@@ -1,0 +1,113 @@
+.main {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  outline: none;
+  border: 0;
+  vertical-align: middle;
+  text-decoration: none;
+  background: transparent;
+  padding: 0;
+}
+.main.learn-more {
+  width: 15rem;
+  height: auto;
+}
+
+.main.learn-more.auto-schedule .circle {
+  border: 2px solid;
+  border-image: linear-gradient(45deg, #6fdbff 0%, #ffb3fe 100%);
+  border-image-slice: 1;
+  background: #fff;
+  /* background: linear-gradient(56deg, #6fdbff 0%, #6850ff 40%, #500f95 100%); */
+}
+.main.learn-more.auto-schedule .button-text {
+  color: linear-gradient(56deg, #6fdbff 0%, #6850ff 40%, #500f95 100%);
+}
+.main.learn-more.auto-schedule:hover .circle {
+  background: #fff;
+}
+.main.learn-more.auto-schedule:hover .button-text {
+  background-image: linear-gradient(to right, #6fdbff, #ffb3fe);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.main.learn-more.auto-schedule .circle .icon.arrow::before {
+  position: absolute;
+  content: "";
+  top: -0.25rem;
+  right: 0.0625rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-top: 0.125rem solid #6fdbff;
+  border-right: 0.125rem solid #6fdbff;
+  transform: rotate(45deg);
+}
+.main:hover.auto-schedule .circle .icon.arrow {
+  background: #6fdbff;
+  transform: translate(1rem, 0);
+}
+
+.main.learn-more .circle {
+  transition: all 0.45s cubic-bezier(0.65, 0, 0.076, 1);
+  position: relative;
+  display: block;
+  margin: 0;
+  width: 3rem;
+  height: 3rem;
+  background: #3f4166;
+  /* background: linear-gradient(56deg, #6fdbff 0%, #6850ff 40%, #500f95 100%); */
+}
+.main.learn-more .circle .icon {
+  transition: all 0.45s cubic-bezier(0.65, 0, 0.076, 1);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  background: #fff;
+}
+.main.learn-more .circle .icon.arrow {
+  transition: all 0.45s cubic-bezier(0.65, 0, 0.076, 1);
+  left: 0.625rem;
+  width: 1.125rem;
+  height: 0.125rem;
+  background: none;
+}
+.main.learn-more .circle .icon.arrow::before {
+  position: absolute;
+  content: "";
+  top: -0.25rem;
+  right: 0.0625rem;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-top: 0.125rem solid #fff;
+  border-right: 0.125rem solid #fff;
+  transform: rotate(45deg);
+}
+.main.learn-more .button-text {
+  transition: all 0.45s cubic-bezier(0.65, 0, 0.076, 1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.75rem 0;
+  margin: 0 0 0 1rem;
+  color: #282936;
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
+  text-transform: uppercase;
+}
+.main:hover .circle {
+  width: 100%;
+}
+.main:hover .circle .icon.arrow {
+  background: #fff;
+  transform: translate(1rem, 0);
+}
+.main:hover .button-text {
+  color: #fff;
+}
