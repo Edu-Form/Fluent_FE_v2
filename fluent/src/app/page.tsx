@@ -1,9 +1,7 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -37,7 +35,7 @@ export default function Page() {
         <Image
           src={"/images/Login.svg"}
           alt="image"
-          width={0} // 너비와 높이를 비율로 관리
+          width={0}
           height={0}
           className="w-full h-auto rounded-t-xl"
         />
@@ -46,13 +44,14 @@ export default function Page() {
             Login
           </CardTitle>
         </CardHeader>
-
         <div className="flex justify-center mb-10">
           <input
             id="username"
             placeholder="전화번호를 적으세요"
             value={username}
-            onChange={(e: any) => setUsername(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setUsername(e.target.value)
+            }
             className="w-[80%] text-sm placeholder-gray-400 placeholder-opacity-70 border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </div>
