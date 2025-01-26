@@ -1,7 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { API } from "@/utils/api";
-import Lottie from "lottie-react";
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => <div>Loading...</div>,
+});
 import timerAnimationData from "@/src/app/lotties/mainLoading.json";
 import { FaCheck } from "react-icons/fa6";
 import { FaSearch } from "react-icons/fa";
