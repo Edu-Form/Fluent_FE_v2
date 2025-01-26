@@ -1,6 +1,10 @@
 "use client";
 
-import Lottie from "lottie-react";
+import dynamic from "next/dynamic";
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => <div>Loading...</div>,
+});
 import timerAnimationData from "@/src/app/lotties/mainLoading.json";
 
 import { useEffect, useState, Suspense } from "react";
