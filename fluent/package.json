@@ -1,0 +1,28 @@
+{
+  "name": "fluent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.6",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  },
+  "packageManager": "yarn@3.6.0+sha512.418e45c2268c4d6b69a28f3939084b5853d5f392c43c0b5588bd1995a96e328414ae4b7777a8980c64bad4328c52586ff879b289f98ae65372a55fa4d0ff70dd"
+}
