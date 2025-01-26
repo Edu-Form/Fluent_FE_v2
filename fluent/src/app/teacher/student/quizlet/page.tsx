@@ -1,13 +1,28 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { LuCircleFadingPlus } from "react-icons/lu";
-import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 
-import QuizletCard from "@/components/Quizlet/QuizletCard";
-import QuizletModal from "@/components/Quizlet/QuizletModal";
+const DayPicker = dynamic(
+  () => import("react-day-picker").then((mod) => mod.DayPicker),
+  {
+    ssr: false,
+  }
+);
+
+const QuizletCard = dynamic(() => import("@/components/Quizlet/QuizletCard"), {
+  ssr: false,
+});
+
+const QuizletModal = dynamic(
+  () => import("@/components/Quizlet/QuizletModal"),
+  {
+    ssr: false,
+  }
+);
 
 // Edit button
 const content = {

@@ -24,21 +24,21 @@ const QuizletContent = ({ student_name }: { student_name: string }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const fetchQuizletData = async () => {
-        try {
-          const response = await fetch(`${API}/api/quizlet/${student_name}`);
-          const data = await response.json();
-          setQuizletData(data);
-        } catch (error) {
-          console.error("Error fetching Quizlet data:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
+    const fetchQuizletData = async () => {
+      try {
+        const response = await fetch(
+          `http://example.com/api/quizlet/${student_name}`
+        );
+        const data = await response.json();
+        setQuizletData(data);
+      } catch (error) {
+        console.error("Error fetching Quizlet data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      fetchQuizletData();
-    }
+    fetchQuizletData();
   }, [student_name]);
 
   if (loading) {
