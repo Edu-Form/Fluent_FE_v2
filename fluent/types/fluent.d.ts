@@ -15,14 +15,6 @@ interface QuizletCardProps {
   kor_quizlet: string[];
 }
 
-// interface QuizletData {
-//   date: string;
-//   cards: any[]; // cards 배열의 요소 타입을 구체적으로 지정할 수도 있어요.
-// }
-// interface Card {
-//   date: string;
-// }
-
 //다이어리 타입을 지정해놓았습니다
 
 interface DiaryData {
