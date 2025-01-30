@@ -32,7 +32,7 @@ const SchedulePage = () => {
   const openVariousSchedule = () => setIsVariousRoomOpen(true);
   const closeVariousSchedule = () => setIsVariousRoomOpen(false);
 
-  const URL = `http://13.54.77.128/api/schedules/${type}/${user}`;
+  const URL = `/api/schedules/${type}/${user}`;
 
   useEffect(() => {
     if (!user || classes.length > 0) return;
