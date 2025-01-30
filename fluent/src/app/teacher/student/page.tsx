@@ -71,16 +71,17 @@ const Student_List = ({ data }: any) => {
   const type = searchParams.get("type");
   const student_name = searchParams.get("student_name");
   const func = searchParams.get("func");
+  const phoneNumber = searchParams.get("id");
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredData = data.filter((item: string[]) =>
-    item[0].toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredData = data.filter((item: string) =>
+    item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const renderRightContent = () => {
     if (!student_name)
-      return <div> 오른쪽 공간은 학생클릭시 나올 내용 (수정필요))</div>;
+      return <div> 오른쪽 공간은 학생클릭시 나올 내용 (수정필요)</div>;
     switch (type) {
       case "diary":
         return <DiaryContent student_name={student_name} />;
@@ -112,7 +113,7 @@ const Student_List = ({ data }: any) => {
           {filteredData.map((item: string[], index: number) => (
             <div key={index}>
               <Link
-                href={`/teacher/student/${func}?user=${user}&type=${type}&id=${user}&student_name=${item[0]}`}
+                href={`/teacher/student/${func}?user=${user}&type=${type}&id=${phoneNumber}&student_name=${item}`}
                 className="w-full h-20 p-2 gap-2 rounded-xl flex justify-start items-center text-black bg-white hover:bg-[#8A8CAF] hover:border-[#8A8CAF] transform hover:scale-105 transition-all duration-300 border border-gray-100 shadow-sm"
               >
                 <div className="flex w-2 h-12 rounded-xl bg-[#2675F8]"></div>
@@ -120,7 +121,7 @@ const Student_List = ({ data }: any) => {
                   <FaCheck className="text-[#2675F8] text-lg" />
                 </div>
                 <div className="text-center font-semibold m-2 text-lg">
-                  {item[0]}
+                  {item}
                 </div>
               </Link>
             </div>
@@ -144,7 +145,7 @@ const Home = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const URL = `${API}/api/diary/${type}/${user}`;
+        const URL = `/api/diary/${type}/${user}`;
         const res = await fetch(URL, { cache: "no-store" });
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();

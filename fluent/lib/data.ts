@@ -10,6 +10,56 @@ export function serialize_document(document: any) {
   return document;
 }
 
+export async function getStudentDiaryData(student_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+
+    // Find the diaries related to the student name, sorted by date
+    const filteredDiaries = await db
+      .collection("diary")
+      .find({ student_name })
+      .sort({ date: 1 })
+      .toArray();  // Convert cursor to an array
+    console.log(filteredDiaries)
+    if (!filteredDiaries || filteredDiaries.length === 0) {
+      return null;  // Return null if no diaries are found
+    }
+
+    // Serialize the documents before returning (optional, but generally recommended)
+    return filteredDiaries.map(serialize_document);
+  } catch (error) {
+    console.error("Error fetching diaries:", error);
+    return null;
+  }
+}
+
+export async function getStudentListData(teacherName: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    // Find the students related to the teacher name
+    const filteredStudents = await db
+      .collection("students")
+      .find({ teacher: teacherName })
+      .sort({ name: 1 })
+      .toArray();  // Convert cursor to an array
+
+    if (!filteredStudents || filteredStudents.length === 0) {
+      return null;  // Return null if no students are found
+    }
+
+    // Serialize the documents before returning (optional, but generally recommended)
+    return filteredStudents.map(student => student.name);
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    return null;
+  }
+}
+
+
+
 // Function to get teacher's schedule
 export const getTeacherScheduleData = async (teacherName: string) => {
   try {

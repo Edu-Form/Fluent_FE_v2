@@ -44,10 +44,11 @@ const DiaryPage = () => {
   useEffect(() => {
     // 비동기 데이터 로딩 함수
     const fetchData = async () => {
-      const URL = `http://13.54.77.128/api/diary/student/${student_name}`;
+      const URL = `/api/diary/student/${student_name}`;
       try {
         const res = await fetch(URL, { cache: "no-store" });
         const data = await res.json();
+        console.log(data)
         setDiaryData(data); // 가져온 데이터를 상태에 설정
       } catch (error) {
         console.log("Error fetching data:", error);
