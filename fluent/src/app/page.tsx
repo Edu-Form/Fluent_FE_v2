@@ -1,35 +1,31 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getUserData } from "@/lib/data";
 
 export default function Page() {
   const [username, setUsername] = useState("");
   const router = useRouter();
 
   async function Login() {
-    const url = `api/user/${username}`
-    console.log(url)
-    const response = await fetch(url);
-    if (response.ok) {
-      const user = await response.json();
-      console.log(user)
-      if (user) {
-        // Type guard: Check if user is a Student (has 'level' property)
-        if ("level" in user) {
-          const url = `/home?user=${user.name}&type=student&id=${user.phoneNumber}`;
-          router.push(url);
-        } else {
-          const url = `/teacher/home?user=${user.name}&type=teacher&id=${user.phoneNumber}`;
-          router.push(url);
+    try {
+      const response = await fetch(`http://13.54.77.128/api/user/${username}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data) {
+          if (data[0].type == "teacher") {
+            const url = `/teacher/home?user=${data[0].user_name}&type=${data[0].type}&id=${data[0].user_number}`;
+            router.push(url);
+          } else if (data[0].type == "student") {
+            const url = `/home?user=${data[0].user_name}&type=${data[0].type}&id=${data[0].user_number}`;
+            router.push(url);
+          }
         }
       }
-    } else {
-      router.push("/"); // Redirect to home or show an error page if no user found
+    } catch {
+      router.push("/");
     }
   }
 
@@ -61,7 +57,7 @@ export default function Page() {
         </div>
         <CardFooter className="flex justify-center">
           <Button
-            className="w-[90%] rounded-[0.5rem] text-xl py-2 my-20 bg-[#171861]"
+            className="w-[90%] rounded-[0.5rem] text-xl text-white py-2 my-20 bg-[#171861] hover:text-[#171861] hover:bg-[#cecee5]"
             onClick={Login}
           >
             Log in

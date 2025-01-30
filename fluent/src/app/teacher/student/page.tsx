@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { API } from "@/utils/api";
 const Lottie = dynamic(() => import("lottie-react"), {
   ssr: false,
   loading: () => <div>Loading...</div>,
