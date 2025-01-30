@@ -7,6 +7,7 @@ import type { Student } from "./definitions"
 import type { Teacher } from "./definitions"
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
+import { Phone } from "lucide-react"
 
 export async function updateStudent(id: string, update: Partial<Student>): Promise<Student> {
   try {
@@ -88,6 +89,7 @@ export async function addTeacher(formData: FormData): Promise<Teacher> {
         experience: formData.get("experience") as string,
         notes: formData.get("notes") as string,
         createdAt: new Date().toISOString(),
+        phoneNumber: formData.get("PhoneNumber") as string,
       }
       const addedTeacher = await addTeacherToDB(newTeacher)
       revalidatePath("/teacher-information")

@@ -43,7 +43,7 @@ const QuizletPage = () => {
   const fetchQuizletData = useCallback(async () => {
     try {
       const response = await fetch(
-        `http://13.54.77.128/api/quizlet/student/${student_name}`
+        `/api/quizlet/student/${student_name}`
       );
       const quizletData: QuizletCardProps[] = await response.json();
       console.log("Fetched Quizlet Data:", quizletData); // 데이터 확인
