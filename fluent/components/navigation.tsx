@@ -72,7 +72,7 @@ function NavigationComponent() {
         isHomePage || displayPage ? "hidden" : ""
       }`}
     >
-      <div className="flex items-center bg-white px-12 py-4 rounded-xl shadow-lg space-x-2 sm:space-x-4 md:space-x-6 lg:space-x-10">
+      <div className="absolute items-center bg-white px-12 py-4 rounded-xl shadow-lg space-x-2 sm:space-x-4 md:space-x-6 lg:space-x-10">
         <NavIcon
           Icon={RiHome6Fill}
           isActive={activeIndex === 0}
@@ -135,7 +135,7 @@ function NavIcon({ Icon, isActive, tooltip, onClick }: NavIconProps) {
       </div>
       <div
         className="absolute left-1/2 transform -translate-x-1/2 translate-y-2 opacity-0 group-hover:opacity-100 bg-black text-white text-xs rounded-md px-2 py-1 whitespace-nowrap transition-opacity duration-200"
-        style={{ bottom: "110%" }}
+        style={{ bottom: "120%" }}
       >
         {tooltip}
       </div>

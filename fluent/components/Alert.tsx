@@ -35,23 +35,29 @@ export default function Alert() {
 
   return (
     <div
-      className={`relative bg-[#2675f8] w-[70vw]  px-8 py-5 overflow-hidden rounded-lg min-w-[1000px]  ${
+      className={`alart flex items-center justify-center ${
         isHomePage || displayPage ? "hidden" : ""
       }`}
     >
-      <div className="flex items-end text-white gap-4">
-        {/* <span className="text-base font-bold">{user || "Unknown"}</span> */}
-        <h1 className="text-4xl font-extrabold text-center">{time}</h1>
-        <h2 className=" text-xs text-center ">{date}</h2>
-      </div>
-      <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-        <Image
-          src="/images/megaphone.svg"
-          alt="megaphone"
-          width={0}
-          height={0}
-          className="h-fill w-auto object-contain"
-        />
+      <div
+        className={`flex items-center relative bg-[#2675f8] w-[70vw]  px-8 py-5 overflow-hidden rounded-lg min-w-[1000px]  ${
+          isHomePage || displayPage ? "hidden" : ""
+        }`}
+      >
+        <div className="flex items-end text-white gap-4">
+          {/* <span className="text-base font-bold">{user || "Unknown"}</span> */}
+          <h1 className="text-4xl font-extrabold text-center">{time}</h1>
+          <h2 className=" text-xs text-center ">{date}</h2>
+        </div>
+        <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+          <Image
+            src="/images/megaphone.svg"
+            alt="megaphone"
+            width={0}
+            height={0}
+            className="h-fill w-auto object-contain"
+          />
+        </div>
       </div>
     </div>
   );

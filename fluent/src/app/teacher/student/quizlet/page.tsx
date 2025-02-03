@@ -42,14 +42,13 @@ const QuizletPage = () => {
 
   const fetchQuizletData = useCallback(async () => {
     try {
-      const response = await fetch(
-        `/api/quizlet/student/${student_name}`
-      );
-      const quizletData: QuizletCardProps[] = await response.json();
-      console.log("Fetched Quizlet Data:", quizletData); // 데이터 확인
-      setData(quizletData);
+      const response = await fetch(`/api/quizlet/student/${student_name}`);
+      const quizletData = await response.json();
+      console.log("Fetched Quizlet Data:", quizletData);
+      setData(Array.isArray(quizletData) ? quizletData : []);
     } catch (error) {
       console.error("Failed to fetch quizlet data:", error);
+      setData([]); // 에러 시 빈 배열로 초기화
     }
   }, [student_name]);
 
@@ -93,10 +92,12 @@ const QuizletPage = () => {
                 setSelectedDate(formattedDate || null);
               }}
               modifiers={{
-                hasData: data.map((item) => {
-                  const date = new Date(item.date);
-                  return date;
-                }),
+                hasData: Array.isArray(data)
+                  ? data.map((item) => {
+                      const date = new Date(item.date);
+                      return date;
+                    })
+                  : [],
               }}
               modifiersClassNames={{
                 selected: "bg-blue-500 text-white",
