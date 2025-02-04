@@ -1,6 +1,5 @@
 "use client";
 
-import { API } from "@/utils/api";
 import { useEffect, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,7 @@ export default function VariousRoom({
   const [time, setTime] = useState<number | "">("");
 
   const [studentName, setStudentName] = useState("");
-  const [studentList, setStudentList] = useState<string[][]>([]); // 학생 리스트
+  const [studentList, setStudentList] = useState<string[]>([]); // 학생 리스트
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // 드롭다운 상태
 
   const [results, setResults] = useState<any>(null); // API 응답 데이터 저장
@@ -32,14 +31,14 @@ export default function VariousRoom({
     // Fetch student list from API
     async function fetchStudentList() {
       try {
-        const URL = `${API}/api/diary/${type}/${user}`;
+        const URL = `/api/diary/${type}/${user}`;
         const response = await fetch(URL, { cache: "no-store" });
 
         if (!response.ok) {
           throw new Error("Failed to fetch student list");
         }
 
-        const data: string[][] = await response.json();
+        const data: string[] = await response.json();
         setStudentList(data); // 학생 리스트 업데이트
       } catch (error) {
         console.error("Error fetching student list:", error);
@@ -71,7 +70,7 @@ export default function VariousRoom({
       student_name: studentName,
     };
 
-    const response = await fetch(`${API}/api/schedules/auto/`, {
+    const response = await fetch(`/api/schedules/auto/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -217,12 +216,12 @@ export default function VariousRoom({
                         <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow max-h-40 overflow-y-auto">
                           {studentList.length > 0 ? (
                             studentList
-                              .filter(([name]) =>
+                              .filter((name) =>
                                 name
                                   .toLowerCase()
                                   .includes(studentName.toLowerCase())
                               ) // 입력값과 일치하는 이름 필터링
-                              .map(([name]) => (
+                              .map((name) => (
                                 <div
                                   key={name}
                                   onClick={() => handleStudentSelect(name)}

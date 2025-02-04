@@ -83,7 +83,38 @@ export async function getStudentListData(teacherName: string) {
   }
 }
 
+export const getRoomData = async (date: string, time: number) => {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const filteredSchedules = await db
+      .collection("schedules")
+      .find({ date, time })
+      .sort({ room_name: 1 })
+      .toArray(); // Convert to array (MongoDB cursor)
 
+    
+    // Get all room names
+    const db2 = client.db("room_allocation_db");
+    const allRooms = await db2
+      .collection("roomList")
+      .find().toArray();
+    const allRoomNames = allRooms.map((room) => room.room_name);
+
+    // Cross out unavailable rooms using splice()
+    for (const schedule of filteredSchedules) {
+      const index = allRoomNames.indexOf(schedule.room_name);
+      if (index !== -1) {
+        allRoomNames.splice(index, 1); // Removes the specific unavailable room
+      }
+    }
+
+    return allRoomNames.map(serialize_document); // Serialize and return
+  } catch (error) {
+    console.error("Error fetching rooms:", error);
+    throw new Error("Database error");
+  }
+}
 
 // Function to get teacher's schedule
 export const getTeacherScheduleData = async (teacherName: string) => {
@@ -120,6 +151,43 @@ export const getStudentScheduleData = async (studentName: string) => {
     throw new Error("Database error");
   }
 };
+
+export async function saveScheduleData(schedule: any) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const result = await db.collection("schedules").insertOne(schedule);
+    return result.insertedId.toString();
+  } catch (error) {
+    console.error("Error saving schedule:", error);
+    throw new Error("Database error");
+  }
+}
+
+export async function saveManyScheduleData(schedule: any) {
+  try {
+    const { dates, time, duration, teacher_name, student_name } = schedule;
+    const allSavedRooms = [];
+
+    for (const date of dates) {
+      const availableRooms = await getRoomData(date, time);
+
+      if (availableRooms.length === 0) {
+        return { status_code: 400, error: "No available rooms" };
+      }
+
+      const room_name = availableRooms[0];
+      const each_schedule = { room_name, date, time, duration, teacher_name, student_name };
+      await saveScheduleData(each_schedule);
+      allSavedRooms.push(room_name);
+    }
+
+    return { status_code: 200, all_dates: dates, all_rooms: allSavedRooms, time };
+  } catch (error) {
+    console.error("Error saving schedules:", error);
+    throw new Error("Database error");
+  }
+}
 
 export async function getUserData(username: string): Promise<Student | Teacher | null>{
   try {

@@ -1,6 +1,5 @@
 "use client";
 
-import { API } from "@/utils/api";
 import { useEffect, useState } from "react";
 import { DayPicker } from "react-day-picker";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,7 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
   const [duration] = useState("1");
 
   const [studentName, setStudentName] = useState("");
-  const [studentList, setStudentList] = useState<string[][]>([]); // 학생 리스트
+  const [studentList, setStudentList] = useState<string[]>([]); // 학생 리스트
   const [isDropdownOpen, setIsDropdownOpen] = useState(false); // 드롭다운 열림 상태
 
   const [showRoomSelection, setShowRoomSelection] = useState(false); // 방넘김
@@ -35,14 +34,14 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
     }
     async function fetchStudentList() {
       try {
-        const URL = `${API}/api/diary/${type}/${user}`;
+        const URL = `/api/diary/${type}/${user}`;
         const response = await fetch(URL, { cache: "no-store" });
 
         if (!response.ok) {
           throw new Error("Failed to fetch student list");
         }
 
-        const data: string[][] = await response.json();
+        const data: string[] = await response.json();
         setStudentList(data); // 학생 리스트 업데이트
       } catch (error) {
         console.error("Error fetching student list:", error);
@@ -58,6 +57,7 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
     setStudentName(name); // 선택한 이름으로 업데이트
     setIsDropdownOpen(false); // 드롭다운 닫기
   };
+
   // This function sends date and time data to API and receives a list of rooms.
   async function searchRooms() {
     const formattedDate = date
@@ -69,7 +69,7 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
       : "";
 
     const all_rooms = await fetch(
-      `${API}/api/schedules/search_rooms/${formattedDate}/${time}/`
+      `/api/schedules/search_rooms/${formattedDate}/${time}/`
     );
     const json_all_rooms = await all_rooms.json();
 
@@ -99,7 +99,7 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
         })
       : "";
 
-    const response = await fetch(`${API}/api/schedules/`, {
+    const response = await fetch(`/api/schedules/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -285,12 +285,12 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
                           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded shadow">
                             {studentList.length > 0 ? (
                               studentList
-                                .filter(([name]) =>
+                                .filter((name) =>
                                   name
                                     .toLowerCase()
                                     .includes(studentName.toLowerCase())
                                 ) // 입력값과 일치하는 이름 필터링
-                                .map(([name]) => (
+                                .map((name) => (
                                   <div
                                     key={name} // 고유 값 사용
                                     onClick={() => handleStudentSelect(name)}
