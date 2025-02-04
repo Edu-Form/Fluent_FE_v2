@@ -213,7 +213,34 @@ export async function getUserData(username: string): Promise<Student | Teacher |
 }
 
 
-export async function saveQuizletData(quizlet: any) {
+export async function saveQuizletData(quizlet: any, kor_quizlet: string[], eng_quizlet: string[]) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+
+    const modified_quizlet = {
+      student_name: quizlet.student_name,
+      class_date: quizlet.class_date,
+      date: quizlet.date,
+      original_text: quizlet.original_text,
+      eng_quizlet,
+      kor_quizlet
+    };
+
+    const result = await db.collection("quizlet").insertOne(modified_quizlet);
+
+    return {
+      status_code: 200,
+      id: result.insertedId.toString(),
+      student_name: quizlet.student_name,
+      date: quizlet.date,
+      eng_quizlet,
+      kor_quizlet
+    };
+  } catch (error) {
+    console.error("Error saving quizlet:", error);
+    throw new Error("Database error");
+  }
 }
 
 

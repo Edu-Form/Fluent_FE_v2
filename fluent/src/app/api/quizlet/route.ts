@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveQuizletData } from "@/lib/data";
-import { openaiClient } from "@/lib/openaiClient"; // Adjust the import path as necessary
+import { openaiClient } from "@/lib/openaiClient"; // Import the OpenAI client instance
 
 export async function POST(request: Request) {
   try {
@@ -38,13 +38,10 @@ export async function POST(request: Request) {
         ]
     });
 
-    const translated_text = completion.data.choices[0].message.content.trim();
+    const translated_text = completion.choices[0]?.message?.content?.trim() ?? '';
     const kor_quizlet = translated_text.split('\n');
     
-
-
-
-    const result = await saveQuizletData(quizletData);
+    const result = await saveQuizletData(quizletData, kor_quizlet, eng_quizlet);
 
     return NextResponse.json({ message: "Data saved successfully", result }, { status: 200 });
   } catch (error) {
