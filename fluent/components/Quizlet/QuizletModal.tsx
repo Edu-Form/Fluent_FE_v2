@@ -1,6 +1,5 @@
 "use client";
 
-import { API } from "@/utils/api";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Lottie from "lottie-react";
@@ -67,7 +66,7 @@ export default function QuizletModal({
     setLoading(true); // Submit을 누르면 로딩 시작
 
     try {
-      const response = await fetch(`${API}/api/quizlet/`, {
+      const response = await fetch(`/api/quizlet/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
