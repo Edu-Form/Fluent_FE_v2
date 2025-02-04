@@ -19,7 +19,7 @@ export default function Page() {
       if (user) {
         // Type guard: Check if user is a Student (has 'level' property)
         if ("level" in user) {
-          const url = `/home?user=${user.name}&type=student&id=${user.phoneNumber}`;
+          const url = `/student/home?user=${user.name}&type=student&id=${user.phoneNumber}`;
           router.push(url);
         } else {
           const url = `/teacher/home?user=${user.name}&type=teacher&id=${user.phoneNumber}`;

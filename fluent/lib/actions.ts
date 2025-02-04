@@ -13,7 +13,6 @@ import type { Student } from "./definitions";
 import type { Teacher } from "./definitions";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { Phone } from "lucide-react"
 
 export async function updateStudent(
   id: string,
@@ -91,30 +90,33 @@ export async function addStudent(formData: FormData): Promise<Student> {
 }
 
 export async function addTeacher(formData: FormData): Promise<Teacher> {
-    try {
-      const newTeacher = {
-        name: formData.get("name") as string,
-        experience: formData.get("experience") as string,
-        notes: formData.get("notes") as string,
-        createdAt: new Date().toISOString(),
-        phoneNumber: formData.get("PhoneNumber") as string,
-      }
-      const addedTeacher = await addTeacherToDB(newTeacher)
-      revalidatePath("/teacher-information")
-      return addedTeacher
-    } catch (error) {
-      console.error("Failed to add teacher:", error)
-      throw new Error("Failed to add teacher. Please try again.")
-    }
+  try {
+    const newTeacher = {
+      name: formData.get("name") as string,
+      experience: formData.get("experience") as string,
+      notes: formData.get("notes") as string,
+      createdAt: new Date().toISOString(),
+      phoneNumber: formData.get("PhoneNumber") as string,
+    };
+    const addedTeacher = await addTeacherToDB(newTeacher);
+    revalidatePath("/teacher-information");
+    return addedTeacher;
+  } catch (error) {
+    console.error("Failed to add teacher:", error);
+    throw new Error("Failed to add teacher. Please try again.");
   }
-  
-  export async function updateTeacher(id: string, update: Partial<Teacher>): Promise<Teacher> {
-    try {
-      const updatedTeacher = await updateTeacherInDB(id, update)
-      revalidatePath("/teacher-information")
-      return updatedTeacher
-    } catch (error) {
-      console.error("Failed to update teacher:", error)
-      throw new Error("Failed to update teacher. Please try again.")
-    }
+}
+
+export async function updateTeacher(
+  id: string,
+  update: Partial<Teacher>
+): Promise<Teacher> {
+  try {
+    const updatedTeacher = await updateTeacherInDB(id, update);
+    revalidatePath("/teacher-information");
+    return updatedTeacher;
+  } catch (error) {
+    console.error("Failed to update teacher:", error);
+    throw new Error("Failed to update teacher. Please try again.");
   }
+}

@@ -25,8 +25,8 @@ function NavigationComponent() {
   const user_id = searchParams.get("id");
   const func = searchParams.get("func");
   const url_data = `user=${user}&type=${type}&id=${user_id}`;
-  const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
   const quizlet_url_data = `user=${user}&type=${type}&id=${user_id}&func=quizlet`;
+  const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -38,9 +38,9 @@ function NavigationComponent() {
       setActiveIndex(0);
     } else if (pathname.includes("/schedule")) {
       setActiveIndex(1);
-    } else if (pathname.includes("/student") && func === "diary") {
-      setActiveIndex(2);
     } else if (pathname.includes("/student") && func === "quizlet") {
+      setActiveIndex(2);
+    } else if (pathname.includes("/student") && func === "diary") {
       setActiveIndex(3);
     }
   }, [pathname, func]);
@@ -49,16 +49,24 @@ function NavigationComponent() {
     router.push(`/${type}/home?${url_data}`);
   };
 
+  const handleScheduleClick = () => {
+    router.push(`/${type}/schedule?${url_data}`);
+  };
+
   const handleCardsClick = () => {
-    router.push(`/${type}/student?${quizlet_url_data}`);
+    if (type === "teacher") {
+      router.push(`/${type}/student?${quizlet_url_data}`);
+    } else {
+      router.push(`/${type}/quizlet?${quizlet_url_data}`);
+    }
   };
 
   const handleBookmarkClick = () => {
-    router.push(`/${type}/student?${diary_url_data}`);
-  };
-
-  const handleScheduleClick = () => {
-    router.push(`/${type}/schedule?${url_data}`);
+    if (type === "teacher") {
+      router.push(`/${type}/student?${diary_url_data}`);
+    } else {
+      router.push(`/${type}/diary?${diary_url_data}`);
+    }
   };
 
   const handleLogout = () => {
@@ -72,7 +80,7 @@ function NavigationComponent() {
         isHomePage || displayPage ? "hidden" : ""
       }`}
     >
-      <div className="flex items-center bg-white px-12 py-4 rounded-xl shadow-lg space-x-2 sm:space-x-4 md:space-x-6 lg:space-x-10">
+      <div className="absolute items-center bg-white px-12 py-4 rounded-xl shadow-lg space-x-2 sm:space-x-4 md:space-x-6 lg:space-x-10">
         <NavIcon
           Icon={RiHome6Fill}
           isActive={activeIndex === 0}
@@ -91,22 +99,24 @@ function NavigationComponent() {
             handleScheduleClick();
           }}
         />
-        <NavIcon
-          Icon={PiBookBookmarkFill}
-          isActive={activeIndex === 2}
-          tooltip="Diary"
-          onClick={() => {
-            setActiveIndex(2);
-            handleBookmarkClick();
-          }}
-        />
+
         <NavIcon
           Icon={TbCardsFilled}
-          isActive={activeIndex === 3}
+          isActive={activeIndex === 2}
           tooltip="Quizlet"
           onClick={() => {
-            setActiveIndex(3);
+            setActiveIndex(2);
             handleCardsClick();
+          }}
+        />
+
+        <NavIcon
+          Icon={PiBookBookmarkFill}
+          isActive={activeIndex === 3}
+          tooltip="Diary"
+          onClick={() => {
+            setActiveIndex(3);
+            handleBookmarkClick();
           }}
         />
 
@@ -135,7 +145,7 @@ function NavIcon({ Icon, isActive, tooltip, onClick }: NavIconProps) {
       </div>
       <div
         className="absolute left-1/2 transform -translate-x-1/2 translate-y-2 opacity-0 group-hover:opacity-100 bg-black text-white text-xs rounded-md px-2 py-1 whitespace-nowrap transition-opacity duration-200"
-        style={{ bottom: "110%" }}
+        style={{ bottom: "120%" }}
       >
         {tooltip}
       </div>

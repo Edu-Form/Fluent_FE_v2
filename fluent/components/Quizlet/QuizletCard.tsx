@@ -1,66 +1,113 @@
 "use client";
-
 import { useState } from "react";
-import { IoIosArrowBack } from "react-icons/io";
-import { IoIosArrowForward } from "react-icons/io";
+import { motion } from "framer-motion";
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
 export default function QuizletCard({
   content,
 }: {
   content: QuizletCardProps;
 }) {
-  const date = content.date;
   const engWords = content.eng_quizlet || [];
   const korWords = content.kor_quizlet || [];
-  // engWords와 korWords를 매핑해 cards로 변환
+
+  // 단어 쌍 생성
   const cards = engWords.map((eng, index) => [eng, korWords[index] || ""]);
-  const [card, setCard] = useState(0);
-  const [cardface, setCardface] = useState(0);
+
+  const [currentCard, setCurrentCard] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  const handleNextCard = () => {
+    setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
+    setIsFlipped(false);
+  };
+
+  const handlePrevCard = () => {
+    setCurrentCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
+    setIsFlipped(false);
+  };
+
+  // 카드가 없을 경우 처리
+  if (cards.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-full bg-gray-100">
+        <p className="text-gray-500">단어를 선택해주세요.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col justify-center items-center ">
-      {content.date ? (
-        <div className="text-2xl font-bold mb-10 text-[#2675f8]">{date}</div>
-      ) : (
-        <div className="text-2xl font-bold mb-10 text-[#2675f8]">
-          Please Select a Quizlet
-        </div>
-      )}
-      <div
-        className="flex flex-col justify-center items-center w-[40vw] h-[40vh] rounded overflow-hidden shadow-base border-2 bg-white"
-        onClick={() => setCardface((prev) => 1 - prev)} // 카드 면 변경
-      >
-        <div className="flex items-center px-6 py-4">
-          {cards.length > 0 ? (
-            <div className="font-bold text-3xl mb-2 text-center">
-              {cards[card][cardface]}
+    <div className="flex flex-col items-center justify-center min-h-full bg-gray-100 ">
+      <div className="w-full max-w-md">
+        {/* 카드 컨테이너 */}
+        <motion.div
+          className="relative w-full aspect-[4/3] perspective-1000"
+          onClick={() => setIsFlipped(!isFlipped)}
+        >
+          <motion.div
+            className="absolute w-full h-full bg-white rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-700"
+            animate={{
+              rotateY: isFlipped ? 180 : 0,
+              scale: isFlipped ? 1.05 : 1,
+            }}
+            style={{
+              transformStyle: "preserve-3d",
+              backfaceVisibility: "hidden",
+            }}
+          >
+            {/* 앞면 */}
+            <div
+              className="absolute w-full h-full flex items-center justify-center p-6 text-center"
+              style={{
+                transform: "rotateY(0deg)",
+                backfaceVisibility: "hidden",
+              }}
+            >
+              <div>
+                <h2 className="text-3xl font-bold text-[#121B5C]">
+                  {cards[currentCard][0]}
+                </h2>
+                <p className="text-sm text-gray-500 mt-2">탭하여 번역 보기</p>
+              </div>
             </div>
-          ) : (
-            <div>Select Quizlet에서 날짜를 확인하세요.</div>
-          )}
-        </div>
-      </div>
-      <div className="flex mt-3 gap-10 quizlet-card-button">
-        <IoIosArrowBack
-          className="inline text-4xl hover:animate-pulse text-[#2675f8] rounded-[100%] hover:bg-slate-200"
-          onClick={() => {
-            setCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
-            setCardface(0); // 영어로 초기화
-          }}
-        />
-       {/* 숫자 */}
-        {cards.length > 0 && (
-          <div className="flex text-[#2675f8] align-middle text-xl">
-            {card + 1} / {cards.length}
+
+            {/* 뒷면 */}
+            <div
+              className="absolute w-full h-full flex items-center justify-center p-6 text-center bg-[#121B5C] rounded-2xl"
+              style={{
+                transform: "rotateY(180deg)",
+                backfaceVisibility: "hidden",
+              }}
+            >
+              <div>
+                <h2 className="text-3xl font-bold text-white">
+                  {cards[currentCard][1]}
+                </h2>
+                <p className="text-sm text-gray-300 mt-2">탭하여 숨기기</p>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+        {/* 네비게이션 */}
+        <div className="flex justify-between items-center mt-6">
+          <button
+            onClick={handlePrevCard}
+            className="p-2 rounded-full bg-gray-100 text-[#121B5C] shadow-sm hover:bg-gray-200 transition-colors"
+          >
+            <IoIosArrowBack className="text-2xl" />
+          </button>
+
+          <div className="text-[#121B5C] text-lg font-semibold">
+            {currentCard + 1} / {cards.length}
           </div>
-        )}
-        <IoIosArrowForward
-          className="inline text-4xl hover:animate-pulse text-[#2675f8] rounded-[100%] hover:bg-slate-200"
-          onClick={() => {
-            setCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
-            setCardface(0); // 영어로 초기화
-          }}
-        />
+
+          <button
+            onClick={handleNextCard}
+            className="p-2 rounded-full bg-gray-100 text-[#121B5C] shadow-sm hover:bg-gray-200 transition-colors"
+          >
+            <IoIosArrowForward className="text-2xl" />
+          </button>
+        </div>
       </div>
     </div>
   );

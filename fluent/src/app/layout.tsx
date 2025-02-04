@@ -22,19 +22,15 @@ export default function RootLayout({
         {/* 전체 화면 높이를 기준으로 분할 */}
         <div className="flex flex-col flex-1 overflow-hidden h-full gap-[1vh] p-[2vh]">
           {/* Alert (10% Height) */}
-          <div className="flex justify-center items-center h-[10%] overflow-hidden">
-            <Alert />
-          </div>
-
+          {/* <div className="flex justify-center items-center h-[10%] overflow-hidden">
+         
+          </div> */}
+          <Alert />
           {/* Main Content (80% Height) */}
           <div className="flex flex-1 justify-center item-center overflow-y-hidden">
             {children}
           </div>
-
-          {/* Navigation (10% Height) */}
-          <div className="flex justify-center items-center h-[10%] overflow-hidden">
-            <Navigation />
-          </div>
+          <Navigation />
         </div>
       </body>
     </html>

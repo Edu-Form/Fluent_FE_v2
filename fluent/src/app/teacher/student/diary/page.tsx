@@ -48,7 +48,7 @@ const DiaryPage = () => {
       try {
         const res = await fetch(URL, { cache: "no-store" });
         const data = await res.json();
-        console.log(data)
+        console.log(data);
         setDiaryData(data); // 가져온 데이터를 상태에 설정
       } catch (error) {
         console.log("Error fetching data:", error);
@@ -100,14 +100,17 @@ const DiaryPage = () => {
         </div> */}
       {/* </div> */}
 
-      <div className="relative">
-        <div className=" relative px-60 h-[80vh] hide-scrollbar">
-          <DiaryCard
-            diarydata={diaryData.sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-            )}
-          />
-        </div>
+      <div className="relative w-full h-full hide-scrollbar overflow-y-scroll">
+        <DiaryCard
+          diarydata={
+            Array.isArray(diaryData)
+              ? diaryData.sort(
+                  (a, b) =>
+                    new Date(b.date).getTime() - new Date(a.date).getTime()
+                )
+              : []
+          }
+        />
       </div>
 
       <style jsx>{`
@@ -122,10 +125,7 @@ const DiaryPage = () => {
 export default function Diary() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div className="relative">
-        <div className="flex justify-center"></div>
-        <DiaryPage />
-      </div>
+      <DiaryPage />
     </Suspense>
   );
 }

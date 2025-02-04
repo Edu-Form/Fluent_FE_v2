@@ -34,7 +34,7 @@ const HomePage = () => {
       {/* 상단 영역 */}
       <div className="flex flex-1 ">
         {/* Announcement 컴포넌트 */}
-        <div className="flex flex-col w-[70vw] min-w-[1000px] mx-auto h-[40vh] rounded-3xl bg-white cursor-pointer drop-shadow-lg">
+        <div className="flex flex-col w-[70vw] min-w-[1000px] mx-auto h-[40vh] rounded-xl bg-white cursor-pointer drop-shadow-lg">
           <div className="flex p-5 px-8 w-full h-full overflow-auto">
             <Announcement />
           </div>

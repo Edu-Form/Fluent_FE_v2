@@ -1,33 +1,18 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useState, useEffect, Suspense, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { LuCircleFadingPlus } from "react-icons/lu";
-import { FiCalendar, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
-
-const QuizletCard = dynamic(() => import("@/components/Quizlet/QuizletCard"), {
-  ssr: false,
-});
-
-const QuizletModal = dynamic(
-  () => import("@/components/Quizlet/QuizletModal"),
-  {
-    ssr: false,
-  }
-);
-
-const content = {
-  write: "Create Quizlet",
-};
+import { useState, useCallback, useEffect } from "react";
+import { FiChevronLeft, FiChevronRight, FiCalendar } from "react-icons/fi";
+import { useSearchParams } from "next/navigation";
+import QuizletCard from "@/components/Quizlet/QuizletCard";
 
 const QuizletPage = () => {
   const searchParams = useSearchParams();
-  const student_name = searchParams.get("student_name");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const user = searchParams.get("user");
+  const type = searchParams.get("type");
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<QuizletCardProps[]>([]);
   const [currentCard, setCurrentCard] = useState<QuizletCardProps>({
     _id: "",
     date: "",
@@ -37,40 +22,22 @@ const QuizletPage = () => {
     original_text: "",
     cards: [],
   });
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  const openIsModal = () => setIsModalOpen(true);
-  const closeIsModal = () => setIsModalOpen(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const fetchQuizletData = useCallback(async () => {
     try {
-      const response = await fetch(`/api/quizlet/student/${student_name}`);
-      const quizletData = await response.json();
-      console.log("Fetched Quizlet Data:", quizletData);
-
-      const quizletArray = Array.isArray(quizletData)
-        ? quizletData
-        : Object.values(quizletData);
-
-      if (quizletArray.length === 0) {
-        console.log("No quizlet data available");
-        setData([]);
-        setCurrentCard(null);
-        return;
-      }
-
-      const sortedData = quizletArray.sort(
+      const response = await fetch(`/api/quizlet/${type}/${user}`);
+      const quizletData: QuizletCardProps[] = await response.json();
+      const sortedData = quizletData.sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
-
       setData(sortedData);
       setCurrentCard(sortedData[0]);
     } catch (error) {
       console.error("Failed to fetch quizlet data:", error);
-      setData([]);
-      setCurrentCard(null);
     }
-  }, [student_name]);
+  }, [type, user]);
 
   useEffect(() => {
     fetchQuizletData();
@@ -86,7 +53,7 @@ const QuizletPage = () => {
     setCurrentCard(data[(currentIndex - 1 + data.length) % data.length]);
   };
 
-  const handleDateSelect = (date) => {
+  const handleDateSelect = (date: string) => {
     const selectedIndex = data.findIndex((item) => item.date === date);
     if (selectedIndex !== -1) {
       setCurrentIndex(selectedIndex);
@@ -133,11 +100,7 @@ const QuizletPage = () => {
           >
             {/* Date Header */}
             <div className="relative bg-gradient-to-r from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4">
-              <h1
-                className={`{text-lg sm:text-2xl font-bold text-center ${
-                  !currentCard ? "hidden" : ""
-                }`}
-              >
+              <h1 className="text-lg sm:text-2xl font-bold text-center">
                 {year}년 {month}월 {day}일 {weekday}
               </h1>
 
@@ -169,15 +132,6 @@ const QuizletPage = () => {
                   </div>
                 </div>
               )}
-
-              {/* Create Button */}
-              <button
-                onClick={openIsModal}
-                className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full cursor-pointer transition-all"
-              >
-                <LuCircleFadingPlus className="w-4 h-4" />
-                <span className="text-sm font-medium">{content.write}</span>
-              </button>
             </div>
 
             {/* Quizlet Content */}
@@ -203,17 +157,8 @@ const QuizletPage = () => {
           ))}
         </div>
       </div>
-
-      {isModalOpen && <QuizletModal closeIsModal={closeIsModal} />}
     </div>
   );
 };
 
-// Suspense를 사용하여 QuizletPage를 감싸기
-export default function Page() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <QuizletPage />
-    </Suspense>
-  );
-}
+export default QuizletPage;
