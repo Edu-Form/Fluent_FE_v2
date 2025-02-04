@@ -100,7 +100,7 @@ const DiaryPage = () => {
         </div> */}
       {/* </div> */}
 
-      <div className="relative px-10 h-screen hide-scrollbar overflow-y-scroll">
+      <div className="relative w-full h-full hide-scrollbar overflow-y-scroll">
         <DiaryCard
           diarydata={
             Array.isArray(diaryData)
@@ -125,10 +125,7 @@ const DiaryPage = () => {
 export default function Diary() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div className="relative">
-        <div className="flex justify-center"></div>
-        <DiaryPage />
-      </div>
+      <DiaryPage />
     </Suspense>
   );
 }

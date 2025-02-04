@@ -7,35 +7,29 @@ import Lottie from "lottie-react";
 import timerAnimationData from "@/src/app/lotties/timeLoading.json";
 import "react-day-picker/dist/style.css";
 
-// To change to display from 2024. 12. 12. to the 2024-12-12 format.
+// 기존 날짜 포맷 함수들 유지
 const formatToISO = (date: string | undefined) => {
   try {
     if (date != undefined) {
-      // Converts "YYYY. MM. DD." to "YYYY-MM-DD"
       const parts = date.trim().replace(/\.$/, "").split(". ");
       if (parts.length === 3) {
         const [year, month, day] = parts;
-        console.log(
-          `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`
-        );
         return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       }
     }
   } catch {
-    console.log("");
     return "";
-  } // Fallback for invalid date
+  }
 };
 
 const today_formatted = () => {
   const today = new Date();
   const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+  const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
-// To change the date format from 2024-12-12 to 2024. 12. 12.
 const formatToSave = (date: string | undefined) => {
   if (!date) return "";
   const [year, month, day] = date.split("-");
@@ -49,7 +43,7 @@ export default function QuizletModal({
   const router = useRouter();
   const [class_date, setClassDate] = useState(
     formatToSave(formatToISO(next_class_date))
-  ); // 수업 날짜 state 추가
+  );
   const [date, setDate] = useState(formatToSave(today_formatted()));
   const [original_text, setOriginal_text] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,11 +54,9 @@ export default function QuizletModal({
   const type = searchParams.get("type");
   const user_id = searchParams.get("id");
 
-  const postDiary = async (e: any) => {
+  const postQuizlet = async (e: any) => {
     e.preventDefault();
-    console.log(student_name, class_date, date, original_text);
-
-    setLoading(true); // Submit을 누르면 로딩 시작
+    setLoading(true);
 
     try {
       const response = await fetch(`${API}/api/quizlet/`, {
@@ -81,111 +73,135 @@ export default function QuizletModal({
         router.push(
           `/teacher/student/quizlet?user=${user}&type=${type}&id=${user_id}&student_name=${student_name}`
         );
-        window.location.reload(); // 강제 새로고침
+        window.location.reload();
       } else {
-        console.error("Failed to save diary");
+        console.error("Failed to save quizlet");
       }
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false); // 요청 후 로딩 끝
+      setLoading(false);
     }
   };
 
   return (
-    <dialog id="my_modal_3" className="modal bg-slate-400 bg-opacity-50" open>
-      <div className="flex flex-row relative">
-        {/* 로딩 중일 때 애니메이션 표시 */}
-        {loading ? (
-          <div className="absolute inset-0 flex justify-center items-center rounded-[3rem] bg-slate-500 bg-opacity-50 z-50">
-            <div className="w-40 h-40 bg-white flex justify-center items-center rounded-2xl">
-              <Lottie animationData={timerAnimationData} />
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-40 h-40 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
+            <Lottie animationData={timerAnimationData} />
           </div>
-        ) : null}
-
-        <div className="rounded-[3rem] p-5 bg-white">
-          <form
-            className="w-[400px] h-[650px]  border-none5"
-            onSubmit={postDiary}
-          >
-            <button
-              onClick={() => !loading && closeIsModal()}
-              className="btn btn-sm btn-circle btn-ghost absolute top-6 right-6 text-black"
-            >
-              ✕
-            </button>
-            <p className="my-5 w-40 h-12 text-xl font-semibold rounded-[20px] text-white bg-[#121B5C] flex items-center justify-center">
-              Create Quizlet
-            </p>
-            <div className="grid gap-4 mb-4 grid-cols-2">
-              <div className="col-span-2">
-                <label
-                  htmlFor="class_date"
-                  className="time text-lg font-semibold text-black"
-                >
-                  Class Date
-                </label>
-                <input
-                  type="date"
-                  name="class_date"
-                  id="class_date"
-                  defaultValue={formatToISO(next_class_date)}
-                  onChange={(e) => setClassDate(formatToSave(e.target.value))}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                  required={true}
-                  disabled={loading} // 로딩 중에는 입력 비활성화
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label
-                  htmlFor="date"
-                  className="time text-lg font-semibold text-black"
-                >
-                  Date
-                </label>
-                <input
-                  type="date"
-                  name="date"
-                  id="date"
-                  defaultValue={today_formatted()}
-                  onChange={(e) => setDate(formatToSave(e.target.value))}
-                  className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                  required={true}
-                  disabled={loading} // 로딩 중에는 입력 비활성화
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label
-                  htmlFor="diary"
-                  className="time text-lg font-semibold text-black"
-                >
-                  Quizlet Content
-                </label>
-                <textarea
-                  id="original_text"
-                  rows={12}
-                  onChange={(e) => setOriginal_text(e.target.value)}
-                  className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                  placeholder="What did you do today?"
-                  disabled={loading} // 로딩 중에는 텍스트박스 비활성화
-                ></textarea>
-              </div>
-            </div>
-            <div className="absolute bottom-5 left-1/2 transform -translate-x-1/2 mb-5 w-full flex justify-center">
-              <button
-                type="submit"
-                className={`w-4/5 h-14 mt-6 rounded-xl text-white bg-[#121B5C]`}
-                disabled={loading} // 로딩 중에는 버튼 비활성화
-              >
-                Submit Quizlet
-              </button>
-            </div>
-          </form>
         </div>
+      )}
+
+      <div className="relative w-[420px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+        <button
+          onClick={() => !loading && closeIsModal()}
+          className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <form onSubmit={postQuizlet} className="p-6 space-y-6">
+          <h2 className="text-2xl font-bold text-center text-[#121B5C]">
+            Create Quizlet
+          </h2>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="class_date"
+              className="text-sm font-medium text-gray-700"
+            >
+              Class Date
+            </label>
+            <input
+              type="date"
+              name="class_date"
+              id="class_date"
+              defaultValue={formatToISO(next_class_date)}
+              onChange={(e) => setClassDate(formatToSave(e.target.value))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 transition-all"
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="date" className="text-sm font-medium text-gray-700">
+              Date
+            </label>
+            <input
+              type="date"
+              name="date"
+              id="date"
+              defaultValue={today_formatted()}
+              onChange={(e) => setDate(formatToSave(e.target.value))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 transition-all"
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="original_text"
+              className="text-sm font-medium text-gray-700"
+            >
+              Quizlet Content
+            </label>
+            <textarea
+              id="original_text"
+              rows={8}
+              onChange={(e) => setOriginal_text(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 resize-none"
+              placeholder="Enter quizlet content here..."
+              disabled={loading}
+            ></textarea>
+          </div>
+
+          <button
+            type="submit"
+            className={`w-full py-4 rounded-lg text-white font-semibold 
+              ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-[#121B5C] hover:bg-[#0f1a4e] transition-colors"
+              }`}
+            disabled={loading}
+          >
+            Submit Quizlet
+          </button>
+        </form>
       </div>
-    </dialog>
+
+      <style jsx>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
+    </div>
   );
 }
