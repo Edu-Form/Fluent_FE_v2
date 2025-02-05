@@ -65,7 +65,7 @@ export default function QuizletCard({
             >
               <div>
                 <h2 className="text-3xl font-bold text-[#121B5C]">
-                  {cards[currentCard][0]}
+                  {cards[currentCard][1]}
                 </h2>
                 <p className="text-sm text-gray-500 mt-2">탭하여 번역 보기</p>
               </div>
@@ -81,7 +81,7 @@ export default function QuizletCard({
             >
               <div>
                 <h2 className="text-3xl font-bold text-white">
-                  {cards[currentCard][1]}
+                  {cards[currentCard][0]}
                 </h2>
                 <p className="text-sm text-gray-300 mt-2">탭하여 숨기기</p>
               </div>
