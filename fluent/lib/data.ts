@@ -164,6 +164,34 @@ export async function saveScheduleData(schedule: any) {
   }
 }
 
+
+export async function getTodayScheduleData(date: string, user: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const filteredSchedules = await db
+      .collection("schedules").find({ date: date.replace(/%20/g, ' '), teacher_name: user })
+      // .find({ date, teacher_name: user })
+      .sort({ time: 1 })
+      .toArray(); // Convert to array (MongoDB cursor)
+
+    console.log(filteredSchedules)
+    const parsedSchedule = filteredSchedules.map(schedule => ({
+      room_name: schedule.room_name,
+      student_name: schedule.student_name,
+      time: schedule.time,
+      time_range: `${schedule.time - 12}pm ~ ${schedule.time - 11}pm`
+    }));
+
+    return parsedSchedule;
+  } catch (error) {
+    console.error("Error fetching one day one teacher schedule:", error);
+    throw new Error("Database error");
+  }
+}
+
+
+
 export async function saveManyScheduleData(schedule: any) {
   try {
     const { dates, time, duration, teacher_name, student_name } = schedule;

@@ -44,7 +44,7 @@ const AnnouncementPage = () => {
   useEffect(() => {
     // Fetch schedule data
     const fetchData = async () => {
-      const URL = `http://13.54.77.128/api/schedules/oneday_oneteacher/${today}/${user}`;
+      const URL = `/api/schedules/oneday_oneteacher/${today}/${user}`;
       try {
         const res = await fetch(URL, { cache: "no-store" });
         const data = await res.json();
