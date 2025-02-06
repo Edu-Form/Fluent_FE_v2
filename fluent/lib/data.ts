@@ -241,6 +241,38 @@ export async function getUserData(username: string): Promise<Student | Teacher |
 }
 
 
+export async function saveDiaryData(diary: any, diary_correction: string, diary_expressions: string, diary_summary: string) {
+  
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+
+    const modified_diary = {
+      student_name: diary.student_name,
+      class_date: diary.class_date,
+      date: diary.date,
+      original_text: diary.original_text,
+      diary_correction: diary_correction,
+      diary_expressions: diary_expressions,
+      diary_summary: diary_summary
+    };
+
+    const result = await db.collection("diary").insertOne(modified_diary);
+
+    return {
+      status_code: 200,
+      id: result.insertedId.toString(),
+      student_name: diary.student_name,
+      date: diary.date,
+      message: modified_diary
+    };
+  } catch (error) {
+    console.error("Error saving diary:", error);
+    throw new Error("Database error");
+  }
+}
+
+
 export async function saveQuizletData(quizlet: any, kor_quizlet: string[], eng_quizlet: string[]) {
   try {
     const client = await clientPromise;

@@ -13,6 +13,7 @@ export async function POST(request: Request) {
 
     
     const { student_name, class_date, date, original_text } = quizletData;
+    
 
     // Process the original text to create eng_quizlet
     let lines = original_text.split('\n');

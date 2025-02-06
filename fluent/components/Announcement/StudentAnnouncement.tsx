@@ -74,43 +74,31 @@ const AnnouncementPage = () => {
     useState<ScheduleData | null>(null);
   const [room_data, setRoom_data] = useState<RoomData | null>(null);
   const [next_schedule_data_url, setNext_schedule_data_url] = useState(
-    `/diary?user=${user}&type=${type}&id=${user_id}`
+    `/student/diary?user=${user}&type=${type}&id=${user_id}`
   );
 
   useEffect(() => {
     // 비동기 데이터 로딩 함수
     const fetchData = async () => {
-      const URL = `http://13.54.77.128/api/schedules/${type}/${user}`;
+      const URL = `/api/schedules/${type}/${user}`;
       try {
         const res = await fetch(URL, { cache: "no-store" });
         const data = await res.json();
         console.log(data);
         const next = await next_schedule(data);
         setNext_schedule_data(next); // 가져온 데이터를 상태에 설정
-        fetchRoomData(next);
       } catch (error) {
         console.log("Error");
       }
     };
 
-    const fetchRoomData = async (next_schedule_data: any) => {
-      const URL = `http://13.54.77.128/api/room_list/`;
-      try {
-        const res = await fetch(URL);
-        const data = await res.json();
-        console.log(data);
-        setRoom_data(room_description(data, next_schedule_data)); // 가져온 데이터를 상태에 설정
-      } catch (error) {
-        console.log("Error");
-      }
-    };
     fetchData(); // 데이터 요청 함수 호출
   }, [user, type]); // 컴포넌트가 처음 렌더링될 때만 실행
 
   useEffect(() => {
     if (next_schedule_data != null)
       setNext_schedule_data_url(
-        `/diary?user=${user}&type=${type}&id=${user_id}&today_date=${next_schedule_data.date}`
+        `/student/diary?user=${user}&type=${type}&id=${user_id}&today_date=${next_schedule_data.date}`
       );
   }, [next_schedule_data, type, user, user_id]);
 
@@ -147,8 +135,8 @@ const AnnouncementPage = () => {
 
           <div className="flex">
             <div className="flex flex-col text-lg text-[#32335c] ">
-              {next_schedule_data && room_data
-                ? `${next_schedule_data.room_name} - ${room_data.description}`
+              {next_schedule_data 
+                ? `${next_schedule_data.room_name}`
                 : "N/A"}
               <span className="flex justify-center text-sm  font-normal text-[#C2C2C2]">
                 Where
@@ -159,7 +147,7 @@ const AnnouncementPage = () => {
       </div>
       <Link
         className="flex mt-4  text-sm justify-end text-white hover:text-[#676ac2]"
-        href={`/schedule?user=${user}&type=${type}&id=${user_id}`}
+        href={`/student/schedule?user=${user}&type=${type}&id=${user_id}`}
       >
         For more details
         <Image
@@ -177,7 +165,7 @@ const AnnouncementPage = () => {
         </p>
 
         <div className="flex flex-col justify-start gap-4">
-          <Link href={`/quizlet?user=${user}&type=${type}&id=${user_id}`}>
+          <Link href={`/student/quizlet?user=${user}&type=${type}&id=${user_id}`}>
             <span className="flex justify-between bg-white  hover:text-white  hover:bg-[#c79868]  rounded-xl p-5 text-[#32335c]">
               Study the Quizlet{" "}
               <Image

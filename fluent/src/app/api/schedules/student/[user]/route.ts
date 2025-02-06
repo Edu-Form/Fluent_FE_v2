@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     }
 
     const schedules = await getStudentScheduleData(user); // Pass user to getTeacherScheduleData
-
+    console.log(schedules)
     if (!schedules) {
       return NextResponse.json({ error: "Schedules not found" }, { status: 404 });
     }

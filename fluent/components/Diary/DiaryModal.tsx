@@ -72,7 +72,7 @@ export default function DiaryModal({
 
       if (response.ok) {
         closeIsModal();
-        router.push(`/diary?user=${student_name}&type=${type}&id=${user_id}`);
+        router.push(`/student/diary?user=${student_name}&type=${type}&id=${user_id}`);
         window.location.reload();
       } else {
         console.error("Failed to save diary");
