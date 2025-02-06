@@ -1,11 +1,11 @@
 "use client";
 
 import EnterBtn from "@/components/EnterBtn/EnterBtn";
-
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Suspense } from "react";
 import Announcement from "@/components/Announcement/TeacherAnnouncement";
+import TeacherNotice from "@/components/TeacherNotice";
 
 const HomePage = () => {
   const searchParams = useSearchParams();
@@ -30,28 +30,34 @@ const HomePage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-2 h-full">
-      {/* 상단 영역 */}
-      <div className="flex flex-1 ">
-        {/* Announcement 컴포넌트 */}
-        <div className="flex flex-col w-[70vw] min-w-[1000px] mx-auto h-[40vh] rounded-xl bg-white cursor-pointer drop-shadow-lg">
-          <div className="flex p-5 px-8 w-full h-full overflow-auto">
-            <Announcement />
+    <div className="flex w-full h-full  justify-center items-center p-4">
+      <div className="flex flex-col w-[82vw] justify-center h-full max-h-[900px] gap-4">
+        {/* 상단 영역 */}
+        <div className="flex h-[100%] gap-4">
+          {/* 공지사항 */}
+          <div className="flex flex-col w-[65%] min-w-[700px] rounded-xl bg-white cursor-pointer drop-shadow-lg">
+            <div className="flex p-5 px-8 w-full h-full overflow-auto">
+              <Announcement />
+            </div>
+          </div>
+
+          {/* 오늘의 학생 */}
+          <div className="flex w-[35%] min-w-[300px] cursor-pointer drop-shadow-lg">
+            <TeacherNotice />
           </div>
         </div>
-      </div>
 
-      {/* 하단 영역 */}
-      <div className="flex flex-1 justify-center items-center">
-        <div className="flex w-[70vw] min-w-[1000px] justify-between">
-          <div onClick={Schedule}>
-            <EnterBtn id="schedule" image="/images/ScheduleCard.svg" />
+        {/* 하단 영역 */}
+
+        <div className="flex w-full gap-1 justify-between py-4">
+          <div className="flex-1 max-w-[480px]" onClick={Schedule}>
+            <EnterBtn id="schedule" image="/images/ScheduleCardMain.svg" />
           </div>
-          <div onClick={Quizlet}>
-            <EnterBtn id="quizlet" image="/images/QuizletCard.svg" />
+          <div className="flex-1 max-w-[480px]" onClick={Quizlet}>
+            <EnterBtn id="quizlet" image="/images/QuizletCardMain.svg" />
           </div>
-          <div onClick={Diary}>
-            <EnterBtn id="diary" image="/images/DiaryCard.svg" />
+          <div className="flex-1 max-w-[480px]" onClick={Diary}>
+            <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
           </div>
         </div>
       </div>

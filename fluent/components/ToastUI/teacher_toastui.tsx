@@ -26,16 +26,6 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
   const [scheduleData, setScheduleData] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null); // 선택된 이벤트
 
-  calendarInstanceRef.current?.on(
-    "clickDayname"
-    // ({ date }: { date: Date }) => {
-    // const formattedDate = `${date.getFullYear()}. ${
-    //   date.getMonth() + 1
-    // }. ${date.getDate()}`;
-    // onDateClick(formattedDate); // 클릭된 날짜 전달
-    // }
-  );
-
   //시간췌크
   const [currentDate, setCurrentDate] = useState({
     year: new Date().getFullYear(),
