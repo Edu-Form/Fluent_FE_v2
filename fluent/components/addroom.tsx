@@ -90,7 +90,7 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
   }
 
   async function saveClass() {
-    alert("수업이 등록되었습니다!"); // Alert 메시지 출력
+    
     const formattedDate = date
       ? date.toLocaleDateString("ko-KR", {
           year: "numeric",
@@ -115,6 +115,10 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
     });
 
     if (response.status == 200) {
+      alert("수업이 등록되었습니다!"); // Alert 메시지 출력
+      window.location.reload(); // 새로고침
+    } else {
+      alert("수업 등록에 실패했습니다. 다시 시도해주세요."); // Alert 메시지 출력
       window.location.reload(); // 새로고침
     }
   }

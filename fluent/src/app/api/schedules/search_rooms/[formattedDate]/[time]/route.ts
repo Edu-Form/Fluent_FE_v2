@@ -12,7 +12,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Missing date or time parameter" }, { status: 400 });
     }
 
-    const availableRooms = await getRoomData(date, parseInt(time, 10));
+    const availableRooms = await getRoomData(date, time);
 
     return NextResponse.json(availableRooms);
   } catch (error) {

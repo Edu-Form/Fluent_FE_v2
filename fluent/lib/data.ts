@@ -83,16 +83,16 @@ export async function getStudentListData(teacherName: string) {
   }
 }
 
-export const getRoomData = async (date: string, time: number) => {
+export const getRoomData = async (date: string, time: string) => {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
     const filteredSchedules = await db
       .collection("schedules")
-      .find({ date, time })
+      .find({ date: date.replace(/%20/g, ' '), time})
       .sort({ room_name: 1 })
       .toArray(); // Convert to array (MongoDB cursor)
-
+    console.log(filteredSchedules)
     
     // Get all room names
     const db2 = client.db("room_allocation_db");
@@ -101,15 +101,14 @@ export const getRoomData = async (date: string, time: number) => {
       .find().toArray();
     const allRoomNames = allRooms.map((room) => room.room_name);
 
-    // Cross out unavailable rooms using splice()
-    for (const schedule of filteredSchedules) {
-      const index = allRoomNames.indexOf(schedule.room_name);
-      if (index !== -1) {
-        allRoomNames.splice(index, 1); // Removes the specific unavailable room
-      }
-    }
+    // Create a Set of unavailable rooms
+    const unavailableRooms = new Set(filteredSchedules.map((schedule) => schedule.room_name));
 
-    return allRoomNames.map(serialize_document); // Serialize and return
+    // Filter out unavailable rooms from the allRoomNames list
+    const availableRooms = allRoomNames.filter((roomName) => !unavailableRooms.has(roomName));
+
+    console.log(availableRooms)
+    return availableRooms.map(serialize_document); // Serialize and return
   } catch (error) {
     console.error("Error fetching rooms:", error);
     throw new Error("Database error");
@@ -151,6 +150,23 @@ export const getStudentScheduleData = async (studentName: string) => {
     throw new Error("Database error");
   }
 };
+
+export async function deductCredit(student_name: string, date: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const studentData = await db.collection("students").findOne({ name: student_name })|| { paymentHistory: "" };
+    const result = await db.collection("students").updateOne({ name: student_name }, { $inc: { credits: -1 } });
+    const result2 = await db.collection("students").updateOne(
+      { name: student_name },
+      { $set: { paymentHistory: `${studentData.paymentHistory} ${date}: Credit -1`} }
+    );
+    return result;
+  } catch (error) {
+    console.error("Error deducting credit:", error);
+    throw new Error("Database error");
+  }
+}
 
 export async function saveScheduleData(schedule: any) {
   try {
