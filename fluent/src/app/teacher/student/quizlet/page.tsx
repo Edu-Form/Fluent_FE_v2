@@ -129,7 +129,7 @@ const QuizletPage = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.3 }}
-            className="w-full h-full max-w-5xl bg-white rounded-2xl shadow-lg overflow-hidden"
+            className="w-full h-full max-w-5xl bg-white rounded-2xl shadow-lg"
           >
             {/* Date Header */}
             <div className="relative bg-gradient-to-r from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4">

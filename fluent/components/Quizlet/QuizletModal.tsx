@@ -93,7 +93,7 @@ export default function QuizletModal({
         </div>
       )}
 
-      <div className="relative w-[420px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+      <div className="relative w-[720px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
         <button
           onClick={() => !loading && closeIsModal()}
           className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
@@ -120,6 +120,25 @@ export default function QuizletModal({
           </h2>
 
           <div className="space-y-2">
+            {/* <label htmlFor="date" className="text-md font-bold text-gray-700">
+              Today is
+            </label>
+            <div className="w-full text-center px-4 py-1 text-xl font-bold text-gray-700">
+              <span className="block">{today_formatted()}</span>
+            </div> */}
+            {/* <input
+              type="date"
+              name="date"
+              id="date"
+              defaultValue={today_formatted()}
+              onChange={(e) => setDate(formatToSave(e.target.value))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 transition-all"
+              required
+              disabled={loading}
+            /> */}
+          </div>
+
+          <div className="space-y-2">
             <label
               htmlFor="class_date"
               className="text-sm font-medium text-gray-700"
@@ -138,21 +157,7 @@ export default function QuizletModal({
             />
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="date" className="text-sm font-medium text-gray-700">
-              Date
-            </label>
-            <input
-              type="date"
-              name="date"
-              id="date"
-              defaultValue={today_formatted()}
-              onChange={(e) => setDate(formatToSave(e.target.value))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 transition-all"
-              required
-              disabled={loading}
-            />
-          </div>
+
 
           <div className="space-y-2">
             <label
@@ -163,7 +168,7 @@ export default function QuizletModal({
             </label>
             <textarea
               id="original_text"
-              rows={8}
+              rows={14}
               onChange={(e) => setOriginal_text(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 resize-none"
               placeholder="Enter quizlet content here..."

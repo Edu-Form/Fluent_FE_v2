@@ -95,7 +95,7 @@ export default function DiaryModal({
         </div>
       )}
 
-      <div className="relative w-[420px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+      <div className="relative w-[720px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
         {/* 닫기 버튼 */}
         <button
           onClick={() => !loading && closeIsModal()}
@@ -142,7 +142,7 @@ export default function DiaryModal({
             />
           </div>
 
-          {/* 일기 날짜 입력 */}
+          {/* 일기 날짜 입력
           <div className="space-y-2">
             <label htmlFor="date" className="text-sm font-medium text-gray-700">
               Date
@@ -157,7 +157,7 @@ export default function DiaryModal({
               required
               disabled={loading}
             />
-          </div>
+          </div> */}
 
           {/* 일기 내용 입력 */}
           <div className="space-y-2">
@@ -169,7 +169,7 @@ export default function DiaryModal({
             </label>
             <textarea
               id="original_text"
-              rows={8}
+              rows={14}
               onChange={(e) => setMessage(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 resize-none"
               placeholder="What did you do today?"

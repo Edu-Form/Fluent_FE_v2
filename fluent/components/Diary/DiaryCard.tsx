@@ -126,7 +126,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.3 }}
-            className="w-full max-w-6xl h-full bg-white rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-6xl h-full bg-white rounded-2xl shadow-2xl"
           >
             {/* Date Header */}
             <div className="relative bg-gradient-to-r from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4 flex items-center justify-between">
@@ -208,7 +208,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
 
               {/* Content Area */}
               <div className="p-4 sm:p-6">
-                <div className="overflow-y-auto max-h-[50vh] md:max-h-[60vh] lg:max-h-[70vh] bg-gray-50 rounded-xl p-4 shadow-inner">
+                <div className="overflow-y-auto bg-gray-50 rounded-xl p-4 shadow-inner">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={activeSection}
@@ -224,7 +224,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                             <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 text-[#3f4166] flex items-center">
                               <FiBook className="mr-2" /> Original Diary
                             </h2>
-                            <div className="max-h-[40vh] overflow-y-auto pr-2">
+                            <div className="overflow-y-auto pr-2">
                               <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
                                 {diary.original_text}
                               </p>
@@ -235,7 +235,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                             <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-[#bbb5ff] via-[#ff00ae] to-[#ff00a6] text-transparent bg-clip-text flex items-center">
                               <span className="mr-2">✨</span> Corrected Diary
                             </h2>
-                            <div className="max-h-[40vh] overflow-y-auto pr-2">
+                            <div className="overflow-y-auto pr-2">
                               <motion.div
                                 variants={typingVariants}
                                 className="text-sm sm:text-base text-gray-700 leading-relaxed"

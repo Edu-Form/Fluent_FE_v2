@@ -25,7 +25,7 @@ export default function RootLayout({
           </div>
 
           {/* Main Content Section */}
-          <div className="flex-1 overflow-hidden px-4 ">{children}</div>
+            <div className="flex-1 px-4">{children}</div>
 
           {/* Navigation Section - Fixed at bottom */}
           <div className="flex-none h-20">

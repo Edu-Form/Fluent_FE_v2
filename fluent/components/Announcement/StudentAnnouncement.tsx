@@ -61,9 +61,23 @@ const AnnouncementPage = () => {
       } catch (error) {
         console.log("Error fetching schedule data");
       }
+
+    };
+
+    const fetchData2 = async () => {
+      const URL2 = `/api/user/${user_id}`;
+      try {
+        const res2 = await fetch(URL2, { cache: "no-store" });
+        const data2 = await res2.json();
+        console.log(data2.credits)
+        setUserCredits(data2.credits);
+      } catch (error) {
+        console.log("Error fetching student data");
+      }
     };
 
     fetchData();
+    fetchData2();
   }, [user, type]);
 
   return (
