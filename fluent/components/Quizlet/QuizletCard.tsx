@@ -38,7 +38,7 @@ export default function QuizletCard({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-full bg-gray-100 ">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-lg">
         {/* 카드 컨테이너 */}
         <motion.div
           className="relative w-full aspect-[4/3] perspective-1000"
