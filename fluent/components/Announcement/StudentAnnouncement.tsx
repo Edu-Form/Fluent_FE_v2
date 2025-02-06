@@ -58,10 +58,9 @@ const AnnouncementPage = () => {
         const data = await res.json();
         const next = next_schedule(data);
         setNext_schedule_data(next);
-      } catch (error) {
+      } catch {
         console.log("Error fetching schedule data");
       }
-
     };
 
     const fetchData2 = async () => {
@@ -69,16 +68,16 @@ const AnnouncementPage = () => {
       try {
         const res2 = await fetch(URL2, { cache: "no-store" });
         const data2 = await res2.json();
-        console.log(data2.credits)
+        console.log(data2.credits);
         setUserCredits(data2.credits);
-      } catch (error) {
+      } catch {
         console.log("Error fetching student data");
       }
     };
 
     fetchData();
     fetchData2();
-  }, [user, type]);
+  }, [user, type, user_id]);
 
   return (
     <div className="bg-gray-50 min-h-full">

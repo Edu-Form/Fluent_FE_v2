@@ -1,8 +1,7 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
 import dynamic from "next/dynamic";
 
 import "react-day-picker/dist/style.css";
@@ -13,13 +12,23 @@ const StudentToastUI = dynamic(
     ssr: false,
   }
 );
-
+interface ClassData {
+  _id: string;
+  id: string;
+  calendarId: string;
+  room_name: string;
+  date: string | undefined;
+  time: number;
+  duration: number;
+  teacher_name: string;
+  student_name: string;
+}
 const SchedulePage = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
 
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<ClassData[]>([]);
 
   const URL = `/api/schedules/${type}/${user}`;
 
@@ -34,7 +43,6 @@ const SchedulePage = () => {
         setClasses(data);
       })
       .catch((error) => console.log("값을 불러오지 못 합니다", error));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, URL, classes.length]);
 
   return (

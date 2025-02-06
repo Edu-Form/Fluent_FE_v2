@@ -36,7 +36,7 @@ const TeacherNotice = () => {
       );
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [announcements.length]);
 
   const handlePrevious = () => {
     setCurrentIndex((prevIndex) =>
