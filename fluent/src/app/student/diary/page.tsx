@@ -66,24 +66,6 @@ const DiaryPage = ({ student_list }: any) => {
 
   return (
     <>
-      {/* <div className="w-full h-full hide-scrollbar overflow-y-scroll  relative flex justify-center items-center">
-        <Image src={DiaryBg} alt="diarymain" layout="fill" objectFit="cover" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-0 text-center">
-          <span className="text-white text-3xl">{user}&apos;s Diary.</span>
-          <span className="animate-blink text-white text-4xl">|</span>
-        </div>
-        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-0">
-          <motion.span
-            initial="hidden"
-            animate="visible"
-            variants={variants}
-            className="text-white text-[3rem]"
-          >
-            ↓
-          </motion.span>
-        </div>
-      </div> */}
-
       <div className="relative w-full h-full  hide-scrollbar overflow-y-scroll">
         <DiaryCard
           diarydata={

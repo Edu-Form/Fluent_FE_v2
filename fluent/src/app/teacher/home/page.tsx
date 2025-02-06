@@ -49,7 +49,7 @@ const HomePage = () => {
 
         {/* 하단 영역 */}
 
-        <div className="flex w-full gap-1 justify-between py-4">
+        <div className="flex w-full gap-10 justify-between py-4">
           <div className="flex-1 max-w-[480px]" onClick={Schedule}>
             <EnterBtn id="schedule" image="/images/ScheduleCardMain.svg" />
           </div>

@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Calendar from "@toast-ui/calendar";
 import "@toast-ui/calendar/dist/toastui-calendar.min.css";
-import axios from "axios"; // Axios를 사용하여 API 호출
-import { API } from "@/utils/api";
 
 interface ToastUIProps {
   data: {
@@ -24,7 +22,6 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const calendarInstanceRef = useRef<typeof Calendar | null>(null);
   const [scheduleData, setScheduleData] = useState<any[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null); // 선택된 이벤트
 
   //시간췌크
   const [currentDate, setCurrentDate] = useState({
@@ -151,7 +148,6 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
       ({ event }: { event: any }) => {
         const clickedEvent = event.raw;
         console.log("클릭한 이벤트 데이터:", clickedEvent); // 클릭한 이벤트 데이터 콘솔에 출력
-        setSelectedEvent(clickedEvent); // 클릭한 이벤트 저장
       }
     );
     // 현재 표시 중인 연도와 월 업데이트
@@ -223,7 +219,7 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
 
       <div
         ref={calendarContainerRef}
-        style={{ width: "100%", height: "60vh" }}
+        style={{ width: "100%", height: "65vh" }}
       />
     </div>
   );

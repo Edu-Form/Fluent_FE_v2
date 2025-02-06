@@ -4,7 +4,6 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiCalendar,
-  FiEdit2,
   FiBook,
   FiList,
   FiMessageCircle,
@@ -24,9 +23,9 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<
-    "original" | "corrected" | "summary" | "expressions"
-  >("original");
+  const [activeSection, setActiveSection] = useState<"diary" | "summary">(
+    "diary"
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const openIsModal = () => setIsModalOpen(true);
@@ -141,7 +140,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                   className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full cursor-pointer transition-all"
                 >
                   <FiCalendar className="w-4 h-4" />
-                  <span className="text-sm font-medium whitespace-nowrap ">
+                  <span className="text-sm font-medium whitespace-nowrap">
                     날짜 선택
                   </span>
                   <div className="px-1.5 py-0.5 bg-white/20 rounded-md text-xs animate-pulse">
@@ -182,24 +181,14 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
               <div className="flex border-b border-gray-200">
                 {[
                   {
-                    name: "original",
-                    label: "Original Diary",
+                    name: "diary",
+                    label: "Diary",
                     icon: <FiBook className="mr-2" />,
-                  },
-                  {
-                    name: "corrected",
-                    label: "Corrected Diary",
-                    icon: <FiEdit2 className="mr-2" />,
                   },
                   {
                     name: "summary",
                     label: "Summary",
                     icon: <FiList className="mr-2" />,
-                  },
-                  {
-                    name: "expressions",
-                    label: "Key Expressions",
-                    icon: <FiMessageCircle className="mr-2" />,
                   },
                 ].map((section) => (
                   <button
@@ -218,84 +207,81 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
               </div>
 
               {/* Content Area */}
-              <div className="p-4 sm:p-6 overflow-y-auto max-h-[70vh]">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeSection}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {activeSection === "original" && (
-                      <div className="bg-gray-50 rounded-xl p-4 sm:p-6 shadow-inner">
-                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 text-[#3f4166] flex items-center">
-                          <FiBook className="mr-2" /> Original Diary
-                        </h2>
-                        <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
-                          {diary.original_text}
-                        </p>
-                      </div>
-                    )}
-
-                    {activeSection === "corrected" && (
-                      <div className="bg-gradient-to-br from-[#e6f2ff] to-[#f3e6ff] rounded-xl p-4 sm:p-6 shadow-inner">
-                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-[#bbb5ff] via-[#ff00ae] to-[#ff00a6] text-transparent bg-clip-text flex items-center">
-                          <span className="mr-2">✨</span> Corrected Diary
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-white/50 rounded-lg p-3 shadow">
-                            <h3 className="text-sm font-semibold mb-2 text-[#3f4166]">
-                              Original
-                            </h3>
-                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                              {diary.original_text}
-                            </p>
+              <div className="p-4 sm:p-6">
+                <div className="overflow-y-auto max-h-[50vh] md:max-h-[60vh] lg:max-h-[70vh] bg-gray-50 rounded-xl p-4 shadow-inner">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeSection}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      {activeSection === "diary" && (
+                        <div className="space-y-6">
+                          <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+                            <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 text-[#3f4166] flex items-center">
+                              <FiBook className="mr-2" /> Original Diary
+                            </h2>
+                            <div className="max-h-[40vh] overflow-y-auto pr-2">
+                              <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                {diary.original_text}
+                              </p>
+                            </div>
                           </div>
-                          <div className="bg-white/50 rounded-lg p-3 shadow">
-                            <h3 className="text-sm font-semibold mb-2 text-[#e600ff]">
-                              Corrected
-                            </h3>
-                            <motion.div
-                              variants={typingVariants}
-                              className="text-sm text-gray-700 leading-relaxed"
-                            >
-                              {splitText(diary.diary_correction)}
-                            </motion.div>
+
+                          <div className="bg-gradient-to-br from-[#e6f2ff] to-[#f3e6ff] rounded-xl p-4 sm:p-6 shadow-sm">
+                            <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-[#bbb5ff] via-[#ff00ae] to-[#ff00a6] text-transparent bg-clip-text flex items-center">
+                              <span className="mr-2">✨</span> Corrected Diary
+                            </h2>
+                            <div className="max-h-[40vh] overflow-y-auto pr-2">
+                              <motion.div
+                                variants={typingVariants}
+                                className="text-sm sm:text-base text-gray-700 leading-relaxed"
+                              >
+                                {splitText(diary.diary_correction)}
+                              </motion.div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {activeSection === "summary" && (
-                      <div className="bg-gray-50 rounded-xl p-4 sm:p-6 shadow-inner">
-                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 text-[#3f4166] flex items-center">
-                          <FiList className="mr-2" /> Summary
-                        </h2>
-                        <motion.div
-                          variants={typingVariants}
-                          className="text-sm sm:text-base text-gray-700 leading-relaxed"
-                        >
-                          {splitText(diary.diary_summary)}
-                        </motion.div>
-                      </div>
-                    )}
+                      {activeSection === "summary" && (
+                        <div className="space-y-6">
+                          <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+                            <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 text-[#3f4166] flex items-center">
+                              <FiList className="mr-2" /> Summary
+                            </h2>
+                            <div className="max-h-[40vh] overflow-y-auto pr-2">
+                              <motion.div
+                                variants={typingVariants}
+                                className="text-sm sm:text-base text-gray-700 leading-relaxed"
+                              >
+                                {splitText(diary.diary_summary)}
+                              </motion.div>
+                            </div>
+                          </div>
 
-                    {activeSection === "expressions" && (
-                      <div className="bg-gray-50 rounded-xl p-4 sm:p-6 shadow-inner">
-                        <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 text-[#3f4166] flex items-center">
-                          <FiMessageCircle className="mr-2" /> Key Expressions
-                        </h2>
-                        <motion.div
-                          variants={typingVariants}
-                          className="text-sm sm:text-base text-gray-700 leading-relaxed"
-                        >
-                          {splitText(diary.diary_expressions)}
-                        </motion.div>
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
+                          <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+                            <h2 className="text-base sm:text-xl font-bold mb-2 sm:mb-4 text-[#3f4166] flex items-center">
+                              <FiMessageCircle className="mr-2" /> Key
+                              Expressions
+                            </h2>
+                            <div className="max-h-[40vh] overflow-y-auto pr-2">
+                              <motion.div
+                                variants={typingVariants}
+                                className="text-sm sm:text-base text-gray-700 leading-relaxed"
+                              >
+                                {splitText(diary.diary_expressions)}
+                              </motion.div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -324,73 +310,28 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         </div>
       </div>
 
-      {/* Custom DatePicker Styles */}
-      <style jsx global>{`
-        .react-datepicker {
-          font-family: inherit;
-          border-radius: 0.5rem;
-          border: 1px solid #e2e8f0;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-          background-color: white;
+      {/* Custom Scrollbar Styles */}
+      <style jsx>{`
+        .overflow-y-auto {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(63, 65, 102, 0.3) transparent;
         }
 
-        .react-datepicker__header {
-          background-color: #3f4166;
-          border-bottom: none;
-          border-top-left-radius: 0.5rem;
-          border-top-right-radius: 0.5rem;
-          padding: 1rem;
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 6px;
         }
 
-        .react-datepicker__current-month {
-          color: white;
-          font-weight: 600;
-          font-size: 1rem;
-          margin-bottom: 0.5rem;
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: transparent;
         }
 
-        .react-datepicker__day-names {
-          margin-top: 0.5rem;
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background-color: rgba(63, 65, 102, 0.3);
+          border-radius: 20px;
         }
 
-        .react-datepicker__day-name {
-          color: rgba(255, 255, 255, 0.8);
-          font-weight: 500;
-          width: 2rem;
-          margin: 0.2rem;
-        }
-
-        .react-datepicker__day {
-          width: 2rem;
-          height: 2rem;
-          line-height: 2rem;
-          margin: 0.2rem;
-          border-radius: 0.3rem;
-          color: #374151;
-        }
-
-        .react-datepicker__day--selected {
-          background-color: #3f4166 !important;
-          color: white !important;
-          font-weight: 600;
-        }
-
-        .react-datepicker__day--keyboard-selected {
-          background-color: rgba(63, 65, 102, 0.1) !important;
-          color: #3f4166 !important;
-        }
-
-        .react-datepicker__day:hover {
-          background-color: rgba(63, 65, 102, 0.1);
-        }
-
-        .react-datepicker__day--disabled {
-          color: #cbd5e0;
-        }
-
-        .react-datepicker__day--today {
-          font-weight: 600;
-          color: #3f4166;
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(63, 65, 102, 0.5);
         }
       `}</style>
     </>

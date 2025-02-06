@@ -40,7 +40,7 @@ export default function Alert() {
       }`}
     >
       <div
-        className={`flex items-center relative bg-[#2675f8] w-[82vw]  px-8 py-5 overflow-hidden rounded-lg min-w-[1000px]  ${
+        className={`flex items-center relative bg-[#2675f8] w-[95vw]  px-8 py-5 overflow-hidden rounded-lg min-w-[1000px]  ${
           isHomePage || displayPage ? "hidden" : ""
         }`}
       >

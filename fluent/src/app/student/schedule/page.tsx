@@ -13,19 +13,11 @@ const StudentToastUI = dynamic(
     ssr: false,
   }
 );
-const TeacherToastUI = dynamic(
-  () => import("@/components/ToastUI/teacher_toastui"),
-  {
-    ssr: false,
-  }
-);
 
 const SchedulePage = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
-  const user_id = searchParams.get("id");
-  const router = useRouter();
 
   const [classes, setClasses] = useState<any[]>([]);
 
@@ -46,9 +38,9 @@ const SchedulePage = () => {
   }, [user, URL, classes.length]);
 
   return (
-    <div className="flex w-full h-full overflow-hidden p-1">
+    <div className="flex w-full h-full overflow-hidden p-2">
       <div className="flex-1 flex justify-center items-center max-w-full max-h-full overflow-auto">
-        <div className="bg-white w-[95%] h-[90%] max-w-full m-5 p-5 rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white w-[95%] h-[90%] max-w-full m-5 p-5 rounded-xl shadow-lg overflow-hidden">
           <StudentToastUI data={classes} />
         </div>
       </div>

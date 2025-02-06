@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { Suspense } from "react";
-import EnterBtn from "../EnterBtn/EnterBtn";
-import Button from "../Button/Button";
+import { Check, Calendar, FileText, ClipboardList } from "lucide-react";
+import { Clock, BookOpen } from "lucide-react";
+import { MdDiamond } from "react-icons/md";
 
 interface ScheduleData {
   date: string;
@@ -15,53 +15,26 @@ interface ScheduleData {
   time: number;
 }
 
-interface RoomData {
-  room_name: string;
-  description: string;
-}
-
 function next_schedule(data: any) {
   const today = new Date();
-
-  // Format today's date to match the input data format
   const formattedToday = today.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
 
-  console.log(formattedToday);
-
-  // Iterate over the sorted data to find the first valid schedule
   for (const item of data) {
     if (item.date >= formattedToday) {
-      // String comparison
-      console.log("Next class:", item);
-      return item; // Return the first valid schedule
+      return item;
     }
   }
 
-  // If no valid schedule is found
-  console.log("No upcoming classes found.");
   return null;
 }
 
-function room_description(data: any, next_schedule_data: any) {
-  for (const item of data) {
-    console.log(item);
-    console.log(next_schedule_data.room_name);
-    if (item.room_name == next_schedule_data.room_name) {
-      // String comparison
-      console.log("Room Description", item);
-      return item; // Return room description
-    }
-  }
-}
-
-function convertTo12HourFormat(time24: any) {
-  console.log(time24);
+function convertTo12HourFormat(time24: number) {
   const suffix = time24 >= 12 ? "PM" : "AM";
-  const hours12 = time24 % 12 || 12; // Convert 0 to 12 for midnight
+  const hours12 = time24 % 12 || 12;
   return `${hours12} ${suffix}`;
 }
 
@@ -70,131 +43,166 @@ const AnnouncementPage = () => {
   const user = searchParams.get("user");
   const type = searchParams.get("type");
   const user_id = searchParams.get("id");
+  const [userCredits, setUserCredits] = useState(5);
+
   const [next_schedule_data, setNext_schedule_data] =
     useState<ScheduleData | null>(null);
-  const [room_data, setRoom_data] = useState<RoomData | null>(null);
-  const [next_schedule_data_url, setNext_schedule_data_url] = useState(
-    `/student/diary?user=${user}&type=${type}&id=${user_id}`
-  );
+  const [isDiaryCompleted, setIsDiaryCompleted] = useState(false);
+  const [isQuizletCompleted, setIsQuizletCompleted] = useState(false);
 
   useEffect(() => {
-    // 비동기 데이터 로딩 함수
     const fetchData = async () => {
       const URL = `/api/schedules/${type}/${user}`;
       try {
         const res = await fetch(URL, { cache: "no-store" });
         const data = await res.json();
-        console.log(data);
-        const next = await next_schedule(data);
-        setNext_schedule_data(next); // 가져온 데이터를 상태에 설정
+        const next = next_schedule(data);
+        setNext_schedule_data(next);
       } catch (error) {
-        console.log("Error");
+        console.log("Error fetching schedule data");
       }
     };
 
-    fetchData(); // 데이터 요청 함수 호출
-  }, [user, type]); // 컴포넌트가 처음 렌더링될 때만 실행
-
-  useEffect(() => {
-    if (next_schedule_data != null)
-      setNext_schedule_data_url(
-        `/student/diary?user=${user}&type=${type}&id=${user_id}&today_date=${next_schedule_data.date}`
-      );
-  }, [next_schedule_data, type, user, user_id]);
+    fetchData();
+  }, [user, type]);
 
   return (
-    <div className="flex flex-col z-50 font-bold">
-      <span className={`my-5 text-xl text-white font-['Playwrite']`}>
-        Fluent
-      </span>
-      <h1 className="text-2xl mt-9 mb-4 text-white">Hi, {user} !</h1>
-
-      <div className="border-[2px] bg-white border-[#32335c] rounded-2xl w-[30rem] p-6">
-        <div className="flex justify-around">
-          <div className="flex">
-            <div className=" flex flex-col text-lg text-[32335c#0FA7FF] ">
-              {next_schedule_data
-                ? next_schedule_data.date
-                : "No upcoming classes"}
-              <span className="flex justify-center text-sm  font-normal text-[#C2C2C2]">
-                Next class
-              </span>{" "}
-            </div>
+    <div className="bg-gray-50 min-h-full">
+      <div className="max-w-8xl  space-y-6">
+        {/* 인사말 섹션 */}
+        <div className="flex items-center justify-between bg-white rounded-2xl p-6 shadow-sm">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              안녕하세요, {user}님
+            </h1>
+            <p className="text-gray-600 mt-1">
+              오늘의 학습 계획을 확인해보세요
+            </p>
           </div>
-
-          <div className="flex">
-            <div className="flex flex-col text-lg text-[#32335c] ">
-              {next_schedule_data
-                ? convertTo12HourFormat(next_schedule_data.time)
-                : "N/A"}
-              <span className="flex justify-center text-sm font-normal text-[#C2C2C2]">
-                Time
-              </span>{" "}
+          <div className="flex items-center space-x-2 bg-amber-50 rounded-full px-8 py-4">
+            <div className="flex  text-amber-700 items-center space-x-1">
+              {" "}
+              <MdDiamond />
+              <p className="text-xl font-bold">Credit</p>
             </div>
-          </div>
 
-          <div className="flex">
-            <div className="flex flex-col text-lg text-[#32335c] ">
-              {next_schedule_data 
-                ? `${next_schedule_data.room_name}`
-                : "N/A"}
-              <span className="flex justify-center text-sm  font-normal text-[#C2C2C2]">
-                Where
-              </span>{" "}
-            </div>
+            <span className="text-xl font-bold text-amber-700">
+              {userCredits.toLocaleString()}
+            </span>
           </div>
         </div>
-      </div>
-      <Link
-        className="flex mt-4  text-sm justify-end text-white hover:text-[#676ac2]"
-        href={`/student/schedule?user=${user}&type=${type}&id=${user_id}`}
-      >
-        For more details
-        <Image
-          src={"/images/arrow.svg"}
-          alt=""
-          width={14}
-          height={14}
-          className="ml-1 text-center items-center"
-        />
-      </Link>
 
-      <div className="mt-10">
-        <p className="text-lg mb-4 text-white">
-          Did you check everything for your class?
-        </p>
+        {/* 다음 수업 */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">다음 수업</h2>
+            <Link
+              href={`/student/schedule?user=${user}&type=${type}&id=${user_id}`}
+              className="text-blue-600 hover:text-blue-700 transition-colors"
+            >
+              전체 일정
+            </Link>
+          </div>
 
-        <div className="flex flex-col justify-start gap-4">
-          <Link href={`/student/quizlet?user=${user}&type=${type}&id=${user_id}`}>
-            <span className="flex justify-between bg-white  hover:text-white  hover:bg-[#c79868]  rounded-xl p-5 text-[#32335c]">
-              Study the Quizlet{" "}
-              <Image
-                src={"/images/arrow.svg"}
-                alt=""
-                width={30}
-                height={30}
-                className="ml-1 text-center items-center"
-              />
-            </span>
-          </Link>
-          <Link href={next_schedule_data_url}>
-            <span className="flex justify-between bg-white hover:text-white  hover:bg-[#c79868]  rounded-xl p-5 text-[#32335c]">
-              Write the Diary
-              <Image
-                src={"/images/arrow.svg"}
-                alt=""
-                width={30}
-                height={30}
-                className="ml-1 text-center items-center"
-              />
-            </span>
-          </Link>
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              {
+                icon: <Calendar className="w-6 h-6 text-blue-600" />,
+                label: "날짜",
+                value: next_schedule_data?.date || "예정된 수업 없음",
+                bgColor: "bg-blue-50",
+                textColor: "text-blue-900",
+              },
+              {
+                icon: <Clock className="w-6 h-6 text-green-600" />,
+                label: "시간",
+                value: next_schedule_data
+                  ? convertTo12HourFormat(next_schedule_data.time)
+                  : "N/A",
+                bgColor: "bg-green-50",
+                textColor: "text-green-900",
+              },
+              {
+                icon: <BookOpen className="w-6 h-6 text-purple-600" />,
+                label: "강의실",
+                value: next_schedule_data?.room_name || "N/A",
+                bgColor: "bg-purple-50",
+                textColor: "text-purple-900",
+              },
+            ].map((item, index) => (
+              <div
+                key={index}
+                className={`${item.bgColor} rounded-xl p-4 flex items-center space-x-3`}
+              >
+                <div className="p-2 rounded-lg bg-white/50">{item.icon}</div>
+                <div>
+                  <h3 className="text-xs text-gray-500 mb-1">{item.label}</h3>
+                  <p className={`font-bold ${item.textColor}`}>{item.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 체크리스트 */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">
+            오늘의 체크리스트
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              {
+                icon: FileText,
+                title: "Diary 작성",
+                completedBg: "bg-orange-500",
+                uncompletedBg: "bg-orange-50",
+                completedText: "text-orange-900",
+                state: isDiaryCompleted,
+                toggle: () => setIsDiaryCompleted(!isDiaryCompleted),
+              },
+              {
+                icon: ClipboardList,
+                title: "Quizlet 학습",
+                completedBg: "bg-purple-500",
+                uncompletedBg: "bg-purple-50",
+                completedText: "text-purple-900",
+                state: isQuizletCompleted,
+                toggle: () => setIsQuizletCompleted(!isQuizletCompleted),
+              },
+            ].map((item, index) => (
+              <button
+                key={index}
+                onClick={item.toggle}
+                className={`rounded-xl p-5 text-left flex items-center justify-between transition-all ${
+                  item.state
+                    ? `${item.completedBg} text-white`
+                    : `${item.uncompletedBg} ${item.completedText} hover:bg-opacity-80`
+                }`}
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 rounded-lg bg-white/20">
+                    <item.icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{item.title}</h3>
+                    <p className="text-sm opacity-70">
+                      {item.state ? "완료됨" : "시작하기"}
+                    </p>
+                  </div>
+                </div>
+                <Check
+                  className={`w-6 h-6 ${
+                    item.state ? "text-white" : "text-opacity-50"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
 };
-
 export default function Announcement() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
