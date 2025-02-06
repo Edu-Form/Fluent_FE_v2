@@ -1,11 +1,10 @@
-import { ObjectId } from "mongodb"
-import { clientPromise } from '@/lib/mongodb';
-import type { Student, Teacher } from "./definitions"
-
+import { ObjectId } from "mongodb";
+import { clientPromise } from "@/lib/mongodb";
+import type { Student, Teacher } from "./definitions";
 
 export function serialize_document(document: any) {
   if (document._id) {
-    document._id = document._id.toString();  // Convert _id to string
+    document._id = document._id.toString(); // Convert _id to string
   }
   return document;
 }
@@ -20,10 +19,10 @@ export async function getStudentQuizletData(student_name: string) {
       .collection("quizlet")
       .find({ student_name })
       .sort({ date: 1 })
-      .toArray();  // Convert cursor to an array
+      .toArray(); // Convert cursor to an array
 
     if (!filteredQuizlets || filteredQuizlets.length === 0) {
-      return null;  // Return null if no quizlets are found
+      return null; // Return null if no quizlets are found
     }
 
     // Serialize the documents before returning (optional, but generally recommended)
@@ -33,7 +32,6 @@ export async function getStudentQuizletData(student_name: string) {
     return null;
   }
 }
-
 
 export async function getStudentDiaryData(student_name: string) {
   try {
@@ -45,10 +43,10 @@ export async function getStudentDiaryData(student_name: string) {
       .collection("diary")
       .find({ student_name })
       .sort({ date: 1 })
-      .toArray();  // Convert cursor to an array
-    console.log(filteredDiaries)
+      .toArray(); // Convert cursor to an array
+    console.log(filteredDiaries);
     if (!filteredDiaries || filteredDiaries.length === 0) {
-      return null;  // Return null if no diaries are found
+      return null; // Return null if no diaries are found
     }
 
     // Serialize the documents before returning (optional, but generally recommended)
@@ -69,14 +67,14 @@ export async function getStudentListData(teacherName: string) {
       .collection("students")
       .find({ teacher: teacherName })
       .sort({ name: 1 })
-      .toArray();  // Convert cursor to an array
+      .toArray(); // Convert cursor to an array
 
     if (!filteredStudents || filteredStudents.length === 0) {
-      return null;  // Return null if no students are found
+      return null; // Return null if no students are found
     }
 
     // Serialize the documents before returning (optional, but generally recommended)
-    return filteredStudents.map(student => student.name);
+    return filteredStudents.map((student) => student.name);
   } catch (error) {
     console.error("Error fetching students:", error);
     return null;
@@ -89,31 +87,33 @@ export const getRoomData = async (date: string, time: string) => {
     const db = client.db("school_management");
     const filteredSchedules = await db
       .collection("schedules")
-      .find({ date: date.replace(/%20/g, ' '), time})
+      .find({ date: date.replace(/%20/g, " "), time })
       .sort({ room_name: 1 })
       .toArray(); // Convert to array (MongoDB cursor)
-    console.log(filteredSchedules)
-    
+    console.log(filteredSchedules);
+
     // Get all room names
     const db2 = client.db("room_allocation_db");
-    const allRooms = await db2
-      .collection("roomList")
-      .find().toArray();
+    const allRooms = await db2.collection("roomList").find().toArray();
     const allRoomNames = allRooms.map((room) => room.room_name);
 
     // Create a Set of unavailable rooms
-    const unavailableRooms = new Set(filteredSchedules.map((schedule) => schedule.room_name));
+    const unavailableRooms = new Set(
+      filteredSchedules.map((schedule) => schedule.room_name)
+    );
 
     // Filter out unavailable rooms from the allRoomNames list
-    const availableRooms = allRoomNames.filter((roomName) => !unavailableRooms.has(roomName));
+    const availableRooms = allRoomNames.filter(
+      (roomName) => !unavailableRooms.has(roomName)
+    );
 
-    console.log(availableRooms)
+    console.log(availableRooms);
     return availableRooms.map(serialize_document); // Serialize and return
   } catch (error) {
     console.error("Error fetching rooms:", error);
     throw new Error("Database error");
   }
-}
+};
 
 // Function to get teacher's schedule
 export const getTeacherScheduleData = async (teacherName: string) => {
@@ -155,12 +155,22 @@ export async function deductCredit(student_name: string, date: string) {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
-    const studentData = await db.collection("students").findOne({ name: student_name })|| { paymentHistory: "" };
-    const result = await db.collection("students").updateOne({ name: student_name }, { $inc: { credits: -1 } });
-    const result2 = await db.collection("students").updateOne(
-      { name: student_name },
-      { $set: { paymentHistory: `${studentData.paymentHistory} ${date}: Credit -1`} }
-    );
+    const studentData = (await db
+      .collection("students")
+      .findOne({ name: student_name })) || { paymentHistory: "" };
+    const result = await db
+      .collection("students")
+      .updateOne({ name: student_name }, { $inc: { credits: -1 } });
+    const result2 = await db
+      .collection("students")
+      .updateOne(
+        { name: student_name },
+        {
+          $set: {
+            paymentHistory: `${studentData.paymentHistory} ${date}: Credit -1`,
+          },
+        }
+      );
     return result;
   } catch (error) {
     console.error("Error deducting credit:", error);
@@ -180,23 +190,23 @@ export async function saveScheduleData(schedule: any) {
   }
 }
 
-
 export async function getTodayScheduleData(date: string, user: string) {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
     const filteredSchedules = await db
-      .collection("schedules").find({ date: date.replace(/%20/g, ' '), teacher_name: user })
+      .collection("schedules")
+      .find({ date: date.replace(/%20/g, " "), teacher_name: user })
       // .find({ date, teacher_name: user })
       .sort({ time: 1 })
       .toArray(); // Convert to array (MongoDB cursor)
 
-    console.log(filteredSchedules)
-    const parsedSchedule = filteredSchedules.map(schedule => ({
+    console.log(filteredSchedules);
+    const parsedSchedule = filteredSchedules.map((schedule) => ({
       room_name: schedule.room_name,
       student_name: schedule.student_name,
       time: schedule.time,
-      time_range: `${schedule.time - 12}pm ~ ${schedule.time - 11}pm`
+      time_range: `${schedule.time - 12}pm ~ ${schedule.time - 11}pm`,
     }));
 
     return parsedSchedule;
@@ -205,8 +215,6 @@ export async function getTodayScheduleData(date: string, user: string) {
     throw new Error("Database error");
   }
 }
-
-
 
 export async function saveManyScheduleData(schedule: any) {
   try {
@@ -221,44 +229,65 @@ export async function saveManyScheduleData(schedule: any) {
       }
 
       const room_name = availableRooms[0];
-      const each_schedule = { room_name, date, time, duration, teacher_name, student_name };
+      const each_schedule = {
+        room_name,
+        date,
+        time,
+        duration,
+        teacher_name,
+        student_name,
+      };
       await saveScheduleData(each_schedule);
       allSavedRooms.push(room_name);
     }
 
-    return { status_code: 200, all_dates: dates, all_rooms: allSavedRooms, time };
+    return {
+      status_code: 200,
+      all_dates: dates,
+      all_rooms: allSavedRooms,
+      time,
+    };
   } catch (error) {
     console.error("Error saving schedules:", error);
     throw new Error("Database error");
   }
 }
 
-export async function getUserData(username: string): Promise<Student | Teacher | null>{
+export async function getUserData(
+  username: string
+): Promise<Student | Teacher | null> {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
 
     // Search in "teachers" collection first
-    const teacher = await db.collection("teachers").findOne({ phoneNumber: username });
+    const teacher = await db
+      .collection("teachers")
+      .findOne({ phoneNumber: username });
     if (teacher) return teacher as unknown as Teacher;
 
     // If not found, search in "students" collection
-    const student = await db.collection("students").findOne({ phoneNumber: username });
+    const student = await db
+      .collection("students")
+      .findOne({ phoneNumber: username });
     if (student) return student as unknown as Student;
 
     // No user found
     return null;
   } catch (error) {
     console.error("Error fetching user data from MongoDB:", error);
-    
+
     // Ensure a value is always returned, even if an error occurs
     return null;
   }
 }
 
-
-export async function saveDiaryData(diary: any, diary_correction: string, diary_expressions: string, diary_summary: string) {
-  
+export async function saveDiaryData(
+  diary: any,
+  diary_correction: string,
+  diary_expressions: string,
+  diary_summary: string
+) {
   try {
     const client = await clientPromise;
     const db = client.db("room_allocation_db");
@@ -270,7 +299,7 @@ export async function saveDiaryData(diary: any, diary_correction: string, diary_
       original_text: diary.original_text,
       diary_correction: diary_correction,
       diary_expressions: diary_expressions,
-      diary_summary: diary_summary
+      diary_summary: diary_summary,
     };
 
     const result = await db.collection("diary").insertOne(modified_diary);
@@ -280,7 +309,7 @@ export async function saveDiaryData(diary: any, diary_correction: string, diary_
       id: result.insertedId.toString(),
       student_name: diary.student_name,
       date: diary.date,
-      message: modified_diary
+      message: modified_diary,
     };
   } catch (error) {
     console.error("Error saving diary:", error);
@@ -288,8 +317,11 @@ export async function saveDiaryData(diary: any, diary_correction: string, diary_
   }
 }
 
-
-export async function saveQuizletData(quizlet: any, kor_quizlet: string[], eng_quizlet: string[]) {
+export async function saveQuizletData(
+  quizlet: any,
+  kor_quizlet: string[],
+  eng_quizlet: string[]
+) {
   try {
     const client = await clientPromise;
     const db = client.db("room_allocation_db");
@@ -300,7 +332,7 @@ export async function saveQuizletData(quizlet: any, kor_quizlet: string[], eng_q
       date: quizlet.date,
       original_text: quizlet.original_text,
       eng_quizlet,
-      kor_quizlet
+      kor_quizlet,
     };
 
     const result = await db.collection("quizlet").insertOne(modified_quizlet);
@@ -311,13 +343,10 @@ export async function saveQuizletData(quizlet: any, kor_quizlet: string[], eng_q
       student_name: quizlet.student_name,
       date: quizlet.date,
       eng_quizlet,
-      kor_quizlet
+      kor_quizlet,
     };
   } catch (error) {
     console.error("Error saving quizlet:", error);
     throw new Error("Database error");
   }
 }
-
-
-

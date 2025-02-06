@@ -47,7 +47,7 @@ export default function DiaryModal({
   const [class_date, setClassDate] = useState(
     formatToSave(formatToISO(next_class_date))
   );
-  const [date, setDate] = useState(formatToSave(today_formatted()));
+  const [date] = useState(formatToSave(today_formatted()));
   const [original_text, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -72,7 +72,9 @@ export default function DiaryModal({
 
       if (response.ok) {
         closeIsModal();
-        router.push(`/student/diary?user=${student_name}&type=${type}&id=${user_id}`);
+        router.push(
+          `/student/diary?user=${student_name}&type=${type}&id=${user_id}`
+        );
         window.location.reload();
       } else {
         console.error("Failed to save diary");

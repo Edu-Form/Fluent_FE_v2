@@ -43,7 +43,7 @@ export default function QuizletModal({
   const [class_date, setClassDate] = useState(
     formatToSave(formatToISO(next_class_date))
   );
-  const [date, setDate] = useState(formatToSave(today_formatted()));
+  const [date] = useState(formatToSave(today_formatted()));
   const [original_text, setOriginal_text] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -156,8 +156,6 @@ export default function QuizletModal({
               disabled={loading}
             />
           </div>
-
-
 
           <div className="space-y-2">
             <label

@@ -65,7 +65,7 @@ const EnterBtn: React.FC<BtnProps> = ({ id, image }) => {
       className={`
         flex items-center 
         w-full min-w-[300px] max-w-[480px] 
-        ${bgColor} ${hoverColor} shadow-lg
+        ${bgColor} ${hoverColor} ${shadow} shadow-lg
         space-x-6 p-4 rounded-xl 
         transition-all duration-300 ease-in-out 
         transform hover:scale-105 group

@@ -2,37 +2,17 @@
 
 import Lottie from "lottie-react";
 import timerAnimationData from "@/src/app/lotties/mainLoading.json";
-import Image from "next/image";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
-import DiaryBg from "@/public/images/diarymain.svg";
+
 import DiaryCard from "@/components/Diary/DiaryCard";
 
-const DiaryPage = ({ student_list }: any) => {
+const DiaryPage = () => {
   const [diaryData, setDiaryData] = useState<DiaryData[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
-  const user_id = searchParams.get("id");
-
-  const variants: { [key: string]: any } = {
-    hidden: {
-      opacity: 0.2,
-      y: 15,
-    },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: i * 0.2,
-        duration: 0.7,
-        repeat: Infinity,
-        repeatType: "reverse",
-      },
-    }),
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +22,7 @@ const DiaryPage = ({ student_list }: any) => {
           const res = await fetch(URL, { cache: "no-store" });
           const data = await res.json();
           setDiaryData(data);
-        } catch (error) {
+        } catch {
           console.log("Error");
         } finally {
           setLoading(false);

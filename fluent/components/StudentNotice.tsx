@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { IoChevronBackOutline, IoChevronForwardOutline } from "react-icons/io5";
-import Link from "next/link";
 
 const TeacherNotice = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -31,7 +30,7 @@ const TeacherNotice = () => {
       );
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [announcements.length]);
 
   const handlePrevious = () => {
     setCurrentIndex((prevIndex) =>
