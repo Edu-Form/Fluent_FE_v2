@@ -68,7 +68,7 @@ const QuizletPageContent = () => {
   const weekday = currentDate.toLocaleDateString("en-US", { weekday: "long" });
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-[80vh] bg-white ">
       <div className="relative flex w-full h-full items-center justify-center p-10">
         {/* Navigation Buttons */}
         <button

@@ -12,21 +12,23 @@ const HomePage = () => {
   const type = searchParams.get("type");
   const user_id = searchParams.get("id");
   const url_data = `user=${user}&type=${type}&id=${user_id}`;
+  const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
+  const quizlet_url_data = `user=${user}&type=${type}&id=${user_id}&func=quizlet`;
 
   const router = useRouter();
 
   function Quizlet() {
-    router.push(`/student/quizlet?${url_data}`);
+    router.push(`/student/quizlet?${quizlet_url_data}`);
   }
   function Diary() {
-    router.push(`/student/diary?${url_data}`);
+    router.push(`/student/diary?${diary_url_data}`);
   }
   function Schedule() {
     router.push(`/student/schedule?${url_data}`);
   }
 
   return (
-    <div className="flex w-full -[80vh] justify-center items-center bg-gray-50 p-4">
+    <div className="flex w-full h-[80vh] justify-center items-center bg-gray-50 p-4">
       <div className="flex flex-col w-full max-w-[2580px] justify-center h-full gap-4">
         {/* 상단 영역 */}
         <div className="flex  gap-6">

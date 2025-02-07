@@ -66,7 +66,7 @@ const DiaryPageContent = () => {
   }
 
   return (
-    <div className="relative bg-white w-full h-full hide-scrollbar overflow-y-scroll">
+    <div className="relative bg-white w-full h-[80vh] hide-scrollbar overflow-y-scroll">
       {!diaryData || diaryData.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full">
           <p className="text-gray-500 text-lg">

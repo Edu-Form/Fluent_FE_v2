@@ -69,7 +69,7 @@ const DiaryPageContent = () => {
   }
 
   return (
-    <div className="relative w-full h-full hide-scrollbar overflow-y-scroll">
+    <div className="relative w-full h-[80vh]  hide-scrollbar overflow-y-scroll">
       <DiaryCard
         diarydata={
           Array.isArray(diaryData)

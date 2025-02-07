@@ -140,36 +140,37 @@ const SchedulePage = () => {
         <div className="flex flex-col flex-grow overflow-hidden">
           <h3 className="text-lg font-semibold mb-2">학생 리스트</h3>
           {filteredStudents.length > 0 ? (
-            <div className="flex flex-col space-y-4 overflow-y-auto pr-2 flex-grow">
+            <div className="flex flex-col space-y-2 overflow-y-auto pr-2 flex-grow">
               {filteredStudents.map((student, index) => (
                 <div
                   key={index}
-                  className="bg-white rounded-2xl shadow-md p-4 hover:shadow-lg transition-shadow duration-300"
+                  className="bg-white rounded-lg border border-gray-100 p-3 hover:shadow-sm transition-shadow duration-200"
                 >
-                  <div className="flex justify-between items-center mb-3">
-                    <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-medium">
-                      {student.room_name}호
-                    </div>
-                    <span className="text-sm text-gray-500">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-medium text-gray-900">
+                      {student.student_name} 학생
+                    </span>
+                    <span className="text-xs font-medium text-gray-600">
                       {student.time.toString().padStart(2, "0")}:00
                     </span>
                   </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-800">
-                      {student.student_name} 학생
-                    </h4>
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-sm text-gray-500">
-                      담당 선생님: {student.teacher_name}
-                    </span>
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500">
+                        {student.room_name}호
+                      </span>
+                      <span className="text-xs text-gray-400">•</span>
+                      <span className="text-xs text-gray-500">
+                        {student.teacher_name}
+                      </span>
+                    </div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">
+            <p className="text-xs text-gray-500">
               선택된 날짜의 스케줄이 없습니다.
             </p>
           )}

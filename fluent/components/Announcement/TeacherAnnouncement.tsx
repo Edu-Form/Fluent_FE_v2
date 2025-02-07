@@ -100,7 +100,7 @@ const AnnouncementPage = () => {
                       <FaCheck className="text-blue-500 text-lg" />
                     </div>
                     <div>
-                      <div className="font-semibold text-gray-900">
+                      <div className="font-semibold text-sm text-gray-900">
                         {schedule.student_name || "Unknown"}
                       </div>
                       <div className="flex items-center text-sm text-gray-500 mt-0.5">
