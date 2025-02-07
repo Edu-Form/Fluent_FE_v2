@@ -11,16 +11,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No data provided" }, { status: 400 });
     }
 
-    const { student_name, class_date, date, original_text } = quizletData;
+    const { original_text } = quizletData;
 
     // Process the original text to create eng_quizlet
     let lines = original_text.split("\n");
-    interface QuizletData {
-      student_name: string;
-      class_date: string;
-      date: string;
-      original_text: string;
-    }
+    // interface QuizletData {
+    //   student_name: string;
+    //   class_date: string;
+    //   date: string;
+    //   original_text: string;
+    // }
 
     lines = lines
       .map((line: string) => line.trim())

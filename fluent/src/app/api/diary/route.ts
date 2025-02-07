@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No data provided" }, { status: 400 });
     }
 
-    const { student_name, class_date, date, original_text } = diaryData;
+    const { original_text } = diaryData;
 
     /// Diary Correction
     const ai_diary_correction = async (original_text: string) => {
