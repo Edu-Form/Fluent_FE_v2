@@ -160,17 +160,15 @@ export async function deductCredit(student_name: string, date: string) {
     const result = await db
       .collection("students")
       .updateOne({ name: student_name }, { $inc: { credits: -1 } });
-    const result2 = await db
-      .collection("students")
-      .updateOne(
-        { name: student_name },
-        {
-          $set: {
-            paymentHistory: `${studentData.paymentHistory} ${date}: Credit -1`,
-          },
-        }
-      );
-    return result;
+    const result2 = await db.collection("students").updateOne(
+      { name: student_name },
+      {
+        $set: {
+          paymentHistory: `${studentData.paymentHistory} ${date}: Credit -1`,
+        },
+      }
+    );
+    return { result, result2 };
   } catch (error) {
     console.error("Error deducting credit:", error);
     throw new Error("Database error");

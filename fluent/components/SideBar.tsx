@@ -136,9 +136,6 @@ const SidebarContent = ({ onStudentSelect }: SidebarLayoutProps) => {
                   >
                     {item}
                   </p>
-                  <p className="text-[13px] text-gray-500 mt-0.5">
-                    최근 수업: data
-                  </p>
                 </div>
               </div>
             </div>

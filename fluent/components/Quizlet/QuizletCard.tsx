@@ -1,13 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { motion } from "framer-motion";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
-export default function QuizletCard({
-  content,
-}: {
-  content: QuizletCardProps;
-}) {
+const QuizletCardContent = ({ content }: { content: QuizletCardProps }) => {
   const engWords = content.eng_quizlet || [];
   const korWords = content.kor_quizlet || [];
 
@@ -30,14 +26,14 @@ export default function QuizletCard({
   // 카드가 없을 경우 처리
   if (cards.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-full bg-gray-100">
+      <div className="flex items-center justify-center min-h-full bg-white">
         <p className="text-gray-500">단어를 선택해주세요.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-full bg-gray-100 ">
+    <div className="relative flex w-full h-full bg-white items-center justify-center p-4 sm:p-10 ">
       <div className="w-full max-w-lg">
         {/* 카드 컨테이너 */}
         <motion.div
@@ -110,5 +106,18 @@ export default function QuizletCard({
         </div>
       </div>
     </div>
+  );
+};
+export default function QuizletCard(props: { content: QuizletCardProps }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-full bg-white">
+          <p className="text-gray-500">카드를 불러오는 중...</p>
+        </div>
+      }
+    >
+      <QuizletCardContent {...props} />
+    </Suspense>
   );
 }

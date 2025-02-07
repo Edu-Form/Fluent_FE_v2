@@ -26,7 +26,7 @@ const HomePage = () => {
   }
 
   return (
-    <div className="flex w-full min-h-full justify-center items-center bg-gray-50 p-4">
+    <div className="flex w-full -[80vh] justify-center items-center bg-gray-50 p-4">
       <div className="flex flex-col w-full max-w-[2580px] justify-center h-full gap-4">
         {/* 상단 영역 */}
         <div className="flex  gap-6">

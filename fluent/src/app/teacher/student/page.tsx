@@ -46,7 +46,7 @@ const SuspenseContent = ({
   const renderContent = () => {
     if (!selectedStudent) {
       return (
-        <div className="flex justify-center items-center h-full text-gray-500">
+        <div className="flex  bg-white justify-center items-center h-full text-gray-500">
           학생을 선택해주세요.
         </div>
       );
@@ -59,7 +59,7 @@ const SuspenseContent = ({
         return <QuizletPage />;
       default:
         return (
-          <div className="flex justify-center items-center h-full text-gray-500">
+          <div className="flex bg-white justify-center items-center h-full text-gray-500">
             잘못된 기능이 선택되었습니다.
           </div>
         );

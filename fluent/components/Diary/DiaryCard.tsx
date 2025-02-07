@@ -101,7 +101,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
 
   return (
     <>
-      <div className="relative flex w-full h-full bg-slate-100 items-center justify-center p-4 sm:p-10">
+      <div className="relative flex w-full h-full bg-white items-center justify-center p-4 sm:p-10">
         <button
           onClick={handlePrev}
           className="absolute left-2 z-10 p-4 rounded-full bg-white shadow-lg hover:bg-gray-100 transition-colors"
@@ -129,7 +129,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
             className="w-full max-w-6xl h-full bg-white rounded-2xl shadow-2xl"
           >
             {/* Date Header */}
-            <div className="relative bg-gradient-to-r from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4 flex items-center justify-between">
+            <div className="relative rounded-t-lg bg-gradient-to-r from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4 flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <h1 className="text-lg sm:text-2xl font-bold">
                   {year}년 {month}월 {day}일 {weekday}

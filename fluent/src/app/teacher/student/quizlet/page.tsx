@@ -22,21 +22,23 @@ const content = {
   write: "Create Quizlet",
 };
 
+interface QuizletCardProps {
+  _id: string;
+  date: string;
+  student_name: string;
+  eng_quizlet: string[];
+  kor_quizlet: string[];
+  original_text: string;
+  cards: any[]; // 더 구체적인 타입으로 대체 가능
+}
+
 const QuizletPage = () => {
   const searchParams = useSearchParams();
   const student_name = searchParams.get("student_name");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [data, setData] = useState([]);
-  const [currentCard, setCurrentCard] = useState<QuizletCardProps>({
-    _id: "",
-    date: "",
-    student_name: "",
-    eng_quizlet: [],
-    kor_quizlet: [],
-    original_text: "",
-    cards: [],
-  });
+  const [data, setData] = useState<QuizletCardProps[]>([]);
+  const [currentCard, setCurrentCard] = useState<QuizletCardProps | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const openIsModal = () => setIsModalOpen(true);
@@ -45,6 +47,14 @@ const QuizletPage = () => {
   const fetchQuizletData = useCallback(async () => {
     try {
       const response = await fetch(`/api/quizlet/student/${student_name}`);
+
+      // 404 등의 에러 응답 처리 추가
+      if (!response.ok) {
+        setData([]);
+        setCurrentCard(null);
+        return;
+      }
+
       const quizletData = await response.json();
       console.log("Fetched Quizlet Data:", quizletData);
 
@@ -86,7 +96,7 @@ const QuizletPage = () => {
     setCurrentCard(data[(currentIndex - 1 + data.length) % data.length]);
   };
 
-  const handleDateSelect = (date) => {
+  const handleDateSelect = (date: string) => {
     const selectedIndex = data.findIndex((item) => item.date === date);
     if (selectedIndex !== -1) {
       setCurrentIndex(selectedIndex);
@@ -95,7 +105,17 @@ const QuizletPage = () => {
     setIsDatePickerOpen(false);
   };
 
-  if (!data.length) return null;
+  if (!data.length) {
+    return (
+      <div className="w-full h-full bg-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 text-lg">
+            이 학생은 아직 퀴즐렛 작성을 하지 않았습니다
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const currentDate = currentCard ? new Date(currentCard.date) : new Date();
   const year = currentDate.getFullYear();
@@ -104,8 +124,8 @@ const QuizletPage = () => {
   const weekday = currentDate.toLocaleDateString("en-US", { weekday: "long" });
 
   return (
-    <div className="w-full h-full">
-      <div className="relative flex w-full h-full items-center justify-center p-10">
+    <div className="w-full h-full bg-white">
+      <div className="relative flex w-full h-full items-center justify-center overflow-hidden ">
         {/* Navigation Buttons */}
         <button
           onClick={handlePrev}
@@ -129,10 +149,10 @@ const QuizletPage = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.3 }}
-            className="w-full h-full max-w-5xl bg-white rounded-2xl shadow-lg"
+            className="w-full max-w-6xl h-full bg-white rounded-2xl shadow-2xl"
           >
             {/* Date Header */}
-            <div className="relative bg-gradient-to-r from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4">
+            <div className="relative  bg-gradient-to-r  from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4">
               <h1
                 className={`{text-lg sm:text-2xl font-bold text-center ${
                   !currentCard ? "hidden" : ""
@@ -181,8 +201,8 @@ const QuizletPage = () => {
             </div>
 
             {/* Quizlet Content */}
-            <div className="overflow-y-auto h-[calc(100vh-200px)] sm:max-h-[calc(80vh-80px)]">
-              <QuizletCard content={currentCard} />
+            <div className="overflow-y-auto h-full ">
+              {currentCard && <QuizletCard content={currentCard} />}
             </div>
           </motion.div>
         </AnimatePresence>

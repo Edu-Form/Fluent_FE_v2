@@ -16,19 +16,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="h-screen bg-[#F6F7FB]">
-        <div className="relative h-full flex flex-col">
+    <html lang="en" className="h-full">
+      <body className="min-h-full bg-[#F6F7FB]">
+        <div className="min-h-screen flex flex-col">
           {/* Alert Section */}
           <div className="flex-none p-4">
             <Alert />
           </div>
 
           {/* Main Content Section */}
-            <div className="flex-1 px-4">{children}</div>
+          <div className="flex-1 px-4">{children}</div>
 
           {/* Navigation Section - Fixed at bottom */}
-          <div className="flex-none h-20">
+          <div className="flex-1 h-20">
             <Navigation />
           </div>
         </div>

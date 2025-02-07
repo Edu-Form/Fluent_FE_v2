@@ -99,7 +99,7 @@ const SchedulePage = () => {
   };
 
   return (
-    <div className="flex w-full h-full  p-1">
+    <div className="flex w-full h-[80vh] p-1">
       {/* 왼쪽: WeekSelector와 학생 리스트 */}
       <div className="w-[20%] h-full bg-white shadow-md p-4 flex flex-col rounded-xl">
         {/* 날짜 선택 섹션 */}

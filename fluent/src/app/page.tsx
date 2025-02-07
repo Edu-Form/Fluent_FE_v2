@@ -32,7 +32,7 @@ export default function Page() {
   }
 
   return (
-    <div className="h-full w-screen bg-white flex items-center justify-center">
+    <div className="w-screen h-[80vh]  bg-white flex items-center justify-center">
       <Card className="w-[90%] max-w-[400px]">
         <Image
           src={"/images/Login.svg"}

@@ -1,13 +1,20 @@
 "use client";
 
-import Lottie from "lottie-react";
-import timerAnimationData from "@/src/app/lotties/mainLoading.json";
-import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import timerAnimationData from "@/src/app/lotties/mainLoading.json";
 
-import DiaryCard from "@/components/Diary/DiaryCard";
+const Lottie = dynamic(() => import("lottie-react"), {
+  ssr: false,
+  loading: () => <div>Loading...</div>,
+});
 
-const DiaryPage = () => {
+const DiaryCard = dynamic(() => import("@/components/Diary/DiaryCard"), {
+  ssr: false,
+});
+
+const DiaryPageContent = () => {
   const [diaryData, setDiaryData] = useState<DiaryData[]>([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
@@ -28,6 +35,7 @@ const DiaryPage = () => {
           setLoading(false);
         }
       } else {
+        setLoading(false);
       }
     };
     fetchData();
@@ -45,27 +53,36 @@ const DiaryPage = () => {
   }
 
   return (
-    <>
-      <div className="relative w-full h-full  hide-scrollbar overflow-y-scroll">
-        <DiaryCard
-          diarydata={
-            Array.isArray(diaryData)
-              ? diaryData.sort(
-                  (a, b) =>
-                    new Date(b.date).getTime() - new Date(a.date).getTime()
-                )
-              : []
-          }
-        />
-      </div>
-    </>
+    <div className="relative w-full h-full hide-scrollbar overflow-y-scroll">
+      <DiaryCard
+        diarydata={
+          Array.isArray(diaryData)
+            ? diaryData.sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+            : []
+        }
+      />
+    </div>
   );
 };
 
-const Diary = () => {
-  return <DiaryPage />;
+const DiaryPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 flex flex-col justify-center items-center text-xl font-['Playwrite']">
+          <div>Fluent</div>
+          <div className="mt-4">Loading...</div>
+        </div>
+      }
+    >
+      <DiaryPageContent />
+    </Suspense>
+  );
 };
 
 export default function Page() {
-  return <Diary />;
+  return <DiaryPage />;
 }

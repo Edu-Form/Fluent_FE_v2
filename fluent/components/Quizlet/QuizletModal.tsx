@@ -1,6 +1,5 @@
 "use client";
-
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Lottie from "lottie-react";
 import timerAnimationData from "@/src/app/lotties/timeLoading.json";
@@ -35,10 +34,10 @@ const formatToSave = (date: string | undefined) => {
   return `${year}. ${month}. ${day}.`;
 };
 
-export default function QuizletModal({
+const QuizletModalContent = ({
   closeIsModal,
   next_class_date,
-}: QuizeletlModalProps) {
+}: QuizeletlModalProps) => {
   const router = useRouter();
   const [class_date, setClassDate] = useState(
     formatToSave(formatToISO(next_class_date))
@@ -119,24 +118,7 @@ export default function QuizletModal({
             Create Quizlet
           </h2>
 
-          <div className="space-y-2">
-            {/* <label htmlFor="date" className="text-md font-bold text-gray-700">
-              Today is
-            </label>
-            <div className="w-full text-center px-4 py-1 text-xl font-bold text-gray-700">
-              <span className="block">{today_formatted()}</span>
-            </div> */}
-            {/* <input
-              type="date"
-              name="date"
-              id="date"
-              defaultValue={today_formatted()}
-              onChange={(e) => setDate(formatToSave(e.target.value))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 transition-all"
-              required
-              disabled={loading}
-            /> */}
-          </div>
+          <div className="space-y-2"></div>
 
           <div className="space-y-2">
             <label
@@ -205,5 +187,21 @@ export default function QuizletModal({
         }
       `}</style>
     </div>
+  );
+};
+
+export default function QuizletModal(props: QuizeletlModalProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="w-40 h-40 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
+            <Lottie animationData={timerAnimationData} />
+          </div>
+        </div>
+      }
+    >
+      <QuizletModalContent {...props} />
+    </Suspense>
   );
 }

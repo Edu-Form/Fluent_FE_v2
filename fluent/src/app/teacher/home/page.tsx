@@ -30,7 +30,7 @@ const HomePage = () => {
   }
 
   return (
-    <div className="flex w-full h-full  justify-center items-center p-4">
+    <div className="flex w-full h-[80vh] justify-center items-center p-4">
       <div className="flex flex-col w-[82vw] justify-center h-full max-h-[900px] gap-4">
         {/* 상단 영역 */}
         <div className="flex h-[100%] gap-4">

@@ -76,11 +76,11 @@ function NavigationComponent() {
 
   return (
     <div
-      className={`navbar flex items-center justify-center ${
+      className={`flex p-4 h-full w-full items-center justify-center ${
         isHomePage || displayPage ? "hidden" : ""
       }`}
     >
-      <div className="absolute items-center bg-white px-12 py-4 rounded-xl shadow-lg space-x-2 sm:space-x-4 md:space-x-6 lg:space-x-10">
+      <div className="bg-white px-12 py-4 rounded-xl shadow-lg space-x-2 sm:space-x-4 md:space-x-6 lg:space-x-10 flex items-center p-2">
         <NavIcon
           Icon={RiHome6Fill}
           isActive={activeIndex === 0}
@@ -99,7 +99,6 @@ function NavigationComponent() {
             handleScheduleClick();
           }}
         />
-
         <NavIcon
           Icon={TbCardsFilled}
           isActive={activeIndex === 2}
@@ -109,7 +108,6 @@ function NavigationComponent() {
             handleCardsClick();
           }}
         />
-
         <NavIcon
           Icon={PiBookBookmarkFill}
           isActive={activeIndex === 3}
@@ -119,7 +117,6 @@ function NavigationComponent() {
             handleBookmarkClick();
           }}
         />
-
         <button
           onClick={handleLogout}
           className="flex items-center bg-red-500 text-white px-2 py-1 rounded-md sm:px-3 sm:py-2 sm:rounded-xl"

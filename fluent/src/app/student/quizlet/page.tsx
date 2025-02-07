@@ -1,16 +1,15 @@
 "use client";
 
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useCallback, useEffect } from "react";
 import { FiChevronLeft, FiChevronRight, FiCalendar } from "react-icons/fi";
 import { useSearchParams } from "next/navigation";
 import QuizletCard from "@/components/Quizlet/QuizletCard";
 
-const QuizletPage = () => {
+const QuizletPageContent = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
-
   const [currentIndex, setCurrentIndex] = useState(0);
   const [data, setData] = useState<QuizletCardProps[]>([]);
   const [currentCard, setCurrentCard] = useState<QuizletCardProps>({
@@ -22,9 +21,7 @@ const QuizletPage = () => {
     original_text: "",
     cards: [],
   });
-
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-
   const fetchQuizletData = useCallback(async () => {
     try {
       const response = await fetch(`/api/quizlet/${type}/${user}`);
@@ -161,4 +158,19 @@ const QuizletPage = () => {
   );
 };
 
-export default QuizletPage;
+const QuizletPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-full bg-white flex items-center justify-center">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+      }
+    >
+      <QuizletPageContent />
+    </Suspense>
+  );
+};
+export default function Page() {
+  return <QuizletPage />;
+}
