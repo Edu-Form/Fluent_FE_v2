@@ -61,8 +61,8 @@ const AnnouncementPage = () => {
 
   return (
     <div className="flex flex-col w-full">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+      {/* 헤더 섹션 */}
+      <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-gray-900">
             Today {filteredData.length} class
@@ -82,68 +82,63 @@ const AnnouncementPage = () => {
         </div>
       </div>
 
-      {/* Schedule Grid */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* 스케줄 리스트 */}
+      <div className="flex flex-col gap-3">
         {filteredData.length > 0 ? (
           filteredData.map((schedule, index) => (
             <div
               key={index}
               className="group bg-white rounded-xl border border-gray-100 hover:border-blue-100 shadow-sm hover:shadow-md transition-all"
             >
-              <div className="relative p-4">
+              <div className="relative p-4 flex items-center justify-between">
                 <div className="absolute left-0 top-0 h-full w-1 bg-blue-500 rounded-l-xl"></div>
 
-                {/* Student Info */}
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                      <FaCheck className="text-blue-500 text-lg" />
+                {/* 학생 정보 */}
+                <div className="flex items-center gap-6 flex-1">
+                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                    <FaCheck className="text-blue-500 text-lg" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900">
+                      {schedule.student_name || "Unknown"}
                     </div>
-                    <div>
-                      <div className="font-semibold text-sm text-gray-900">
-                        {schedule.student_name || "Unknown"}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-500 mt-0.5">
-                        <CiLocationOn className="mr-1" />
-                        {schedule.room_name || "Unknown"}
-                      </div>
+                    <div className="flex items-center text-sm text-gray-500 mt-0.5">
+                      <CiLocationOn className="mr-1" />
+                      {schedule.room_name || "Unknown"}
                     </div>
                   </div>
-                  <div className="px-3 py-1 text-sm font-medium text-blue-600 bg-blue-50 rounded-full">
+
+                  <div className="px-4 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-full">
                     {convertTo12HourFormat(schedule.time)}
                   </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <Link
-                    href={`/teacher/student/quizlet?user=${user}&type=${type}&id=${user_id}&student_name=${schedule.student_name}`}
-                    className="flex-1"
-                  >
-                    <span className="flex items-center justify-center gap-1.5 py-2 rounded-lg border border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                  {/* 액션 버튼 */}
+                  <div className="flex gap-3">
+                    <Link
+                      href={`/teacher/student/quizlet?user=${user}&type=${type}&id=${user_id}&student_name=${schedule.student_name}`}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                    >
                       <TbCardsFilled className="text-blue-500" />
                       <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600">
                         Quizlet
                       </span>
-                    </span>
-                  </Link>
-                  <Link
-                    href={`/teacher/student/diary?user=${user}&type=${type}&id=${user_id}&student_name=${schedule.student_name}`}
-                    className="flex-1"
-                  >
-                    <span className="flex items-center justify-center gap-1.5 py-2 rounded-lg border border-gray-100 hover:border-orange-500 hover:bg-orange-50 transition-colors">
+                    </Link>
+                    <Link
+                      href={`/teacher/student/diary?user=${user}&type=${type}&id=${user_id}&student_name=${schedule.student_name}`}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-100 hover:border-orange-500 hover:bg-orange-50 transition-colors"
+                    >
                       <PiBookBookmarkFill className="text-orange-500" />
                       <span className="text-sm font-medium text-gray-700 group-hover:text-orange-600">
                         Diary
                       </span>
-                    </span>
-                  </Link>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
           ))
         ) : (
-          <div className="col-span-4 flex justify-center items-center h-[200px] bg-white rounded-xl border border-gray-100">
+          <div className="flex justify-center items-center h-[200px] bg-white rounded-xl border border-gray-100">
             <p className="text-lg font-medium text-gray-500">No class today</p>
           </div>
         )}
