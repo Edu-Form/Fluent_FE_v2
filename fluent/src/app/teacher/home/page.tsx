@@ -35,7 +35,6 @@ const HomePageContent = () => {
 
   const [classes, setClasses] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
-  const [selectedDate] = useState<Date>(new Date()); // 현재 날짜로 초기화
 
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/students/${user}`;
