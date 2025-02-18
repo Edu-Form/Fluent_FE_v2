@@ -90,7 +90,6 @@ export default function AddRoom({ closeAddSchedule }: ScheduleModalProps) {
   }
 
   async function saveClass() {
-    
     const formattedDate = date
       ? date.toLocaleDateString("ko-KR", {
           year: "numeric",

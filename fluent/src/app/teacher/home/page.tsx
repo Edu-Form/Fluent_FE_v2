@@ -2,30 +2,37 @@
 
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect, Suspense } from "react";
-import Announcement from "@/components/Announcement/TeacherAnnouncement";
-import TeacherNotice from "@/components/TeacherNotice";
 import dynamic from "next/dynamic";
 
-// Toast UI Calendar를 동적으로 불러옵니다
-const Teacher_toastUI = dynamic(
-  () => import("@/components/ToastUI/teacher_toastui"),
-  {
-    ssr: false,
-  }
+// 동적 컴포넌트 로딩
+const Announcement = dynamic(
+  () => import("@/components/Announcement/TeacherAnnouncement"),
+  { ssr: false }
 );
 
-const HomePage = () => {
+const TeacherNotice = dynamic(() => import("@/components/TeacherNotice"), {
+  ssr: false,
+});
+
+const Alert = dynamic(() => import("@/components/Alert"), { ssr: false });
+
+const Teacher_toastUI = dynamic(
+  () => import("@/components/ToastUI/teacher_toastui"),
+  { ssr: false }
+);
+
+// 로딩 컴포넌트
+const SkeletonLoader = () => (
+  <div className="animate-pulse bg-gray-100 rounded-lg w-full h-full"></div>
+);
+
+const HomePageContent = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
-  const user_id = searchParams.get("id");
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isVariousRoomOpen, setIsVariousRoomOpen] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date()); // 현재 날짜로 초기화
-  const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [selectedDate] = useState<Date>(new Date()); // 현재 날짜로 초기화
 
   const URL = `/api/schedules/${type}/${user}`;
 
@@ -81,45 +88,59 @@ const HomePage = () => {
       }));
 
       console.log("Formatted Students:", formattedStudents);
-
-      setFilteredStudents(formattedStudents);
     }
   }, [selectedDate, classes]);
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
-  };
 
   return (
     <div className="flex w-full h-screen p-4 gap-4">
       {/* 왼쪽 영역 */}
       <div className="flex flex-col w-[40%] gap-4">
-        {/* 시간 표시 */}
-        <div className="bg-blue-600 text-white p-4 rounded-lg">
-          <div className="text-2xl font-bold">20:21</div>
-          <div className="text-sm">2025. 02. 12 wednesday</div>
+        {/* 시간 표시 - Alert 컴포넌트로 대체 */}
+        <div className="rounded-lg h-[70px] overflow-hidden">
+          <Suspense fallback={<SkeletonLoader />}>
+            <Alert />
+          </Suspense>
         </div>
 
         {/* 공지사항 */}
-        <div className="flex-1 bg-white rounded-lg p-4 shadow-lg">
-          <div className="h-full overflow-auto">
-            <TeacherNotice />
+        <div className="bg-white rounded-lg p-4 shadow-lg h-[20%]">
+          <div className="h-full">
+            <Suspense fallback={<SkeletonLoader />}>
+              <TeacherNotice />
+            </Suspense>
           </div>
         </div>
 
-        {/* 오늘의 학생 리스트 */}
-        <div className="flex-1 h-[300px] bg-white rounded-lg p-4 shadow-lg">
-          <Announcement />
+        {/* 오늘의 학생 리스트 (확장됨) */}
+        <div className="bg-white rounded-lg p-4 shadow-lg flex-1">
+          <Suspense fallback={<SkeletonLoader />}>
+            <Announcement />
+          </Suspense>
         </div>
       </div>
 
       {/* 오른쪽 스케줄 영역 */}
       <div className="w-[60%] bg-white rounded-lg p-4 shadow-lg">
         <div className="w-full h-full">
-          <Teacher_toastUI data={classes} />
+          <Suspense fallback={<SkeletonLoader />}>
+            <Teacher_toastUI data={classes} />
+          </Suspense>
         </div>
       </div>
     </div>
   );
 };
 
-export default HomePage;
+export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-screen flex items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <HomePageContent />
+    </Suspense>
+  );
+}

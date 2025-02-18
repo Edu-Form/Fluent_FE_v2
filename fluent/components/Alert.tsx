@@ -35,19 +35,19 @@ export default function Alert() {
 
   return (
     <div
-      className={`alart flex items-center justify-center ${
+      className={`alart flex h-full items-center justify-center ${
         isHomePage || displayPage ? "hidden" : ""
       }`}
     >
       <div
-        className={`flex items-center relative bg-[#2675f8] w-[95vw]  px-8 py-5 overflow-hidden rounded-lg min-w-[1000px]  ${
+        className={`flex items-center relative bg-[#2675f8] w-full px-8 py-5 overflow-hidden rounded-lg   ${
           isHomePage || displayPage ? "hidden" : ""
         }`}
       >
         <div className="flex items-end text-white gap-4">
           {/* <span className="text-base font-bold">{user || "Unknown"}</span> */}
-          <h1 className="text-4xl font-extrabold text-center">{time}</h1>
-          <h2 className=" text-xs text-center ">{date}</h2>
+          <h1 className="text-4xl font-extrabold text-center z-10">{time}</h1>
+          <h2 className=" text-xs text-center  z-10">{date}</h2>
         </div>
         <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
           <Image
