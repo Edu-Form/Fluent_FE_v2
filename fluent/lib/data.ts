@@ -347,3 +347,26 @@ export async function saveQuizletData(
     throw new Error("Database error");
   }
 }
+
+export async function getTeacherStatus(teacherName: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    // Find all students that have the teacherName in their teacher field
+    const students = await db
+      .collection("students")
+      .find({ teacher: teacherName })
+      .toArray();
+
+    if (!students.length) {
+      return null; // Return null if no students are found
+    }
+
+    // Serialize the documents before returning (optional, but generally recommended)
+    return students.map(serialize_document);
+  } catch (error) {
+    console.error("Error fetching students for teacher:", error);
+    return null;
+  }
+}

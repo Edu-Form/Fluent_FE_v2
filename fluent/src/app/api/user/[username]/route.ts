@@ -5,6 +5,7 @@ import { getUserData } from "@/lib/data";
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
+    console.log(url.pathname)
     const username = url.pathname.split('/').pop(); // Extract the username from the URL
 
     if (!username) {

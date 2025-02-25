@@ -37,7 +37,7 @@ const HomePageContent = () => {
   const [allStudents, setAllStudents] = useState<any[]>([]);
 
   const URL = `/api/schedules/${type}/${user}`;
-  const ALL_STUDENTS_URL = `/api/students/${user}`;
+  const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;
 
   useEffect(() => {
     if (!user || classes.length > 0) return;
@@ -108,7 +108,7 @@ const HomePageContent = () => {
           {/* 전체 학생 리스트 테이블 */}
           <div className="w-full">
             <h2 className="text-xl font-bold mb-4 text-gray-800">
-              전체 학생 리스트
+              전체 학생 체크리스트
             </h2>
             <div className="w-full overflow-x-auto">
               <table className="w-full text-sm text-left text-gray-500">
@@ -118,19 +118,16 @@ const HomePageContent = () => {
                       학생 이름
                     </th>
                     <th scope="col" className="px-4 py-3 text-center">
-                      Toggle
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-center">
                       Class Note
                     </th>
                     <th scope="col" className="px-4 py-3 text-center">
                       Quizlet
                     </th>
                     <th scope="col" className="px-4 py-3 text-center">
-                      Diary 첨삭
+                      Diary 작성
                     </th>
                     <th scope="col" className="px-4 py-3 text-center">
-                      Diary 작성
+                      Diary 첨삭
                     </th>
                     <th scope="col" className="px-4 py-3 text-center">
                       스케줄
@@ -144,27 +141,15 @@ const HomePageContent = () => {
                       className="border-b hover:bg-gray-100 transition-colors"
                     >
                       <td className="px-4 py-3 font-medium text-gray-900">
-                        {student.student_name}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => toggleStudentStatus(student.id)}
-                          className="flex justify-center items-center w-full"
-                        >
-                          {student.is_active ? (
-                            <IoCheckmarkCircle className="text-green-500 text-xl" />
-                          ) : (
-                            <IoCloseCircle className="text-red-500 text-xl" />
-                          )}
-                        </button>
+                        {student.name}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          href={`/teacher/student/classnote?student=${student.student_name}`}
+                          href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
                           className="flex justify-center items-center w-full"
                         >
-                          {student.class_note_completed ? (
-                            <IoCheckmarkCircle className="text-green-500 text-xl" />
+                          {student.class_note ? (
+                            <><IoCheckmarkCircle className="text-green-500 text-xl" /> {student.class_note}</>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}
@@ -172,11 +157,11 @@ const HomePageContent = () => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          href={`/teacher/student/quizlet?student=${student.student_name}`}
+                          href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
                           className="flex justify-center items-center w-full"
                         >
-                          {student.quizlet_completed ? (
-                            <IoCheckmarkCircle className="text-green-500 text-xl" />
+                          {student.quizlet_date ? (
+                            <><IoCheckmarkCircle className="text-green-500 text-xl" /> 퀴즐렛 생성</>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}
@@ -184,11 +169,11 @@ const HomePageContent = () => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          href={`/teacher/student/diary?student=${student.student_name}`}
+                          href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
                           className="flex justify-center items-center w-full"
                         >
-                          {student.diary_feedback_completed ? (
-                            <IoCheckmarkCircle className="text-green-500 text-xl" />
+                          {student.diary_date ? (
+                            <><IoCheckmarkCircle className="text-green-500 text-xl" /><span>{student.diary_edit}</span></>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}
@@ -196,11 +181,11 @@ const HomePageContent = () => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          href={`/teacher/student/diary?student=${student.student_name}`}
+                          href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
                           className="flex justify-center items-center w-full"
                         >
-                          {student.diary_written ? (
-                            <IoCheckmarkCircle className="text-green-500 text-xl" />
+                          {student.diary_edit ? (
+                            <><IoCheckmarkCircle className="text-green-500 text-xl" /> <span>첨삭완료</span></>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}
@@ -208,14 +193,10 @@ const HomePageContent = () => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          href={`/teacher/student/schedule?student=${student.student_name}`}
+                          href={`/student/schedule?user=${student.name}&type=student&id=${student.phoneNumber}`}
                           className="flex justify-center items-center w-full"
                         >
-                          {student.schedule_updated ? (
-                            <IoCheckmarkCircle className="text-green-500 text-xl" />
-                          ) : (
-                            <IoCloseCircle className="text-red-500 text-xl" />
-                          )}
+                          스케줄보기
                         </Link>
                       </td>
                     </tr>
