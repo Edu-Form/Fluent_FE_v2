@@ -161,7 +161,7 @@ const HomePageContent = () => {
                           className="flex justify-center items-center w-full"
                         >
                           {student.quizlet_date ? (
-                            <><IoCheckmarkCircle className="text-green-500 text-xl" /> 퀴즐렛 생성</>
+                            <><IoCheckmarkCircle className="text-green-500 text-xl" /> 퀴즐렛 생성 완료</>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}

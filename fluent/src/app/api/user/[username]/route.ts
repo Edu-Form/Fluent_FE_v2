@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     console.log(url.pathname)
-    const username = url.pathname.split('/').pop(); // Extract the username from the URL
+    const username = decodeURIComponent(url.pathname.split('/').pop() ?? ''); // Extract the username from the URL
 
     if (!username) {
       return NextResponse.json({ error: "Username not provided" }, { status: 400 });

@@ -5,7 +5,8 @@ import { getStudentScheduleData } from "@/lib/data";
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const user = url.pathname.split('/').pop(); // Extract the user from the URL
+    const user = decodeURIComponent(url.pathname.split('/').pop() ?? ''); // Extract the user from the URL
+    console.log("decodeURI:", user)
 
     if (!user) {
       return NextResponse.json({ error: "User not provided" }, { status: 400 });

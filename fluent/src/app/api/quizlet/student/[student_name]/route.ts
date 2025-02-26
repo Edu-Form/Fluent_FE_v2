@@ -4,7 +4,7 @@ import { getStudentQuizletData } from "@/lib/data"; // Import the function from 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    const student_name = url.pathname.split('/').pop(); // Extract the student_name from the URL
+    const student_name = decodeURIComponent(url.pathname.split('/').pop() ?? ''); // Extract the student_name from the URL
     console.log(student_name)
     if (!student_name) {
       return NextResponse.json({ error: "Student name not provided" }, { status: 400 });
