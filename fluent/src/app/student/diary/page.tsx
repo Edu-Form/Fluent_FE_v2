@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
+import Navigation from "@/components/navigation";
 
 // Lottie와 animationData를 클라이언트 사이드에서만 로드
 const Lottie = dynamic(() => import("lottie-react"), {
