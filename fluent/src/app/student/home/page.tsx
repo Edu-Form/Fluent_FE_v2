@@ -363,52 +363,50 @@ const HomePage = () => {
 
   return (
     <div className="flex flex-col w-full h-full p-2 sm:p-4 gap-2 sm:gap-4 bg-gray-50">
-      {isMobile ? (
+      {/* 모바일 레이아웃 */}
+      <div className="block md:hidden">
         <MobileLayout />
-      ) : (
-        <>
-          {/* 데스크톱 레이아웃 */}
-          {/* 시간 표시 - Alert 컴포넌트 */}
-          <div className="rounded-lg bg-white shadow-lg">
-            <Suspense fallback={<SkeletonLoader />}>
-              <Alert />
-            </Suspense>
-          </div>
+      </div>
+      {/* 데스크톱 레이아웃 */}
+      <div className="hidden md:flex md:flex-col md:gap-6">
+        {/* 시간 표시 - Alert 컴포넌트 */}
+        <div className="rounded-lg bg-white shadow-lg">
+          <Suspense fallback={<SkeletonLoader />}>
+            <Alert />
+          </Suspense>
+        </div>
+        {/* 오늘의 학생 공지 */}
+        <div className="bg-white rounded-lg p-3 sm:p-4 shadow-lg flex-1 ">
+          <Suspense fallback={<SkeletonLoader />}>
+            <Announcement />
+          </Suspense>
+        </div>
+        {/* 학습 메뉴 버튼들 */}
+        <div className="space-y-2 mt-6">
+          <div className="flex flex-row gap-2 sm:gap-10">
+            <div
+              onClick={Schedule}
+              className="cursor-pointer flex-1 transition-transform hover:scale-105"
+            >
+              <EnterBtn id="schedule" image="/images/ScheduleCardMain.svg" />
+            </div>
 
-          {/* 오늘의 학생 공지 */}
-          <div className="bg-white rounded-lg p-3 sm:p-4 shadow-lg flex-1">
-            <Suspense fallback={<SkeletonLoader />}>
-              <Announcement />
-            </Suspense>
-          </div>
+            <div
+              onClick={Quizlet}
+              className="cursor-pointer flex-1 transition-transform hover:scale-105"
+            >
+              <EnterBtn id="quizlet" image="/images/QuizletCardMain.svg" />
+            </div>
 
-          {/* 학습 메뉴 버튼들 */}
-          <div className="space-y-2">
-            <div className="flex flex-row gap-2 sm:gap-10">
-              <div
-                onClick={Schedule}
-                className="cursor-pointer flex-1 transition-transform hover:scale-105"
-              >
-                <EnterBtn id="schedule" image="/images/ScheduleCardMain.svg" />
-              </div>
-
-              <div
-                onClick={Quizlet}
-                className="cursor-pointer flex-1 transition-transform hover:scale-105"
-              >
-                <EnterBtn id="quizlet" image="/images/QuizletCardMain.svg" />
-              </div>
-
-              <div
-                onClick={Diary}
-                className="cursor-pointer flex-1 transition-transform hover:scale-105"
-              >
-                <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
-              </div>
+            <div
+              onClick={Diary}
+              className="cursor-pointer flex-1 transition-transform hover:scale-105"
+            >
+              <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
             </div>
           </div>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 };
