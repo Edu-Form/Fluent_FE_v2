@@ -32,6 +32,7 @@ const HomePageContent = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
+  const id = searchParams.get("id");
 
   const [classes, setClasses] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
@@ -199,7 +200,7 @@ const HomePageContent = () => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          href={`/student/schedule?user=${student.name}&type=student&id=${student.phoneNumber}`}
+                          href={`/teacher/schedule?user=${user}&type=teacher&id=${id}`}
                           className="flex justify-center items-center w-full"
                         >
                           스케줄보기
