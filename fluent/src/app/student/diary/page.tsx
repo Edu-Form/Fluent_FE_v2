@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
 
 // Lottie와 animationData를 클라이언트 사이드에서만 로드
 const Lottie = dynamic(() => import("lottie-react"), {
@@ -39,9 +40,32 @@ const LoadingScreen = ({ message = "Fluent" }: LoadingScreenProps) => (
   </div>
 );
 
+// 모바일 감지 hook
+const useMobileDetection = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // 초기 검사
+    checkMobile();
+
+    // 윈도우 리사이즈 리스너 설정
+    window.addEventListener("resize", checkMobile);
+
+    // 클린업
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
 const DiaryPageContent = () => {
   const [diaryData, setDiaryData] = useState<DiaryData[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useMobileDetection();
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
@@ -69,7 +93,11 @@ const DiaryPageContent = () => {
   }
 
   return (
-    <div className="relative w-full h-[80vh]  hide-scrollbar overflow-y-scroll">
+    <div
+      className={`relative w-full ${
+        isMobile ? "h-[75vh]" : "h-[80vh]"
+      } hide-scrollbar overflow-y-scroll`}
+    >
       <DiaryCard
         diarydata={
           Array.isArray(diaryData)
@@ -80,6 +108,8 @@ const DiaryPageContent = () => {
             : []
         }
       />
+      {isMobile && <div className="h-16" />}{" "}
+      {/* 모바일에서 하단 네비게이션 영역 확보 */}
     </div>
   );
 };
@@ -88,6 +118,8 @@ export default function Page() {
   return (
     <Suspense fallback={<LoadingScreen message="Loading..." />}>
       <DiaryPageContent />
+      {/* 네비게이션 컴포넌트 */}
+      <Navigation mobileOnly={true} defaultActiveIndex={3} />
     </Suspense>
   );
 }

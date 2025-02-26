@@ -13,10 +13,67 @@ import { useState, useEffect } from "react";
 interface NavIconProps {
   Icon: IconType;
   isActive: boolean;
-  tooltip: string;
+  label: string;
   onClick: () => void;
 }
 
+// 네비게이션 아이콘 컴포넌트
+function NavIcon({ Icon, isActive, label, onClick }: NavIconProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center justify-center p-2 w-16"
+    >
+      <div
+        className={`p-2 rounded-full ${
+          isActive ? "bg-blue-100 text-blue-600" : "text-gray-500"
+        }`}
+      >
+        <Icon className="text-xl" />
+      </div>
+      <span
+        className={`text-xs mt-1 ${
+          isActive ? "text-blue-600 font-medium" : "text-gray-500"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
+// 로그아웃 확인 모달 컴포넌트
+interface LogoutConfirmModalProps {
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function LogoutConfirmModal({ onConfirm, onCancel }: LogoutConfirmModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-4 w-72 max-w-[90%]">
+        <h3 className="text-lg font-medium mb-2">로그아웃</h3>
+        <p className="text-gray-600 mb-4">정말 로그아웃 하시겠습니까?</p>
+        <div className="flex justify-end space-x-2">
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 bg-gray-200 rounded-md text-gray-700"
+          >
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-3 py-1.5 bg-red-500 text-white rounded-md"
+          >
+            로그아웃
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 메인 네비게이션 컴포넌트
 function NavigationComponent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -29,6 +86,7 @@ function NavigationComponent() {
   const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const isHomePage = pathname === "/onboard" || pathname === "/";
   const displayPage = pathname === "/onboard" || pathname === "/";
@@ -38,9 +96,15 @@ function NavigationComponent() {
       setActiveIndex(0);
     } else if (pathname.includes("/schedule")) {
       setActiveIndex(1);
-    } else if (pathname.includes("/student") && func === "quizlet") {
+    } else if (
+      pathname.includes("/quizlet") ||
+      (pathname.includes("/student") && func === "quizlet")
+    ) {
       setActiveIndex(2);
-    } else if (pathname.includes("/student") && func === "diary") {
+    } else if (
+      pathname.includes("/diary") ||
+      (pathname.includes("/student") && func === "diary")
+    ) {
       setActiveIndex(3);
     }
   }, [pathname, func]);
@@ -74,83 +138,111 @@ function NavigationComponent() {
     router.push("/");
   };
 
+  if (isHomePage || displayPage) {
+    return null;
+  }
+
   return (
-    <div
-      className={`flex p-4 h-full w-full items-center justify-center ${
-        isHomePage || displayPage ? "hidden" : ""
-      }`}
-    >
-      <div className="bg-white px-12 py-4 rounded-xl shadow-lg space-x-2 sm:space-x-4 md:space-x-6 lg:space-x-10 flex items-center p-2">
-        <NavIcon
-          Icon={RiHome6Fill}
-          isActive={activeIndex === 0}
-          tooltip="Home"
-          onClick={() => {
-            setActiveIndex(0);
-            handleHomeClick();
-          }}
+    <>
+      {showLogoutConfirm && (
+        <LogoutConfirmModal
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogoutConfirm(false)}
         />
-        <NavIcon
-          Icon={FaCalendarDays}
-          isActive={activeIndex === 1}
-          tooltip="Schedule"
-          onClick={() => {
-            setActiveIndex(1);
-            handleScheduleClick();
-          }}
-        />
-        <NavIcon
-          Icon={TbCardsFilled}
-          isActive={activeIndex === 2}
-          tooltip="Quizlet"
-          onClick={() => {
-            setActiveIndex(2);
-            handleCardsClick();
-          }}
-        />
-        <NavIcon
-          Icon={PiBookBookmarkFill}
-          isActive={activeIndex === 3}
-          tooltip="Diary"
-          onClick={() => {
-            setActiveIndex(3);
-            handleBookmarkClick();
-          }}
-        />
-        <button
-          onClick={handleLogout}
-          className="flex items-center bg-red-500 text-white px-2 py-1 rounded-md sm:px-3 sm:py-2 sm:rounded-xl"
-        >
-          <span className="mr-1 sm:mr-2 text-sm sm:text-base">Logout</span>
-          <LuLogOut className="text-xl sm:text-2xl" />
-        </button>
+      )}
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg z-40">
+        <div className="flex justify-around items-center py-2">
+          <NavIcon
+            Icon={RiHome6Fill}
+            isActive={activeIndex === 0}
+            label="홈"
+            onClick={() => {
+              setActiveIndex(0);
+              handleHomeClick();
+            }}
+          />
+          <NavIcon
+            Icon={FaCalendarDays}
+            isActive={activeIndex === 1}
+            label="일정"
+            onClick={() => {
+              setActiveIndex(1);
+              handleScheduleClick();
+            }}
+          />
+          <NavIcon
+            Icon={TbCardsFilled}
+            isActive={activeIndex === 2}
+            label="퀴즐렛"
+            onClick={() => {
+              setActiveIndex(2);
+              handleCardsClick();
+            }}
+          />
+          <NavIcon
+            Icon={PiBookBookmarkFill}
+            isActive={activeIndex === 3}
+            label="일기"
+            onClick={() => {
+              setActiveIndex(3);
+              handleBookmarkClick();
+            }}
+          />
+          <NavIcon
+            Icon={LuLogOut}
+            isActive={false}
+            label="로그아웃"
+            onClick={() => setShowLogoutConfirm(true)}
+          />
+        </div>
+        {/* 아이폰 하단 안전 영역 */}
+        <div className="h-safe-bottom bg-white" />
       </div>
-    </div>
+
+      {/* 하단 네비게이션 공간 확보를 위한 패딩 */}
+      <div className="pb-16" />
+    </>
   );
 }
 
-function NavIcon({ Icon, isActive, tooltip, onClick }: NavIconProps) {
-  return (
-    <div className="relative group">
-      <div
-        onClick={onClick}
-        className={`p-1 sm:p-2 rounded-xl cursor-pointer ${
-          isActive ? "bg-blue-600 text-white" : "bg-white text-black"
-        } hover:bg-blue-600 hover:text-white transition duration-200`}
-      >
-        <Icon className="text-2xl sm:text-3xl" />
-      </div>
-      <div
-        className="absolute left-1/2 transform -translate-x-1/2 translate-y-2 opacity-0 group-hover:opacity-100 bg-black text-white text-xs rounded-md px-2 py-1 whitespace-nowrap transition-opacity duration-200"
-        style={{ bottom: "120%" }}
-      >
-        {tooltip}
-      </div>
-    </div>
-  );
+// 모바일 여부를 확인하는 hook
+export function useMobileDetection() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // 초기 검사
+    checkMobile();
+
+    // 윈도우 리사이즈 리스너 설정
+    window.addEventListener("resize", checkMobile);
+
+    // 클린업
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  return isMobile;
 }
 
-export default function Navigation() {
+// 특정 페이지에서 활성화된 인덱스를 설정하기 위한 인터페이스
+interface NavigationProps {
+  defaultActiveIndex?: number;
+  mobileOnly?: boolean;
+}
+
+// 외부에서 사용할 메인 네비게이션 컴포넌트
+export default function Navigation({ mobileOnly = false }: NavigationProps) {
+  const isMobile = useMobileDetection();
+
+  // 모바일 전용 모드인데 모바일이 아닌 경우 null 반환
+  if (mobileOnly && !isMobile) {
+    return null;
+  }
+
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <NavigationComponent />

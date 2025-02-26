@@ -61,12 +61,6 @@ const HomePageContent = () => {
       .catch((error) => console.log("Error fetching students:", error));
   }, [user, URL, ALL_STUDENTS_URL, classes.length]);
 
-  // 상태 토글 함수 (예시)
-  const toggleStudentStatus = (studentId: string) => {
-    // 실제 구현은 백엔드 API 호출 필요
-    console.log(`Toggle status for student ${studentId}`);
-  };
-
   return (
     <div className="flex w-full h-screen p-4 gap-4">
       {/* 왼쪽 영역 */}
@@ -149,7 +143,10 @@ const HomePageContent = () => {
                           className="flex justify-center items-center w-full"
                         >
                           {student.class_note ? (
-                            <><IoCheckmarkCircle className="text-green-500 text-xl" /> {student.class_note}</>
+                            <>
+                              <IoCheckmarkCircle className="text-green-500 text-xl" />{" "}
+                              {student.class_note}
+                            </>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}
@@ -161,7 +158,10 @@ const HomePageContent = () => {
                           className="flex justify-center items-center w-full"
                         >
                           {student.quizlet_date ? (
-                            <><IoCheckmarkCircle className="text-green-500 text-xl" /> 퀴즐렛 생성 완료</>
+                            <>
+                              <IoCheckmarkCircle className="text-green-500 text-xl" />{" "}
+                              퀴즐렛 생성 완료
+                            </>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}
@@ -173,7 +173,10 @@ const HomePageContent = () => {
                           className="flex justify-center items-center w-full"
                         >
                           {student.diary_date ? (
-                            <><IoCheckmarkCircle className="text-green-500 text-xl" /><span>{student.diary_edit}</span></>
+                            <>
+                              <IoCheckmarkCircle className="text-green-500 text-xl" />
+                              <span>{student.diary_edit}</span>
+                            </>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}
@@ -185,7 +188,10 @@ const HomePageContent = () => {
                           className="flex justify-center items-center w-full"
                         >
                           {student.diary_edit ? (
-                            <><IoCheckmarkCircle className="text-green-500 text-xl" /> <span>첨삭완료</span></>
+                            <>
+                              <IoCheckmarkCircle className="text-green-500 text-xl" />{" "}
+                              <span>첨삭완료</span>
+                            </>
                           ) : (
                             <IoCloseCircle className="text-red-500 text-xl" />
                           )}

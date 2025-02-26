@@ -64,11 +64,11 @@ const EnterBtn: React.FC<BtnProps> = ({ id, image }) => {
     <div
       className={`
         flex items-center 
-        w-full min-w-[300px] max-w-[480px] 
+        w-full min-w-[300px] 
         ${bgColor} ${hoverColor} ${shadow} shadow-lg
         space-x-6 p-4 rounded-xl 
         transition-all duration-300 ease-in-out 
-        transform hover:scale-105 group
+        transform hover:scale-100 group
       `}
     >
       <div className="relative w-[140px] h-[140px] flex items-center justify-center">
@@ -82,10 +82,10 @@ const EnterBtn: React.FC<BtnProps> = ({ id, image }) => {
             group-hover:scale-[1.2] 
             group-hover:translate-y-[-10px]
             group-hover:rotate-3
-            
             group-hover:animate-float
             
           `}
+          draggable="false"
         />
       </div>
 
