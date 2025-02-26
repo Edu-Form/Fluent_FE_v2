@@ -24,28 +24,6 @@ const SkeletonLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-[70px]"></div>
 );
 
-// 모바일 감지 hook
-const useMobileDetection = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    // 초기 검사
-    checkMobile();
-
-    // 윈도우 리사이즈 리스너 설정
-    window.addEventListener("resize", checkMobile);
-
-    // 클린업
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
-  return isMobile;
-};
-
 interface ScheduleData {
   date: string;
   duration: number;
@@ -94,7 +72,6 @@ const HomePage = () => {
     useState<ScheduleData | null>(null);
 
   const router = useRouter();
-  const isMobile = useMobileDetection();
 
   useEffect(() => {
     const fetchData = async () => {
