@@ -5,7 +5,7 @@ import Lottie from "lottie-react";
 import timerAnimationData from "@/src/app/lotties/timeLoading.json";
 import "react-day-picker/dist/style.css";
 
-// 기존 날짜 포맷 함수들 유지
+// 날짜 포맷 함수
 const formatToISO = (date: string | undefined) => {
   try {
     if (date != undefined) {
@@ -34,23 +34,24 @@ const formatToSave = (date: string | undefined) => {
   return `${year}. ${month}. ${day}.`;
 };
 
-const QuizletModalContent = ({
-  closeIsModal,
-  next_class_date,
-}: QuizeletlModalProps) => {
+// 퀴즐렛 페이지 내용 컴포넌트
+const QuizletPageContent = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const next_class_date = searchParams.get("next_class_date") || "";
+  const user = searchParams.get("user");
+  const student_name = searchParams.get("student_name");
+  const type = searchParams.get("type");
+  const user_id = searchParams.get("id");
+
   const [class_date, setClassDate] = useState(
     formatToSave(formatToISO(next_class_date))
   );
   const [date] = useState(formatToSave(today_formatted()));
   const [original_text, setOriginal_text] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const searchParams = useSearchParams();
-  const user = searchParams.get("user");
-  const student_name = searchParams.get("student_name");
-  const type = searchParams.get("type");
-  const user_id = searchParams.get("id");
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const postQuizlet = async (e: any) => {
     e.preventDefault();
@@ -67,7 +68,10 @@ const QuizletModalContent = ({
       });
 
       if (response.ok) {
-        window.close();
+        setSaveSuccess(true);
+        setTimeout(() => {
+          router.push(`/teacher/home?user=${user}&type=${type}&id=${user_id}`);
+        }, 1500);
       } else {
         console.error("Failed to save quizlet");
       }
@@ -79,106 +83,317 @@ const QuizletModalContent = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+    <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
+      {/* 로딩 오버레이 */}
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-40 h-40 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="w-28 h-28 bg-white rounded-3xl shadow-lg flex items-center justify-center">
             <Lottie animationData={timerAnimationData} />
           </div>
         </div>
       )}
 
-      <div className="relative w-[720px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
-
-        <form onSubmit={postQuizlet} className="p-6 space-y-6">
-          <h2 className="text-2xl font-bold text-center text-[#121B5C]">
-            Class Note
-          </h2>
-
-          <div className="space-y-2"></div>
-
-          <div className="space-y-2">
-            <label
-              htmlFor="class_date"
-              className="text-sm font-medium text-gray-700"
-            >
-              Class Date
-            </label>
-            <input
-              type="date"
-              name="class_date"
-              id="class_date"
-              defaultValue={formatToISO(next_class_date)}
-              onChange={(e) => setClassDate(formatToSave(e.target.value))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 transition-all"
-              required
-              disabled={loading}
-            />
+      {/* 성공 메시지 */}
+      {saveSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="w-96 bg-white rounded-3xl shadow-lg flex flex-col items-center justify-center p-8 animate-scale-in">
+            <div className="w-14 h-14 bg-[#20D16B] rounded-full flex items-center justify-center mb-5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-[#191F28] mb-2">저장 완료</h2>
+            <p className="text-[#4E5968] text-center">
+              퀴즐렛이 성공적으로 저장되었습니다.
+              <br />
+              교사 홈 페이지로 이동합니다.
+            </p>
           </div>
+        </div>
+      )}
 
-          <div className="space-y-2">
-            <label
-              htmlFor="original_text"
-              className="text-sm font-medium text-gray-700"
-            >
-              Quizlet Content
-            </label>
-            <textarea
-              id="original_text"
-              rows={14}
-              onChange={(e) => setOriginal_text(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#121B5C]/50 resize-none"
-              placeholder="Enter quizlet content here..."
-              disabled={loading}
-            ></textarea>
-          </div>
-
+      {/* 헤더 */}
+      <header className="bg-white border-b border-[#F2F4F6] py-4 sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-5 flex items-center justify-between">
+          <h1 className="text-lg font-bold text-[#191F28]">수업 노트</h1>
           <button
-            type="submit"
-            className={`w-full py-4 rounded-lg text-white font-semibold 
-              ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-[#121B5C] hover:bg-[#0f1a4e] transition-colors"
-              }`}
-            disabled={loading}
+            onClick={() =>
+              router.push(
+                `/teacher/home?user=${user}&type=${type}&id=${user_id}`
+              )
+            }
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#F9FAFB] transition-colors"
+            aria-label="닫기"
           >
-            Create Quizlet
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-[#8B95A1]"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
           </button>
-        </form>
-      </div>
+        </div>
+      </header>
+
+      <main className="flex-grow py-6">
+        <div className="max-w-4xl mx-auto px-5">
+          <form onSubmit={postQuizlet} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* 학생 이름 */}
+              {student_name && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[#4E5968]">
+                    학생 이름
+                  </label>
+                  <div className="px-4 py-3.5 bg-[#F9FAFB] border border-[#E5E8EB] rounded-2xl text-[#333D4B] text-sm">
+                    {student_name}
+                  </div>
+                </div>
+              )}
+
+              {/* 수업 날짜 */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="class_date"
+                  className="block text-sm font-medium text-[#4E5968]"
+                >
+                  수업 날짜
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    name="class_date"
+                    id="class_date"
+                    defaultValue={formatToISO(next_class_date)}
+                    onChange={(e) => setClassDate(formatToSave(e.target.value))}
+                    className="w-full px-4 py-3.5 text-sm border border-[#E5E8EB] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3182F6]/30 focus:border-[#3182F6] transition-colors text-[#333D4B]"
+                    required
+                    disabled={loading}
+                  />
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#8B95A1"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect
+                        x="3"
+                        y="4"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"
+                      ></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 퀴즐렛 내용 */}
+            <div className="space-y-2">
+              <label
+                htmlFor="original_text"
+                className="block text-sm font-medium text-[#4E5968]"
+              >
+                퀴즐렛 내용
+              </label>
+              <div className="relative bg-white">
+                <textarea
+                  id="original_text"
+                  onChange={(e) => setOriginal_text(e.target.value)}
+                  className="w-full px-4 py-3.5 text-sm border border-[#E5E8EB] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3182F6]/30 focus:border-[#3182F6] transition-colors text-[#333D4B] resize-none"
+                  placeholder="1. Fluent  2. 퀴즐렛 이런식으로 번호를 먼저 입력하세요."
+                  style={{ minHeight: "60vh" }}
+                  disabled={loading}
+                ></textarea>
+                <div className="absolute top-3 right-3">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 rounded-full bg-[#FF5F57]"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#FFBD2E]"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#28C840]"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 작성 가이드 */}
+            <div className="bg-[#F2F4F8] rounded-2xl p-4 border-l-[3px] border-[#3182F6]">
+              <div className="flex items-center space-x-2 mb-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#3182F6"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <h3 className="text-sm font-bold text-[#3182F6]">
+                  작성 가이드
+                </h3>
+              </div>
+              <ul className="text-xs text-[#4E5968] space-y-2 pl-2">
+                <li className="flex items-start">
+                  <span className="text-[#f63131] mr-2 text-sm leading-5">
+                    •
+                  </span>
+                  <span className="font-medium">
+                    번호를 꼭 적어주세요 1. 2. 3. 으로!!
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-[#3182F6] mr-2 text-sm leading-5">
+                    •
+                  </span>
+                  <span>수업 중 배운 중요한 내용을 요약해 주세요.</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-[#3182F6] mr-2 text-sm leading-5">
+                    •
+                  </span>
+                  <span>
+                    학생이 어려워하는 부분을 중점적으로 기록해 주세요.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-[#3182F6] mr-2 text-sm leading-5">
+                    •
+                  </span>
+                  <span>다음 수업에서 복습할 내용을 포함해 주세요.</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* 하단 버튼 영역 */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() =>
+                  router.push(
+                    `/teacher/home?user=${user}&type=${type}&id=${user_id}`
+                  )
+                }
+                className="flex-1 py-4 rounded-xl text-[#4E5968] text-sm font-medium border border-[#E5E8EB] hover:bg-[#F9FAFB] transition-colors"
+                disabled={loading}
+              >
+                취소하기
+              </button>
+              <button
+                type="submit"
+                className={`flex-1 py-4 rounded-xl text-white text-sm font-medium
+                  ${
+                    loading
+                      ? "bg-[#DEE2E6] cursor-not-allowed"
+                      : "bg-[#3182F6] hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors"
+                  }`}
+                disabled={loading}
+              >
+                저장하기
+              </button>
+            </div>
+          </form>
+        </div>
+      </main>
 
       <style jsx>{`
-        @keyframes slide-up {
+        @keyframes fade-in {
           from {
-            transform: translateY(20px);
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+
+        @keyframes scale-in {
+          from {
+            transform: scale(0.95);
             opacity: 0;
           }
           to {
-            transform: translateY(0);
+            transform: scale(1);
             opacity: 1;
           }
         }
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
+        .animate-scale-in {
+          animation: scale-in 0.2s ease-out;
+        }
+
+        /* 데이터 픽커 스타일 오버라이드 */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          opacity: 0;
+          width: 100%;
+          height: 100%;
+          position: absolute;
+          top: 0;
+          left: 0;
+          cursor: pointer;
+        }
+
+        textarea::placeholder {
+          color: #b0b8c1;
         }
       `}</style>
     </div>
   );
 };
 
-export default function QuizletModal(props: QuizeletlModalProps) {
+// 메인 컴포넌트 - Suspense로 감싸 로딩 상태 관리
+export default function QuizletPage() {
   return (
     <Suspense
       fallback={
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="w-40 h-40 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
-            <Lottie animationData={timerAnimationData} />
+        <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+          <div className="bg-white rounded-3xl shadow-lg p-6 flex flex-col items-center justify-center">
+            <div className="w-24 h-24 mb-4">
+              <Lottie animationData={timerAnimationData} />
+            </div>
+            <p className="text-[#4E5968] text-sm font-medium">로딩 중...</p>
           </div>
         </div>
       }
     >
-      <QuizletModalContent {...props} />
+      <QuizletPageContent />
     </Suspense>
   );
 }

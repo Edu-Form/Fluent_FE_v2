@@ -1,12 +1,11 @@
 "use client";
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { motion } from "framer-motion";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { FiCalendar, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { LuCircleFadingPlus } from "react-icons/lu";
 
-
-function shuffleCards(cards: string[][]){
+function shuffleCards(cards: string[][]) {
   const shuffled = [...cards]; // Create a copy to avoid mutating the original array
 
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -17,12 +16,9 @@ function shuffleCards(cards: string[][]){
   return shuffled;
 }
 
-// // Example usage:
 // let items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 // shuffleArray(items);
 // console.log(items); // Mutated (shuffled) original array
-
-
 
 const QuizletCardContent = ({
   content,
@@ -44,16 +40,15 @@ const QuizletCardContent = ({
   const engWords = content.eng_quizlet || [];
   const korWords = content.kor_quizlet || [];
 
-  // 단어 쌍 생성
-  let cards = engWords.map((eng, index) => [eng, korWords[index] || ""]);
-
+  // 단어 쌍 생성 - let에서 const로 변경 (ESLint prefer-const 오류 해결)
+  const cards = engWords.map((eng, index) => [eng, korWords[index] || ""]);
 
   const [shuffledCards, setshuffledCards] = useState<string[][] | null>(null);
 
   // Random Shuffle
   function shuffled() {
-    setshuffledCards(shuffleCards(cards))
-    console.log(cards)
+    setshuffledCards(shuffleCards(cards));
+    console.log(cards);
   }
 
   const [currentCard, setCurrentCard] = useState(0);
@@ -171,7 +166,10 @@ const QuizletCardContent = ({
           <>
             {/* Date Selection Trigger */}
             <div
-              onClick={() => {setIsDatePickerOpen(!isDatePickerOpen); setshuffledCards(null);}}
+              onClick={() => {
+                setIsDatePickerOpen(!isDatePickerOpen);
+                setshuffledCards(null);
+              }}
               className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full cursor-pointer transition-all"
             >
               <FiCalendar className="w-4 h-4" />
@@ -258,7 +256,9 @@ const QuizletCardContent = ({
                 >
                   <div>
                     <h2 className="text-2xl font-bold text-gray-800">
-                      {shuffledCards ? shuffledCards[currentCard][1] : cards[currentCard][1]}
+                      {shuffledCards
+                        ? shuffledCards[currentCard][1]
+                        : cards[currentCard][1]}
                     </h2>
                     <p className="text-xs text-gray-400 mt-3 font-medium">
                       탭하여 번역 보기
@@ -276,7 +276,9 @@ const QuizletCardContent = ({
                 >
                   <div>
                     <h2 className="text-2xl font-bold text-blue-600">
-                      {shuffledCards ? shuffledCards[currentCard][1] : cards[currentCard][0]}
+                      {shuffledCards
+                        ? shuffledCards[currentCard][1]
+                        : cards[currentCard][0]}
                     </h2>
                     <p className="text-xs text-blue-400 mt-3 font-medium">
                       탭하여 숨기기

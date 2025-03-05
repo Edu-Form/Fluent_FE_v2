@@ -81,7 +81,7 @@ const QuizletPageContent = () => {
     cards: [],
   });
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const isMobile = useMobileDetection();
 
   const fetchQuizletData = useCallback(async () => {

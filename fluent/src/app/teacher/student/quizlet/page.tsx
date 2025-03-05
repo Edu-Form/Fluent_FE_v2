@@ -40,7 +40,7 @@ const QuizletPageContent = () => {
   const [currentCard, setCurrentCard] = useState<QuizletCardProps | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [, setIsModalOpen] = useState(false);
   const searchParams = useSearchParams();
   const student_name = searchParams.get("student_name");
 

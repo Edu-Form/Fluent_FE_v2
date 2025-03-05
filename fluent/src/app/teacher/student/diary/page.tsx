@@ -67,16 +67,16 @@ const DiaryPageContent = () => {
 
   return (
     <div className="relative bg-white w-full h-[80vh] hide-scrollbar overflow-y-scroll">
-        <DiaryCard
-          diarydata={
-            Array.isArray(diaryData)
-              ? diaryData.sort(
-                  (a, b) =>
-                    new Date(b.date).getTime() - new Date(a.date).getTime()
-                )
-              : []
-          }
-        />
+      <DiaryCard
+        diarydata={
+          Array.isArray(diaryData)
+            ? diaryData.sort(
+                (a, b) =>
+                  new Date(b.date).getTime() - new Date(a.date).getTime()
+              )
+            : []
+        }
+      />
       <style jsx>{`
         .hide-scrollbar {
           scrollbar-width: none;

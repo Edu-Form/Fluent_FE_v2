@@ -56,12 +56,6 @@ const AnnouncementPage = () => {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
 
-  // 퀴즐렛 모달 제어 함수
-  const openQuizletModal = (studentName: string) => {
-    setSelectedStudent(studentName);
-    setIsQuizletModalOpen(true);
-  };
-
   const closeQuizletModal = () => {
     setIsQuizletModalOpen(false);
     setSelectedStudent(null);

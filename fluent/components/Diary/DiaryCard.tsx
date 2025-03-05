@@ -90,7 +90,106 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
     ));
   };
 
-  if (!sortedData.length) return null;
+  // 데이터가 없을 때 템플릿 UI를 표시
+  if (!sortedData.length) {
+    return (
+      <div className="relative flex w-full h-full bg-white items-center justify-center p-4 sm:p-10">
+        {/* 빈 데이터일 때의 네비게이션 버튼 (비활성화) */}
+        <button
+          disabled
+          className="absolute left-2 z-10 p-4 rounded-full bg-white shadow-lg opacity-50 cursor-not-allowed"
+          aria-label="Previous diary"
+        >
+          <FiChevronLeft size={24} />
+        </button>
+
+        <button
+          disabled
+          className="absolute right-2 z-10 p-4 rounded-full bg-white shadow-lg opacity-50 cursor-not-allowed"
+          aria-label="Next diary"
+        >
+          <FiChevronRight size={24} />
+        </button>
+
+        {/* 빈 카드 컨테이너 */}
+        <motion.div className="w-full max-w-6xl h-full bg-white rounded-2xl shadow-2xl">
+          {/* 날짜 헤더 */}
+          <div className="relative rounded-t-lg bg-gradient-to-r from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-lg sm:text-2xl font-bold">Diary</h1>
+            </div>
+
+            {type === "student" && (
+              <button
+                onClick={openIsModal}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-sm font-medium transition-colors"
+              >
+                {content.write}
+              </button>
+            )}
+          </div>
+
+          {/* 콘텐츠 컨테이너 */}
+          <div className="flex flex-col">
+            {/* 섹션 네비게이션 */}
+            <div className="flex border-b border-gray-200">
+              {[
+                {
+                  name: "diary",
+                  label: "Diary",
+                  icon: <FiBook className="mr-2" />,
+                },
+                {
+                  name: "summary",
+                  label: "Summary",
+                  icon: <FiList className="mr-2" />,
+                },
+              ].map((section) => (
+                <button
+                  key={section.name}
+                  onClick={() => setActiveSection(section.name as any)}
+                  className={`flex-1 py-3 flex items-center justify-center text-sm sm:text-base font-medium transition-all duration-300 ${
+                    activeSection === section.name
+                      ? "bg-[#3f4166] text-white"
+                      : "hover:bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {section.icon}
+                  <span className="hidden sm:inline">{section.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* 콘텐츠 영역 */}
+            <div className="p-4 sm:p-6">
+              <div className="overflow-y-auto bg-gray-50 rounded-xl p-4 shadow-inner h-[50vh] flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-gray-400 text-lg mb-4">
+                    아직 작성된 일기가 없습니다
+                  </p>
+                  {type === "student" && (
+                    <button
+                      onClick={openIsModal}
+                      className="px-6 py-3 bg-[#3f4166] text-white rounded-full text-sm font-medium hover:bg-[#4b4d7a] transition-colors"
+                    >
+                      일기 작성하기
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {isModalOpen && (
+          <DiaryModal
+            closeIsModal={closeIsModal}
+            next_class_date={new Date().toISOString().split("T")[0]}
+          />
+        )}
+      </div>
+    );
+  }
 
   const diary = sortedData[currentIndex];
   const date = new Date(diary.date);
