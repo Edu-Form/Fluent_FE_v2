@@ -1,95 +1,186 @@
 "use client";
-import { useState, Suspense } from "react";
+
+import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Lottie from "lottie-react";
-import timerAnimationData from "@/src/app/lotties/timeLoading.json";
 import "react-day-picker/dist/style.css";
 
 // 날짜 포맷 함수
-const formatToISO = (date: string | undefined) => {
+const formatToISO = (date: string | undefined): string => {
   try {
-    if (date != undefined) {
-      const parts = date.trim().replace(/\.$/, "").split(". ");
-      if (parts.length === 3) {
-        const [year, month, day] = parts;
-        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-      }
+    if (!date) return "";
+
+    const parts = date.trim().replace(/\.$/, "").split(". ");
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     }
-  } catch {
+
+    // 이미 ISO 형식인 경우 검증 후 반환
+    if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      return date;
+    }
+
+    return "";
+  } catch (error) {
+    console.error("날짜 포맷 오류:", error);
     return "";
   }
 };
 
-const today_formatted = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+const today_formatted = (): string => {
+  try {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.error("오늘 날짜 포맷 오류:", error);
+    return new Date().toISOString().split("T")[0]; // 대체 방법
+  }
 };
 
-const formatToSave = (date: string | undefined) => {
-  if (!date) return "";
-  const [year, month, day] = date.split("-");
-  return `${year}. ${month}. ${day}.`;
+const formatToSave = (date: string | undefined): string => {
+  try {
+    if (!date) return "";
+
+    // 유효한 날짜 형식인지 확인
+    if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) return "";
+
+    const [year, month, day] = date.split("-");
+    if (!year || !month || !day) return "";
+
+    return `${year}. ${month}. ${day}.`;
+  } catch (error) {
+    console.error("저장 형식 변환 오류:", error);
+    return "";
+  }
 };
 
 // 퀴즐렛 페이지 내용 컴포넌트
-const QuizletPageContent = () => {
+const QuizletPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isMounted, setIsMounted] = useState<boolean>(false);
 
-  const next_class_date = searchParams.get("next_class_date") || "";
-  const user = searchParams.get("user");
-  const student_name = searchParams.get("student_name");
-  const type = searchParams.get("type");
-  const user_id = searchParams.get("id");
+  // URL 파라미터 안전하게 가져오기
+  const getParam = (name: string): string => {
+    try {
+      return searchParams?.get(name) || "";
+    } catch (error) {
+      console.error(`파라미터 가져오기 오류 (${name}):`, error);
+      return "";
+    }
+  };
 
-  const [class_date, setClassDate] = useState(
-    formatToSave(formatToISO(next_class_date))
-  );
-  const [date] = useState(formatToSave(today_formatted()));
-  const [original_text, setOriginal_text] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const next_class_date = getParam("next_class_date");
+  const user = getParam("user");
+  const student_name = getParam("student_name");
+  const type = getParam("type");
+  const user_id = getParam("id");
 
-  const postQuizlet = async (e: any) => {
+  const [class_date, setClassDate] = useState<string>("");
+  const [date, setDate] = useState<string>("");
+  const [original_text, setOriginal_text] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+
+  // 마운트 확인 및 초기 데이터 설정
+  useEffect(() => {
+    setIsMounted(true);
+
+    // 초기 날짜값 설정
+    try {
+      const formattedClassDate = formatToSave(formatToISO(next_class_date));
+      const formattedToday = formatToSave(today_formatted());
+
+      setClassDate(formattedClassDate);
+      setDate(formattedToday);
+    } catch (error) {
+      console.error("날짜 초기화 오류:", error);
+      // 오류 발생 시 기본값으로 오늘 날짜 사용
+      const todayISO = new Date().toISOString().split("T")[0];
+      setClassDate(formatToSave(todayISO));
+      setDate(formatToSave(todayISO));
+    }
+  }, [next_class_date]);
+
+  const postQuizlet = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // 데이터 유효성 검사
+      if (!class_date) {
+        throw new Error("수업 날짜를 입력해주세요.");
+      }
+
+      if (!original_text || original_text.trim().length === 0) {
+        throw new Error("퀴즐렛 내용을 입력해주세요.");
+      }
+
+      const payload = {
+        student_name: student_name || "",
+        class_date,
+        date,
+        original_text,
+      };
+
       const response = await fetch(`/api/quizlet/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         cache: "no-store",
-        body: JSON.stringify({ student_name, class_date, date, original_text }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
         setSaveSuccess(true);
         setTimeout(() => {
-          router.push(`/teacher/home?user=${user}&type=${type}&id=${user_id}`);
+          try {
+            // 안전한 리다이렉션 처리
+            const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+              user
+            )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+              user_id
+            )}`;
+            router.push(redirectUrl);
+          } catch (error) {
+            console.error("리다이렉션 오류:", error);
+            // 오류 발생 시 기본 경로로 이동
+            router.push("/teacher/home");
+          }
         }, 1500);
       } else {
-        console.error("Failed to save quizlet");
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "저장에 실패했습니다." }));
+        throw new Error(errorData.message || "저장에 실패했습니다.");
       }
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error("퀴즐렛 저장 오류:", error);
+      alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
   };
+
+  // 클라이언트 측 렌더링이 아직 완료되지 않았을 경우 간단한 로딩 표시
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-[#3182F6] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
       {/* 로딩 오버레이 */}
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="w-28 h-28 bg-white rounded-3xl shadow-lg flex items-center justify-center">
-            <Lottie animationData={timerAnimationData} />
-          </div>
+          <div className="w-28 h-28 bg-white rounded-3xl shadow-lg flex items-center justify-center"></div>
         </div>
       )}
 
@@ -127,11 +218,14 @@ const QuizletPageContent = () => {
         <div className="max-w-4xl mx-auto px-5 flex items-center justify-between">
           <h1 className="text-lg font-bold text-[#191F28]">수업 노트</h1>
           <button
-            onClick={() =>
-              router.push(
-                `/teacher/home?user=${user}&type=${type}&id=${user_id}`
-              )
-            }
+            onClick={() => {
+              const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+                user
+              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                user_id
+              )}`;
+              router.push(redirectUrl);
+            }}
             className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#F9FAFB] transition-colors"
             aria-label="닫기"
           >
@@ -184,7 +278,9 @@ const QuizletPageContent = () => {
                     name="class_date"
                     id="class_date"
                     defaultValue={formatToISO(next_class_date)}
-                    onChange={(e) => setClassDate(formatToSave(e.target.value))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setClassDate(formatToSave(e.target.value))
+                    }
                     className="w-full px-4 py-3.5 text-sm border border-[#E5E8EB] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3182F6]/30 focus:border-[#3182F6] transition-colors text-[#333D4B]"
                     required
                     disabled={loading}
@@ -229,7 +325,9 @@ const QuizletPageContent = () => {
               <div className="relative bg-white">
                 <textarea
                   id="original_text"
-                  onChange={(e) => setOriginal_text(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setOriginal_text(e.target.value)
+                  }
                   className="w-full px-4 py-3.5 text-sm border border-[#E5E8EB] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3182F6]/30 focus:border-[#3182F6] transition-colors text-[#333D4B] resize-none"
                   placeholder="1. Fluent  2. 퀴즐렛 이런식으로 번호를 먼저 입력하세요."
                   style={{ minHeight: "60vh" }}
@@ -303,11 +401,14 @@ const QuizletPageContent = () => {
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={() =>
-                  router.push(
-                    `/teacher/home?user=${user}&type=${type}&id=${user_id}`
-                  )
-                }
+                onClick={() => {
+                  const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+                    user
+                  )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                    user_id
+                  )}`;
+                  router.push(redirectUrl);
+                }}
                 className="flex-1 py-4 rounded-xl text-[#4E5968] text-sm font-medium border border-[#E5E8EB] hover:bg-[#F9FAFB] transition-colors"
                 disabled={loading}
               >
@@ -378,21 +479,20 @@ const QuizletPageContent = () => {
   );
 };
 
-// 메인 컴포넌트 - Suspense로 감싸 로딩 상태 관리
-export default function QuizletPage() {
+// 서버 렌더링에 안전한 로딩 폴백
+const LoadingFallback: React.FC = () => (
+  <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
+    <div className="bg-white rounded-3xl shadow-lg p-6 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-[#3182F6] border-t-transparent rounded-full animate-spin"></div>
+      <p className="ml-3 text-[#4E5968]">로딩 중...</p>
+    </div>
+  </div>
+);
+
+// 메인 내보내기
+export default function QuizletPage(): ReactNode {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
-          <div className="bg-white rounded-3xl shadow-lg p-6 flex flex-col items-center justify-center">
-            <div className="w-24 h-24 mb-4">
-              <Lottie animationData={timerAnimationData} />
-            </div>
-            <p className="text-[#4E5968] text-sm font-medium">로딩 중...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingFallback />}>
       <QuizletPageContent />
     </Suspense>
   );
