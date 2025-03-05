@@ -14,13 +14,16 @@ export async function POST(request: Request) {
     const { original_text } = quizletData;
 
     // Process the original text to create eng_quizlet
-    let lines = original_text.split("\n");
+    let lines = original_text.split("\n").filter((line: string) => /^[0-9]/.test(line));
     // interface QuizletData {
     //   student_name: string;
     //   class_date: string;
     //   date: string;
     //   original_text: string;
     // }
+
+    // Filter the numbered lines for quizlet 
+    lines = lines.
 
     lines = lines
       .map((line: string) => line.trim())
