@@ -140,7 +140,7 @@ const HomePageContent = () => {
                       </td>
                       <td className="px-4 py-3 text-center">
                         <Link
-                          href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
+                          href={`/teacher/student/class_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
                           className="flex justify-center items-center w-full"
                         >
                           {student.class_note ? (

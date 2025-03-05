@@ -67,13 +67,6 @@ const DiaryPageContent = () => {
 
   return (
     <div className="relative bg-white w-full h-[80vh] hide-scrollbar overflow-y-scroll">
-      {!diaryData || diaryData.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full">
-          <p className="text-gray-500 text-lg">
-            이 학생은 아직 다이어리 작성을 하지 않았습니다
-          </p>
-        </div>
-      ) : (
         <DiaryCard
           diarydata={
             Array.isArray(diaryData)
@@ -84,7 +77,6 @@ const DiaryPageContent = () => {
               : []
           }
         />
-      )}
       <style jsx>{`
         .hide-scrollbar {
           scrollbar-width: none;

@@ -105,17 +105,17 @@ const QuizletPage = () => {
     setIsDatePickerOpen(false);
   };
 
-  if (!data.length) {
-    return (
-      <div className="w-full h-full bg-white flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500 text-lg">
-            이 학생은 아직 퀴즐렛 작성을 하지 않았습니다
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // if (!data.length) {
+  //   return (
+  //     <div className="w-full h-full bg-white flex items-center justify-center">
+  //       <div className="text-center">
+  //         <p className="text-gray-500 text-lg">
+  //           이 학생은 아직 퀴즐렛 작성을 하지 않았습니다
+  //         </p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   const currentDate = currentCard ? new Date(currentCard.date) : new Date();
   const year = currentDate.getFullYear();
