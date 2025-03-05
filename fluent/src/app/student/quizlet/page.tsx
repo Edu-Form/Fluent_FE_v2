@@ -127,10 +127,6 @@ const QuizletPageContent = () => {
     setIsDatePickerOpen(false);
   };
 
-  if (loading) {
-    return <LoadingScreen message="Loading Quizlet..." />;
-  }
-
   if (!data.length) {
     return (
       <div className="w-full h-[80vh] flex items-center justify-center bg-white">

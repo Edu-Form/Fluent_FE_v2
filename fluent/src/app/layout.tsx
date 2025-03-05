@@ -15,11 +15,11 @@ export default function RootLayout({
 
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-full bg-[#F6F7FB]">
+      <body className="flex flex-col justify-center min-h-full bg-[#F6F7FB]">
         {isTeacherPath ? (
-          <div className="min-h-screen">{children}</div>
+          <div>{children}</div>
         ) : (
-          <div className="min-h-screen flex flex-col">
+          <div className="flex flex-col">
             {/* Main Content Section */}
             <div className="flex-1 px-4">{children}</div>
 
