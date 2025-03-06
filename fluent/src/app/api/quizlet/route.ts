@@ -22,9 +22,6 @@ export async function POST(request: Request) {
     //   original_text: string;
     // }
 
-    // Filter the numbered lines for quizlet 
-    lines = lines.
-
     lines = lines
       .map((line: string) => line.trim())
       .filter((line: string) => line);

@@ -135,6 +135,8 @@ const QuizletPageContent: React.FC = () => {
         body: JSON.stringify(payload),
       });
 
+      console.log(payload);
+
       if (response.ok) {
         setSaveSuccess(true);
         setTimeout(() => {

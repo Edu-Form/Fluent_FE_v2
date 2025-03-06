@@ -51,6 +51,24 @@ const QuizletCardContent = ({
     console.log(cards);
   }
 
+  function Audio(text: string) {
+    if ('speechSynthesis' in window) {
+      const speech = new SpeechSynthesisUtterance(text);
+      speech.lang = 'en-US';
+      speech.pitch = 1;
+      speech.rate = 1;
+      window.speechSynthesis.speak(speech);
+    } else {
+      console.log("Speech synthesis is not supported in this browser.");
+    }
+  }
+
+  function readCardText() {
+    // Use the condition provided to select the text
+    const text = shuffledCards ? shuffledCards[currentCard][0] : cards[currentCard][0];
+    Audio(text);  // Call the Audio function with the selected text
+  }
+
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -159,6 +177,7 @@ const QuizletCardContent = ({
         <h1 className="text-lg sm:text-xl font-bold text-center">
           {year}년 {month}월 {day}일 {weekday}
           <div onClick={shuffled}>Shuffle Cards</div>
+          <div onClick={readCardText}>Audio</div>
         </h1>
 
         {/* Navigation Buttons for Multiple Cards */}
@@ -277,7 +296,7 @@ const QuizletCardContent = ({
                   <div>
                     <h2 className="text-2xl font-bold text-blue-600">
                       {shuffledCards
-                        ? shuffledCards[currentCard][1]
+                        ? shuffledCards[currentCard][0]
                         : cards[currentCard][0]}
                     </h2>
                     <p className="text-xs text-blue-400 mt-3 font-medium">
