@@ -174,21 +174,14 @@ const QuizletCardContent = ({
   };
 
   const currentDate = new Date(content.date);
-  const [formattedDate, setFormattedDate] = useState<any>(content.date);
-
-// Check if the date is invalid
-  if (isNaN(currentDate.getFullYear())) {
-    console.error("Invalid date format");
-  } else {
     // If the date is valid, format it properly
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth() + 1;  // Month is 0-based, so add 1
-    const day = currentDate.getDate();
-    const weekday = currentDate.toLocaleDateString("ko-KR", { weekday: "long" });
-    
-    setFormattedDate(`${year}년 ${month}월 ${day}일 ${weekday}`);
-    console.log(formattedDate);
-  }
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth() + 1;  // Month is 0-based, so add 1
+  const day = currentDate.getDate();
+  const weekday = currentDate.toLocaleDateString("ko-KR", { weekday: "long" });
+  const formattedDate = (`${year}년 ${month}월 ${day}일 ${weekday}`);
+  console.log(formattedDate);
+
 
   // 카드가 없을 경우 빈 카드 디자인 표시 - 실제 카드와 동일한 레이아웃 활용
   if (cards.length === 0) {
@@ -328,7 +321,7 @@ const QuizletCardContent = ({
       {/* 날짜 표시 */}
       <div className="absolute top-14 left-0 right-0 flex justify-center">
         <div className="text-sm text-gray-700 px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
-          {formattedDate}
+          {isNaN(currentDate.getTime()) ? content.date : formattedDate}
         </div>
       </div>
 
