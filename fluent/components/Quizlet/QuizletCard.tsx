@@ -53,7 +53,6 @@ const QuizletCardContent = ({
   );
   const [originalCards, setOriginalCards] = useState(cards);
   const [isCheckedView, setIsCheckedView] = useState(false); //flase면 별이 있고 true면 별이 없는 상태
-  const [shuffledCards] = useState<string[][] | null>(null);
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -123,14 +122,14 @@ const QuizletCardContent = ({
   const handleNextCard = () => {
     setIsFlipped(false);
     setCurrentCard((prev) =>
-      prev + 1 === (shuffledCards || cards).length ? 0 : prev + 1
+      prev + 1 === (cards).length ? 0 : prev + 1
     );
   };
 
   const handlePrevCard = () => {
     setIsFlipped(false);
     setCurrentCard((prev) =>
-      prev === 0 ? (shuffledCards || cards).length - 1 : prev - 1
+      prev === 0 ? (cards).length - 1 : prev - 1
     );
   };
 
@@ -175,11 +174,21 @@ const QuizletCardContent = ({
   };
 
   const currentDate = new Date(content.date);
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1;
-  const day = currentDate.getDate();
-  const weekday = currentDate.toLocaleDateString("ko-KR", { weekday: "long" });
-  const formattedDate = `${year}년 ${month}월 ${day}일 ${weekday}`;
+  const [formattedDate, setFormattedDate] = useState<any>(content.date);
+
+// Check if the date is invalid
+  if (isNaN(currentDate.getFullYear())) {
+    console.error("Invalid date format");
+  } else {
+    // If the date is valid, format it properly
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;  // Month is 0-based, so add 1
+    const day = currentDate.getDate();
+    const weekday = currentDate.toLocaleDateString("ko-KR", { weekday: "long" });
+    
+    setFormattedDate(`${year}년 ${month}월 ${day}일 ${weekday}`);
+    console.log(formattedDate);
+  }
 
   // 카드가 없을 경우 빈 카드 디자인 표시 - 실제 카드와 동일한 레이아웃 활용
   if (cards.length === 0) {
@@ -391,7 +400,7 @@ const QuizletCardContent = ({
       <div className="absolute bottom-10 left-0 right-0 flex justify-center">
         <div className="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
           <span className="text-gray-700 text-xl font-medium">
-            {currentCard + 1} / {(shuffledCards || cards).length}
+            {currentCard + 1} / {(cards).length}
           </span>
         </div>
       </div>
@@ -411,7 +420,7 @@ const QuizletCardContent = ({
                   idx === currentIndex ? "bg-blue-50 text-blue-600" : ""
                 }`}
               >
-                {new Date(item.date).toLocaleDateString("ko-KR")}
+                {isNaN(new Date(item.date).getTime()) ? item.date : new Date(item.date).toLocaleDateString("ko-KR")}
               </button>
             ))}
           </div>
