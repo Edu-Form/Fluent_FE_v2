@@ -127,7 +127,7 @@ const QuizletPageContent = () => {
   };
 
   return (
-    <div className="relative bg-white w-full h-[80vh] hide-scrollbar overflow-y-scroll">
+    <div className="absolute inset-0 bg-white overflow-hidden">
       {!data || data.length === 0 ? (
         <QuizletCard
           content={createEmptyCard()}
@@ -145,10 +145,25 @@ const QuizletPageContent = () => {
         />
       )}
 
-      <style jsx>{`
+      <style jsx global>{`
+        html,
+        body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+        }
+
+        body > div,
+        #__next {
+          height: 100%;
+        }
+
         .hide-scrollbar {
           scrollbar-width: none;
+          -ms-overflow-style: none;
         }
+
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }
@@ -156,7 +171,6 @@ const QuizletPageContent = () => {
     </div>
   );
 };
-
 export default function Page() {
   return (
     <Suspense

@@ -4,8 +4,9 @@ import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import "react-day-picker/dist/style.css";
 
-// 날짜 포맷 함수
+// 날짜 포맷 함수들 유지
 const formatToISO = (date: string | undefined): string => {
+  // 기존 함수 유지
   try {
     if (!date) return "";
 
@@ -28,6 +29,7 @@ const formatToISO = (date: string | undefined): string => {
 };
 
 const today_formatted = (): string => {
+  // 기존 함수 유지
   try {
     const today = new Date();
     const year = today.getFullYear();
@@ -41,6 +43,7 @@ const today_formatted = (): string => {
 };
 
 const formatToSave = (date: string | undefined): string => {
+  // 기존 함수 유지
   try {
     if (!date) return "";
 
@@ -84,6 +87,7 @@ const QuizletPageContent: React.FC = () => {
   const [original_text, setOriginal_text] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [showGuide, setShowGuide] = useState<boolean>(false);
 
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
@@ -178,11 +182,13 @@ const QuizletPageContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#F9FAFB]">
       {/* 로딩 오버레이 */}
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="w-28 h-28 bg-white rounded-3xl shadow-lg flex items-center justify-center"></div>
+          <div className="w-28 h-28 bg-white rounded-3xl shadow-lg flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-[#3182F6] border-t-transparent rounded-full animate-spin"></div>
+          </div>
         </div>
       )}
 
@@ -215,146 +221,70 @@ const QuizletPageContent: React.FC = () => {
         </div>
       )}
 
-      {/* 헤더 */}
+      {/* 헤더 - Sticky 적용 */}
       <header className="bg-white border-b border-[#F2F4F6] py-4 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-5 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-[#191F28]">수업 노트</h1>
-          <button
-            onClick={() => {
-              const redirectUrl = `/teacher/home?user=${encodeURIComponent(
-                user
-              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-                user_id
-              )}`;
-              router.push(redirectUrl);
-            }}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#F9FAFB] transition-colors"
-            aria-label="닫기"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-[#8B95A1]"
-            >
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-      </header>
-
-      <main className="flex-grow py-6">
-        <div className="max-w-4xl mx-auto px-5">
-          <form onSubmit={postQuizlet} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* 학생 이름 */}
-              {student_name && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[#4E5968]">
-                    학생 이름
-                  </label>
-                  <div className="px-4 py-3.5 bg-[#F9FAFB] border border-[#E5E8EB] rounded-2xl text-[#333D4B] text-sm">
-                    {student_name}
-                  </div>
-                </div>
-              )}
-
-              {/* 수업 날짜 */}
-              <div className="space-y-2">
-                <label
-                  htmlFor="class_date"
-                  className="block text-sm font-medium text-[#4E5968]"
-                >
-                  수업 날짜
-                </label>
-                <div className="relative">
-                  <input
-                    type="date"
-                    name="class_date"
-                    id="class_date"
-                    defaultValue={formatToISO(next_class_date)}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setClassDate(formatToSave(e.target.value))
-                    }
-                    className="w-full px-4 py-3.5 text-sm border border-[#E5E8EB] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3182F6]/30 focus:border-[#3182F6] transition-colors text-[#333D4B]"
-                    required
-                    disabled={loading}
-                  />
-                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#8B95A1"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect
-                        x="3"
-                        y="4"
-                        width="18"
-                        height="18"
-                        rx="2"
-                        ry="2"
-                      ></rect>
-                      <line x1="16" y1="2" x2="16" y2="6"></line>
-                      <line x1="8" y1="2" x2="8" y2="6"></line>
-                      <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                  </div>
-                </div>
+        <div className="max-w-screen-xl mx-auto px-5 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <h1 className="p-4 text-2xl font-bold text-[#191F28]">
+              Class Note
+            </h1>
+            {student_name && (
+              <div className="px-5 py-1.5 bg-[#F2F4F8] rounded-full">
+                <span className="text-xl font-bold text-[#1f5eff]">
+                  {student_name}
+                </span>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* 퀴즐렛 내용 */}
-            <div className="space-y-2">
-              <label
-                htmlFor="original_text"
-                className="block text-sm font-medium text-[#4E5968]"
-              >
-                퀴즐렛 내용
-              </label>
-              <div className="relative bg-white">
-                <textarea
-                  id="original_text"
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setOriginal_text(e.target.value)
-                  }
-                  className="w-full px-4 py-3.5 text-sm border border-[#E5E8EB] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#3182F6]/30 focus:border-[#3182F6] transition-colors text-[#333D4B] resize-none"
-                  placeholder="1. Fluent  2. 퀴즐렛 이런식으로 번호를 먼저 입력하세요."
-                  style={{ minHeight: "60vh" }}
-                  disabled={loading}
-                ></textarea>
-                <div className="absolute top-3 right-3">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 rounded-full bg-[#FF5F57]"></div>
-                    <div className="w-2 h-2 rounded-full bg-[#FFBD2E]"></div>
-                    <div className="w-2 h-2 rounded-full bg-[#28C840]"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 작성 가이드 */}
-            <div className="bg-[#F2F4F8] rounded-2xl p-4 border-l-[3px] border-[#3182F6]">
-              <div className="flex items-center space-x-2 mb-3">
+          <div className="flex items-center space-x-3">
+            {/* 날짜 선택기 */}
+            <div className="relative">
+              <input
+                type="date"
+                name="class_date"
+                id="class_date"
+                defaultValue={formatToISO(next_class_date)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setClassDate(formatToSave(e.target.value))
+                }
+                className="px-3 py-2 bg-white text-sm border border-[#E5E8EB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3182F6]/30 focus:border-[#3182F6] transition-colors text-[#333D4B] w-40"
+                required
+                disabled={loading}
+              />
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
+                  width="14"
+                  height="14"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#3182F6"
+                  stroke="#8B95A1"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </div>
+            </div>
+            {/* 작성 가이드 툴팁 버튼 */}
+            <div className="relative group">
+              <button
+                type="button"
+                className="p-2 rounded-lg text-[#3182F6] hover:bg-[#F2F4F8] transition-colors"
+                aria-label="작성 가이드"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -363,75 +293,153 @@ const QuizletPageContent: React.FC = () => {
                   <line x1="12" y1="8" x2="12" y2="12"></line>
                   <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
-                <h3 className="text-sm font-bold text-[#3182F6]">
-                  작성 가이드
-                </h3>
+              </button>
+
+              {/* 툴팁 내용 */}
+              <div className="absolute right-0 mt-2 w-72 bg-white border border-[#E5E8EB] rounded-xl shadow-lg p-4 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200 z-20">
+                <div className="flex items-center space-x-2 mb-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#3182F6"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <h3 className="text-sm font-bold text-[#3182F6]">
+                    작성 가이드
+                  </h3>
+                </div>
+                <ul className="text-xs text-[#4E5968] space-y-2">
+                  <li className="flex items-start">
+                    <span className="text-[#f63131] mr-2 text-sm leading-5">
+                      •
+                    </span>
+                    <span className="font-medium">
+                      번호를 꼭 적어주세요 1. 2. 3. 으로!!
+                    </span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-[#3182F6] mr-2 text-sm leading-5">
+                      •
+                    </span>
+                    <span>수업 중 배운 중요한 내용을 요약해 주세요.</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-[#3182F6] mr-2 text-sm leading-5">
+                      •
+                    </span>
+                    <span>
+                      학생이 어려워하는 부분을 중점적으로 기록해 주세요.
+                    </span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-[#3182F6] mr-2 text-sm leading-5">
+                      •
+                    </span>
+                    <span>다음 수업에서 복습할 내용을 포함해 주세요.</span>
+                  </li>
+                </ul>
               </div>
-              <ul className="text-xs text-[#4E5968] space-y-2 pl-2">
-                <li className="flex items-start">
-                  <span className="text-[#f63131] mr-2 text-sm leading-5">
-                    •
-                  </span>
-                  <span className="font-medium">
-                    번호를 꼭 적어주세요 1. 2. 3. 으로!!
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-[#3182F6] mr-2 text-sm leading-5">
-                    •
-                  </span>
-                  <span>수업 중 배운 중요한 내용을 요약해 주세요.</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-[#3182F6] mr-2 text-sm leading-5">
-                    •
-                  </span>
-                  <span>
-                    학생이 어려워하는 부분을 중점적으로 기록해 주세요.
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-[#3182F6] mr-2 text-sm leading-5">
-                    •
-                  </span>
-                  <span>다음 수업에서 복습할 내용을 포함해 주세요.</span>
-                </li>
-              </ul>
             </div>
 
-            {/* 하단 버튼 영역 */}
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const redirectUrl = `/teacher/home?user=${encodeURIComponent(
-                    user
-                  )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-                    user_id
-                  )}`;
-                  router.push(redirectUrl);
-                }}
-                className="flex-1 py-4 rounded-xl text-[#4E5968] text-sm font-medium border border-[#E5E8EB] hover:bg-[#F9FAFB] transition-colors"
-                disabled={loading}
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => {
+                const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+                  user
+                )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                  user_id
+                )}`;
+                router.push(redirectUrl);
+              }}
+              className="p-2 rounded-lg hover:bg-[#F2F4F8] transition-colors"
+              aria-label="닫기"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-[#8B95A1]"
               >
-                취소하기
-              </button>
-              <button
-                type="submit"
-                className={`flex-1 py-4 rounded-xl text-white text-sm font-medium
-                  ${
-                    loading
-                      ? "bg-[#DEE2E6] cursor-not-allowed"
-                      : "bg-[#3182F6] hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors"
-                  }`}
-                disabled={loading}
-              >
-                저장하기
-              </button>
-            </div>
-          </form>
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
         </div>
-      </main>
+      </header>
+
+      <form
+        onSubmit={postQuizlet}
+        className="flex-grow flex flex-col overflow-hidden"
+      >
+        {/* 메인 텍스트 영역 - 화면에 꽉 채움 */}
+        <div className="flex-grow flex flex-col relative">
+          <textarea
+            id="original_text"
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              setOriginal_text(e.target.value)
+            }
+            className="flex-grow w-full p-10 text-5xl font-bold focus:outline-none bg-white text-[#333D4B] resize-none"
+            placeholder="1. Fluent  2. 퀴즐렛 이런식으로 번호를 먼저 입력하세요."
+            disabled={loading}
+          ></textarea>
+
+          {/* 텍스트 영역 꾸미기 - 상단 원 */}
+          <div className="absolute top-3 right-3">
+            <div className="flex space-x-1">
+              <div className="w-4 h-4 rounded-full bg-[#FF5F57]"></div>
+              <div className="w-4 h-4 rounded-full bg-[#FFBD2E]"></div>
+              <div className="w-4 h-4 rounded-full bg-[#28C840]"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* 하단 버튼 영역 - Sticky 적용 */}
+        <div className="w-full bg-white border-t border-[#E5E8EB] py-4 px-5 sticky bottom-0 z-10 flex gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+                user
+              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                user_id
+              )}`;
+              router.push(redirectUrl);
+            }}
+            className="flex-1 py-3 rounded-xl text-[#4E5968] text-sm font-medium border border-[#E5E8EB] hover:bg-[#F9FAFB] transition-colors"
+            disabled={loading}
+          >
+            취소하기
+          </button>
+          <button
+            type="submit"
+            className={`flex-1 py-3 rounded-xl text-white text-sm font-medium
+              ${
+                loading
+                  ? "bg-[#DEE2E6] cursor-not-allowed"
+                  : "bg-[#3182F6] hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors"
+              }`}
+            disabled={loading}
+          >
+            저장하기
+          </button>
+        </div>
+      </form>
 
       <style jsx>{`
         @keyframes fade-in {
@@ -475,6 +483,27 @@ const QuizletPageContent: React.FC = () => {
 
         textarea::placeholder {
           color: #b0b8c1;
+          font-size: 2.5rem;
+        }
+
+        /* 전체 고정 레이아웃 */
+        html,
+        body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+        }
+
+        /* 텍스트 영역 스크롤 */
+        textarea {
+          overflow-y: auto;
+        }
+
+        /* 포커스 시 아웃라인 없애기 */
+        textarea:focus {
+          outline: none;
+          box-shadow: none;
         }
       `}</style>
     </div>

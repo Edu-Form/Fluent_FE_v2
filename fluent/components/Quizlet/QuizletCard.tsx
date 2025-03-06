@@ -1,32 +1,40 @@
 "use client";
-import { useState, Suspense } from "react";
-import { motion } from "framer-motion";
+import { useState, Suspense, useEffect } from "react";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
-import { FiCalendar, FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import { LuCircleFadingPlus } from "react-icons/lu";
+import { FiCalendar } from "react-icons/fi";
+import { HiOutlineSpeakerWave } from "react-icons/hi2";
+import {
+  BsShuffle,
+  BsStar,
+  BsStarFill,
+  BsBookmarkStar,
+  BsBookmarkStarFill,
+} from "react-icons/bs";
+
+// QuizletCardProps 인터페이스 정의
+interface QuizletCardProps {
+  _id: string;
+  date: string;
+  student_name: string;
+  eng_quizlet: string[];
+  kor_quizlet: string[];
+  original_text: string;
+  cards: any[];
+}
 
 function shuffleCards(cards: string[][]) {
   // Use a traditional Fisher-Yates (Durstenfeld) shuffle algorithm
-  
   for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [cards[i], cards[j]] = [cards[j], cards[i]]; // Swap pairs directly in the original array
   }
 }
 
-
-// let items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-// shuffleArray(items);
-// console.log(items); // Mutated (shuffled) original array
-
 const QuizletCardContent = ({
   content,
   allCards = [],
   currentIndex = 0,
-  onNext,
-  onPrev,
   onSelectCard,
-  onCreateQuizlet,
 }: {
   content: QuizletCardProps;
   allCards?: QuizletCardProps[];
@@ -39,49 +47,65 @@ const QuizletCardContent = ({
   const engWords = content.eng_quizlet || [];
   const korWords = content.kor_quizlet || [];
 
-  // 단어 쌍 생성 - let에서 const로 변경 (ESLint prefer-const 오류 해결)
-  const [cards, setCards] = useState(engWords.map((eng, index) => [eng, korWords[index] || "", "0"]))
+  // 단어 쌍 생성
+  const [cards, setCards] = useState(
+    engWords.map((eng, index) => [eng, korWords[index] || "", "0"])
+  );
   const [originalCards, setOriginalCards] = useState(cards);
   const [isCheckedView, setIsCheckedView] = useState(false);
+  const [shuffledCards, setShuffledCards] = useState<string[][] | null>(null);
+  const [currentCard, setCurrentCard] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [favoriteCards, setFavoriteCards] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [isBookmark, setIsBookmark] = useState(false);
+
+  // currentCard가 변경될 때마다 즐겨찾기 상태 체크
+  useEffect(() => {
+    // 카드 변경 시 즐겨찾기 상태를 초기화하지 않고 해당 카드의 상태를 유지
+  }, [currentCard]);
 
   function checkCurrentCard() {
-    // Directly mutate the original `cards` array
+    // 현재 카드의 즐겨찾기 상태 토글
+    const newFavoriteCards = { ...favoriteCards };
+    newFavoriteCards[currentCard] = !favoriteCards[currentCard];
+    setFavoriteCards(newFavoriteCards);
+
+    // 카드 데이터에도 상태 업데이트
     cards[currentCard][2] = cards[currentCard][2] === "0" ? "1" : "0";
-    console.log(cards[currentCard]);
-    
-    // Trigger a re-render by updating the state (this is important in React)
-    setCards([...cards]); // This ensures React notices the change and re-renders
+    setCards([...cards]); // 상태 업데이트로 리렌더링 트리거
   }
 
-  // Function to toggle between checked cards and all cards
   function playCheckedCards() {
-    // Toggle the view state
+    // 즐겨찾기 보기 상태 토글
     setIsCheckedView(!isCheckedView);
     setCurrentCard(0);
 
     if (isCheckedView) {
-      // If we're in checked cards view, show all cards
-      console.log(cards)
+      // 즐겨찾기 보기에서 전체 보기로 전환
+      console.log(cards);
       setCards(originalCards);
     } else {
-      // If we're in all cards view, filter the checked cards
-      const checkedCards = cards.filter(card => card[2] === "1"); // Filter cards with [2] as "1"
-      console.log(checkedCards)
-      setOriginalCards(cards)
+      // 전체 보기에서 즐겨찾기 보기로 전환
+      const checkedCards = cards.filter((card) => card[2] === "1"); // 즐겨찾기된 카드만 필터링
+      console.log(checkedCards);
+      setOriginalCards(cards);
       setCards(checkedCards);
+      setIsBookmark(!isBookmark);
     }
   }
 
-  // Random Shuffle
   function shuffled() {
     shuffleCards(cards);
     setCards([...cards]);
   }
 
   function Audio(text: string) {
-    if ('speechSynthesis' in window) {
+    if ("speechSynthesis" in window) {
       const speech = new SpeechSynthesisUtterance(text);
-      speech.lang = 'en-US';
+      speech.lang = "en-US";
       speech.pitch = 1;
       speech.rate = 1;
       window.speechSynthesis.speak(speech);
@@ -91,25 +115,22 @@ const QuizletCardContent = ({
   }
 
   function readCardText() {
-    // Use the condition provided to select the text
-    const text = isFlipped 
-  ? (cards[currentCard][0]) 
-  : (cards[currentCard][1]);
-    Audio(text);  // Call the Audio function with the selected text
+    const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
+    Audio(text); // Call the Audio function with the selected text
   }
-
-  const [currentCard, setCurrentCard] = useState(0);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const handleNextCard = () => {
     setIsFlipped(false);
-    setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1)); 
+    setCurrentCard((prev) =>
+      prev + 1 === (shuffledCards || cards).length ? 0 : prev + 1
+    );
   };
 
   const handlePrevCard = () => {
     setIsFlipped(false);
-    setCurrentCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
+    setCurrentCard((prev) =>
+      prev === 0 ? (shuffledCards || cards).length - 1 : prev - 1
+    );
   };
 
   const handleDateSelect = (index: number) => {
@@ -125,75 +146,90 @@ const QuizletCardContent = ({
   const month = currentDate.getMonth() + 1;
   const day = currentDate.getDate();
   const weekday = currentDate.toLocaleDateString("ko-KR", { weekday: "long" });
+  const formattedDate = `${year}년 ${month}월 ${day}일 ${weekday}`;
 
-  // 카드가 없을 경우 빈 카드 디자인 표시
+  // 카드가 없을 경우 빈 카드 디자인 표시 - 실제 카드와 동일한 레이아웃 활용
   if (cards.length === 0) {
     return (
-      <div className="w-full h-full bg-gray-50 flex flex-col">
-        {/* 헤더 부분 */}
-        <div className="relative bg-blue-500 text-white p-2 sm:p-4">
-          <h1 className="text-lg sm:text-xl font-bold text-center">
-            Quizlet Cards
-          </h1>
+      <div className="w-full h-full flex flex-col overflow-hidden bg-gray-50">
+        {/* 상단 컨트롤 바 */}
+        <div className="py-2 px-4 flex justify-between items-center z-10 absolute top-0 left-0 right-0">
+          <div className="flex items-center space-x-1">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+              {content.student_name?.charAt(0) || "?"}
+            </div>
+            <span className="font-medium text-sm text-gray-700 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
+              {content.student_name || "학생"}
+            </span>
+          </div>
 
-          {/* Create Button */}
-          {onCreateQuizlet && (
+          <div className="flex items-center space-x-2">
             <button
-              onClick={onCreateQuizlet}
-              className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full cursor-pointer transition-all"
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-400 shadow-sm"
+              disabled
             >
-              <LuCircleFadingPlus className="w-4 h-4" />
-              <span className="text-sm font-medium">Create Quizlet</span>
+              <FiCalendar className="w-5 h-5" />
             </button>
-          )}
+            <button
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-400 shadow-sm"
+              disabled
+            >
+              <HiOutlineSpeakerWave className="w-5 h-5" />
+            </button>
+            <button
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-400 shadow-sm"
+              disabled
+            >
+              <BsBookmarkStar className="w-5 h-5" />
+            </button>
+            <button
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-400 shadow-sm"
+              disabled
+            >
+              <BsShuffle className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex-grow flex items-center justify-center p-4 sm:p-10">
-          <div className="w-full max-w-lg">
-            {/* 카드 컨테이너 */}
-            <motion.div className="relative w-full aspect-[4/3] perspective-1000">
-              <motion.div
-                className="absolute w-full h-full bg-white rounded-xl shadow-sm flex items-center justify-center transition-all duration-500"
-                style={{
-                  transformStyle: "preserve-3d",
-                  backfaceVisibility: "hidden",
-                }}
-              >
-                {/* 빈 카드 앞면 */}
-                <div
-                  className="absolute w-full h-full flex items-center justify-center p-6 text-center"
-                  style={{
-                    transform: "rotateY(0deg)",
-                    backfaceVisibility: "hidden",
-                  }}
-                >
-                  <div>
-                    <div className="w-32 h-6 bg-gray-100 rounded-full mx-auto"></div>
-                    <p className="text-xs text-gray-400 mt-3 font-medium">
-                      탭하여 번역 보기
-                    </p>
-                  </div>
+        {/* 날짜 표시 */}
+        <div className="absolute top-14 left-0 right-0 flex justify-center">
+          <div className="text-sm text-gray-700 px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
+            {new Date().toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              weekday: "long",
+            })}
+          </div>
+        </div>
+
+        {/* 카드 컨텐츠 - 화면을 꽉 채우는 중앙 섹션 */}
+        <div className="flex-grow flex items-stretch h-full">
+          <div className="w-16 flex items-center justify-center cursor-not-allowed text-gray-200">
+            <IoIosArrowBack className="text-4xl" />
+          </div>
+
+          <div className="flex-grow flex flex-col items-center justify-center px-4">
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="w-full max-w-4xl h-4/5 bg-white rounded-3xl shadow-xl flex items-center justify-center p-8">
+                <div className="text-center w-full">
+                  <h2 className="text-4xl font-bold text-gray-300 mb-6">
+                    등록된 퀴즐렛이 없습니다
+                  </h2>
                 </div>
-              </motion.div>
-            </motion.div>
-            {/* 네비게이션 */}
-            <div className="flex justify-between items-center mt-6">
-              <button
-                disabled
-                className="p-2 rounded-full bg-white text-gray-300 shadow-sm cursor-not-allowed"
-              >
-                <IoIosArrowBack className="text-xl" />
-              </button>
-
-              <div className="text-gray-400 text-sm font-medium">0 / 0</div>
-
-              <button
-                disabled
-                className="p-2 rounded-full bg-white text-gray-300 shadow-sm cursor-not-allowed"
-              >
-                <IoIosArrowForward className="text-xl" />
-              </button>
+              </div>
             </div>
+          </div>
+
+          <div className="w-16 flex items-center justify-center cursor-not-allowed text-gray-200">
+            <IoIosArrowForward className="text-4xl" />
+          </div>
+        </div>
+
+        {/* 카드 페이지 인디케이터 */}
+        <div className="absolute bottom-10 left-0 right-0 flex justify-center">
+          <div className="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
+            <span className="text-gray-400 text-xl font-medium">0 / 0</span>
           </div>
         </div>
       </div>
@@ -201,153 +237,168 @@ const QuizletCardContent = ({
   }
 
   return (
-    <div className="w-full h-full bg-white flex flex-col">
-      {/* 헤더 부분 */}
-      <div className="relative bg-blue-500 text-white p-2 sm:p-4">
-        <h1 className="text-lg sm:text-xl font-bold text-center">
-          {year}년 {month}월 {day}일 {weekday}
-          <div onClick={shuffled}>Shuffle Cards</div>
-          <div onClick={readCardText}>Audio</div>
-          <div onClick={playCheckedCards}>{isCheckedView ? "Show All Cards" : "Play Checked Cards"}</div>
-          {isCheckedView ? (
-          <div></div>  // Empty div when isCheckedView is true
-          ) : (
-            <div onClick={checkCurrentCard}>{cards[currentCard][2] === '1' ? 'Uncheck Current Card' : 'Check Current Card'}</div> // Show text when isCheckedView is false
-          )}
-        </h1>
+    <div className="w-full h-full flex flex-col overflow-hidden bg-gray-50">
+      {/* 상단 컨트롤 바 */}
+      <div className="py-2 px-4 flex justify-between items-center z-10 absolute top-0 left-0 right-0">
+        <div className="flex items-center space-x-1">
+          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+            {content.student_name?.charAt(0) || "?"}
+          </div>
+          <span className="font-medium text-sm text-gray-700 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
+            {content.student_name}
+          </span>
+        </div>
 
-        {/* Navigation Buttons for Multiple Cards */}
-        {allCards.length > 1 && (
-          <>
-            {/* Date Selection Trigger */}
-            <div
-              onClick={() => {
-                setIsDatePickerOpen(!isDatePickerOpen);
-              }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full cursor-pointer transition-all"
-            >
-              <FiCalendar className="w-4 h-4" />
-              <span className="text-sm font-medium">날짜</span>
-            </div>
-
-            {/* Date Selection Popup */}
-            {isDatePickerOpen && (
-              <div className="absolute top-full left-4 mt-2 z-50 bg-white rounded-lg shadow-md">
-                <div className="p-1 max-h-60 overflow-y-auto">
-                  {allCards.map((item, idx) => (
-                    <button
-                      key={item._id}
-                      onClick={() => handleDateSelect(idx)}
-                      className="w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-md text-sm"
-                    >
-                      {new Date(item.date).toLocaleDateString("ko-KR")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/*  모달창 버튼 (혹시 몰라 남겨둡니다) */}
-        {/* {onCreateQuizlet && (
+        <div className="flex items-center space-x-2">
           <button
-            onClick={onCreateQuizlet}
-            className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full cursor-pointer transition-all"
+            onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+            className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
           >
-            <LuCircleFadingPlus className="w-4 h-4" />
-            <span className="text-sm font-medium">Create Quizlet</span>
+            <FiCalendar className="w-5 h-5" />
           </button>
-        )} */}
+          <button
+            onClick={readCardText}
+            className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
+          >
+            <HiOutlineSpeakerWave className="w-5 h-5" />
+          </button>
+          <button
+            onClick={playCheckedCards}
+            className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm transition-colors"
+          >
+            {isBookmark ? (
+              <BsBookmarkStarFill className="w-5 h-5 text-yellow-500" />
+            ) : (
+              <BsBookmarkStar className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          <button
+            onClick={shuffled}
+            className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
+          >
+            <BsShuffle className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-grow relative">
-        {/* Card Navigation Buttons for Multiple Cards */}
+      {/* 날짜 표시 */}
+      <div className="absolute top-14 left-0 right-0 flex justify-center">
+        <div className="text-sm text-gray-700 px-3 py-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
+          {formattedDate}
+        </div>
+      </div>
 
-        <div className="flex bg-slate-50 items-center justify-center p-4 sm:p-10 h-full">
-          <div className="w-full max-w-lg">
-            {/* 카드 컨테이너 */}
-            <div className="relative w-full aspect-[4/3]" onClick={() => setIsFlipped(!isFlipped)}>
-              <div className="absolute w-full h-full bg-white rounded-xl shadow-lg flex items-center justify-center">
-                {/* Front of the card */}
-                {isFlipped ? (
-                  <div className="absolute w-full h-full flex items-center justify-center p-6 text-center">
-                    <div>
-                      <h2 className="text-2xl font-bold text-blue-600">
-                        {cards[currentCard][0]}
-                      </h2>
-                      <p className="text-xs text-blue-400 mt-3 font-medium">
-                        탭하여 숨기기
-                      </p>
-                      {cards[currentCard][2] === "0" ? <p></p> : <p>체크된 카드</p>}
-                    </div>
-                  </div>
-                ) : (
-                  // Back of the card
-                  <div className="absolute w-full h-full flex items-center justify-center p-6 text-center">
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-800">
-                        {cards[currentCard][1]}
-                      </h2>
-                      <p className="text-xs text-gray-400 mt-3 font-medium">
-                        탭하여 번역 보기
-                      </p>
-                      {cards[currentCard][2] === "0" ? <p></p> : <p>체크된 카드</p>}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+      {/* 카드 컨텐츠  */}
+      <div className="flex-grow flex items-stretch h-full">
+        <div
+          onClick={handlePrevCard}
+          className="w-16 flex items-center justify-center cursor-pointer  hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
+        >
+          <IoIosArrowBack className="text-4xl" />
+        </div>
 
-            {/* 프로그레스 바 */}
-            <div className="mt-6 bg-gray-200 h-1 w-full rounded-full overflow-hidden">
-              <div
-                className="bg-blue-500 h-1 rounded-full transition-all duration-300"
-                style={{
-                  width: `${((currentCard + 1) / cards.length) * 100}%`,
+        <div
+          className="flex-grow flex flex-col items-center justify-center"
+          onClick={() => setIsFlipped(!isFlipped)}
+        >
+          <div className="w-full h-full flex items-center justify-center">
+            <div
+              className={`w-full sm:max-w-4xl sm:h-4/5 bg-white rounded-3xl shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
+                isFlipped ? "text-white bg-sky-300 scale-105" : ""
+              }`}
+            >
+              {/* 즐겨찾기 버튼을 카드 내부 오른쪽 상단에 배치 */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation(); // 카드 뒤집힘 방지
+                  checkCurrentCard();
                 }}
-              ></div>
-            </div>
-
-            {/* 네비게이션 */}
-            <div className="flex justify-between items-center mt-3">
-              <button
-                onClick={handlePrevCard}
-                className="p-2 rounded-full bg-white text-gray-700 shadow-sm hover:bg-gray-100 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
               >
-                <IoIosArrowBack className="text-xl" />
+                {favoriteCards[currentCard] ? (
+                  <BsStarFill className="w-6 h-6 text-yellow-500" />
+                ) : (
+                  <BsStar className="w-6 h-6 text-gray-400" />
+                )}
               </button>
 
-              <div className="text-gray-700 text-sm font-medium">
-                {currentCard + 1} / {cards.length}
+              <div className="text-center w-full">
+                <h2 className="text-2xl font-bold leading-tight sm:text-7xl">
+                  {isFlipped
+                    ? shuffledCards
+                      ? shuffledCards[currentCard][0]
+                      : cards[currentCard][0]
+                    : shuffledCards
+                    ? shuffledCards[currentCard][1]
+                    : cards[currentCard][1]}
+                </h2>
+                <p
+                  className={`mt-8 text-gray-400 sm:text-xl text-sm ${
+                    isFlipped ? "text-white" : ""
+                  }`}
+                >
+                  탭하여 {isFlipped ? "한국어" : "영어"}로 전환
+                </p>
               </div>
-
-              <button
-                onClick={handleNextCard}
-                className="p-2 rounded-full bg-white text-gray-700 shadow-sm hover:bg-gray-100 transition-colors"
-              >
-                <IoIosArrowForward className="text-xl" />
-              </button>
             </div>
           </div>
         </div>
 
-        {/* Pagination Indicator */}
-        {allCards.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10">
+        <div
+          onClick={handleNextCard}
+          className="w-16 flex items-center justify-center cursor-pointer hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
+        >
+          <IoIosArrowForward className="text-4xl" />
+        </div>
+      </div>
+
+      {/* 카드 페이지 인디케이터 */}
+      <div className="absolute bottom-10 left-0 right-0 flex justify-center">
+        <div className="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
+          <span className="text-gray-700 text-xl font-medium">
+            {currentCard + 1} / {(shuffledCards || cards).length}
+          </span>
+        </div>
+      </div>
+
+      {/* Date Selection Popup */}
+      {isDatePickerOpen && (
+        <div className="absolute top-14 right-4 mt-2 z-50 bg-white rounded-lg shadow-lg">
+          <div className="p-2 max-h-60 overflow-y-auto">
+            <h3 className="text-sm font-medium px-3 py-2 text-gray-500">
+              날짜 선택
+            </h3>
+            {allCards.map((item, idx) => (
+              <button
+                key={item._id}
+                onClick={() => handleDateSelect(idx)}
+                className={`w-full text-left px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-md text-sm ${
+                  idx === currentIndex ? "bg-blue-50 text-blue-600" : ""
+                }`}
+              >
+                {new Date(item.date).toLocaleDateString("ko-KR")}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 하단 페이지네이션 인디케이터 */}
+      {allCards.length > 1 && (
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+          <div className="flex gap-1.5">
             {allCards.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => handleDateSelect(idx)}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  idx === currentIndex ? "bg-blue-500 w-3" : "bg-gray-300"
+                className={`w-2 h-2 rounded-full transition-all ${
+                  idx === currentIndex ? "bg-blue-500 w-5" : "bg-gray-300"
                 }`}
               />
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
