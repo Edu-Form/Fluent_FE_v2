@@ -52,8 +52,8 @@ const QuizletCardContent = ({
     engWords.map((eng, index) => [eng, korWords[index] || "", "0"])
   );
   const [originalCards, setOriginalCards] = useState(cards);
-  const [isCheckedView, setIsCheckedView] = useState(false);
-  const [shuffledCards, setShuffledCards] = useState<string[][] | null>(null);
+  const [isCheckedView, setIsCheckedView] = useState(false); //flase면 별이 있고 true면 별이 없는 상태
+  const [shuffledCards] = useState<string[][] | null>(null);
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -82,6 +82,7 @@ const QuizletCardContent = ({
     // 즐겨찾기 보기 상태 토글
     setIsCheckedView(!isCheckedView);
     setCurrentCard(0);
+    setIsBookmark(!isBookmark);
 
     if (isCheckedView) {
       // 즐겨찾기 보기에서 전체 보기로 전환
@@ -93,7 +94,6 @@ const QuizletCardContent = ({
       console.log(checkedCards);
       setOriginalCards(cards);
       setCards(checkedCards);
-      setIsBookmark(!isBookmark);
     }
   }
 
@@ -262,6 +262,7 @@ const QuizletCardContent = ({
           >
             <HiOutlineSpeakerWave className="w-5 h-5" />
           </button>
+
           <button
             onClick={playCheckedCards}
             className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm transition-colors"
@@ -272,6 +273,7 @@ const QuizletCardContent = ({
               <BsBookmarkStar className="w-5 h-5 text-gray-400" />
             )}
           </button>
+
           <button
             onClick={shuffled}
             className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
@@ -308,19 +310,21 @@ const QuizletCardContent = ({
               }`}
             >
               {/* 즐겨찾기 버튼을 카드 내부 오른쪽 상단에 배치 */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation(); // 카드 뒤집힘 방지
-                  checkCurrentCard();
-                }}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
-              >
-                {favoriteCards[currentCard] ? (
-                  <BsStarFill className="w-6 h-6 text-yellow-500" />
-                ) : (
-                  <BsStar className="w-6 h-6 text-gray-400" />
-                )}
-              </button>
+              {!isCheckedView && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent card flip
+                    checkCurrentCard();
+                  }}
+                  className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
+                >
+                  {favoriteCards[currentCard] ? (
+                    <BsStarFill className="w-6 h-6 text-yellow-500" />
+                  ) : (
+                    <BsStar className="w-6 h-6 text-gray-400" />
+                  )}
+                </button>
+              )}
 
               <div className="text-center w-full">
                 <h2 className="text-2xl font-bold leading-tight sm:text-7xl">
