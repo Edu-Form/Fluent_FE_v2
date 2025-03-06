@@ -6,15 +6,14 @@ import { FiCalendar, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { LuCircleFadingPlus } from "react-icons/lu";
 
 function shuffleCards(cards: string[][]) {
-  const shuffled = [...cards]; // Create a copy to avoid mutating the original array
-
-  for (let i = shuffled.length - 1; i > 0; i--) {
+  // Use a traditional Fisher-Yates (Durstenfeld) shuffle algorithm
+  
+  for (let i = cards.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; // Swap pairs
+    [cards[i], cards[j]] = [cards[j], cards[i]]; // Swap pairs directly in the original array
   }
-
-  return shuffled;
 }
+
 
 // let items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 // shuffleArray(items);
@@ -41,14 +40,42 @@ const QuizletCardContent = ({
   const korWords = content.kor_quizlet || [];
 
   // 단어 쌍 생성 - let에서 const로 변경 (ESLint prefer-const 오류 해결)
-  const cards = engWords.map((eng, index) => [eng, korWords[index] || ""]);
+  const [cards, setCards] = useState(engWords.map((eng, index) => [eng, korWords[index] || "", "0"]))
+  const [originalCards, setOriginalCards] = useState(cards);
+  const [isCheckedView, setIsCheckedView] = useState(false);
 
-  const [shuffledCards, setshuffledCards] = useState<string[][] | null>(null);
+  function checkCurrentCard() {
+    // Directly mutate the original `cards` array
+    cards[currentCard][2] = cards[currentCard][2] === "0" ? "1" : "0";
+    console.log(cards[currentCard]);
+    
+    // Trigger a re-render by updating the state (this is important in React)
+    setCards([...cards]); // This ensures React notices the change and re-renders
+  }
+
+  // Function to toggle between checked cards and all cards
+  function playCheckedCards() {
+    // Toggle the view state
+    setIsCheckedView(!isCheckedView);
+    setCurrentCard(0);
+
+    if (isCheckedView) {
+      // If we're in checked cards view, show all cards
+      console.log(cards)
+      setCards(originalCards);
+    } else {
+      // If we're in all cards view, filter the checked cards
+      const checkedCards = cards.filter(card => card[2] === "1"); // Filter cards with [2] as "1"
+      console.log(checkedCards)
+      setOriginalCards(cards)
+      setCards(checkedCards);
+    }
+  }
 
   // Random Shuffle
   function shuffled() {
-    setshuffledCards(shuffleCards(cards));
-    console.log(cards);
+    shuffleCards(cards);
+    setCards([...cards]);
   }
 
   function Audio(text: string) {
@@ -65,7 +92,9 @@ const QuizletCardContent = ({
 
   function readCardText() {
     // Use the condition provided to select the text
-    const text = shuffledCards ? shuffledCards[currentCard][0] : cards[currentCard][0];
+    const text = isFlipped 
+  ? (cards[currentCard][0]) 
+  : (cards[currentCard][1]);
     Audio(text);  // Call the Audio function with the selected text
   }
 
@@ -85,7 +114,6 @@ const QuizletCardContent = ({
 
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {
-      setshuffledCards(null);
       setCurrentCard(0);
       onSelectCard(index);
     }
@@ -180,6 +208,12 @@ const QuizletCardContent = ({
           {year}년 {month}월 {day}일 {weekday}
           <div onClick={shuffled}>Shuffle Cards</div>
           <div onClick={readCardText}>Audio</div>
+          <div onClick={playCheckedCards}>{isCheckedView ? "Show All Cards" : "Play Checked Cards"}</div>
+          {isCheckedView ? (
+          <div></div>  // Empty div when isCheckedView is true
+          ) : (
+            <div onClick={checkCurrentCard}>{cards[currentCard][2] === '1' ? 'Uncheck Current Card' : 'Check Current Card'}</div> // Show text when isCheckedView is false
+          )}
         </h1>
 
         {/* Navigation Buttons for Multiple Cards */}
@@ -189,7 +223,6 @@ const QuizletCardContent = ({
             <div
               onClick={() => {
                 setIsDatePickerOpen(!isDatePickerOpen);
-                setshuffledCards(null);
               }}
               className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full cursor-pointer transition-all"
             >
@@ -242,11 +275,12 @@ const QuizletCardContent = ({
                   <div className="absolute w-full h-full flex items-center justify-center p-6 text-center">
                     <div>
                       <h2 className="text-2xl font-bold text-blue-600">
-                        {shuffledCards ? shuffledCards[currentCard][0] : cards[currentCard][0]}
+                        {cards[currentCard][0]}
                       </h2>
                       <p className="text-xs text-blue-400 mt-3 font-medium">
                         탭하여 숨기기
                       </p>
+                      {cards[currentCard][2] === "0" ? <p></p> : <p>체크된 카드</p>}
                     </div>
                   </div>
                 ) : (
@@ -254,11 +288,12 @@ const QuizletCardContent = ({
                   <div className="absolute w-full h-full flex items-center justify-center p-6 text-center">
                     <div>
                       <h2 className="text-2xl font-bold text-gray-800">
-                        {shuffledCards ? shuffledCards[currentCard][1] : cards[currentCard][1]}
+                        {cards[currentCard][1]}
                       </h2>
                       <p className="text-xs text-gray-400 mt-3 font-medium">
                         탭하여 번역 보기
                       </p>
+                      {cards[currentCard][2] === "0" ? <p></p> : <p>체크된 카드</p>}
                     </div>
                   </div>
                 )}
