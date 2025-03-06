@@ -74,17 +74,19 @@ const QuizletCardContent = ({
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const handleNextCard = () => {
-    setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
     setIsFlipped(false);
+    setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1)); 
   };
 
   const handlePrevCard = () => {
-    setCurrentCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
     setIsFlipped(false);
+    setCurrentCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
   };
 
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {
+      setshuffledCards(null);
+      setCurrentCard(0);
       onSelectCard(index);
     }
     setIsDatePickerOpen(false);
@@ -229,83 +231,39 @@ const QuizletCardContent = ({
       {/* Main Content */}
       <div className="flex-grow relative">
         {/* Card Navigation Buttons for Multiple Cards */}
-        {allCards.length > 1 && (
-          <>
-            <button
-              onClick={onPrev}
-              className="absolute left-4 top-1/2 z-10 p-3 rounded-full bg-gray-200 shadow-sm hover:bg-gray-300 transition-colors transform -translate-y-1/2"
-            >
-              <FiChevronLeft size={20} />
-            </button>
-
-            <button
-              onClick={onNext}
-              className="absolute right-4 top-1/2 z-10 p-3 rounded-full bg-gray-200 shadow-sm hover:bg-gray-300 transition-colors transform -translate-y-1/2"
-            >
-              <FiChevronRight size={20} />
-            </button>
-          </>
-        )}
 
         <div className="flex bg-slate-50 items-center justify-center p-4 sm:p-10 h-full">
           <div className="w-full max-w-lg">
             {/* 카드 컨테이너 */}
-            <motion.div
-              className="relative w-full aspect-[4/3] perspective-1000"
-              onClick={() => setIsFlipped(!isFlipped)}
-            >
-              <motion.div
-                className="absolute w-full h-full bg-white rounded-xl shadow-lg flex items-center justify-center transition-all duration-500"
-                animate={{
-                  rotateY: isFlipped ? 180 : 0,
-                  scale: isFlipped ? 1.02 : 1,
-                }}
-                style={{
-                  transformStyle: "preserve-3d",
-                  backfaceVisibility: "hidden",
-                }}
-              >
-                {/* 앞면 */}
-                <div
-                  className="absolute w-full h-full flex items-center justify-center p-6 text-center"
-                  style={{
-                    transform: "rotateY(0deg)",
-                    backfaceVisibility: "hidden",
-                  }}
-                >
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-800">
-                      {shuffledCards
-                        ? shuffledCards[currentCard][1]
-                        : cards[currentCard][1]}
-                    </h2>
-                    <p className="text-xs text-gray-400 mt-3 font-medium">
-                      탭하여 번역 보기
-                    </p>
+            <div className="relative w-full aspect-[4/3]" onClick={() => setIsFlipped(!isFlipped)}>
+              <div className="absolute w-full h-full bg-white rounded-xl shadow-lg flex items-center justify-center">
+                {/* Front of the card */}
+                {isFlipped ? (
+                  <div className="absolute w-full h-full flex items-center justify-center p-6 text-center">
+                    <div>
+                      <h2 className="text-2xl font-bold text-blue-600">
+                        {shuffledCards ? shuffledCards[currentCard][0] : cards[currentCard][0]}
+                      </h2>
+                      <p className="text-xs text-blue-400 mt-3 font-medium">
+                        탭하여 숨기기
+                      </p>
+                    </div>
                   </div>
-                </div>
-
-                {/* 뒷면 */}
-                <div
-                  className="absolute w-full h-full flex items-center justify-center p-6 text-center bg-blue-50 rounded-xl"
-                  style={{
-                    transform: "rotateY(180deg)",
-                    backfaceVisibility: "hidden",
-                  }}
-                >
-                  <div>
-                    <h2 className="text-2xl font-bold text-blue-600">
-                      {shuffledCards
-                        ? shuffledCards[currentCard][0]
-                        : cards[currentCard][0]}
-                    </h2>
-                    <p className="text-xs text-blue-400 mt-3 font-medium">
-                      탭하여 숨기기
-                    </p>
+                ) : (
+                  // Back of the card
+                  <div className="absolute w-full h-full flex items-center justify-center p-6 text-center">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-800">
+                        {shuffledCards ? shuffledCards[currentCard][1] : cards[currentCard][1]}
+                      </h2>
+                      <p className="text-xs text-gray-400 mt-3 font-medium">
+                        탭하여 번역 보기
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            </motion.div>
+                )}
+              </div>
+            </div>
 
             {/* 프로그레스 바 */}
             <div className="mt-6 bg-gray-200 h-1 w-full rounded-full overflow-hidden">
