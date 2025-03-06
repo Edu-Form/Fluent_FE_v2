@@ -52,8 +52,8 @@ const QuizletCardContent = ({
     engWords.map((eng, index) => [eng, korWords[index] || "", "0"])
   );
   const [originalCards, setOriginalCards] = useState(cards);
-  const [isCheckedView, setIsCheckedView] = useState(false);
-  const [shuffledCards, setShuffledCards] = useState<string[][] | null>(null);
+  const [isCheckedView, setIsCheckedView] = useState(false); //flase면 별이 있고 true면 별이 없는 상태
+  const [shuffledCards] = useState<string[][] | null>(null);
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -83,6 +83,7 @@ const QuizletCardContent = ({
     setIsCheckedView(!isCheckedView);
     setIsFlipped(false);
     setCurrentCard(0);
+    setIsBookmark(!isBookmark);
 
     if (isCheckedView) {
       // 즐겨찾기 보기에서 전체 보기로 전환
@@ -94,7 +95,6 @@ const QuizletCardContent = ({
       console.log(checkedCards);
       setOriginalCards(cards);
       setCards(checkedCards);
-      setIsBookmark(!isBookmark);
     }
   }
 
@@ -134,9 +134,41 @@ const QuizletCardContent = ({
     );
   };
 
+  // 날짜 선택 기능 수정
+  useEffect(() => {
+    // 컴포넌트가 마운트되거나 content가 변경될 때 카드 초기화
+    if (content && content.eng_quizlet && content.kor_quizlet) {
+      const newCards = content.eng_quizlet.map((eng, index) => [
+        eng,
+        content.kor_quizlet[index] || "",
+        "0",
+      ]);
+
+      setCards(newCards);
+      setOriginalCards(newCards);
+      setCurrentCard(0);
+      setIsFlipped(false);
+      setIsCheckedView(false);
+      setIsBookmark(false);
+
+      // 즐겨찾기 상태 초기화
+      const initialFavorites: { [key: number]: boolean } = {};
+      newCards.forEach((_, index) => {
+        initialFavorites[index] = false;
+      });
+      setFavoriteCards(initialFavorites);
+    }
+  }, [content]);
+
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {
+      // 다른 날짜 카드로 변경 시 현재 상태 초기화
+      setIsFlipped(false);
       setCurrentCard(0);
+      setIsCheckedView(false);
+      setIsBookmark(false);
+
+      // 선택한 날짜의 카드 데이터 로드 요청
       onSelectCard(index);
     }
     setIsDatePickerOpen(false);
@@ -263,6 +295,7 @@ const QuizletCardContent = ({
           >
             <HiOutlineSpeakerWave className="w-5 h-5" />
           </button>
+
           <button
             onClick={playCheckedCards}
             className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm transition-colors"
@@ -273,6 +306,7 @@ const QuizletCardContent = ({
               <BsBookmarkStar className="w-5 h-5 text-gray-400" />
             )}
           </button>
+
           <button
             onClick={shuffled}
             className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
@@ -305,23 +339,27 @@ const QuizletCardContent = ({
           <div className="w-full h-full flex items-center justify-center">
             <div
               className={`w-full sm:max-w-4xl sm:h-4/5 bg-white rounded-3xl shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
-                isFlipped ? "text-white bg-sky-300 scale-105" : ""
+                isFlipped
+                  ? "text-black border-4 border-sky-200  scale-105  shadow-sky-100 "
+                  : ""
               }`}
             >
               {/* 즐겨찾기 버튼을 카드 내부 오른쪽 상단에 배치 */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation(); // 카드 뒤집힘 방지
-                  checkCurrentCard();
-                }}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
-              >
-                {favoriteCards[currentCard] ? (
-                  <BsStarFill className="w-6 h-6 text-yellow-500" />
-                ) : (
-                  <BsStar className="w-6 h-6 text-gray-400" />
-                )}
-              </button>
+              {!isCheckedView && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent card flip
+                    checkCurrentCard();
+                  }}
+                  className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 transition-colors z-10"
+                >
+                  {favoriteCards[currentCard] ? (
+                    <BsStarFill className="w-6 h-6 text-yellow-500" />
+                  ) : (
+                    <BsStar className="w-6 h-6 text-gray-400" />
+                  )}
+                </button>
+              )}
 
               <div className="text-center w-full">
                 <h2 className="text-2xl font-bold leading-tight sm:text-7xl">
@@ -331,7 +369,7 @@ const QuizletCardContent = ({
                 </h2>
                 <p
                   className={`mt-8 text-gray-400 sm:text-xl text-sm ${
-                    isFlipped ? "text-white" : ""
+                    isFlipped ? "text-gray-400" : ""
                   }`}
                 >
                   탭하여 {isFlipped ? "한국어" : "영어"}로 전환

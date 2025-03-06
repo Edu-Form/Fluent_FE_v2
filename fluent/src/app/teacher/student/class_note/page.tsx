@@ -87,7 +87,6 @@ const QuizletPageContent: React.FC = () => {
   const [original_text, setOriginal_text] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
-  const [showGuide, setShowGuide] = useState<boolean>(false);
 
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
