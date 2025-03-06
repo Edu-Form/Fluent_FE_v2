@@ -133,9 +133,41 @@ const QuizletCardContent = ({
     );
   };
 
+  // 날짜 선택 기능 수정
+  useEffect(() => {
+    // 컴포넌트가 마운트되거나 content가 변경될 때 카드 초기화
+    if (content && content.eng_quizlet && content.kor_quizlet) {
+      const newCards = content.eng_quizlet.map((eng, index) => [
+        eng,
+        content.kor_quizlet[index] || "",
+        "0",
+      ]);
+
+      setCards(newCards);
+      setOriginalCards(newCards);
+      setCurrentCard(0);
+      setIsFlipped(false);
+      setIsCheckedView(false);
+      setIsBookmark(false);
+
+      // 즐겨찾기 상태 초기화
+      const initialFavorites: { [key: number]: boolean } = {};
+      newCards.forEach((_, index) => {
+        initialFavorites[index] = false;
+      });
+      setFavoriteCards(initialFavorites);
+    }
+  }, [content]);
+
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {
+      // 다른 날짜 카드로 변경 시 현재 상태 초기화
+      setIsFlipped(false);
       setCurrentCard(0);
+      setIsCheckedView(false);
+      setIsBookmark(false);
+
+      // 선택한 날짜의 카드 데이터 로드 요청
       onSelectCard(index);
     }
     setIsDatePickerOpen(false);
@@ -306,7 +338,9 @@ const QuizletCardContent = ({
           <div className="w-full h-full flex items-center justify-center">
             <div
               className={`w-full sm:max-w-4xl sm:h-4/5 bg-white rounded-3xl shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
-                isFlipped ? "text-white bg-sky-300 scale-105" : ""
+                isFlipped
+                  ? "text-black border-4 border-sky-200  scale-105  shadow-sky-100 "
+                  : ""
               }`}
             >
               {/* 즐겨찾기 버튼을 카드 내부 오른쪽 상단에 배치 */}
@@ -338,7 +372,7 @@ const QuizletCardContent = ({
                 </h2>
                 <p
                   className={`mt-8 text-gray-400 sm:text-xl text-sm ${
-                    isFlipped ? "text-white" : ""
+                    isFlipped ? "text-gray-400" : ""
                   }`}
                 >
                   탭하여 {isFlipped ? "한국어" : "영어"}로 전환
