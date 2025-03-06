@@ -81,6 +81,7 @@ const QuizletCardContent = ({
   function playCheckedCards() {
     // 즐겨찾기 보기 상태 토글
     setIsCheckedView(!isCheckedView);
+    setIsFlipped(false);
     setCurrentCard(0);
 
     if (isCheckedView) {
@@ -325,11 +326,7 @@ const QuizletCardContent = ({
               <div className="text-center w-full">
                 <h2 className="text-2xl font-bold leading-tight sm:text-7xl">
                   {isFlipped
-                    ? shuffledCards
-                      ? shuffledCards[currentCard][0]
-                      : cards[currentCard][0]
-                    : shuffledCards
-                    ? shuffledCards[currentCard][1]
+                    ? cards[currentCard][0]
                     : cards[currentCard][1]}
                 </h2>
                 <p
