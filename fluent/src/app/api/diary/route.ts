@@ -54,7 +54,7 @@ export async function POST(request: Request) {
             - "errorContent": The incorrect text. 
             - "errorType": The type of error (e.g., "spelling", "grammar", "punctuation"). Must be in English 1 word.
             - "errorFix": The corrected text.
-            - "errorExplain": A brief explanation of the error in Korean. Must be in Korean.
+            - "errorExplain": A brief and easy explanation of the error that kids can understand. Must be in English.
 
             Guidelines:
             - Maintain sentence structure and punctuation.

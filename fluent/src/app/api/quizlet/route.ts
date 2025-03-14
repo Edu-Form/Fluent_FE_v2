@@ -22,6 +22,10 @@ export async function POST(request: Request) {
     //   original_text: string;
     // }
 
+    if (lines.length === 0) {
+      return NextResponse.json({ error: "No Translation" }, { status: 400 });
+    }
+
     lines = lines
       .map((line: string) => line.trim())
       .filter((line: string) => line);
