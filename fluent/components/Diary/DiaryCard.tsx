@@ -83,6 +83,9 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   };
 
   const splitText = (text: string) => {
+    if (typeof text !== "string") {
+      return null;
+    }
     return text.split("").map((char, index) => (
       <motion.span key={index} variants={letterVariants}>
         {char}
@@ -119,14 +122,14 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
               <h1 className="text-lg sm:text-2xl font-bold">Diary</h1>
             </div>
 
-            {type === "student" && (
+            
               <button
                 onClick={openIsModal}
                 className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-sm font-medium transition-colors"
               >
                 {content.write}
               </button>
-            )}
+            
           </div>
 
           {/* 콘텐츠 컨테이너 */}
@@ -167,14 +170,14 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                   <p className="text-gray-400 text-lg mb-4">
                     아직 작성된 일기가 없습니다
                   </p>
-                  {type === "student" && (
-                    <button
+                  
+                    {/* <button
                       onClick={openIsModal}
                       className="px-6 py-3 bg-[#3f4166] text-white rounded-full text-sm font-medium hover:bg-[#4b4d7a] transition-colors"
                     >
                       일기 작성하기
-                    </button>
-                  )}
+                    </button> */}
+                  
                 </div>
               </div>
             </div>
@@ -248,14 +251,14 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                 </div>
               </div>
 
-              {type === "student" && (
+              
                 <button
                   onClick={openIsModal}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-sm font-medium transition-colors animate-pulse"
                 >
                   {content.write}
                 </button>
-              )}
+              
 
               {/* DatePicker Popup */}
               {isDatePickerOpen && (

@@ -13,21 +13,54 @@ export async function POST(request: Request) {
 
     const { original_text } = diaryData;
 
-    /// Diary Correction
+    // /// Diary Correction Version 1
+    // const ai_diary_correction = async (original_text: string) => {
+    //   const completion = await openaiClient.chat.completions.create({
+    //     model: "gpt-4",
+    //     messages: [
+    //       {
+    //         role: "system",
+    //         content:
+    //           "Your task is to correct a student's diary sentences with a limited number of corrections to improve their writing skills.\n" +
+    //           "Guidelines:\n" +
+    //           "- Focus on identifying only crucial English grammar mistakes.\n" +
+    //           "- Only correct the language aspect, refraining from altering spaces, commas, and similar punctuation.\n" +
+    //           "- Correct each sentence individually without combining them.\n" +
+    //           "- Respond only with the corrected text, without sentences like: " +
+    //           "'Sure / Certainly. Here are the corrections based on the given criteria.'",
+    //       },
+    //       {
+    //         role: "user",
+    //         content: `Here's the text to correct: ${original_text}`,
+    //       },
+    //     ],
+    //   });
+
+    //   return completion.choices[0]?.message?.content?.trim() ?? "";
+    // };
+    /// Diary Correction with Error Details
     const ai_diary_correction = async (original_text: string) => {
       const completion = await openaiClient.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4-turbo",
+        response_format: { type: "json_object" }, // Ensures structured output
         messages: [
           {
             role: "system",
-            content:
-              "Your task is to correct a student's diary sentences with a limited number of corrections to improve their writing skills.\n" +
-              "Guidelines:\n" +
-              "- Focus on identifying only crucial English grammar mistakes.\n" +
-              "- Only correct the language aspect, refraining from altering spaces, commas, and similar punctuation.\n" +
-              "- Correct each sentence individually without combining them.\n" +
-              "- Respond only with the corrected text, without sentences like: " +
-              "'Sure / Certainly. Here are the corrections based on the given criteria.'",
+            content: `
+            Your task is to analyze a student's diary entry and identify key English grammar mistakes.
+            Return a JSON object containing an array of errors with the following fields:
+            - "errorStart": The start index of the mistake. Must be integer.
+            - "errorEnd": The end index of the mistake. Must be integer.
+            - "errorContent": The incorrect text. 
+            - "errorType": The type of error (e.g., "spelling", "grammar", "punctuation"). Must be in English 1 word.
+            - "errorFix": The corrected text.
+            - "errorExplain": A brief explanation of the error in Korean. Must be in Korean.
+
+            Guidelines:
+            - Maintain sentence structure and punctuation.
+            - Do not introduce unnecessary corrections.
+            - Respond only with a valid JSON object { "errors": [...] }.
+            `,
           },
           {
             role: "user",
@@ -36,9 +69,9 @@ export async function POST(request: Request) {
         ],
       });
 
-      return completion.choices[0]?.message?.content?.trim() ?? "";
-    };
+      return JSON.parse(completion.choices[0]?.message?.content?.trim() ?? "[]");
 
+    };
     const diary_correction = await ai_diary_correction(original_text);
     console.log(diary_correction);
 

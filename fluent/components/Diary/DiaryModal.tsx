@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Lottie from "lottie-react";
-import timerAnimationData from "@/src/app/lotties/timeLoading.json";
+// import Lottie from "lottie-react";
+// import timerAnimationData from "@/src/app/lotties/timeLoading.json";
 import "react-day-picker/dist/style.css";
 
 interface QuizeletlModalProps {
@@ -92,7 +92,7 @@ export default function DiaryModal({
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-40 h-40 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
-            <Lottie animationData={timerAnimationData} />
+            {/* <Lottie animationData={timerAnimationData} /> */}
           </div>
         </div>
       )}

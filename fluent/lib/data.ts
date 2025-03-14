@@ -281,7 +281,7 @@ export async function getUserData(
 
 export async function saveDiaryData(
   diary: any,
-  diary_correction: string,
+  diary_correction: any,
   diary_expressions: string,
   diary_summary: string
 ) {

@@ -65,7 +65,7 @@ const HomePage = () => {
 
   const quizlet_url_data = `user=${user}&type=${type}&id=${user_id}&func=quizlet`;
   const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
-  const [userCredits, setUserCredits] = useState(5);
+  const [userCredits, setUserCredits] = useState<string | number>('');
   const [isDiaryCompleted, setIsDiaryCompleted] = useState(false);
   const [isQuizletCompleted, setIsQuizletCompleted] = useState(false);
   const [next_schedule_data, setNext_schedule_data] =
@@ -139,7 +139,7 @@ const HomePage = () => {
               <div>
                 <p className="text-xs text-amber-700 font-medium">Credit</p>
                 <p className="text-xl font-bold text-amber-700 leading-tight">
-                  {userCredits.toLocaleString()}
+                  {userCredits}
                 </p>
               </div>
             </div>
