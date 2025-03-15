@@ -15,18 +15,15 @@ export async function POST(request: Request) {
 
     // Process the original text to create eng_quizlet
     let lines = original_text.split("\n").filter((line: string) => /^[0-9]/.test(line));
-    // interface QuizletData {
-    //   student_name: string;
-    //   class_date: string;
-    //   date: string;
-    //   original_text: string;
-    // }
 
     if (lines.length === 0) {
       return NextResponse.json({ error: "No Translation" }, { status: 400 });
     }
 
-    lines = lines
+    // Trim numbers at the start of each Line
+    const noNumlines = lines.map((item: string) => item.replace(/^\d+\.\s*/, ''));
+
+    lines = noNumlines
       .map((line: string) => line.trim())
       .filter((line: string) => line);
     const eng_quizlet = lines;

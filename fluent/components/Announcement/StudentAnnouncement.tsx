@@ -43,7 +43,7 @@ const AnnouncementPage = () => {
   const user = searchParams.get("user");
   const type = searchParams.get("type");
   const user_id = searchParams.get("id");
-  const [userCredits, setUserCredits] = useState(5);
+  const [userCredits, setUserCredits] = useState<string | number>('');
 
   const [next_schedule_data, setNext_schedule_data] =
     useState<ScheduleData | null>(null);

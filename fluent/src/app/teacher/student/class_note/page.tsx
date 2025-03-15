@@ -171,6 +171,25 @@ const QuizletPageContent: React.FC = () => {
     }
   };
 
+  const handleNumbering = async () => {
+    if (!original_text.trim()) return;
+
+    try {
+      const response = await fetch("/api/quizlet/numbering", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: original_text }),
+      });
+
+      const data = await response.json();
+      setOriginal_text(data.numbered_text); // Assuming the API returns { numbered_text: "..." }
+    } catch (error) {
+      console.error("Error numbering text:", error);
+    }
+  };
+
   // 클라이언트 측 렌더링이 아직 완료되지 않았을 경우 간단한 로딩 표시
   if (!isMounted) {
     return (
@@ -235,6 +254,12 @@ const QuizletPageContent: React.FC = () => {
               </div>
             )}
           </div>
+
+          
+          <div>
+            <button onClick={handleNumbering} className="bg-[#F2F4F8]">Numbering</button>
+          </div>
+
 
           <div className="flex items-center space-x-3">
             {/* 날짜 선택기 */}
@@ -390,6 +415,7 @@ const QuizletPageContent: React.FC = () => {
         <div className="flex-grow flex flex-col relative">
           <textarea
             id="original_text"
+            value = {original_text}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setOriginal_text(e.target.value)
             }
@@ -397,6 +423,16 @@ const QuizletPageContent: React.FC = () => {
             placeholder="1. Fluent  2. 퀴즐렛 이런식으로 번호를 먼저 입력하세요."
             disabled={loading}
           ></textarea>
+          {/* <div
+            id="original_text"
+            contentEditable
+            onInput={(e: React.FormEvent<HTMLDivElement>) => {
+              // Update the state with the content of the editable div
+              setOriginal_text(e.currentTarget.innerText);
+            }}
+            className="flex-grow w-full p-10 text-5xl font-bold focus:outline-none bg-white text-[#333D4B] resize-none"
+            dangerouslySetInnerHTML={{ __html: original_text }} // If you want to inject formatted content
+          ></div> */}
 
           {/* 텍스트 영역 꾸미기 - 상단 원 */}
           <div className="absolute top-3 right-3">
