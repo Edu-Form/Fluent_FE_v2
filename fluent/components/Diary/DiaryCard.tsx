@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { FiChevronLeft, FiChevronRight, FiCalendar } from "react-icons/fi";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -27,11 +27,13 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const openIsModal = () => setIsModalOpen(true);
   const closeIsModal = () => setIsModalOpen(false);
 
-  const sortedData = Array.isArray(diarydata)
-    ? diarydata.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      )
-    : [];
+  const sortedData = useMemo(() => {
+    return Array.isArray(diarydata)
+      ? diarydata.sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )
+      : [];
+  }, [diarydata]); // Only recompute when diarydata changes
 
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
@@ -138,7 +140,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
       );
     }
 
-    let result = [];
+    const result = [];
     let lastPos = 0;
     
     for (let i = 0; i < errors.length; i++) {
