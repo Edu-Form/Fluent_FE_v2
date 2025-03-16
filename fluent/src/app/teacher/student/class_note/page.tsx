@@ -241,9 +241,9 @@ const QuizletPageContent: React.FC = () => {
 
       {/* 헤더 - Sticky 적용 */}
       <header className="bg-white border-b border-[#F2F4F6] py-4 sticky top-0 z-10">
-        <div className="max-w-screen-xl mx-auto px-5 flex items-center justify-between">
+        <div className="max-w-full-xl px-5 flex items-center justify-between mx-10">
           <div className="flex items-center space-x-3">
-            <h1 className="p-4 text-2xl font-bold text-[#191F28]">
+            <h1 className="p-4 text-3xl font-bold text-[#191F28]">
               Class Note
             </h1>
             {student_name && (
@@ -255,13 +255,34 @@ const QuizletPageContent: React.FC = () => {
             )}
           </div>
 
-          
-          <div>
-            <button onClick={handleNumbering} className="bg-[#F2F4F8]">Numbering</button>
-          </div>
-
-
           <div className="flex items-center space-x-3">
+            {/* Numbering 버튼 */}
+            <button
+              onClick={handleNumbering}
+              className="flex items-center gap-2 px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm"
+              disabled={loading}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              자동 번호 매기기
+            </button>
+
             {/* 날짜 선택기 */}
             <div className="relative">
               <input
@@ -295,6 +316,7 @@ const QuizletPageContent: React.FC = () => {
                 </svg>
               </div>
             </div>
+
             {/* 작성 가이드 툴팁 버튼 */}
             <div className="relative group">
               <button
@@ -415,7 +437,7 @@ const QuizletPageContent: React.FC = () => {
         <div className="flex-grow flex flex-col relative">
           <textarea
             id="original_text"
-            value = {original_text}
+            value={original_text}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setOriginal_text(e.target.value)
             }
@@ -423,16 +445,6 @@ const QuizletPageContent: React.FC = () => {
             placeholder="1. Fluent  2. 퀴즐렛 이런식으로 번호를 먼저 입력하세요."
             disabled={loading}
           ></textarea>
-          {/* <div
-            id="original_text"
-            contentEditable
-            onInput={(e: React.FormEvent<HTMLDivElement>) => {
-              // Update the state with the content of the editable div
-              setOriginal_text(e.currentTarget.innerText);
-            }}
-            className="flex-grow w-full p-10 text-5xl font-bold focus:outline-none bg-white text-[#333D4B] resize-none"
-            dangerouslySetInnerHTML={{ __html: original_text }} // If you want to inject formatted content
-          ></div> */}
 
           {/* 텍스트 영역 꾸미기 - 상단 원 */}
           <div className="absolute top-3 right-3">

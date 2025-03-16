@@ -4,10 +4,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiCalendar,
-  FiBook,
-  FiList,
   FiArrowRight,
-  FiCheck,
 } from "react-icons/fi";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -15,7 +12,10 @@ import DiaryModal from "@/components/Diary/DiaryModal";
 import { useSearchParams } from "next/navigation";
 
 const content = {
-  write: "Write Diary",
+  write: "일기 작성하기",
+  title: "AI 다이어리 어시스턴트",
+  emptyMessage: "아직 작성된 일기가 없습니다",
+  proofreadTitle: "AI Diary Assistant",
 };
 
 export default function DiaryCard({ diarydata }: { diarydata: any }) {
@@ -26,6 +26,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [errors, setErrors] = useState<any[]>([]);
+  const [selectedError, setSelectedError] = useState<any | null>(null);
   const [highlightedText, setHighlightedText] = useState<string>("");
 
   const openIsModal = () => setIsModalOpen(true);
@@ -75,6 +76,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         extractedErrors = diary.diary_correction.errors;
       }
       setErrors(extractedErrors);
+      setSelectedError(extractedErrors.length > 0 ? extractedErrors[0] : null);
 
       // Prepare the highlighted text with the original text
       const originalText =
@@ -83,47 +85,27 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
     }
   }, [currentIndex, sortedData]);
 
-  // Helper function to get error type color
-  const getErrorTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "spelling":
-        return "red";
-      case "grammar":
-        return "blue";
-      case "punctuation":
-        return "yellow";
-      case "verb":
-        return "red";
-      case "clarity":
-        return "blue";
-      default:
-        return "gray";
-    }
-  };
-
   // 데이터가 없을 때 템플릿 UI를 표시
   if (!sortedData.length) {
     return (
-      <div className="relative flex w-full h-full bg-gray-50 items-center justify-center p-4 sm:p-10">
+      <div className="relative flex w-full h-full bg-gray-50 items-center justify-center p-4 sm:p-6">
         {/* 빈 카드 컨테이너 */}
         <div className="w-full max-w-6xl bg-white rounded-lg shadow-md overflow-hidden">
           {/* 헤더 */}
-          <div className="bg-[#f5f7fb] border-b border-gray-200 p-4">
-            <h1 className="text-2xl font-bold text-gray-800">
-              AI Diary Assistant
+          <div className="bg-white border-b border-gray-100 p-8">
+            <h1 className="text-xl font-bold text-gray-900">
+              {content.proofreadTitle}
             </h1>
           </div>
 
-          <div className="p-8 flex flex-col items-center justify-center">
-            <p className="text-gray-500 text-lg mb-6">
-              아직 작성된 일기가 없습니다
-            </p>
+          <div className="p-12 flex flex-col items-center justify-center">
+            <p className="text-gray-500 text-lg mb-8">{content.emptyMessage}</p>
             {type === "student" && (
               <button
                 onClick={openIsModal}
-                className="px-6 py-3 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="px-6 py-3 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
               >
-                일기 작성하기
+                {content.write}
               </button>
             )}
           </div>
@@ -144,77 +126,145 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
-  const weekday = date.toLocaleDateString("en-US", { weekday: "long" });
 
-  // Ensure safe text display by converting any potential objects to strings or empty strings
   const originalText =
     typeof diary.original_text === "string" ? diary.original_text : "";
   const diarySummary =
     typeof diary.diary_summary === "string" ? diary.diary_summary : "";
-  const diaryCorrection =
-    typeof diary.diary_correction === "string"
-      ? diary.diary_correction
-      : diary.diary_correction && typeof diary.diary_correction === "object"
-      ? JSON.stringify(diary.diary_correction)
-      : "";
   const diaryExpressions =
     typeof diary.diary_expressions === "string" ? diary.diary_expressions : "";
 
-  // Function to create highlighted text with error spans
   const renderHighlightedText = () => {
     if (!originalText || errors.length === 0) {
       return (
-        <p className="text-gray-700 whitespace-pre-wrap">{originalText}</p>
+        <p className="text-gray-700 whitespace-pre-wrap text-lg leading-relaxed">
+          {originalText}
+        </p>
       );
     }
 
-    // Sort errors by start position (descending) to avoid index shifting when creating spans
-    const sortedErrors = [...errors].sort(
-      (a, b) => b.errorStart - a.errorStart
-    );
-
-    let textWithHighlights = originalText;
-
-    // Replace each error instance with a highlighted span
-    sortedErrors.forEach((error) => {
-      const beforeError = textWithHighlights.substring(0, error.errorStart);
-      const errorText = textWithHighlights.substring(
-        error.errorStart,
-        error.errorEnd
-      );
-      const afterError = textWithHighlights.substring(error.errorEnd);
-
-      textWithHighlights = `${beforeError}<span class="text-red-500 underline font-medium">${errorText}</span>${afterError}`;
+    let positions: { pos: number; isStart: boolean; error: any }[] = [];
+    errors.forEach((error) => {
+      positions.push({ pos: error.errorStart, isStart: true, error });
+      positions.push({ pos: error.errorEnd, isStart: false, error });
     });
 
-    return (
-      <p
-        className="text-gray-700 whitespace-pre-wrap"
-        dangerouslySetInnerHTML={{ __html: textWithHighlights }}
-      />
-    );
+    positions.sort((a, b) => {
+      if (a.pos === b.pos) {
+        return a.isStart ? -1 : 1;
+      }
+      return a.pos - b.pos;
+    });
+
+    let result = [];
+    let lastPos = 0;
+    let activeErrors = new Set();
+
+    for (let i = 0; i < positions.length; i++) {
+      const { pos, isStart, error } = positions[i];
+
+      if (pos > lastPos) {
+        result.push(
+          <span key={`text-${lastPos}`} className="text-gray-700">
+            {originalText.substring(lastPos, pos)}
+          </span>
+        );
+      }
+
+      if (isStart) {
+        activeErrors.add(error.id || i);
+      } else {
+        activeErrors.delete(error.id || i);
+      }
+
+      let endPos = pos;
+      if (i < positions.length - 1) {
+        endPos = positions[i + 1].pos;
+      } else {
+        endPos = originalText.length;
+      }
+
+      if (endPos > pos) {
+        const isSelected =
+          selectedError &&
+          error.errorStart === selectedError.errorStart &&
+          error.errorEnd === selectedError.errorEnd;
+
+        if (activeErrors.size > 0 && isStart) {
+          const errorType = error.errorType.toLowerCase();
+          let className = "underline ";
+
+          if (isSelected) {
+            className += "font-medium ";
+
+            if (errorType === "verb") {
+              className += "text-red-600 bg-red-50";
+            } else if (errorType === "clarity") {
+              className += "text-blue-600 bg-blue-50";
+            } else if (errorType === "punctuation") {
+              className += "text-yellow-600 bg-yellow-50";
+            } else {
+              className += "text-red-600 bg-red-50";
+            }
+          } else {
+            if (errorType === "verb") {
+              className += "text-red-600 border-b border-red-600";
+            } else if (errorType === "clarity") {
+              className += "text-blue-600 border-b border-blue-600";
+            } else if (errorType === "punctuation") {
+              className += "text-yellow-600 border-b border-yellow-600";
+            } else {
+              className += "text-red-600 border-b border-red-600";
+            }
+          }
+
+          result.push(
+            <span
+              key={`error-${pos}`}
+              className={className}
+              onClick={() => setSelectedError(error)}
+            >
+              {originalText.substring(pos, endPos)}
+            </span>
+          );
+        }
+      }
+
+      lastPos = pos;
+    }
+
+    // Add any remaining text
+    if (lastPos < originalText.length) {
+      result.push(
+        <span key={`text-end`} className="text-gray-700">
+          {originalText.substring(lastPos)}
+        </span>
+      );
+    }
+
+    return <p className="text-lg leading-relaxed">{result}</p>;
   };
 
   return (
     <>
-      <div className="relative flex w-full h-full bg-gray-50 items-center justify-center p-4 sm:p-10">
+      <div className="relative flex w-full h-full bg-gray-50 items-center justify-center">
         <button
           onClick={handlePrev}
-          className="absolute left-2 z-10 p-3 rounded-full bg-white shadow-md hover:bg-gray-100 transition-colors"
+          className="absolute left-6 z-10 p-4 rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
           aria-label="Previous diary"
         >
-          <FiChevronLeft size={20} />
+          <FiChevronLeft size={24} className="text-gray-700" />
         </button>
 
         <button
           onClick={handleNext}
-          className="absolute right-2 z-10 p-3 rounded-full bg-white shadow-md hover:bg-gray-100 transition-colors"
+          className="absolute right-6 z-10 p-4 rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
           aria-label="Next diary"
         >
-          <FiChevronRight size={20} />
+          <FiChevronRight size={24} className="text-gray-700" />
         </button>
 
-        {/* Main Container */}
+        {/* Main Container - Using flex flex-col with spacing */}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -222,20 +272,20 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="w-full max-w-7xl bg-white rounded-lg shadow-lg overflow-hidden"
+            className="flex flex-col w-full h-full max-w-7xl mx-10"
           >
-            {/* Header with date and controls */}
-            <div className="bg-[#f5f7fb] border-b border-gray-200 p-4 flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-800">
-                AI Diary Assistant
+            {/* Header - Now in its own container with rounded corners and shadow */}
+            <div className="bg-white rounded-t-xl shadow-md py-5 px-10 flex items-center justify-between mb-4">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {content.proofreadTitle}
               </h1>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-5">
                 <div
                   onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-                  className="flex items-center gap-2 bg-white px-3 py-1.5 rounded border border-gray-200 cursor-pointer hover:bg-gray-50"
+                  className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100"
                 >
-                  <FiCalendar className="w-4 h-4 text-gray-500" />
+                  <FiCalendar className="w-5 h-5 text-gray-500" />
                   <span className="text-sm font-medium text-gray-700">
                     {year}년 {month}월 {day}일
                   </span>
@@ -244,7 +294,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                 {type === "student" && (
                   <button
                     onClick={openIsModal}
-                    className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors"
+                    className="px-5 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
                   >
                     {content.write}
                   </button>
@@ -253,120 +303,184 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
 
               {/* DatePicker Popup */}
               {isDatePickerOpen && (
-                <div className="absolute top-16 right-4 mt-2 z-50">
-                  <ReactDatePicker
-                    selected={selectedDate || date}
-                    onChange={handleDateChange}
-                    dateFormat="yyyy/MM/dd"
-                    includeDates={sortedData.map(
-                      (diary) => new Date(diary.date)
-                    )}
-                    inline
-                    onClickOutside={() => setIsDatePickerOpen(false)}
-                  />
+                <div className="absolute top-20 right-10 mt-2 z-50">
+                  <div className="bg-white rounded-lg shadow-xl p-3 border border-gray-200">
+                    <ReactDatePicker
+                      selected={selectedDate || date}
+                      onChange={handleDateChange}
+                      dateFormat="yyyy/MM/dd"
+                      includeDates={sortedData.map(
+                        (diary) => new Date(diary.date)
+                      )}
+                      inline
+                      onClickOutside={() => setIsDatePickerOpen(false)}
+                    />
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Content Area - Split into exact two halves */}
-            <div className="flex h-[calc(100vh-8rem)] md:flex-row">
-              {/* Left Panel (1/2) - Original Text, Summary, and Key Expressions (Scrollable) */}
-              <div className="w-1/2 h-full overflow-y-auto border-r border-gray-200 p-5">
-                {/* Original Text Section */}
-                <div className="mb-6">
-                  <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                    <FiBook className="mr-2 text-blue-600" />
-                    Original Diary
+            {/* Content Area - Now with separated panels */}
+            <div className="flex flex-row h-[calc(100vh-12rem)] gap-6">
+              {/* Left Panel */}
+              <div className="w-full md:w-4/5 bg-white rounded-b-xl shadow-md overflow-hidden">
+                <div className="h-full overflow-y-auto p-7">
+                  {/* Original Text */}
+                  <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center">
+                    원본 일기
                   </h2>
-
-                  <div className="bg-yellow-50 border border-gray-200 rounded p-4 mb-6">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {originalText}
-                    </p>
+                  <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+                    {renderHighlightedText()}
                   </div>
-                </div>
 
-                {/* Summary Section */}
-                <div className="mb-6">
-                  <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                    <FiList className="mr-2 text-amber-600" />
-                    Summary
-                  </h2>
+                  {/* Summary Section (Collapsed) */}
+                  <details className="mb-6 border border-gray-200 rounded-lg">
+                    <summary className="text-base font-bold text-gray-900 p-5 cursor-pointer bg-gray-50 hover:bg-gray-100">
+                      <div className="flex items-center">요약</div>
+                    </summary>
+                    <div className="p-6 bg-white">
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {diarySummary}
+                      </p>
+                    </div>
+                  </details>
 
-                  <div className="bg-white border border-gray-200 rounded p-4 mb-6">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {diarySummary}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Key Expressions Section */}
-                <div>
-                  <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                    Key Expressions
-                  </h2>
-
-                  <div className="space-y-2">
-                    {diaryExpressions
-                      .split("\n")
-                      .filter((line) => line.trim())
-                      .map((expression, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-green-50 border border-green-100 rounded p-3 flex items-start"
-                        >
-                          <span className="bg-green-100 text-green-800 w-6 h-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                            {idx + 1}
-                          </span>
-                          <p className="text-gray-700">{expression}</p>
-                        </div>
-                      ))}
-                  </div>
+                  {/* Key Expressions (Collapsed) */}
+                  <details className="border border-gray-200 rounded-lg">
+                    <summary className="text-base font-bold text-gray-900 p-5 cursor-pointer bg-gray-50 hover:bg-gray-100">
+                      <div className="flex items-center">주요 표현</div>
+                    </summary>
+                    <div className="p-6 bg-white">
+                      <div className="space-y-3">
+                        {diaryExpressions
+                          .split("\n")
+                          .filter((line) => line.trim())
+                          .map((expression, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start"
+                            >
+                              <span className="bg-blue-100 text-blue-800 w-7 h-7 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                                {idx + 1}
+                              </span>
+                              <p className="text-gray-700">{expression}</p>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </div>
 
-              {/* Right Panel (1/2) - Corrections and Suggestions */}
-              <div className="w-1/2 h-full overflow-y-auto bg-[#f9fafc] p-5">
-                <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center">
-                  <FiCheck className="mr-2 text-red-500" />
-                  Correction Assistant
-                </h2>
-
-                {/* Suggestions Cards */}
-                <div className="space-y-3">
-                  {errors &&
-                    errors.map((error, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-white border border-gray-200 rounded p-3"
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <div>
-                            <span
-                              className={`text-${getErrorTypeColor(
-                                error.errorType
-                              )}-500 font-semibold underline`}
-                            >
-                              {error.errorContent}
-                            </span>
-                            {error.errorFix && (
-                              <>
-                                <FiArrowRight className="inline mx-2 text-gray-400" />
-                                <span className="font-semibold">
-                                  {error.errorFix}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          <span className="text-gray-500 text-sm">
-                            {error.errorType}
+              {/* Right Panel */}
+              <div className="w-full md:w-2/5 bg-white rounded-b-xl shadow-md overflow-hidden">
+                <div className="h-full flex flex-col">
+                  {/* Selected Error Panel */}
+                  {selectedError && (
+                    <div className="p-4 border-b border-gray-200">
+                      <div className="mb-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {selectedError.errorType}
                           </span>
                         </div>
-                        <p className="text-gray-600 text-sm">
-                          {error.errorExplain}
+
+                        <div className="flex items-center mb-4">
+                          <p className="text-lg font-medium text-red-600">
+                            {selectedError.errorContent}
+                          </p>
+
+                          {selectedError.errorFix && (
+                            <>
+                              <span className="mx-4 text-gray-400">→</span>
+                              <p className="text-lg font-medium text-blue-600">
+                                {selectedError.errorFix}
+                              </p>
+                            </>
+                          )}
+                        </div>
+
+                        <p className="text-gray-600 mt-4 text-sm leading-relaxed">
+                          {selectedError.errorExplain}
                         </p>
                       </div>
-                    ))}
+                    </div>
+                  )}
+
+                  {/* All Errors List */}
+                  <div className="flex-grow overflow-y-auto p-4">
+                    <h2 className="text-base font-bold text-gray-900 mb-4">
+                      모든 수정 사항
+                    </h2>
+
+                    <div className="space-y-4">
+                      {errors.map((error, idx) => {
+                        const isActive =
+                          selectedError &&
+                          error.errorStart === selectedError.errorStart &&
+                          error.errorEnd === selectedError.errorEnd;
+
+                        const errorType = error.errorType.toLowerCase();
+                        let dotColor = "red";
+
+                        if (errorType === "clarity") {
+                          dotColor = "blue";
+                        } else if (errorType === "punctuation") {
+                          dotColor = "yellow";
+                        }
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`${
+                              isActive
+                                ? "border-blue-300 bg-blue-50"
+                                : "border-gray-200 bg-gray-50"
+                            } rounded-lg p-5 cursor-pointer hover:bg-gray-100 transition-colors border shadow-sm`}
+                            onClick={() => setSelectedError(error)}
+                          >
+                            <div className="flex justify-between items-center mb-3">
+                              <div className="flex items-center">
+                                <span
+                                  className={`w-3 h-3 rounded-full bg-${dotColor}-500 mr-3`}
+                                ></span>
+                                <span
+                                  className={`${
+                                    errorType === "verb"
+                                      ? "text-red-600"
+                                      : errorType === "clarity"
+                                      ? "text-blue-600"
+                                      : errorType === "punctuation"
+                                      ? "text-yellow-600"
+                                      : "text-red-600"
+                                  } font-medium`}
+                                >
+                                  {error.errorContent}
+                                </span>
+                              </div>
+                              <span className="text-gray-500 text-xs px-2 py-1 bg-white rounded-full border border-gray-200">
+                                {error.errorType}
+                              </span>
+                            </div>
+
+                            {error.errorFix && (
+                              <div className="flex items-center text-sm text-gray-600 mb-3">
+                                <span className="ml-6 text-gray-400">→</span>
+                                <span className="ml-3 font-medium text-blue-600">
+                                  {error.errorFix}
+                                </span>
+                              </div>
+                            )}
+
+                            <p className="text-gray-600 text-sm ml-6">
+                              {error.errorExplain.substring(0, 100)}
+                              {error.errorExplain.length > 100 ? "..." : ""}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -383,13 +497,13 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         )}
 
         {/* Pagination Indicator */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+        <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3">
           {sortedData.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
-              className={`w-2 h-2 rounded-full ${
-                idx === currentIndex ? "bg-blue-600" : "bg-gray-300"
+              className={`w-2.5 h-2.5 rounded-full ${
+                idx === currentIndex ? "bg-blue-500" : "bg-gray-300"
               }`}
               aria-label={`Go to diary ${idx + 1}`}
             />
@@ -419,6 +533,14 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
 
         .overflow-y-auto::-webkit-scrollbar-thumb:hover {
           background-color: rgba(156, 163, 175, 0.5);
+        }
+
+        details > summary {
+          list-style: none;
+        }
+
+        details > summary::-webkit-details-marker {
+          display: none;
         }
       `}</style>
     </>
