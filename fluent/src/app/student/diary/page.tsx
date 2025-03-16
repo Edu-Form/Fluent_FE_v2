@@ -5,40 +5,9 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Navigation from "@/components/navigation";
 
-// Lottie와 animationData를 클라이언트 사이드에서만 로드
-// const Lottie = dynamic(() => import("lottie-react"), {
-//   ssr: false,
-//   loading: () => <div>Loading...</div>,
-// });
-
-// const LottieAnimation = dynamic(
-//   async () => {
-//     const timerAnimationData = await import(
-//       "@/src/app/lotties/mainLoading.json"
-//     );
-//     return function LottieWrapper() {
-//       return <Lottie animationData={timerAnimationData} />;
-//     };
-//   },
-//   { ssr: false }
-// );
-
 const DiaryCard = dynamic(() => import("@/components/Diary/DiaryCard"), {
   ssr: false,
 });
-
-interface LoadingScreenProps {
-  message?: string;
-}
-
-// const LoadingScreen = ({ message = "Fluent" }: LoadingScreenProps) => (
-//   <div className="fixed inset-0 flex flex-col justify-center items-center text-xl font-['Playwrite']">
-//     <div>{message}</div>
-//     <div className="mt-4 w-32 h-32">
-//       <LottieAnimation />
-//     </div>
-//   </div>
-// );
 
 // 모바일 감지 hook
 const useMobileDetection = () => {
@@ -64,7 +33,7 @@ const useMobileDetection = () => {
 
 const DiaryPageContent = () => {
   const [diaryData, setDiaryData] = useState<DiaryData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const isMobile = useMobileDetection();
   const searchParams = useSearchParams();
   const user = searchParams.get("user");

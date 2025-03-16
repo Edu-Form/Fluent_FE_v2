@@ -1,11 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import {
-  FiChevronLeft,
-  FiChevronRight,
-  FiCalendar,
-  FiArrowRight,
-} from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiCalendar } from "react-icons/fi";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import DiaryModal from "@/components/Diary/DiaryModal";
@@ -27,7 +22,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [errors, setErrors] = useState<any[]>([]);
   const [selectedError, setSelectedError] = useState<any | null>(null);
-  const [highlightedText, setHighlightedText] = useState<string>("");
+  const [, setHighlightedText] = useState<string>("");
 
   const openIsModal = () => setIsModalOpen(true);
   const closeIsModal = () => setIsModalOpen(false);
@@ -143,7 +138,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
       );
     }
 
-    let positions: { pos: number; isStart: boolean; error: any }[] = [];
+    const positions: { pos: number; isStart: boolean; error: any }[] = [];
     errors.forEach((error) => {
       positions.push({ pos: error.errorStart, isStart: true, error });
       positions.push({ pos: error.errorEnd, isStart: false, error });
@@ -156,9 +151,9 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
       return a.pos - b.pos;
     });
 
-    let result = [];
-    let lastPos = 0;
-    let activeErrors = new Set();
+    const result = [];
+    const lastPos = 0;
+    const activeErrors = new Set();
 
     for (let i = 0; i < positions.length; i++) {
       const { pos, isStart, error } = positions[i];
@@ -229,8 +224,6 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
           );
         }
       }
-
-      lastPos = pos;
     }
 
     // Add any remaining text
