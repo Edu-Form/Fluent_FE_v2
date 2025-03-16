@@ -138,95 +138,58 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
       );
     }
 
-    const positions: { pos: number; isStart: boolean; error: any }[] = [];
-    errors.forEach((error) => {
-      positions.push({ pos: error.errorStart, isStart: true, error });
-      positions.push({ pos: error.errorEnd, isStart: false, error });
-    });
-
-    positions.sort((a, b) => {
-      if (a.pos === b.pos) {
-        return a.isStart ? -1 : 1;
-      }
-      return a.pos - b.pos;
-    });
-
-    const result = [];
-    const lastPos = 0;
-    const activeErrors = new Set();
-
-    for (let i = 0; i < positions.length; i++) {
-      const { pos, isStart, error } = positions[i];
-
-      if (pos > lastPos) {
-        result.push(
-          <span key={`text-${lastPos}`} className="text-gray-700">
-            {originalText.substring(lastPos, pos)}
-          </span>
-        );
-      }
-
-      if (isStart) {
-        activeErrors.add(error.id || i);
-      } else {
-        activeErrors.delete(error.id || i);
-      }
-
-      let endPos = pos;
-      if (i < positions.length - 1) {
-        endPos = positions[i + 1].pos;
-      } else {
-        endPos = originalText.length;
-      }
-
-      if (endPos > pos) {
+    let result = [];
+    let lastPos = 0;
+    
+    for (let i = 0; i < errors.length; i++) {
+      const error = errors[i];
+      const sentence = error.errorSentence;
+    
+      // Find the position of the error sentence in the original text
+      const startIdx = originalText.indexOf(sentence, lastPos);
+    
+      // If the sentence exists and is found after the last position, process it
+      if (startIdx !== -1) {
+        // Add the text before the sentence
+        if (startIdx > lastPos) {
+          result.push(
+            <span key={`text-${lastPos}`} className="text-gray-700">
+              {originalText.substring(lastPos, startIdx)}
+            </span>
+          );
+        }
+    
+        // Highlight the error sentence
+        const endIdx = startIdx + sentence.length;
         const isSelected =
           selectedError &&
           error.errorStart === selectedError.errorStart &&
           error.errorEnd === selectedError.errorEnd;
-
-        if (activeErrors.size > 0 && isStart) {
-          const errorType = error.errorType.toLowerCase();
-          let className = "underline ";
-
-          if (isSelected) {
-            className += "font-medium ";
-
-            if (errorType === "verb") {
-              className += "text-red-600 bg-red-50";
-            } else if (errorType === "clarity") {
-              className += "text-blue-600 bg-blue-50";
-            } else if (errorType === "punctuation") {
-              className += "text-yellow-600 bg-yellow-50";
-            } else {
-              className += "text-red-600 bg-red-50";
-            }
-          } else {
-            if (errorType === "verb") {
-              className += "text-red-600 border-b border-red-600";
-            } else if (errorType === "clarity") {
-              className += "text-blue-600 border-b border-blue-600";
-            } else if (errorType === "punctuation") {
-              className += "text-yellow-600 border-b border-yellow-600";
-            } else {
-              className += "text-red-600 border-b border-red-600";
-            }
-          }
-
-          result.push(
-            <span
-              key={`error-${pos}`}
-              className={className}
-              onClick={() => setSelectedError(error)}
-            >
-              {originalText.substring(pos, endPos)}
-            </span>
-          );
+    
+        let className = "underline ";
+    
+        if (isSelected) {
+          className += "font-medium text-red-600 bg-red-50"; // Selected error styling
+        } else {
+          className += "text-red-600 border-b border-red-600"; // Default error styling
         }
+    
+        result.push(
+          <span
+            key={`error-${startIdx}`}
+            className={className}
+            onClick={() => setSelectedError(error)}
+          >
+            {sentence}
+          </span>
+        );
+    
+        // Update last position to be after the highlighted sentence
+        lastPos = endIdx;
       }
     }
-
-    // Add any remaining text
+    
+    // Add any remaining text after the last highlighted sentence
     if (lastPos < originalText.length) {
       result.push(
         <span key={`text-end`} className="text-gray-700">
@@ -234,8 +197,9 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         </span>
       );
     }
-
+    
     return <p className="text-lg leading-relaxed">{result}</p>;
+    
   };
 
   return (
