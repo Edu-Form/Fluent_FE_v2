@@ -354,8 +354,8 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                       <div className="space-y-3">
                         {diaryExpressions
                           .split("\n")
-                          .filter((line) => line.trim())
-                          .map((expression, idx) => (
+                          .filter((line: any) => line.trim())
+                          .map((expression: any, idx: any) => (
                             <div
                               key={idx}
                               className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start"
