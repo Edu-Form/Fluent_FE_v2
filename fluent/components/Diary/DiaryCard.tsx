@@ -6,6 +6,17 @@ import "react-datepicker/dist/react-datepicker.css";
 import DiaryModal from "@/components/Diary/DiaryModal";
 import { useSearchParams } from "next/navigation";
 
+// 에러 객체 타입 정의
+interface ErrorItem {
+  errorType?: string;
+  errorContent?: string;
+  errorFix?: string;
+  errorExplain?: string;
+  errorStart?: number;
+  errorEnd?: number;
+  // 다른 필드가 있다면 추가할 수 있습니다
+}
+
 const content = {
   write: "일기 작성하기",
   title: "AI 다이어리 어시스턴트",
@@ -16,12 +27,14 @@ const content = {
 export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const searchParams = useSearchParams();
   const type = searchParams.get("type");
+  const student_name = searchParams.get("student_name");
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [errors, setErrors] = useState<any[]>([]);
-  const [selectedError, setSelectedError] = useState<any | null>(null);
+  const [errors, setErrors] = useState<ErrorItem[]>([]);
+  const [selectedError, setSelectedError] = useState<ErrorItem | null>(null);
   const [, setHighlightedText] = useState<string>("");
 
   const openIsModal = () => setIsModalOpen(true);
@@ -33,7 +46,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         )
       : [];
-  }, [diarydata]); // Only recompute when diarydata changes
+  }, [diarydata]);
 
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
@@ -62,8 +75,13 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
     if (sortedData.length > 0) {
       const diary = sortedData[currentIndex];
 
+      // 디버깅 메시지 추가
+      console.log("현재 일기 데이터:", diary);
+      console.log("student_name:", student_name);
+      console.log("type:", type);
+
       // Extract errors from diary_correction if it exists and has errors
-      let extractedErrors: any[] = [];
+      let extractedErrors: ErrorItem[] = [];
       if (
         diary.diary_correction &&
         typeof diary.diary_correction === "object" &&
@@ -71,7 +89,12 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         Array.isArray(diary.diary_correction.errors)
       ) {
         extractedErrors = diary.diary_correction.errors;
+        // 에러 데이터 구조 확인
+        console.log("추출된 에러 데이터 (첫 번째):", extractedErrors[0]);
+      } else {
+        console.log("에러 데이터가 없거나 올바른 형식이 아닙니다.");
       }
+
       setErrors(extractedErrors);
       setSelectedError(extractedErrors.length > 0 ? extractedErrors[0] : null);
 
@@ -80,7 +103,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         typeof diary.original_text === "string" ? diary.original_text : "";
       setHighlightedText(originalText);
     }
-  }, [currentIndex, sortedData]);
+  }, [currentIndex, sortedData, student_name, type]);
 
   // 데이터가 없을 때 템플릿 UI를 표시
   if (!sortedData.length) {
@@ -132,7 +155,13 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
     typeof diary.diary_expressions === "string" ? diary.diary_expressions : "";
 
   const renderHighlightedText = () => {
+    // 디버깅 로그 추가
+    console.log("renderHighlightedText 호출됨");
+    console.log("원본 텍스트:", originalText);
+    console.log("에러 개수:", errors.length);
+
     if (!originalText || errors.length === 0) {
+      console.log("에러가 없거나 원본 텍스트가 없어 일반 텍스트로 표시");
       return (
         <p className="text-gray-700 whitespace-pre-wrap text-lg leading-relaxed">
           {originalText}
@@ -142,56 +171,79 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
 
     const result = [];
     let lastPos = 0;
-    
+
     for (let i = 0; i < errors.length; i++) {
       const error = errors[i];
-      const sentence = error.errorSentence;
-    
-      // Find the position of the error sentence in the original text
-      const startIdx = originalText.indexOf(sentence, lastPos);
-    
-      // If the sentence exists and is found after the last position, process it
-      if (startIdx !== -1) {
-        // Add the text before the sentence
-        if (startIdx > lastPos) {
+
+      // 모든 에러가 필수 필드를 갖고 있지 않을 수 있어 안전하게 체크
+      const content = error.errorContent || "";
+      if (!content) {
+        console.log(`에러 ${i}에 errorContent가 없습니다:`, error);
+        continue;
+      }
+
+      console.log(`에러 ${i} 검색 중: '${content}'`);
+
+      try {
+        // 대소문자 구분 없이 찾기 위해 정규식 사용
+        const escapedContent = content.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(escapedContent, "i");
+        const match = originalText.slice(lastPos).match(regex);
+
+        if (match && match.index !== undefined) {
+          const startIdx = lastPos + match.index;
+          console.log(`에러 ${i} 문장 찾음: 위치 ${startIdx}`);
+
+          if (startIdx > lastPos) {
+            result.push(
+              <span key={`text-${lastPos}`} className="text-gray-700">
+                {originalText.substring(lastPos, startIdx)}
+              </span>
+            );
+          }
+
+          // Highlight the error sentence
+          const matchedText = match[0]; // 실제 매치된 텍스트 사용
+          const endIdx = startIdx + matchedText.length;
+
+          // 안전하게 비교
+          const isSelected =
+            selectedError &&
+            selectedError.errorStart !== undefined &&
+            error.errorStart !== undefined &&
+            selectedError.errorEnd !== undefined &&
+            error.errorEnd !== undefined &&
+            error.errorStart === selectedError.errorStart &&
+            error.errorEnd === selectedError.errorEnd;
+
+          let className = "underline ";
+
+          if (isSelected) {
+            className += "font-medium text-red-600 bg-yellow-100";
+          } else {
+            className += "text-red-600";
+          }
+
           result.push(
-            <span key={`text-${lastPos}`} className="text-gray-700">
-              {originalText.substring(lastPos, startIdx)}
+            <span
+              key={`error-${startIdx}`}
+              className={className}
+              onClick={() => setSelectedError(error)}
+            >
+              {matchedText}
             </span>
           );
-        }
-    
-        // Highlight the error sentence
-        const endIdx = startIdx + sentence.length;
-        const isSelected =
-          selectedError &&
-          error.errorStart === selectedError.errorStart &&
-          error.errorEnd === selectedError.errorEnd;
-    
-        let className = "underline ";
-    
-        if (isSelected) {
-          className += "font-medium text-red-600 bg-red-50"; // Selected error styling
+
+          lastPos = endIdx;
         } else {
-          className += "text-red-600 border-b border-red-600"; // Default error styling
+          console.log(`에러 ${i} 문장을 찾을 수 없습니다: '${content}'`);
         }
-    
-        result.push(
-          <span
-            key={`error-${startIdx}`}
-            className={className}
-            onClick={() => setSelectedError(error)}
-          >
-            {sentence}
-          </span>
-        );
-    
-        // Update last position to be after the highlighted sentence
-        lastPos = endIdx;
+      } catch (e) {
+        console.error(`에러 ${i} 처리 중 오류 발생:`, e);
       }
     }
-    
-    // Add any remaining text after the last highlighted sentence
+
+    // 중요: 이 부분이 for 루프 바깥에 있어야 함
     if (lastPos < originalText.length) {
       result.push(
         <span key={`text-end`} className="text-gray-700">
@@ -199,9 +251,9 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         </span>
       );
     }
-    
+
+    console.log("하이라이트 결과 요소 수:", result.length);
     return <p className="text-lg leading-relaxed">{result}</p>;
-    
   };
 
   return (
@@ -287,6 +339,11 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                   {/* Original Text */}
                   <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center">
                     원본 일기
+                    {student_name && (
+                      <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                        {student_name}
+                      </span>
+                    )}
                   </h2>
                   <div className="mb-8 p-6 bg-gray-50 rounded-lg">
                     {renderHighlightedText()}
@@ -340,13 +397,13 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                       <div className="mb-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex items-center justify-between mb-4">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {selectedError.errorType}
+                            {selectedError.errorType || "오류"}
                           </span>
                         </div>
 
                         <div className="flex items-center mb-4">
                           <p className="text-lg font-medium text-red-600">
-                            {selectedError.errorContent}
+                            {selectedError.errorContent || ""}
                           </p>
 
                           {selectedError.errorFix && (
@@ -360,7 +417,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                         </div>
 
                         <p className="text-gray-600 mt-4 text-sm leading-relaxed">
-                          {selectedError.errorExplain}
+                          {selectedError.errorExplain || ""}
                         </p>
                       </div>
                     </div>
@@ -376,16 +433,32 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                       {errors.map((error, idx) => {
                         const isActive =
                           selectedError &&
+                          selectedError.errorStart !== undefined &&
+                          error.errorStart !== undefined &&
+                          selectedError.errorEnd !== undefined &&
+                          error.errorEnd !== undefined &&
                           error.errorStart === selectedError.errorStart &&
                           error.errorEnd === selectedError.errorEnd;
 
-                        const errorType = error.errorType.toLowerCase();
-                        let dotColor = "red";
+                        const errorType = (error.errorType || "").toLowerCase();
+                        let colorClass = "";
 
+                        // 직접 클래스 이름 지정
                         if (errorType === "clarity") {
-                          dotColor = "blue";
+                          colorClass = "bg-blue-500";
                         } else if (errorType === "punctuation") {
-                          dotColor = "yellow";
+                          colorClass = "bg-yellow-500";
+                        } else {
+                          colorClass = "bg-red-500";
+                        }
+
+                        let textClass = "text-red-600";
+                        if (errorType === "clarity") {
+                          textClass = "text-blue-600";
+                        } else if (errorType === "punctuation") {
+                          textClass = "text-yellow-600";
+                        } else if (errorType === "verb") {
+                          textClass = "text-red-600";
                         }
 
                         return (
@@ -401,24 +474,14 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                             <div className="flex justify-between items-center mb-3">
                               <div className="flex items-center">
                                 <span
-                                  className={`w-3 h-3 rounded-full bg-${dotColor}-500 mr-3`}
+                                  className={`w-3 h-3 rounded-full ${colorClass} mr-3`}
                                 ></span>
-                                <span
-                                  className={`${
-                                    errorType === "verb"
-                                      ? "text-red-600"
-                                      : errorType === "clarity"
-                                      ? "text-blue-600"
-                                      : errorType === "punctuation"
-                                      ? "text-yellow-600"
-                                      : "text-red-600"
-                                  } font-medium`}
-                                >
-                                  {error.errorContent}
+                                <span className={`${textClass} font-medium`}>
+                                  {error.errorContent || ""}
                                 </span>
                               </div>
                               <span className="text-gray-500 text-xs px-2 py-1 bg-white rounded-full border border-gray-200">
-                                {error.errorType}
+                                {error.errorType || "오류"}
                               </span>
                             </div>
 
@@ -432,8 +495,12 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                             )}
 
                             <p className="text-gray-600 text-sm ml-6">
-                              {error.errorExplain.substring(0, 100)}
-                              {error.errorExplain.length > 100 ? "..." : ""}
+                              {error.errorExplain &&
+                                error.errorExplain.substring(0, 100)}
+                              {error.errorExplain &&
+                              error.errorExplain.length > 100
+                                ? "..."
+                                : ""}
                             </p>
                           </div>
                         );

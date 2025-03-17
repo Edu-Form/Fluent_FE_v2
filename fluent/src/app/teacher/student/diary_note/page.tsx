@@ -224,9 +224,7 @@ const DiaryPageContent: React.FC = () => {
       <header className="bg-white border-b border-[#F2F4F6] py-4 sticky top-0 z-10">
         <div className="max-w-screen-xl mx-auto px-5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <h1 className="p-4 text-2xl font-bold text-[#191F28]">
-              Diary
-            </h1>
+            <h1 className="p-4 text-2xl font-bold text-[#191F28]">Diary</h1>
             {student_name && (
               <div className="px-5 py-1.5 bg-[#F2F4F8] rounded-full">
                 <span className="text-xl font-bold text-[#1f5eff]">
