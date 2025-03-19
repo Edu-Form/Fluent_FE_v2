@@ -47,13 +47,32 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         )
       : [];
   }, [diarydata]);
+  useEffect(() => {
+    if (sortedData.length > 0) {
+      // 유효한 날짜만 필터링하여 includeDates에 사용
+      const validDates = sortedData
+        .map((diary) => {
+          try {
+            const dateObj = new Date(diary.class_date);
+            return !isNaN(dateObj.getTime()) ? dateObj : null;
+          } catch (e) {
+            console.error("날짜 변환 오류:", diary.class_date, e);
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      console.log("유효한 날짜 목록:", validDates);
+    }
+  }, [sortedData]);
 
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
     setIsDatePickerOpen(false);
     if (date) {
       const index = sortedData.findIndex(
-        (diary) => new Date(diary.date).toDateString() === date.toDateString()
+        (diary) =>
+          new Date(diary.class_date).toDateString() === date.toDateString()
       );
       if (index !== -1) {
         setCurrentIndex(index);
@@ -285,13 +304,14 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
             transition={{ duration: 0.3 }}
             className="flex flex-col w-full h-full max-w-7xl mx-10"
           >
-            {/* Header - Now in its own container with rounded corners and shadow */}
+            {/* Header*/}
             <div className="bg-white rounded-t-xl shadow-md py-5 px-10 flex items-center justify-between mb-4">
               <h1 className="text-2xl font-bold text-gray-900">
                 {content.proofreadTitle}
               </h1>
 
-              <div className="flex items-center gap-5">
+              {/* DatePicker 버튼과 팝업을 감싸는 상대적 위치 컨테이너 */}
+              <div className="relative">
                 <div
                   onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
                   className="flex items-center gap-3 bg-gray-50 px-4 py-2.5 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100"
@@ -302,33 +322,41 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                   </span>
                 </div>
 
-                {type === "student" && (
-                  <button
-                    onClick={openIsModal}
-                    className="px-5 py-2.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-                  >
-                    {content.write}
-                  </button>
+                {/* DatePicker Popup */}
+                {isDatePickerOpen && (
+                  <div className="absolute top-full right-0 mt-2 z-50">
+                    <div className="bg-white rounded-lg shadow-xl p-3 border border-gray-200">
+                      <ReactDatePicker
+                        selected={selectedDate || date}
+                        onChange={handleDateChange}
+                        dateFormat="yyyy/MM/dd"
+                        includeDates={
+                          sortedData
+                            .map((diary) => {
+                              try {
+                                const dateObj = new Date(diary.class_date);
+                                // 유효한 날짜만 포함
+                                return !isNaN(dateObj.getTime())
+                                  ? dateObj
+                                  : null;
+                              } catch (e) {
+                                console.error(
+                                  "날짜 변환 오류:",
+                                  diary.class_date,
+                                  e
+                                );
+                                return null;
+                              }
+                            })
+                            .filter(Boolean) as Date[]
+                        }
+                        inline
+                        onClickOutside={() => setIsDatePickerOpen(false)}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
-
-              {/* DatePicker Popup */}
-              {isDatePickerOpen && (
-                <div className="absolute top-20 right-10 mt-2 z-50">
-                  <div className="bg-white rounded-lg shadow-xl p-3 border border-gray-200">
-                    <ReactDatePicker
-                      selected={selectedDate || date}
-                      onChange={handleDateChange}
-                      dateFormat="yyyy/MM/dd"
-                      includeDates={sortedData.map(
-                        (diary) => new Date(diary.date)
-                      )}
-                      inline
-                      onClickOutside={() => setIsDatePickerOpen(false)}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Content Area - Now with separated panels */}
