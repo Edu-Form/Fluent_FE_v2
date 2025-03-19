@@ -10,6 +10,7 @@ import {
   BsBookmarkStar,
   BsBookmarkStarFill,
 } from "react-icons/bs";
+import { jsPDF } from "jspdf";
 
 // QuizletCardProps 인터페이스 정의
 interface QuizletCardProps {
@@ -52,7 +53,7 @@ const QuizletCardContent = ({
     engWords.map((eng, index) => [eng, korWords[index] || "", "0"])
   );
   const [originalCards, setOriginalCards] = useState(cards);
-  const [isCheckedView, setIsCheckedView] = useState(false); //flase면 별이 있고 true면 별이 없는 상태
+  const [isCheckedView, setIsCheckedView] = useState(false); //false면 별이 있고 true면 별이 없는 상태
   const [currentCard, setCurrentCard] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -102,6 +103,70 @@ const QuizletCardContent = ({
     setCards([...cards]);
   }
 
+
+  const downloadQuizlet = async () => {
+    if (!Array.isArray(cards) || cards.length === 0) {
+      alert("No data available to download.");
+      return;
+    }
+  
+    console.log(content.date)
+    console.log(cards)
+
+    // Load font
+    const response = await fetch("/fonts/NanumGothic-Regular.ttf");
+    const fontData = await response.arrayBuffer();
+    const fontBase64 = btoa(
+      new Uint8Array(fontData).reduce((data, byte) => data + String.fromCharCode(byte), "")
+    );
+  
+    const doc = new jsPDF();
+    doc.setFontSize(10);
+  
+    // Embed Korean font
+    doc.addFileToVFS("NanumGothic-Regular.ttf", fontBase64);
+    doc.addFont("NanumGothic-Regular.ttf", "NanumGothic", "normal");
+    doc.setFont("NanumGothic");
+
+    // Add title at the top with dynamic date
+    doc.setFontSize(16); // Bigger font for title
+    doc.text(`Quizlet for ${content.date}`, 10, 15); // Title with date
+  
+    doc.setFontSize(10);
+    let y = 25; // Initial Y position
+    const margin = 10; // Left margin
+    const maxWidth = 180; // Maximum width for text before wrapping
+  
+    cards.forEach(([english, korean], index) => {
+      // Split long text into multiple lines
+      const engLines = doc.splitTextToSize(`${index + 1}. ${english}`, maxWidth);
+      const korLines = doc.splitTextToSize(`   → ${korean}`, maxWidth);
+  
+      // Print English lines
+      engLines.forEach((line: any) => {
+        doc.text(line, margin, y);
+        y += 5; // Move down
+      });
+  
+      // Print Korean lines
+      korLines.forEach((line: any) => {
+        doc.text(line, margin, y);
+        y += 5; // Move down
+      });
+  
+      y += 5; // Extra space before next entry
+  
+      // Page break if the content reaches the bottom
+      if (y > 280) {
+        doc.addPage();
+        y = 10; // Reset Y for new page
+      }
+    });
+  
+    doc.save(`${content.date} ${content.student_name}'s Quizlet.pdf`);
+  };
+
+
   function Audio(text: string) {
     if ("speechSynthesis" in window) {
       const speech = new SpeechSynthesisUtterance(text);
@@ -118,6 +183,8 @@ const QuizletCardContent = ({
     const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
     Audio(text); // Call the Audio function with the selected text
   }
+
+
 
   const handleNextCard = () => {
     setIsFlipped(false);
@@ -285,6 +352,12 @@ const QuizletCardContent = ({
         </div>
 
         <div className="flex items-center space-x-2">
+          <button
+            onClick={downloadQuizlet}
+            className="mx-16 p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
+          >
+            <div className="w-5 h-5">Download Quizlet</div>
+          </button>
           <button
             onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
             className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"

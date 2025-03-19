@@ -19,10 +19,11 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "You will number only the quizlet sentences in the given text while leaving titles and subtitles unchanged. " +
-            "Keep the original structure intact. Do NOT delete any lines. " +
-            "Number only the sentences that belong to quizlet notes. " +
-            "Titles and subtitles should remain unnumbered.",
+            "You will number each non-empty line of the given text while keeping the original structure.\n" +
+            "1. Prefix each non-empty line with its respective line number in this format: '1. <original line>'.\n" +
+            "2. Do NOT number empty lines; keep them as they are.\n" +
+            "3. Do NOT delete, merge, or alter any lines.\n" +
+            "4. Maintain all line breaks exactly as they appear."
 
         },
         { role: "user", content: text },

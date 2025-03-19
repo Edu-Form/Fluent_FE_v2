@@ -49,8 +49,6 @@ export async function POST(request: Request) {
             content: `
             Your task is to analyze a student's diary entry and identify key English grammar mistakes.
             Return a JSON object containing an array of errors with the following fields:
-            - "errorStart": The start index of the mistake. Must be integer.
-            - "errorEnd": The end index of the mistake. Must be integer.
             - "errorContent": The incorrect text. 
             - "errorType": The type of error (e.g., "spelling", "grammar", "punctuation"). Must be in English 1 word.
             - "errorFix": The corrected text.
@@ -59,6 +57,7 @@ export async function POST(request: Request) {
             Guidelines:
             - Maintain sentence structure and punctuation.
             - Do not introduce unnecessary corrections.
+            - Do not include punctuation mistakes like comma, period, and spaces.
             - Respond only with a valid JSON object { "errors": [...] }.
             `,
           },
