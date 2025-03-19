@@ -1,5 +1,6 @@
 "use client";
 import { useState, Suspense, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { FiCalendar } from "react-icons/fi";
 import { HiOutlineSpeakerWave } from "react-icons/hi2";
@@ -62,6 +63,9 @@ const QuizletCardContent = ({
   }>({});
   const [isBookmark, setIsBookmark] = useState(false);
 
+  // 즐겨찾기 알림을 위한 상태 추가
+  const [showAlert, setShowAlert] = useState(false);
+
   // currentCard가 변경될 때마다 즐겨찾기 상태 체크
   useEffect(() => {
     // 카드 변경 시 즐겨찾기 상태를 초기화하지 않고 해당 카드의 상태를 유지
@@ -80,21 +84,33 @@ const QuizletCardContent = ({
 
   function playCheckedCards() {
     // 즐겨찾기 보기 상태 토글
-    setIsCheckedView(!isCheckedView);
+
     setIsFlipped(false);
     setCurrentCard(0);
-    setIsBookmark(!isBookmark);
 
     if (isCheckedView) {
       // 즐겨찾기 보기에서 전체 보기로 전환
-      console.log(cards);
+      console.log("전체 카드로 전환:", cards);
       setCards(originalCards);
+      setIsCheckedView(false);
+      setIsBookmark(false);
     } else {
       // 전체 보기에서 즐겨찾기 보기로 전환
       const checkedCards = cards.filter((card) => card[2] === "1"); // 즐겨찾기된 카드만 필터링
-      console.log(checkedCards);
-      setOriginalCards(cards);
-      setCards(checkedCards);
+      console.log("즐겨찾기 카드:", checkedCards);
+
+      if (checkedCards.length === 0) {
+        // 즐겨찾기된 카드가 없을 경우 알림 표시
+        setShowAlert(true);
+        // 3초 후 알림 자동 닫기
+        setTimeout(() => setShowAlert(false), 1000);
+      } else {
+        // 즐겨찾기된 카드가 있을 경우 즐겨찾기 모드로 전환
+        setOriginalCards(cards);
+        setCards(checkedCards);
+        setIsCheckedView(true);
+        setIsBookmark(true);
+      }
     }
   }
 
@@ -188,26 +204,21 @@ const QuizletCardContent = ({
 
   const handleNextCard = () => {
     setIsFlipped(false);
-    setCurrentCard((prev) =>
-      prev + 1 === (cards).length ? 0 : prev + 1
-    );
+    setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
   };
 
   const handlePrevCard = () => {
     setIsFlipped(false);
-    setCurrentCard((prev) =>
-      prev === 0 ? (cards).length - 1 : prev - 1
-    );
+    setCurrentCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
   };
 
-  // 날짜 선택 기능 수정
   useEffect(() => {
     // 컴포넌트가 마운트되거나 content가 변경될 때 카드 초기화
     if (content && content.eng_quizlet && content.kor_quizlet) {
       const newCards = content.eng_quizlet.map((eng, index) => [
         eng,
         content.kor_quizlet[index] || "",
-        "0",
+        "0", // 모든 카드를 즐겨찾기 해제 상태로 초기화
       ]);
 
       setCards(newCards);
@@ -239,16 +250,14 @@ const QuizletCardContent = ({
     }
     setIsDatePickerOpen(false);
   };
-
   const currentDate = new Date(content.date);
-    // If the date is valid, format it properly
+  // If the date is valid, format it properly
   const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1;  // Month is 0-based, so add 1
+  const month = currentDate.getMonth() + 1; // Month is 0-based, so add 1
   const day = currentDate.getDate();
   const weekday = currentDate.toLocaleDateString("ko-KR", { weekday: "long" });
-  const formattedDate = (`${year}년 ${month}월 ${day}일 ${weekday}`);
+  const formattedDate = `${year}년 ${month}월 ${day}일 ${weekday}`;
   console.log(formattedDate);
-
 
   // 카드가 없을 경우 빈 카드 디자인 표시 - 실제 카드와 동일한 레이아웃 활용
   if (cards.length === 0) {
@@ -415,7 +424,7 @@ const QuizletCardContent = ({
             <div
               className={`w-full sm:max-w-4xl sm:h-4/5 bg-white rounded-3xl shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
                 isFlipped
-                  ? "text-black border-4 border-sky-200  scale-105  shadow-sky-100 "
+                  ? "text-white border-2 border-sky-200  scale-105 bg-[#b4dbff]  shadow-sky-100 "
                   : ""
               }`}
             >
@@ -438,9 +447,7 @@ const QuizletCardContent = ({
 
               <div className="text-center w-full">
                 <h2 className="text-2xl font-bold leading-tight sm:text-7xl">
-                  {isFlipped
-                    ? cards[currentCard][0]
-                    : cards[currentCard][1]}
+                  {isFlipped ? cards[currentCard][0] : cards[currentCard][1]}
                 </h2>
                 <p
                   className={`mt-8 text-gray-400 sm:text-xl text-sm ${
@@ -466,7 +473,7 @@ const QuizletCardContent = ({
       <div className="absolute bottom-10 left-0 right-0 flex justify-center">
         <div className="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
           <span className="text-gray-700 text-xl font-medium">
-            {currentCard + 1} / {(cards).length}
+            {currentCard + 1} / {cards.length}
           </span>
         </div>
       </div>
@@ -486,7 +493,9 @@ const QuizletCardContent = ({
                   idx === currentIndex ? "bg-blue-50 text-blue-600" : ""
                 }`}
               >
-                {isNaN(new Date(item.date).getTime()) ? item.date : new Date(item.date).toLocaleDateString("ko-KR")}
+                {isNaN(new Date(item.date).getTime())
+                  ? item.date
+                  : new Date(item.date).toLocaleDateString("ko-KR")}
               </button>
             ))}
           </div>
@@ -509,6 +518,45 @@ const QuizletCardContent = ({
           </div>
         </div>
       )}
+
+      {/* 커스텀 알림창 */}
+      <AnimatePresence>
+        {showAlert && (
+          <motion.div
+            className="fixed inset-0 flex items-center justify-center z-50 bg-gray-300 bg-opacity-50 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="bg-white px-8 py-6 rounded-2xl shadow-xl border border-gray-100 flex flex-col items-center justify-center gap-4 w-72 h-48"
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 30,
+                delay: 0.05,
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+                  {content.student_name?.charAt(0) || "?"}
+                </div>
+                <span className="font-medium text-sm text-gray-700 px-2 py-1 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
+                  {content.student_name || "학생"}
+                </span>
+              </div>
+
+              <p className="text-gray-800 font-medium text-center text-lg">
+                등록된 즐겨찾기가 없습니다
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
