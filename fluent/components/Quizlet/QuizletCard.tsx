@@ -76,6 +76,7 @@ const QuizletCardContent = ({
     const newFavoriteCards = { ...favoriteCards };
     newFavoriteCards[currentCard] = !favoriteCards[currentCard];
     setFavoriteCards(newFavoriteCards);
+    
 
     // 카드 데이터에도 상태 업데이트
     cards[currentCard][2] = cards[currentCard][2] === "0" ? "1" : "0";
@@ -185,6 +186,7 @@ const QuizletCardContent = ({
 
   function Audio(text: string) {
     if ("speechSynthesis" in window) {
+      console.log("Audio activated.")
       const speech = new SpeechSynthesisUtterance(text);
       speech.lang = "en-US";
       speech.pitch = 1;
@@ -195,14 +197,13 @@ const QuizletCardContent = ({
     }
   }
 
-  function readCardText() {
+  const readCardText = () => {
     const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
     Audio(text); // Call the Audio function with the selected text
-  }
-
-
+  };
 
   const handleNextCard = () => {
+    console.log("ArrowRight")
     setIsFlipped(false);
     setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
   };
@@ -237,6 +238,43 @@ const QuizletCardContent = ({
     }
   }, [content]);
 
+
+  // 키보드 방향키 카드 네비게이션
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+
+      if (event.key === "ArrowRight") {
+        handleNextCard();
+      } else if (event.key === "ArrowLeft") {
+        handlePrevCard();
+      } else if (event.key === "ArrowDown") {
+        setIsFlipped((prev) => !prev);
+      }};
+  
+    window.addEventListener("keydown", handleKeyPress);
+    return () => {
+      window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, []);
+
+  
+// 키보드 / 키로 읽기 기능 
+  useEffect(() => {
+    const handleSlashKey = (event: KeyboardEvent) => {
+      if (event.key === "/") {
+        console.log("Slash key detected, calling readCardText()");
+        readCardText(); // Call the function when / key is pressed
+      }
+    };
+  
+    window.addEventListener("keydown", handleSlashKey);
+  
+    return () => {
+      window.removeEventListener("keydown", handleSlashKey);
+    };
+  }, [ content, currentCard, isFlipped ]);
+  
+
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {
       // 다른 날짜 카드로 변경 시 현재 상태 초기화
@@ -257,7 +295,6 @@ const QuizletCardContent = ({
   const day = currentDate.getDate();
   const weekday = currentDate.toLocaleDateString("ko-KR", { weekday: "long" });
   const formattedDate = `${year}년 ${month}월 ${day}일 ${weekday}`;
-  console.log(formattedDate);
 
   // 카드가 없을 경우 빈 카드 디자인 표시 - 실제 카드와 동일한 레이아웃 활용
   if (cards.length === 0) {
