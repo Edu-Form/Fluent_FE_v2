@@ -76,7 +76,6 @@ const QuizletCardContent = ({
     const newFavoriteCards = { ...favoriteCards };
     newFavoriteCards[currentCard] = !favoriteCards[currentCard];
     setFavoriteCards(newFavoriteCards);
-    
 
     // 카드 데이터에도 상태 업데이트
     cards[currentCard][2] = cards[currentCard][2] === "0" ? "1" : "0";
@@ -120,26 +119,28 @@ const QuizletCardContent = ({
     setCards([...cards]);
   }
 
-
   const downloadQuizlet = async () => {
     if (!Array.isArray(cards) || cards.length === 0) {
       alert("No data available to download.");
       return;
     }
-  
-    console.log(content.date)
-    console.log(cards)
+
+    console.log(content.date);
+    console.log(cards);
 
     // Load font
     const response = await fetch("/fonts/NanumGothic-Regular.ttf");
     const fontData = await response.arrayBuffer();
     const fontBase64 = btoa(
-      new Uint8Array(fontData).reduce((data, byte) => data + String.fromCharCode(byte), "")
+      new Uint8Array(fontData).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        ""
+      )
     );
-  
+
     const doc = new jsPDF();
     doc.setFontSize(10);
-  
+
     // Embed Korean font
     doc.addFileToVFS("NanumGothic-Regular.ttf", fontBase64);
     doc.addFont("NanumGothic-Regular.ttf", "NanumGothic", "normal");
@@ -148,45 +149,47 @@ const QuizletCardContent = ({
     // Add title at the top with dynamic date
     doc.setFontSize(16); // Bigger font for title
     doc.text(`Quizlet for ${content.date}`, 10, 15); // Title with date
-  
+
     doc.setFontSize(10);
     let y = 25; // Initial Y position
     const margin = 10; // Left margin
     const maxWidth = 180; // Maximum width for text before wrapping
-  
+
     cards.forEach(([english, korean], index) => {
       // Split long text into multiple lines
-      const engLines = doc.splitTextToSize(`${index + 1}. ${english}`, maxWidth);
+      const engLines = doc.splitTextToSize(
+        `${index + 1}. ${english}`,
+        maxWidth
+      );
       const korLines = doc.splitTextToSize(`   → ${korean}`, maxWidth);
-  
+
       // Print English lines
       engLines.forEach((line: any) => {
         doc.text(line, margin, y);
         y += 5; // Move down
       });
-  
+
       // Print Korean lines
       korLines.forEach((line: any) => {
         doc.text(line, margin, y);
         y += 5; // Move down
       });
-  
+
       y += 5; // Extra space before next entry
-  
+
       // Page break if the content reaches the bottom
       if (y > 280) {
         doc.addPage();
         y = 10; // Reset Y for new page
       }
     });
-  
+
     doc.save(`${content.date} ${content.student_name}'s Quizlet.pdf`);
   };
 
-
   function Audio(text: string) {
     if ("speechSynthesis" in window) {
-      console.log("Audio activated.")
+      console.log("Audio activated.");
       const speech = new SpeechSynthesisUtterance(text);
       speech.lang = "en-US";
       speech.pitch = 1;
@@ -203,7 +206,7 @@ const QuizletCardContent = ({
   };
 
   const handleNextCard = () => {
-    console.log("ArrowRight")
+    console.log("ArrowRight");
     setIsFlipped(false);
     setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
   };
@@ -238,27 +241,25 @@ const QuizletCardContent = ({
     }
   }, [content]);
 
-
   // 키보드 방향키 카드 네비게이션
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-
       if (event.key === "ArrowRight") {
         handleNextCard();
       } else if (event.key === "ArrowLeft") {
         handlePrevCard();
       } else if (event.key === "ArrowDown") {
         setIsFlipped((prev) => !prev);
-      }};
-  
+      }
+    };
+
     window.addEventListener("keydown", handleKeyPress);
     return () => {
       window.removeEventListener("keydown", handleKeyPress);
     };
   }, []);
 
-  
-// 키보드 / 키로 읽기 기능 
+  // 키보드 / 키로 읽기 기능
   useEffect(() => {
     const handleSlashKey = (event: KeyboardEvent) => {
       if (event.key === "/") {
@@ -266,14 +267,13 @@ const QuizletCardContent = ({
         readCardText(); // Call the function when / key is pressed
       }
     };
-  
+
     window.addEventListener("keydown", handleSlashKey);
-  
+
     return () => {
       window.removeEventListener("keydown", handleSlashKey);
     };
-  }, [ content, currentCard, isFlipped ]);
-  
+  }, [content, currentCard, isFlipped]);
 
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {
@@ -459,9 +459,9 @@ const QuizletCardContent = ({
         >
           <div className="w-full h-full flex items-center justify-center">
             <div
-              className={`w-full sm:max-w-4xl sm:h-4/5 bg-white rounded-3xl shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
+              className={`w-full sm:max-w-4xl sm:h-4/5 bg-white rounded-3xl hover:bg-[#e9f2ff] shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
                 isFlipped
-                  ? "text-white border-2 border-sky-200  scale-105 bg-[#b4dbff]  shadow-sky-100 "
+                  ? "text-black border-4 border-sky-200  hover:bg-[#e9f2ff] scale-105  shadow-sky-100 "
                   : ""
               }`}
             >

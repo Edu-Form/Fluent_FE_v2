@@ -104,7 +104,7 @@ const HomePageContent = () => {
           </div>
         </div>
 
-        {/* 오늘의 학생 리스트 (확장됨) */}
+        {/* 오늘의 학생 리스트  */}
         <div className="bg-white rounded-lg p-4 shadow-lg flex-1">
           <Suspense fallback={<SkeletonLoader />}>
             <Announcement />
@@ -122,7 +122,7 @@ const HomePageContent = () => {
             </Suspense>
           </div>
 
-          {/* 전체 학생 리스트 - 행 기반 테이블 디자인 */}
+          {/* 전체 학생 리스트  */}
           <div className="w-full">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">
