@@ -11,6 +11,7 @@ import {
   BsBookmarkStar,
   BsBookmarkStarFill,
 } from "react-icons/bs";
+import { Download } from "lucide-react";
 import { jsPDF } from "jspdf";
 
 // QuizletCardProps 인터페이스 정의
@@ -262,9 +263,8 @@ const QuizletCardContent = ({
   // 키보드 / 키로 읽기 기능
   useEffect(() => {
     const handleSlashKey = (event: KeyboardEvent) => {
-      if (event.key === "/") {
-        console.log("Slash key detected, calling readCardText()");
-        readCardText(); // Call the function when / key is pressed
+      if (event.key === "Enter") {
+        readCardText();
       }
     };
 
@@ -289,9 +289,8 @@ const QuizletCardContent = ({
     setIsDatePickerOpen(false);
   };
   const currentDate = new Date(content.date);
-  // If the date is valid, format it properly
   const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1; // Month is 0-based, so add 1
+  const month = currentDate.getMonth() + 1; //  0, 1
   const day = currentDate.getDate();
   const weekday = currentDate.toLocaleDateString("ko-KR", { weekday: "long" });
   const formattedDate = `${year}년 ${month}월 ${day}일 ${weekday}`;
@@ -400,9 +399,9 @@ const QuizletCardContent = ({
         <div className="flex items-center space-x-2">
           <button
             onClick={downloadQuizlet}
-            className="mx-16 p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
+            className="flex items-center justify-center gap-2 p-2 px-4 rounded-full bg-blue-500 backdrop-blur-sm text-white hover:bg-white hover:text-[#436bff] shadow-sm transition-colors"
           >
-            <div className="w-5 h-5">Download Quizlet</div>
+            PDF <Download className="w-5 h-5" />
           </button>
           <button
             onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}

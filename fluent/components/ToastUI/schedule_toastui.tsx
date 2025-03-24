@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Calendar from "@toast-ui/calendar";
 import "@toast-ui/calendar/dist/toastui-calendar.min.css";
-import axios from "axios";
-import { API } from "@/utils/api";
 
 interface ToastUIProps {
   data: {
@@ -89,7 +87,7 @@ const ScheduleToastUI: React.FC<ToastUIProps> = ({ data, onDateSelect }) => {
       isReadOnly: true, // 읽기 전용 모드 해제
       gridSelection: false, // 그리드 선택 활성화
       template: {
-        time: function (event) {
+        time: function (event: any) {
           const { title } = event;
           return `<div class="toastui-calendar-event-time-content" style="height: 100%; background-color: #E6F0FF;">
                     <span class="toastui-calendar-template-time">
@@ -209,7 +207,7 @@ const ScheduleToastUI: React.FC<ToastUIProps> = ({ data, onDateSelect }) => {
     );
 
     // 날짜 그리드 클릭 시 날짜 선택
-    calendarInstanceRef.current.on("beforeCreateSchedule", (eventInfo) => {
+    calendarInstanceRef.current.on("beforeCreateSchedule", (eventInfo: any) => {
       // 빈 그리드 클릭 시 기본 일정 생성 취소하고 날짜만 전달
       eventInfo.preventDefault();
       if (onDateSelect && eventInfo.start) {
@@ -218,7 +216,7 @@ const ScheduleToastUI: React.FC<ToastUIProps> = ({ data, onDateSelect }) => {
     });
 
     // 날짜 헤더 클릭 시 날짜 선택
-    calendarInstanceRef.current.on("clickDayName", (eventInfo) => {
+    calendarInstanceRef.current.on("clickDayName", (eventInfo: any) => {
       if (onDateSelect && eventInfo.date) {
         onDateSelect(new Date(eventInfo.date));
       }
