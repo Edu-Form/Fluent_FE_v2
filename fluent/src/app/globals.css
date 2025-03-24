@@ -97,3 +97,15 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes fade-animation {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5; /* Slightly invisible */
+  }
+  100% {
+    opacity: 1;
+  }
+}

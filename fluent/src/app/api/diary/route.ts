@@ -39,6 +39,8 @@ export async function POST(request: Request) {
     //   return completion.choices[0]?.message?.content?.trim() ?? "";
     // };
     /// Diary Correction with Error Details
+    
+    
     const ai_diary_correction = async (original_text: string) => {
       const completion = await openaiClient.chat.completions.create({
         model: "gpt-4-turbo",
@@ -47,18 +49,20 @@ export async function POST(request: Request) {
           {
             role: "system",
             content: `
-            Your task is to analyze a student's diary entry and identify key English grammar mistakes.
-            Return a JSON object containing an array of errors with the following fields:
-            - "errorContent": The incorrect text. 
-            - "errorType": The type of error (e.g., "spelling", "grammar", "punctuation"). Must be in English 1 word.
-            - "errorFix": The corrected text.
-            - "errorExplain": A brief and easy explanation of the error that kids can understand. Must be in English.
-
+            Your task is to analyze a student's diary entry, correct grammar mistakes, and provide explanations.
+            ONLY return a valid JSON object with:
+            - "correctedDiary": The fully corrected version of the diary.
+            - "errors": An array of objects with details on mistakes, including:
+              - "errorContent": The incorrect text.
+              - "errorType": The type of error (one word, e.g., "grammar", "spelling").
+              - "errorFix": The corrected text.
+              - "errorExplain": A simple explanation of the error in English, easy for kids to understand.
+    
             Guidelines:
             - Maintain sentence structure and punctuation.
             - Do not introduce unnecessary corrections.
-            - Do not include punctuation mistakes like comma, period, and spaces.
-            - Respond only with a valid JSON object { "errors": [...] }.
+            - Ignore punctuation mistakes like commas, periods, and spaces.
+            - Respond ONLY with a valid JSON object: { "correctedDiary": "...", "errors": [...] }.
             `,
           },
           {
@@ -67,10 +71,23 @@ export async function POST(request: Request) {
           },
         ],
       });
+    
+      let response = completion.choices[0]?.message?.content?.trim();
 
-      return JSON.parse(completion.choices[0]?.message?.content?.trim() ?? "[]");
-
+      // Ensure the response is a JSON object
+      try {
+        if (typeof response === "string") {
+          response = JSON.parse(response);
+        }
+      } catch (error) {
+        console.error("Error parsing AI response:", error);
+        return { correctedDiary: original_text, errors: [] }; // Return original text if parsing fails
+      }
+    
+      return response;
     };
+    
+
     const diary_correction = await ai_diary_correction(original_text);
     console.log(diary_correction);
 

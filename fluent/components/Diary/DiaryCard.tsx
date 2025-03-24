@@ -47,6 +47,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         )
       : [];
   }, [diarydata]);
+  
   useEffect(() => {
     if (sortedData.length > 0) {
       // 유효한 날짜만 필터링하여 includeDates에 사용
@@ -221,6 +222,12 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
             );
           }
 
+          const blinkStyle = {
+            animation: 'fade-animation 2s ease-in-out infinite', // Adjust the duration to your preference
+          };
+          
+          const spanStyle = selectedError ? blinkStyle : {};
+
           // Highlight the error sentence
           const matchedText = match[0]; // 실제 매치된 텍스트 사용
           const endIdx = startIdx + matchedText.length;
@@ -248,6 +255,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
               key={`error-${startIdx}`}
               className={className}
               onClick={() => setSelectedError(error)}
+              style={spanStyle}
             >
               {matchedText}
             </span>
@@ -390,7 +398,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                   </details>
 
                   {/* Key Expressions (Collapsed) */}
-                  <details className="border border-gray-200 rounded-lg">
+                  <details className="mb-6 border border-gray-200 rounded-lg">
                     <summary className="text-base font-bold text-gray-900 p-5 cursor-pointer bg-gray-50 hover:bg-gray-100">
                       <div className="flex items-center">주요 표현</div>
                     </summary>
@@ -413,6 +421,19 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                       </div>
                     </div>
                   </details>
+
+                  {/* Summary Section (Collapsed) */}
+                  <details className="mb-6 border border-gray-200 rounded-lg">
+                    <summary className="text-base font-bold text-gray-900 p-5 cursor-pointer bg-gray-50 hover:bg-gray-100">
+                      <div className="flex items-center">수정된 일기</div>
+                    </summary>
+                    <div className="p-6 bg-white">
+                      <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                        {diary.diary_correction.correctedDiary}
+                      </p>
+                    </div>
+                  </details>
+
                 </div>
               </div>
 
