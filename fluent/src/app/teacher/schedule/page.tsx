@@ -3,10 +3,8 @@
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { ko } from "date-fns/locale";
-import { Calendar as CalendarIcon, Plus, Layers } from "lucide-react";
+import { Calendar as Plus, Layers } from "lucide-react";
 import "react-day-picker/dist/style.css";
-
 import AddRoom from "@/components/addroom";
 import VariousRoom from "@/components/VariousRoom";
 
