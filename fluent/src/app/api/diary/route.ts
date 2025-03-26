@@ -51,7 +51,6 @@ export async function POST(request: Request) {
             content: `
             Your task is to analyze a student's diary entry, correct grammar mistakes, and provide explanations.
             ONLY return a valid JSON object with:
-            - "correctedDiary": The fully corrected version of the diary.
             - "errors": An array of objects with details on mistakes, including:
               - "errorContent": The incorrect text.
               - "errorType": The type of error (one word, e.g., "grammar", "spelling").
@@ -62,7 +61,7 @@ export async function POST(request: Request) {
             - Maintain sentence structure and punctuation.
             - Do not introduce unnecessary corrections.
             - Ignore punctuation mistakes like commas, periods, and spaces.
-            - Respond ONLY with a valid JSON object: { "correctedDiary": "...", "errors": [...] }.
+            - Respond ONLY with a valid JSON object: { "errors": [...] }.
             `,
           },
           {
