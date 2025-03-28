@@ -188,22 +188,50 @@ const QuizletCardContent = ({
     doc.save(`${content.date} ${content.student_name}'s Quizlet.pdf`);
   };
 
-  function Audio(text: string) {
-    if ("speechSynthesis" in window) {
-      console.log("Audio activated.");
-      const speech = new SpeechSynthesisUtterance(text);
-      speech.lang = "en-US";
-      speech.pitch = 1;
-      speech.rate = 1;
-      window.speechSynthesis.speak(speech);
-    } else {
-      console.log("Speech synthesis is not supported in this browser.");
+  // function Audio(text: string) {
+  //   if ("speechSynthesis" in window) {
+  //     console.log("Audio activated.");
+  //     const speech = new SpeechSynthesisUtterance(text);
+  //     speech.lang = "en-US";
+  //     speech.pitch = 1;
+  //     speech.rate = 1;
+  //     window.speechSynthesis.speak(speech);
+  //   } else {
+  //     console.log("Speech synthesis is not supported in this browser.");
+  //   }
+  // }
+
+  async function TTSAudio(text: string) {
+    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: "tts-1",  // or "tts-1-hd" for better quality
+            input: text,
+            voice: "alloy"  // Available voices: alloy, echo, fable, onyx, nova, shimmer
+        })
+    });
+
+    if (!response.ok) {
+        console.error("Error:", await response.text());
+        return;
     }
-  }
+
+    // Get the audio response as a blob
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+
+    // Play the audio
+    const audio = new Audio(audioUrl);
+    audio.play();
+}
 
   const readCardText = () => {
     const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
-    Audio(text); // Call the Audio function with the selected text
+    TTSAudio(text); // Call the Audio function with the selected text
   };
 
   const handleNextCard = () => {
