@@ -202,17 +202,12 @@ const QuizletCardContent = ({
   // }
 
   async function TTSAudio(text: string) {
-    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+    const response = await fetch("/api/quizlet/tts", {
         method: "POST",
         headers: {
-            "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-            model: "tts-1",  // or "tts-1-hd" for better quality
-            input: text,
-            voice: "alloy"  // Available voices: alloy, echo, fable, onyx, nova, shimmer
-        })
+        body: JSON.stringify({ text })
     });
 
     if (!response.ok) {
