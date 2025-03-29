@@ -105,7 +105,6 @@ const SchedulePage = () => {
     return date.toLocaleDateString("ko-KR", options);
   };
 
-  // CSS 스타일 요소 추가
   useEffect(() => {
     const styleElement = document.createElement("style");
     styleElement.textContent = `
