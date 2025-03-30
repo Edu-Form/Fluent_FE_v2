@@ -259,6 +259,10 @@ export default function VariousRoom({
     );
   };
 
+  const [roomList, setRoomList] = useState<string[]>([]); // 방 리스트
+  const [room, setRoom] = useState(""); // 방 이름
+  const [registerStatus, setRegisterStatus] = useState("수업등록"); // Initial button text
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -415,7 +419,7 @@ export default function VariousRoom({
                 </div>
 
                 {/* 수업 시간 설정 */}
-                <div className="mb-8">
+                {/* <div className="mb-8">
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     수업 시간
                   </label>
@@ -458,7 +462,7 @@ export default function VariousRoom({
                       +
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 {/* 선택된 날짜 표시 */}
                 <div className="flex-grow">
@@ -480,6 +484,112 @@ export default function VariousRoom({
                               <span className="text-blue-600">
                                 {formatTime(time)}
                               </span>
+                              <span className="text-blue-600">
+                                {room}
+                              </span>
+                            </div>
+                            <div className="mb-8">
+                              <label className="block text-sm font-medium text-gray-700 mb-3">
+                                수업 시간
+                              </label>
+                              <div className="flex items-center">
+                                <button
+                                  onClick={() => {
+                                    const newTime =
+                                      typeof time === "number" ? (time - 1 + 24) % 24 : 23;
+                                    setTime(newTime);
+                                  }}
+                                  className="w-12 h-12 flex items-center justify-center bg-gray-100 text-lg rounded-l-lg hover:bg-gray-200 transition-colors"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="text"
+                                  value={time === "" ? "" : String(time).padStart(2, "0")}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    if (val === "") {
+                                      setTime("");
+                                    } else {
+                                      const num = parseInt(val, 10);
+                                      if (!isNaN(num) && num >= 0 && num < 24) {
+                                        setTime(num);
+                                      }
+                                    }
+                                  }}
+                                  className="w-20 h-12 text-center text-lg outline-none border-y border-gray-300"
+                                  placeholder="00"
+                                />
+                                <button
+                                  onClick={() => {
+                                    const newTime =
+                                      typeof time === "number" ? (time + 1) % 24 : 1;
+                                    setTime(newTime);
+                                  }}
+                                  className="w-12 h-12 text-lg flex items-center justify-center bg-gray-100 rounded-r-lg hover:bg-gray-200 transition-colors"
+                                >
+                                  +
+                                </button>
+                              <div>
+                                <button 
+                                  onClick={async () => {
+                                    const all_rooms = await fetch(`/api/schedules/search_rooms/${formatDate(date)}/${time}/`);
+                                    const json_all_rooms = await all_rooms.json();
+                                    console.log(json_all_rooms);
+                                    setRoomList(json_all_rooms);
+                                  }} 
+                                  className="bg-blue-500 text-white p-2 rounded ml-2"
+                                >
+                                  Search Rooms
+                                </button>
+                                <div className="mt-4">
+                                  {roomList.map((roomName, index) => (
+                                    <div key={index} className="flex items-center gap-2">
+                                      <input 
+                                        type="radio" 
+                                        name="room" 
+                                        value={roomName} 
+                                        onChange={() => setRoom(roomName)} 
+                                        checked={room === roomName}
+                                        className="cursor-pointer"
+                                      />
+                                      <label>{roomName}</label>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <button 
+                                  onClick={async () => {
+                                    setRegisterStatus("등록 중..."); // Indicate loading state
+
+                                    const response = await fetch(`/api/schedules/`, {
+                                      method: "POST",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        room_name: room,
+                                        date: formatDate(date),
+                                        time: time,
+                                        duration: "1",
+                                        teacher_name: teacherName,
+                                        student_name: studentName,
+                                      }),
+                                    });
+
+                                    if (response.ok) {
+                                      setRegisterStatus("수업이 등록되었습니다!");
+                                    } else {
+                                      setRegisterStatus("수업 등록에 실패하였습니다");
+                                    }
+                                  }} 
+                                  className="bg-green-500 text-white text-xs p-2 rounded "
+                                >
+                                  {registerStatus}
+                                </button>
+                              </div>
+                              </div>
                             </div>
                             <button
                               onClick={() => removeDate(date)}
