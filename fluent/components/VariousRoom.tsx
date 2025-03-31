@@ -14,7 +14,7 @@ export default function VariousRoom({
   const searchParams = useSearchParams();
   const user = searchParams.get("user") || "";
   const type = searchParams.get("type");
-  const [teacherName, setTeacherName] = useState(user);
+  const [teacherName] = useState(user);
 
   // 기존 상태 변수 방식으로 복원
   const [dates, setDates] = useState<Date[] | undefined>([]);
@@ -27,6 +27,13 @@ export default function VariousRoom({
   const [results, setResults] = useState<any>(null); // API 응답 데이터 저장
   const [showSecondSession, setShowSecondSession] = useState(false); // 두 번째 세션 전환 여부
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [roomList, setRoomList] = useState<string[]>([]); // 방 리스트
+  const [room, setRoom] = useState(""); // 방 이름
+  const [registerStatus, setRegisterStatus] = useState("수업등록"); // Initial button text
+
+  // 강의실 검색 관련 상태 추가
+  const [isSearching, setIsSearching] = useState(false); // 검색 모달 상태
+  const [searchLoading, setSearchLoading] = useState(true); // 검색 로딩 상태
 
   useEffect(() => {
     // Fetch student list from API
@@ -105,6 +112,10 @@ export default function VariousRoom({
     } else {
       // 새로운 날짜라면 추가
       setDates([...(dates || []), selectedDate]);
+
+      // 새 날짜를 추가할 때 기존에 선택된 강의실 초기화
+      setRoom("");
+      setRoomList([]);
     }
   };
 
@@ -181,6 +192,10 @@ export default function VariousRoom({
   const removeDate = (date: Date) => {
     if (!dates) return;
     setDates(dates.filter((d) => d.getTime() !== date.getTime()));
+
+    // 날짜 삭제 시 기존에 선택된 강의실 초기화
+    setRoom("");
+    setRoomList([]);
   };
 
   // 달력 렌더링
@@ -258,10 +273,6 @@ export default function VariousRoom({
       </div>
     );
   };
-
-  const [roomList, setRoomList] = useState<string[]>([]); // 방 리스트
-  const [room, setRoom] = useState(""); // 방 이름
-  const [registerStatus, setRegisterStatus] = useState("수업등록"); // Initial button text
 
   return (
     <>
@@ -381,14 +392,14 @@ export default function VariousRoom({
                     </div>
                     {isDropdownOpen && (
                       <div className="absolute z-10 w-full mt-1 border border-gray-200 rounded-lg shadow-lg bg-white max-h-64 overflow-y-auto">
-                        <div className="flex items-center px-4  border-b bg-slate-100">
+                        <div className="flex items-center px-4 border-b bg-slate-100">
                           <Search />
                           <input
                             type="text"
                             value={studentName}
                             onChange={(e) => setStudentName(e.target.value)}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full px-4 py-3  bg-slate-100  focus:outline-none"
+                            className="w-full px-4 py-3 bg-slate-100 focus:outline-none"
                             placeholder="학생 이름 검색..."
                           />
                         </div>
@@ -418,198 +429,507 @@ export default function VariousRoom({
                   </div>
                 </div>
 
-                {/* 수업 시간 설정 */}
-                {/* <div className="mb-8">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    수업 시간
-                  </label>
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => {
-                        const newTime =
-                          typeof time === "number" ? (time - 1 + 24) % 24 : 23;
-                        setTime(newTime);
-                      }}
-                      className="w-12 h-12 flex items-center justify-center bg-gray-100 text-lg rounded-l-lg hover:bg-gray-200 transition-colors"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="text"
-                      value={time === "" ? "" : String(time).padStart(2, "0")}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "") {
-                          setTime("");
-                        } else {
-                          const num = parseInt(val, 10);
-                          if (!isNaN(num) && num >= 0 && num < 24) {
-                            setTime(num);
-                          }
-                        }
-                      }}
-                      className="w-20 h-12 text-center text-lg outline-none border-y border-gray-300"
-                      placeholder="00"
-                    />
-                    <button
-                      onClick={() => {
-                        const newTime =
-                          typeof time === "number" ? (time + 1) % 24 : 1;
-                        setTime(newTime);
-                      }}
-                      className="w-12 h-12 text-lg flex items-center justify-center bg-gray-100 rounded-r-lg hover:bg-gray-200 transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div> */}
-
-                {/* 선택된 날짜 표시 */}
+                {/* 선택된 날짜 표시 - 개선된 디자인 */}
                 <div className="flex-grow">
                   {dates && dates.length > 0 ? (
                     <div>
                       <h3 className="text-lg font-medium text-gray-700 mb-4">
                         선택된 수업 일정
                       </h3>
-                      <div className="space-y-3 max-h-[calc(100%-3rem)] overflow-y-auto pr-2">
+                      <div className="space-y-4 max-h-[calc(100%-3rem)] overflow-y-auto pr-2">
                         {dates.map((date, index) => (
                           <div
                             key={index}
-                            className="border border-gray-200 rounded-lg p-4 bg-blue-50 flex justify-between items-center"
+                            className="border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-200"
                           >
-                            <div className="flex flex-col">
-                              <span className="font-medium text-gray-800 text-lg">
-                                {formatDate(date)}
-                              </span>
-                              <span className="text-blue-600">
-                                {formatTime(time)}
-                              </span>
-                              <span className="text-blue-600">
-                                {room}
-                              </span>
-                            </div>
-                            <div className="mb-8">
-                              <label className="block text-sm font-medium text-gray-700 mb-3">
-                                수업 시간
-                              </label>
+                            {/* 날짜 헤더 부분 */}
+                            <div className="bg-blue-50 p-3 flex justify-between items-center rounded-t-lg border-b border-gray-200">
                               <div className="flex items-center">
-                                <button
-                                  onClick={() => {
-                                    const newTime =
-                                      typeof time === "number" ? (time - 1 + 24) % 24 : 23;
-                                    setTime(newTime);
-                                  }}
-                                  className="w-12 h-12 flex items-center justify-center bg-gray-100 text-lg rounded-l-lg hover:bg-gray-200 transition-colors"
+                                <span className="font-medium text-gray-800">
+                                  {formatDate(date)}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => removeDate(date)}
+                                className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100"
+                              >
+                                <svg
+                                  width="20"
+                                  height="20"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
                                 >
-                                  -
-                                </button>
-                                <input
-                                  type="text"
-                                  value={time === "" ? "" : String(time).padStart(2, "0")}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val === "") {
-                                      setTime("");
-                                    } else {
-                                      const num = parseInt(val, 10);
-                                      if (!isNaN(num) && num >= 0 && num < 24) {
-                                        setTime(num);
-                                      }
+                                  <path
+                                    d="M18 6L6 18M6 6L18 18"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+
+                            {/* 시간 및 방 설정 부분 */}
+                            <div className="p-4">
+                              {/* 시간 설정 */}
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-600 mb-2">
+                                  수업 시간
+                                </label>
+                                <div className="flex items-center">
+                                  <button
+                                    onClick={() => {
+                                      const newTime =
+                                        typeof time === "number"
+                                          ? (time - 1 + 24) % 24
+                                          : 23;
+                                      setTime(newTime);
+                                      // 시간이 변경되면 기존 방 선택 초기화
+                                      setRoom("");
+                                      setRoomList([]);
+                                    }}
+                                    className="w-10 h-10 flex items-center justify-center bg-gray-100 text-gray-600 rounded-l-lg hover:bg-gray-200 transition-colors"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="text"
+                                    value={
+                                      time === ""
+                                        ? ""
+                                        : String(time).padStart(2, "0")
                                     }
-                                  }}
-                                  className="w-20 h-12 text-center text-lg outline-none border-y border-gray-300"
-                                  placeholder="00"
-                                />
-                                <button
-                                  onClick={() => {
-                                    const newTime =
-                                      typeof time === "number" ? (time + 1) % 24 : 1;
-                                    setTime(newTime);
-                                  }}
-                                  className="w-12 h-12 text-lg flex items-center justify-center bg-gray-100 rounded-r-lg hover:bg-gray-200 transition-colors"
-                                >
-                                  +
-                                </button>
-                              <div>
-                                <button 
-                                  onClick={async () => {
-                                    const all_rooms = await fetch(`/api/schedules/search_rooms/${formatDate(date)}/${time}/`);
-                                    const json_all_rooms = await all_rooms.json();
-                                    console.log(json_all_rooms);
-                                    setRoomList(json_all_rooms);
-                                  }} 
-                                  className="bg-blue-500 text-white p-2 rounded ml-2"
-                                >
-                                  Search Rooms
-                                </button>
-                                <div className="mt-4">
-                                  {roomList.map((roomName, index) => (
-                                    <div key={index} className="flex items-center gap-2">
-                                      <input 
-                                        type="radio" 
-                                        name="room" 
-                                        value={roomName} 
-                                        onChange={() => setRoom(roomName)} 
-                                        checked={room === roomName}
-                                        className="cursor-pointer"
-                                      />
-                                      <label>{roomName}</label>
-                                    </div>
-                                  ))}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val === "") {
+                                        setTime("");
+                                        // 시간이 변경되면 기존 방 선택 초기화
+                                        setRoom("");
+                                        setRoomList([]);
+                                      } else {
+                                        const num = parseInt(val, 10);
+                                        if (
+                                          !isNaN(num) &&
+                                          num >= 0 &&
+                                          num < 24
+                                        ) {
+                                          setTime(num);
+                                          // 시간이 변경되면 기존 방 선택 초기화
+                                          setRoom("");
+                                          setRoomList([]);
+                                        }
+                                      }
+                                    }}
+                                    className="w-16 h-10 text-center text-base outline-none border border-gray-300"
+                                    placeholder="00"
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const newTime =
+                                        typeof time === "number"
+                                          ? (time + 1) % 24
+                                          : 1;
+                                      setTime(newTime);
+                                      // 시간이 변경되면 기존 방 선택 초기화
+                                      setRoom("");
+                                      setRoomList([]);
+                                    }}
+                                    className="w-10 h-10 flex items-center justify-center bg-gray-100 text-gray-600 rounded-r-lg hover:bg-gray-200 transition-colors"
+                                  >
+                                    +
+                                  </button>
                                 </div>
                               </div>
+
+                              {/* 강의실 검색 및 선택 - 개선된 모달 디자인 */}
                               <div>
-                                <button 
+                                <label className="block text-sm font-medium text-gray-600 mb-2">
+                                  강의실
+                                </label>
+
+                                {/* 강의실 검색 버튼 */}
+                                <button
                                   onClick={async () => {
-                                    setRegisterStatus("등록 중..."); // Indicate loading state
-
-                                    const response = await fetch(`/api/schedules/`, {
-                                      method: "POST",
-                                      headers: {
-                                        "Content-Type": "application/json",
-                                      },
-                                      body: JSON.stringify({
-                                        room_name: room,
-                                        date: formatDate(date),
-                                        time: time,
-                                        duration: "1",
-                                        teacher_name: teacherName,
-                                        student_name: studentName,
-                                      }),
-                                    });
-
-                                    if (response.ok) {
-                                      setRegisterStatus("수업이 등록되었습니다!");
-                                    } else {
-                                      setRegisterStatus("수업 등록에 실패하였습니다");
+                                    if (time === "") {
+                                      alert("수업 시간을 먼저 설정해주세요");
+                                      return;
                                     }
-                                  }} 
-                                  className="bg-green-500 text-white text-xs p-2 rounded "
+
+                                    setIsSearching(true); // 검색 모달 표시
+                                    setSearchLoading(true); // 로딩 상태 활성화
+
+                                    try {
+                                      const all_rooms = await fetch(
+                                        `/api/schedules/search_rooms/${formatDate(
+                                          date
+                                        )}/${time}/`
+                                      );
+                                      const json_all_rooms =
+                                        await all_rooms.json();
+                                      setRoomList(json_all_rooms);
+                                      setSearchLoading(false); // 로딩 상태 해제
+                                    } catch (error) {
+                                      console.error("방 검색 오류:", error);
+                                      alert("방 검색 중 오류가 발생했습니다.");
+                                      setIsSearching(false);
+                                    }
+                                  }}
+                                  className="flex items-center justify-center w-full py-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-medium transition-all group"
+                                >
+                                  <svg
+                                    width="18"
+                                    height="18"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="mr-2 transition-transform group-hover:scale-110"
+                                  >
+                                    <path
+                                      d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                  강의실 검색
+                                </button>
+
+                                {/* 강의실 검색 모달 */}
+                                {isSearching && (
+                                  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in">
+                                    <div
+                                      className="bg-white w-full max-w-md rounded-xl shadow-xl overflow-hidden animate-scale-in"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {/* 모달 헤더 */}
+                                      <div className="bg-blue-500 text-white p-4 flex justify-between items-center">
+                                        <h3 className="text-lg font-semibold flex items-center">
+                                          <svg
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            className="mr-2"
+                                          >
+                                            <path
+                                              d="M19 21V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V21M19 21H5M19 21H21M5 21H3M9 6.99998H15M9 10.5H12"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            />
+                                          </svg>
+                                          이용 가능한 강의실
+                                        </h3>
+                                        <button
+                                          onClick={() => setIsSearching(false)}
+                                          className="text-white hover:text-blue-100 transition-colors"
+                                        >
+                                          <svg
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                          >
+                                            <path
+                                              d="M18 6L6 18M6 6L18 18"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                            />
+                                          </svg>
+                                        </button>
+                                      </div>
+
+                                      {/* 모달 본문 */}
+                                      <div className="p-4">
+                                        <div className="flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                                          <div className="text-gray-500 mr-2">
+                                            <svg
+                                              width="20"
+                                              height="20"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                            >
+                                              <path
+                                                d="M12 8V12L15 15M12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3Z"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                              />
+                                            </svg>
+                                          </div>
+                                          <div>
+                                            <div className="text-sm text-gray-500">
+                                              선택된 날짜 및 시간
+                                            </div>
+                                            <div className="font-medium">
+                                              {formatDate(date)},{" "}
+                                              {formatTime(time)}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {searchLoading ? (
+                                          // 로딩 상태
+                                          <div className="py-10 flex flex-col items-center justify-center text-gray-500">
+                                            <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+                                            <p>강의실을 검색 중입니다...</p>
+                                          </div>
+                                        ) : roomList.length > 0 ? (
+                                          // 강의실 목록
+                                          <div className="overflow-y-auto max-h-60">
+                                            <div className="grid grid-cols-1 gap-2">
+                                              {roomList.map(
+                                                (roomName, index) => (
+                                                  <div
+                                                    key={index}
+                                                    className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                                                      room === roomName
+                                                        ? "bg-blue-50 border border-blue-200 shadow-sm"
+                                                        : "hover:bg-gray-50 border border-gray-100"
+                                                    }`}
+                                                    onClick={() =>
+                                                      setRoom(roomName)
+                                                    }
+                                                  >
+                                                    <div
+                                                      className={`w-5 h-5 rounded-full flex items-center justify-center mr-3 border transition-colors ${
+                                                        room === roomName
+                                                          ? "border-blue-500 bg-blue-500"
+                                                          : "border-gray-300"
+                                                      }`}
+                                                    >
+                                                      {room === roomName && (
+                                                        <svg
+                                                          width="12"
+                                                          height="12"
+                                                          viewBox="0 0 24 24"
+                                                          fill="none"
+                                                          xmlns="http://www.w3.org/2000/svg"
+                                                        >
+                                                          <path
+                                                            d="M5 13L9 17L19 7"
+                                                            stroke="white"
+                                                            strokeWidth="3"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                          />
+                                                        </svg>
+                                                      )}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                      <p
+                                                        className={`font-medium ${
+                                                          room === roomName
+                                                            ? "text-blue-700"
+                                                            : "text-gray-800"
+                                                        }`}
+                                                      >
+                                                        {roomName}
+                                                      </p>
+                                                      <p className="text-xs text-gray-500">
+                                                        이용 가능한 강의실
+                                                      </p>
+                                                    </div>
+                                                    <div
+                                                      className={`w-2 h-2 rounded-full ${
+                                                        room === roomName
+                                                          ? "bg-green-500"
+                                                          : "bg-gray-300"
+                                                      }`}
+                                                    ></div>
+                                                  </div>
+                                                )
+                                              )}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          // 검색 결과 없음
+                                          <div className="py-10 flex flex-col items-center justify-center text-gray-500">
+                                            <svg
+                                              width="40"
+                                              height="40"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              className="mb-2 text-gray-300"
+                                            >
+                                              <path
+                                                d="M10 3H3V10H10V3Z"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                              />
+                                              <path
+                                                d="M21 3H14V10H21V3Z"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                              />
+                                              <path
+                                                d="M21 14H14V21H21V14Z"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                              />
+                                              <path
+                                                d="M10 14H3V21H10V14Z"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                              />
+                                            </svg>
+                                            <p>이용 가능한 강의실이 없습니다</p>
+                                            <p className="text-sm mt-1">
+                                              다른 시간대를 선택해보세요
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* 모달 하단 버튼 */}
+                                      <div className="border-t border-gray-200 p-4 flex justify-between">
+                                        <button
+                                          onClick={() => setIsSearching(false)}
+                                          className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                                        >
+                                          취소
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            if (room) {
+                                              setIsSearching(false);
+                                            } else {
+                                              alert("강의실을 선택해주세요");
+                                            }
+                                          }}
+                                          className={`px-4 py-2 rounded-lg ${
+                                            room
+                                              ? "bg-blue-500 text-white hover:bg-blue-600"
+                                              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                          } transition-colors`}
+                                        >
+                                          선택 완료
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 선택된 강의실 표시 */}
+                                {room && (
+                                  <div className="mt-3 flex items-center p-3 bg-green-50 border border-green-100 rounded-lg text-green-800 animate-fade-in">
+                                    <div className="w-8 h-8 bg-white rounded-full border border-green-200 flex items-center justify-center mr-3 shadow-sm">
+                                      <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                      >
+                                        <path
+                                          d="M9 11L12 14L22 4M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        />
+                                      </svg>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm text-green-600">
+                                        선택된 강의실
+                                      </p>
+                                      <p className="font-semibold">{room}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => setRoom("")}
+                                      className="text-green-600 hover:text-green-800 transition-colors"
+                                    >
+                                      <svg
+                                        width="18"
+                                        height="18"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                      >
+                                        <path
+                                          d="M18 6L6 18M6 6L18 18"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                        />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                )}
+
+                                {/* 등록 버튼 */}
+                                <button
+                                  onClick={async () => {
+                                    if (!room) {
+                                      alert("강의실을 선택해주세요.");
+                                      return;
+                                    }
+
+                                    setRegisterStatus("등록 중..."); // 로딩 상태 표시
+
+                                    try {
+                                      const response = await fetch(
+                                        `/api/schedules/`,
+                                        {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                          },
+                                          body: JSON.stringify({
+                                            room_name: room,
+                                            date: formatDate(date),
+                                            time: time,
+                                            duration: "1",
+                                            teacher_name: teacherName,
+                                            student_name: studentName,
+                                          }),
+                                        }
+                                      );
+
+                                      if (response.ok) {
+                                        setRegisterStatus("등록 완료!");
+                                        // 성공 표시 잠시 후 원래 상태로
+                                        setTimeout(() => {
+                                          setRegisterStatus("수업등록");
+                                        }, 2000);
+                                      } else {
+                                        setRegisterStatus("등록 실패");
+                                        setTimeout(() => {
+                                          setRegisterStatus("수업등록");
+                                        }, 2000);
+                                      }
+                                    } catch (error) {
+                                      console.error("수업 등록 오류:", error);
+                                      setRegisterStatus("등록 실패");
+                                      setTimeout(() => {
+                                        setRegisterStatus("수업등록");
+                                      }, 2000);
+                                    }
+                                  }}
+                                  disabled={!room || time === ""}
+                                  className={`w-full py-2 rounded text-white text-center font-medium mt-4 ${
+                                    room && time !== ""
+                                      ? "bg-green-500 hover:bg-green-600"
+                                      : "bg-gray-300 cursor-not-allowed"
+                                  } transition-colors`}
                                 >
                                   {registerStatus}
                                 </button>
                               </div>
-                              </div>
                             </div>
-                            <button
-                              onClick={() => removeDate(date)}
-                              className="text-gray-400 hover:text-red-500 transition-colors"
-                            >
-                              <svg
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M18 6L6 18M6 6L18 18"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                />
-                              </svg>
-                            </button>
                           </div>
                         ))}
                       </div>
@@ -639,85 +959,155 @@ export default function VariousRoom({
               </div>
             </div>
           ) : (
-            <div className="flex-1 p-6 overflow-y-auto">
-              <h2 className="text-2xl font-semibold mb-8 text-center text-gray-800">
-                수업 등록 결과
-              </h2>
-              <div className="space-y-4 max-w-3xl mx-auto">
-                {results &&
-                  results.all_dates.map((date: string, index: number) => (
-                    <div
-                      key={index}
-                      className="flex justify-between items-center bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow"
+            /* 두 번째 세션 - 결과 표시 화면 (개선된 버전) */
+            <div className="flex-1 p-6 overflow-y-auto bg-gray-50">
+              <div className="max-w-3xl mx-auto">
+                <div className="text-center mb-8">
+                  <div className="inline-block bg-green-100 text-green-600 px-4 py-2 rounded-full mb-10">
+                    <svg
+                      className="w-6 h-6 inline-block mr-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
                     >
-                      <div className="flex items-center">
-                        <div className="w-12 h-12 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mr-4">
-                          <svg
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M8 2V6M16 2V6M3 10H21M5 4H19C20.1046 4 21 4.89543 21 6V20C21 21.1046 20.1046 22 19 22H5C3.89543 22 3 21.1046 3 20V6C3 4.89543 3.89543 4 5 4Z"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
+                      ></path>
+                    </svg>
+                    성공적으로 등록되었습니다
+                  </div>
+                  <h2 className="text-2xl font-semibold text-gray-800">
+                    수업 등록 결과
+                  </h2>
+                  <p className="text-gray-600 mt-2 mb-10">
+                    {results && results.all_dates.length}개의 수업이
+                    등록되었습니다.
+                  </p>
+                </div>
+
+                {/* 결과 카드 목록 */}
+                <div className="space-y-4">
+                  {results &&
+                    results.all_dates.map((date: string, index: number) => (
+                      <div
+                        key={index}
+                        className="bg-white rounded-lg shadow-sm hover:shadow transition-shadow overflow-hidden"
+                      >
+                        <div className="flex p-4 border-b border-gray-100">
+                          <div className="w-14 h-14 bg-blue-500 text-white rounded-lg flex flex-col items-center justify-center mr-4 shadow-sm">
+                            {/* 날짜에서 일자 추출 */}
+                            <span className="text-xl font-bold">
+                              {new Date(
+                                date.replace(
+                                  /(\d{2})\.(\d{2})\.(\d{4})/,
+                                  "$3-$2-$1"
+                                )
+                              ).getDate()}
+                            </span>
+                            <span className="text-xs">
+                              {new Date(
+                                date.replace(
+                                  /(\d{2})\.(\d{2})\.(\d{4})/,
+                                  "$3-$2-$1"
+                                )
+                              ).toLocaleString("ko-KR", { month: "short" })}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col justify-center">
+                            <h3 className="font-semibold text-lg text-gray-800">
+                              {date}
+                            </h3>
+                            <div className="flex items-center text-gray-600 text-sm mt-1">
+                              <span className="mr-4 flex items-center">
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1"
+                                >
+                                  <path
+                                    d="M12 8V12L15 15M12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3Z"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                                {results.time}:00
+                              </span>
+                              {/* <span className="flex items-center">
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1"
+                                >
+                                  <path
+                                    d="M19 21V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V21M19 21H5M19 21H21M5 21H3M9 7H15M9 11H15M9 15H13"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                                60분
+                              </span> */}
+                            </div>
+                          </div>
                         </div>
-                        <span className="font-medium text-gray-800 text-lg">
-                          {date}
-                        </span>
+
+                        <div className="px-4 py-3 flex justify-between items-center bg-white">
+                          <div className="flex items-center">
+                            <div>
+                              <span className="text-sm text-gray-500">
+                                학생
+                              </span>
+                              <p className="font-medium text-gray-800">
+                                {studentName}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mr-2">
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M19 21V5C19 3.89543 18.1046 3 17 3H7C5.89543 3 5 3.89543 5 5V21M19 21L21 21M5 21L3 21M5 21H19M9 6.99998H15M9 10.5H12"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <span className="text-sm text-gray-500">
+                                강의실
+                              </span>
+                              <p className="font-medium text-gray-800">
+                                {results.all_rooms[index]}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-6">
-                        <div className="flex items-center text-gray-600">
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="mr-2"
-                          >
-                            <path
-                              d="M3 10H21M7 3V5M17 3V5M6 21H18C19.1046 21 20 20.1046 20 19V7C20 5.89543 19.1046 5 18 5H6C4.89543 5 4 5.89543 4 7V19C4 20.1046 4.89543 21 6 21Z"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                          <span className="text-lg">
-                            Room: {results.all_rooms[index]}
-                          </span>
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <svg
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="mr-2"
-                          >
-                            <path
-                              d="M12 8V12L15 15M12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3Z"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                          <span className="text-lg">
-                            Time: {results.time}:00
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                </div>
               </div>
             </div>
           )}
@@ -747,7 +1137,7 @@ export default function VariousRoom({
                     time !== "" &&
                     teacherName &&
                     studentName
-                      ? "bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                      ? "bg-blue-500 text-white hover:bg-blue-600transition-colors"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
                 >
@@ -787,6 +1177,34 @@ export default function VariousRoom({
         }
         .animate-slide-up {
           animation: slide-up 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes scaleIn {
+          from {
+            transform: scale(0.95);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .animate-fade-in {
+          animation: fadeIn 0.2s ease-out forwards;
+        }
+
+        .animate-scale-in {
+          animation: scaleIn 0.3s ease-out forwards;
         }
       `}</style>
     </>
