@@ -181,6 +181,12 @@ const HomePageContent = () => {
                       >
                         스케줄
                       </th>
+                      <th
+                        scope="col"
+                        className="px-3 py-3 text-center whitespace-nowrap"
+                      >
+                        커리큘럼
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -351,6 +357,15 @@ const HomePageContent = () => {
                               className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
                             >
                               스케줄 보기
+                            </Link>
+                          </td>
+
+                          <td className="px-3 py-3 text-center">
+                            <Link
+                              href={`/teacher/student/curriculum?user=${user}&type=teacher&id=${id}`}
+                              className="text-xs text-yellow-400 hover:text-indigo-800 font-medium transition-colors"
+                            >
+                              커리큘럼
                             </Link>
                           </td>
                         </tr>

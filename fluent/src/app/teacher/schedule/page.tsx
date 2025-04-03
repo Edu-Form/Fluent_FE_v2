@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { Calendar as Plus, Layers } from "lucide-react";
 import "react-day-picker/dist/style.css";
 import AddRoom from "@/components/addroom";
-import VariousRoom from "@/components/VariousRoom";
+import VariousRoom2 from "@/components/VariousRoom";
 
 const Schedule_toastUI = dynamic(
   () => import("@/components/ToastUI/schedule_toastui"),
@@ -447,7 +447,7 @@ const SchedulePage = () => {
       {/* VariousRoom 모달 */}
       {type !== "student" && isVariousRoomOpen && (
         <div className="modal-overlay">
-          <VariousRoom closeVariousSchedule={closeVariousSchedule} />
+          <VariousRoom2 closeVariousSchedule={closeVariousSchedule} />
         </div>
       )}
     </div>
