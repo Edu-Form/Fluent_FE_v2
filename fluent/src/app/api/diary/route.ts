@@ -55,11 +55,12 @@ export async function POST(request: Request) {
               - "errorContent": The incorrect text.
               - "errorType": The type of error (one word, e.g., "grammar", "spelling").
               - "errorFix": The corrected text.
-              - "errorExplain": A simple explanation of the error in English, easy for kids to understand.
+              - "errorExplain": A simple explanation of the error in Korean, easy for kids to understand.
     
             Guidelines:
             - Maintain sentence structure and punctuation.
             - Do not introduce unnecessary corrections.
+            - errorExplain MUST be in Korean. 
             - Ignore punctuation mistakes like commas, periods, and spaces.
             - Respond ONLY with a valid JSON object: { "errors": [...] }.
             `,
@@ -89,6 +90,33 @@ export async function POST(request: Request) {
 
     const diary_correction = await ai_diary_correction(original_text);
     console.log(diary_correction);
+
+    /// Diary Summary
+    const ai_corrected_diary = async (original_text: string) => {
+      const completion = await openaiClient.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Your task is to correct any grammar and spelling mistakes in a student's diary entry.\n" +
+              "Guidelines:\n" +
+              "- Keep the original meaning and tone of the diary entry.\n" +
+              "- Do not change the style unless necessary for proper grammar.\n" +
+              "- Keep the language natural and suitable for a student.\n" +
+              "- Return only the corrected diary without additional commentary.",
+          },
+          {
+            role: "user",
+            content: `Here is the diary to summarize: ${original_text}`,
+          },
+        ],
+      });
+
+      return completion.choices[0]?.message?.content?.trim() ?? "";
+    };
+    
+    const corrected_diary = await ai_corrected_diary(original_text);
 
     /// Diary Expressions
     const ai_diary_expressions = async (original_text: string) => {
@@ -164,6 +192,7 @@ export async function POST(request: Request) {
     const result = await saveDiaryData(
       diaryData,
       diary_correction,
+      corrected_diary,
       diary_expressions,
       diary_summary
     );

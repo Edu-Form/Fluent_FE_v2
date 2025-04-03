@@ -504,8 +504,8 @@ const QuizletCardContent = ({
                 </button>
               )}
 
-              <div className="text-center w-full">
-                <h2 className="text-2xl font-bold leading-tight sm:text-7xl">
+              <div className="text-center w-full overflow-auto">
+                <h2 className="text-2xl font-bold leading-tight sm:text-7xl max-h-[400px] overflow-auto">
                   {isFlipped ? cards[currentCard][0] : cards[currentCard][1]}
                 </h2>
                 <p

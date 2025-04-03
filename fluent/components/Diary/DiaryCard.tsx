@@ -429,7 +429,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                     </summary>
                     <div className="p-6 bg-white">
                       <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {diary.diary_correction.correctedDiary}
+                        {diary.corrected_diary || ""}
                       </p>
                     </div>
                   </details>
