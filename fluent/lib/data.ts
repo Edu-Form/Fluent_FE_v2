@@ -1,5 +1,6 @@
 import { clientPromise } from "@/lib/mongodb";
 import type { Student, Teacher } from "./definitions";
+import { ObjectId } from "mongodb";
 
 export function serialize_document(document: any) {
   if (document._id) {
@@ -372,3 +373,43 @@ export async function getTeacherStatus(teacherName: string) {
     return null;
   }
 }
+
+
+// Function to get student's schedule
+export const getQuizletNoteData = async (_id: string) => {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const objectId = new ObjectId(_id); 
+
+    const quizletNote = await db
+      .collection("quizlet")
+      .find({ _id: objectId })
+      .toArray(); // Convert to array (MongoDB cursor)
+    console.log(quizletNote);
+    return quizletNote; // Serialize and return
+  } catch (error) {
+    console.error("Error fetching Quizlet Note:", error);
+    throw new Error("Database error");
+  }
+};
+
+
+// Function to get student's schedule
+export const getDiaryNoteData = async (_id: string) => {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const objectId = new ObjectId(_id); 
+
+    const diaryNote = await db
+      .collection("diary")
+      .find({ _id: objectId })
+      .toArray(); // Convert to array (MongoDB cursor)
+    console.log(diaryNote);
+    return diaryNote; // Serialize and return
+  } catch (error) {
+    console.error("Error fetching Quizlet Note:", error);
+    throw new Error("Database error");
+  }
+};

@@ -362,7 +362,7 @@ const HomePageContent = () => {
 
                           <td className="px-3 py-3 text-center">
                             <Link
-                              href={`/teacher/student/curriculum?user=${user}&type=teacher&id=${id}`}
+                              href={`/teacher/student/curriculum?user=${user}&type=teacher&id=${id}&student_name=${student.name}`}
                               className="text-xs text-yellow-400 hover:text-indigo-800 font-medium transition-colors"
                             >
                               커리큘럼
