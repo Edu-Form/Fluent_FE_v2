@@ -6,11 +6,11 @@ import React from "react";
 
 export default function ThematicQuestionsPage() {
   return (
-    <div className="p-6 space-y-6 bg-white max-h-[95vh] overflow-auto">
+    <div className="p-6 space-y-6 max-h-[95vh] overflow-auto">
       <h1 className="text-2xl font-bold mb-4">📘 긴 답변 (Bulk Answers)</h1>
 
       {/* 1️⃣ Family */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">1️⃣ Family</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>Tell me about your family in detail. How many members are there? What do they do?</li>
@@ -19,7 +19,7 @@ export default function ThematicQuestionsPage() {
       </section>
 
       {/* 2️⃣ Neighborhood */}
-      <section>
+      <section  className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">2️⃣ Neighborhood</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>What neighborhood do you live in? Tell me in detail. What do you like about your neighborhood? What are the characteristics?</li>
@@ -27,7 +27,7 @@ export default function ThematicQuestionsPage() {
       </section>
 
       {/* 3️⃣ House & Room */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">3️⃣ House & Room</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>Tell me about your house in detail.</li>
@@ -37,7 +37,7 @@ export default function ThematicQuestionsPage() {
       </section>
 
       {/* 4️⃣ Family 질문 */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">4️⃣ Family 질문</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>가족을 얼마나 자주 보나요?</li>
@@ -57,7 +57,7 @@ export default function ThematicQuestionsPage() {
       </section>
 
       {/* 5️⃣ House 질문 */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">5️⃣ House 질문</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>몇층에 사시나요?</li>

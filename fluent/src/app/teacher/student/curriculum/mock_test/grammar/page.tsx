@@ -6,11 +6,11 @@ import React from "react";
 
 export default function GrammarQuestionsPage() {
   return (
-    <div className="p-6 space-y-8 bg-white max-h-[95vh] overflow-auto">
+    <div className="p-6 space-y-8 max-h-[95vh] overflow-auto">
       <h1 className="text-2xl font-bold mb-4">📘 Grammar Questions (번역시험)</h1>
 
       {/* 시간 & 날짜 */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">1️⃣ 시간 & 날짜</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>오늘 몇일인가요? 2월 12일 입니다.</li>
@@ -27,7 +27,7 @@ export default function GrammarQuestionsPage() {
       </section>
 
       {/* 과거형 / be 동사 / 일반동사 / 질문 */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mt-6 mb-2">2️⃣ 과거형 / be 동사 / 일반동사 / 질문 (ask at least 6)</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>그녀는 행복하지 않았어.</li>
@@ -57,7 +57,7 @@ export default function GrammarQuestionsPage() {
       </section>
 
       {/* 미래형 */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mt-6 mb-2">3️⃣ 미래형 (ask at least 3)</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>내일 뭐할거니? (will & be going to V)</li>
@@ -71,7 +71,7 @@ export default function GrammarQuestionsPage() {
       </section>
 
       {/* to 부정사 */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mt-6 mb-2">4️⃣ to 부정사 (ask at least 3)</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>너 햄버거 먹고 싶니?</li>
@@ -90,7 +90,7 @@ export default function GrammarQuestionsPage() {
       </section>
 
       {/* 위해의 2가지 to V / for N */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mt-6 mb-2">5️⃣ 위해의 2가지 to V / for N (ask at least 3)</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>나는 친구를 만나기 위해 홍대에 갔어</li>
@@ -103,7 +103,7 @@ export default function GrammarQuestionsPage() {
       </section>
 
       {/* 동안 */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mt-6 mb-2">6️⃣ 동안 (ask at least 3)</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>나는 아침을 먹는 동안 티비를 봤어</li>
@@ -116,7 +116,7 @@ export default function GrammarQuestionsPage() {
       </section>
 
       {/* ing */}
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mt-6 mb-2">7️⃣ -ing 표현 (ask at least 5)</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>운동하는 것은 재미있어</li>
@@ -143,7 +143,7 @@ export default function GrammarQuestionsPage() {
       </section>
 
         {/* 8️⃣ 공감 표현 */}
-        <section>
+        <section className="bg-white p-4 rounded shadow space-y-3">
           <h2 className="text-xl font-semibold mt-6 mb-2">8️⃣ 공감 표현 (ask at least 2)</h2>
           <ul className="list-decimal list-inside space-y-1">
             <li>그거 정말 지루하겠다</li>
@@ -158,8 +158,8 @@ export default function GrammarQuestionsPage() {
       {/* Timer 25 minute mark */}
       <h2 className="text-2xl font-bold">🕒 Timer: 25 minute mark</h2>
 
-              {/* 9️⃣ 인사 표현 / 대화 표현 */}
-              <section>
+        {/* 9️⃣ 인사 표현 / 대화 표현 */}
+        <section className="bg-white p-4 rounded shadow space-y-3">
           <h2 className="text-xl font-semibold mt-6 mb-2">9️⃣ 인사 표현 / 대화 표현 (ask at least 3)</h2>
           <ul className="list-decimal list-inside space-y-1">
             <li>주말에 재미있는거 했어?</li>
@@ -174,7 +174,7 @@ export default function GrammarQuestionsPage() {
         </section>
 
         {/* 🔟 비교급 */}
-        <section>
+        <section className="bg-white p-4 rounded shadow space-y-3">
           <h2 className="text-xl font-semibold mt-6 mb-2">🔟 비교급 (ask at least 3)</h2>
           <ul className="list-decimal list-inside space-y-1">
             <li>맥주가 소주보다 좋은데 와인이 최고야</li>
@@ -191,7 +191,7 @@ export default function GrammarQuestionsPage() {
         </section>
 
         {/* 1️⃣1️⃣ 횟수 */}
-        <section>
+        <section className="bg-white p-4 rounded shadow space-y-3">
           <h2 className="text-xl font-semibold mt-6 mb-2">1️⃣1️⃣ 횟수 (ask at least 2)</h2>
           <ul className="list-decimal list-inside space-y-1">
             <li>저는 보통 가족을 한달에 4번 정도 봐요</li>
@@ -202,7 +202,7 @@ export default function GrammarQuestionsPage() {
         </section>
 
         {/* 1️⃣2️⃣ 부정 질문 */}
-        <section>
+        <section className="bg-white p-4 rounded shadow space-y-3">
           <h2 className="text-xl font-semibold mt-6 mb-2">1️⃣2️⃣ 부정 질문 (ask at least 2)</h2>
           <ul className="list-decimal list-inside space-y-1">
             <li>너 돈 있지 않아?</li>
@@ -221,7 +221,7 @@ export default function GrammarQuestionsPage() {
         </section>
 
         {/* 1️⃣3️⃣ Have + P.P. */}
-        <section>
+        <section className="bg-white p-4 rounded shadow space-y-3">
           <h2 className="text-xl font-semibold mt-6 mb-2">1️⃣3️⃣ Have + P.P. (3가지)</h2>
           <ul className="list-decimal list-inside space-y-1">
             <li>발리 가본적 있어?</li>

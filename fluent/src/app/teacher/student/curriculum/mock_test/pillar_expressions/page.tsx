@@ -6,10 +6,10 @@ import React from "react";
 
 export default function BeginnerPillarExpressionsPage() {
   return (
-    <div className="p-6 space-y-6 bg-white max-h-[95vh] overflow-auto">
+    <div className="p-6 space-y-6 max-h-[95vh] overflow-auto">
       <h1 className="text-2xl font-bold mb-4">📘 Beginner Pillar Expressions</h1>
 
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">1️⃣ Beginner Pillar Expressions (ask 20 out of the pool)</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>뭘 해야 할지 모르겠어.</li>
@@ -133,7 +133,7 @@ export default function BeginnerPillarExpressionsPage() {
         </ul>
       </section>
 
-      <section>
+      <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">2️⃣ Beginner Pillar Expressions</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>I don’t know what to do (move to intermediate?)</li>
