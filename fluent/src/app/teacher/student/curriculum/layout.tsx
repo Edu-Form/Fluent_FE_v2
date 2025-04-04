@@ -14,6 +14,7 @@ export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const [Quizletopen, setQuizletOpen] = useState(false);
   const [Diaryopen, setDiaryOpen] = useState(false);
+  const [MockTestopen, setMockTestOpen] = useState(false);
   const [textData, setTextData] = useState<[]>([]);
   const [text2Data, setText2Data] = useState<[]>([]);
 
@@ -75,13 +76,13 @@ export default function Layout({ children }: LayoutProps) {
               {Quizletopen && (
               <>
                 <Link href={`/teacher/student/curriculum/class_note?user=${user}&type=teacher&id=${id}&student_name=${student_name}`}>
-                    <span className={`block p-2 rounded ml-3 ${pathname === "/teacher/student/curriculum/class_note" ? "bg-gray-700" : ""}`}>새로운 Quizlet 만들기</span>
+                    <span className={`block p-2 rounded ml-3 ${pathname === `/teacher/student/curriculum/class_note?user=${user}&type=teacher&id=${id}&student_name=${student_name}` ? "bg-gray-700" : ""}`}>새로운 Quizlet 만들기</span>
                 </Link>
                 <nav className="">
                 {Array.isArray(textData) && textData.length > 0 ? (
                 textData.slice().reverse().map((item: any, index) => (
                     <Link key={index} href={`/teacher/student/curriculum/class_note/text?user=${user}&type=teacher&id=${id}&student_name=${student_name}&item_id=${item._id}`}>
-                    <span className={`ml-3 block p-2 rounded ${pathname === `/teacher/student/curriculum/class_note/text?item_id=${item._id}` ? "bg-gray-700" : ""}`}>
+                    <span className={`ml-3 block p-2 rounded ${pathname === `/teacher/student/curriculum/class_note/text?user=${user}&type=teacher&id=${id}&student_name=${student_name}&item_id=${item._id}` ? "bg-gray-700" : ""}`}>
                         {item.class_date}
                     </span>
                     </Link>   
@@ -116,6 +117,39 @@ export default function Layout({ children }: LayoutProps) {
                 ) : (
                 <p className="text-gray-400">Loading...</p>
                 )}
+                </nav>
+              </>
+              )}
+
+          <h2
+            className="text-xl font-bold cursor-pointer flex items-center gap-1"
+            onClick={() => setMockTestOpen(!MockTestopen)}
+          >
+            {MockTestopen ? "🔻" : "▶️"} Mock Test
+          </h2>
+              {MockTestopen && (
+              <>
+                <nav className="">
+                  <Link href={`/teacher/student/curriculum/mock_test/self_introduction?user=${user}&type=teacher&id=${id}&student_name=${student_name}`}>
+                    <span className={`ml-3 block p-2 rounded ${pathname === `/teacher/student/curriculum/mock_test/self_introduction?user=${user}&type=teacher&id=${id}&student_name=${student_name}` ? "bg-gray-700" : ""}`}>
+                        Self Introduction
+                    </span>
+                  </Link>   
+                  <Link href={`/teacher/student/curriculum/mock_test/grammar?user=${user}&type=teacher&id=${id}&student_name=${student_name}`}>
+                    <span className={`ml-3 block p-2 rounded ${pathname === `/teacher/student/curriculum/mock_test/grammar?user=${user}&type=teacher&id=${id}&student_name=${student_name}` ? "bg-gray-700" : ""}`}>
+                        Grammar
+                    </span>
+                  </Link> 
+                  <Link href={`/teacher/student/curriculum/mock_test/bulk_answers?user=${user}&type=teacher&id=${id}&student_name=${student_name}`}>
+                    <span className={`ml-3 block p-2 rounded ${pathname === `/teacher/student/curriculum/mock_test/bulk_answers?user=${user}&type=teacher&id=${id}&student_name=${student_name}` ? "bg-gray-700" : ""}`}>
+                        Bulk Answers
+                    </span>
+                  </Link> 
+                  <Link href={`/teacher/student/curriculum/mock_test/pillar_expressions?user=${user}&type=teacher&id=${id}&student_name=${student_name}`}>
+                    <span className={`ml-3 block p-2 rounded ${pathname === `/teacher/student/curriculum/mock_test/pillar_expressions?user=${user}&type=teacher&id=${id}&student_name=${student_name}` ? "bg-gray-700" : ""}`}>
+                        Pillar Expressions
+                    </span>
+                  </Link> 
                 </nav>
               </>
               )}
