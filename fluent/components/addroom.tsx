@@ -334,11 +334,6 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
     );
   };
 
-  // 시간 변경 처리
-  const handleTimeChange = (newTime: string) => {
-    setCommonTime(newTime);
-  };
-
   // 충돌 체크 함수 (실제 데이터 기반)
   const checkRealConflict = (
     formattedDate: string,

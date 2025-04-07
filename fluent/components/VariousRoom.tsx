@@ -5,10 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Calendar from "./VariousRoom/Calendar";
 import StudentSelect from "./VariousRoom/StudentSelect";
 import TimeSelector from "./VariousRoom/TimeSelector";
-import RoomSearchButton from "./VariousRoom/RoomSearchButton";
 import RoomSearchModal from "./VariousRoom/RoomSearchModal";
-import SelectedRoomDisplay from "./VariousRoom/SelectedRoomDisplay";
-import ClassCard from "@/components/VariousRoom/ClassCard";
 import { formatDate, formatTime } from "@/utils/formatters";
 
 interface ScheduleModalProps {
@@ -36,7 +33,7 @@ export default function VariousRoom({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [roomList, setRoomList] = useState<string[]>([]); // 방 리스트
   const [room, setRoom] = useState(""); // 방 이름
-  const [registerStatus, setRegisterStatus] = useState("수업등록"); // Initial button text
+  const [, setRegisterStatus] = useState("수업등록"); // Initial button text
 
   // 강의실 검색 관련 상태 추가
   const [isSearching, setIsSearching] = useState(false); // 검색 모달 상태
@@ -165,9 +162,9 @@ export default function VariousRoom({
     const formattedDates = dates.map((date) => formatDate(date));
 
     // 모든 날짜에 대한 등록 성공 여부를 저장할 배열
-    let successfulDates: string[] = [];
-    let failedDates: string[] = [];
-    let allRooms: string[] = [];
+    const successfulDates: string[] = [];
+    const failedDates: string[] = [];
+    const allRooms: string[] = [];
 
     // 각 날짜별로 등록 시도
     for (const date of formattedDates) {

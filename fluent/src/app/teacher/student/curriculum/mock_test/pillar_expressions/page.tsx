@@ -7,10 +7,14 @@ import React from "react";
 export default function BeginnerPillarExpressionsPage() {
   return (
     <div className="p-6 space-y-6 max-h-[95vh] overflow-auto">
-      <h1 className="text-2xl font-bold mb-4">📘 Beginner Pillar Expressions</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        📘 Beginner Pillar Expressions
+      </h1>
 
       <section className="bg-white p-4 rounded shadow space-y-3">
-        <h2 className="text-xl font-semibold mb-2">1️⃣ Beginner Pillar Expressions (ask 20 out of the pool)</h2>
+        <h2 className="text-xl font-semibold mb-2">
+          1️⃣ Beginner Pillar Expressions (ask 20 out of the pool)
+        </h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>뭘 해야 할지 모르겠어.</li>
           <li>그 셔츠를 어디서 사야 할지 모르겠어.</li>
@@ -134,7 +138,9 @@ export default function BeginnerPillarExpressionsPage() {
       </section>
 
       <section className="bg-white p-4 rounded shadow space-y-3">
-        <h2 className="text-xl font-semibold mb-2">2️⃣ Beginner Pillar Expressions</h2>
+        <h2 className="text-xl font-semibold mb-2">
+          2️⃣ Beginner Pillar Expressions
+        </h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>I don’t know what to do (move to intermediate?)</li>
           <li>I don’t know where to buy that shirt. (move to intermediate?)</li>
@@ -178,7 +184,9 @@ export default function BeginnerPillarExpressionsPage() {
           <li>it’s not worth it</li>
           <li>three days in a row</li>
           <li>As I said / As I told you / As I mentioned</li>
-          <li>I drove for 8 hours there and back (two ways) (back and forth)</li>
+          <li>
+            I drove for 8 hours there and back (two ways) (back and forth)
+          </li>
           <li>Do you recommend it?</li>
           <li>I don’t know who to ask</li>
           <li>I’m not confident</li>
@@ -187,7 +195,10 @@ export default function BeginnerPillarExpressionsPage() {
           <li>Did you get paid yet?</li>
           <li>The fee was very cost efficient</li>
           <li>The fine was 500,000 won</li>
-          <li>I met my middle school friends for the first time in a while (first time in a long time)</li>
+          <li>
+            I met my middle school friends for the first time in a while (first
+            time in a long time)
+          </li>
           <li>You can do whatever you want</li>
           <li>Specifically,</li>
           <li>she wanted me to go to church</li>
@@ -199,7 +210,9 @@ export default function BeginnerPillarExpressionsPage() {
           <li>I think you should write a blog</li>
           <li>I hope you like it (move to intermediate?)</li>
           <li>I hope [it goes well] (move to intermediate?)</li>
-          <li>I hope I don’t gain weight (lose weight) (move to intermediate?)</li>
+          <li>
+            I hope I don’t gain weight (lose weight) (move to intermediate?)
+          </li>
           <li>I hope you get better (move to intermediate?)</li>
           <li>I’m gonna be in korea this winter</li>
           <li>They bought me a lot of food</li>

@@ -3,7 +3,6 @@ import TimeSelector from "./TimeSelector";
 import RoomSearchButton from "./RoomSearchButton";
 import RoomSearchModal from "./RoomSearchModal";
 import SelectedRoomDisplay from "./SelectedRoomDisplay";
-import RegisterButton from "./RegisterButton";
 
 interface DateScheduleCardProps {
   date: Date;
@@ -36,9 +35,6 @@ const DateScheduleCard: React.FC<DateScheduleCardProps> = ({
   setRoomList,
   formatDate,
   formatTime,
-  teacherName,
-  studentName,
-  setRegisterStatus,
   isSearching,
   setIsSearching,
   searchLoading,
@@ -74,52 +70,6 @@ const DateScheduleCard: React.FC<DateScheduleCardProps> = ({
     // 시간이 변경되면 기존 방 선택 초기화
     setRoom("");
     setRoomList([]);
-  };
-
-  // 수업 등록 핸들러
-  const handleRegister = async () => {
-    if (!room) {
-      alert("강의실을 선택해주세요.");
-      return;
-    }
-
-    setRegisterStatus("등록 중..."); // 로딩 상태 표시
-
-    try {
-      const response = await fetch(`/api/schedules/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          room_name: room,
-          date: formatDate(date),
-          time: time,
-          duration: "1",
-          teacher_name: teacherName,
-          student_name: studentName,
-        }),
-      });
-
-      if (response.ok) {
-        setRegisterStatus("등록 완료!");
-        // 성공 표시 잠시 후 원래 상태로
-        setTimeout(() => {
-          setRegisterStatus("수업등록");
-        }, 2000);
-      } else {
-        setRegisterStatus("등록 실패");
-        setTimeout(() => {
-          setRegisterStatus("수업등록");
-        }, 2000);
-      }
-    } catch (error) {
-      console.error("수업 등록 오류:", error);
-      setRegisterStatus("등록 실패");
-      setTimeout(() => {
-        setRegisterStatus("수업등록");
-      }, 2000);
-    }
   };
 
   return (
