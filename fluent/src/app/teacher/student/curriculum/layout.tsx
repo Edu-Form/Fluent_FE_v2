@@ -20,7 +20,6 @@ export default function Layout({ children }: LayoutProps) {
 
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
-  const type = searchParams.get("type");
   const id = searchParams.get("id");
   const student_name = searchParams.get("student_name");
 
@@ -59,7 +58,7 @@ export default function Layout({ children }: LayoutProps) {
 
     fetchQuizletData();
     fetchDiaryData();
-  }, []);
+  }, [student_name]);
 
   return (
     <div className="flex h-screen">

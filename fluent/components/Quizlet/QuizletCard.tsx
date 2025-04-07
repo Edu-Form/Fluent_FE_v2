@@ -281,7 +281,7 @@ const QuizletCardContent = ({
     return () => {
       window.removeEventListener("keydown", handleKeyPress);
     };
-  }, []);
+  }, [handleNextCard, handlePrevCard]);
 
   // 키보드 / 키로 읽기 기능
   useEffect(() => {
@@ -296,7 +296,7 @@ const QuizletCardContent = ({
     return () => {
       window.removeEventListener("keydown", handleSlashKey);
     };
-  }, [content, currentCard, isFlipped]);
+  }, [content, currentCard, isFlipped, readCardText]);
 
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {

@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function ClassNotePage() {
+const ClassNotePage = () => {
   const searchParams = useSearchParams();
   const itemId = searchParams.get("item_id");
   const [text, setText] = useState("");
@@ -25,5 +26,13 @@ export default function ClassNotePage() {
         {text}
       </pre>
     </div>
+  );
+};
+
+export default function WrappedClassNotePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ClassNotePage />
+    </Suspense>
   );
 }

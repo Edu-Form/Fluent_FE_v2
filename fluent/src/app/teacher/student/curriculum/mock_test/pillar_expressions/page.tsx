@@ -38,7 +38,7 @@ export default function BeginnerPillarExpressionsPage() {
           <li>벌써 늦었네, 집에 가자.</li>
           <li>새로운 과제 하고 있어.</li>
           <li>새 컴퓨터 설정해야 해.</li>
-          <li>"스페인어로 안녕"을 어떻게 말하는지 검색해봤어.</li>
+          <li>&quot;스페인어로 안녕&quot;을 어떻게 말하는지 검색해봤어.</li>
           <li>그녀는 그림을 정말 잘 그려.</li>
           <li>외투 입어, 밖에 추워.</li>
           <li>우유 다 떨어졌어.</li>
@@ -105,7 +105,7 @@ export default function BeginnerPillarExpressionsPage() {
           <li>하루 종일,</li>
           <li>그녀는 스페인에 안 가기로 했어.</li>
           <li>내성적인 사람 / 외향적인 사람</li>
-          <li>“편리하다”를 영어로 어떻게 말해? “convenient”이라고 해.</li>
+          <li>“편리하다”를 영어로 어떻게 말해? &apos;convenient&apos;이라고 해.</li>
           <li>“convenient”가 무슨 뜻이야? “편리하다”라는 뜻이야.</li>
           <li>어제 쉬는 날이었어.</li>
           <li>오늘 재미있게 보내길 바래!</li>
@@ -136,54 +136,54 @@ export default function BeginnerPillarExpressionsPage() {
       <section className="bg-white p-4 rounded shadow space-y-3">
         <h2 className="text-xl font-semibold mb-2">2️⃣ Beginner Pillar Expressions</h2>
         <ul className="list-decimal list-inside space-y-1">
-          <li>I don’t know what to do (move to intermediate?)</li>
-          <li>I don’t know where to buy that shirt. (move to intermediate?)</li>
-          <li>I’m currently studying for my exams.</li>
+          <li>I don&apos;t know what to do (move to intermediate?)</li>
+          <li>I don&apos;t know where to buy that shirt. (move to intermediate?)</li>
+          <li>I&apos;m currently studying for my exams.</li>
           <li>I tried sushi for the first time.</li>
           <li>If you want, we can watch a movie.</li>
-          <li>It’s raining outside.</li>
+          <li>It&apos;s raining outside.</li>
           <li>I want to visit Paris.</li>
           <li>I just finished my lunch.</li>
           <li>We took a walk.</li>
           <li>Can you show me how to use this app?</li>
-          <li>Anyway, let’s move on to the next topic.</li>
+          <li>Anyway, let&apos;s move on to the next topic.</li>
           <li>I need to finish my homework.</li>
-          <li>I’m feeling a little tired today.</li>
-          <li>I got hurt. / I’m sick</li>
-          <li>It’s super hot.</li>
+          <li>I&apos;m feeling a little tired today.</li>
+          <li>I got hurt. / I&apos;m sick</li>
+          <li>It&apos;s super hot.</li>
           <li>You must follow the rules.</li>
           <li>I look forward to seeing you next week.</li>
           <li>Have you ever tried Indian food?</li>
           <li>I want to earn a lot of money.</li>
-          <li>I’m on the way to work.</li>
+          <li>I&apos;m on the way to work.</li>
           <li>I found a great restaurant!</li>
           <li>You should eat healthy.</li>
           <li>I ran into an old friend.</li>
-          <li>It’s late already, let’s go home.</li>
-          <li>I’m working on a new assignment.</li>
+          <li>It&apos;s late already, let&apos;s go home.</li>
+          <li>I&apos;m working on a new assignment.</li>
           <li>I need to set up my new computer.</li>
           <li>I looked up “how to say hi in Spanish.”</li>
-          <li>She’s really good at painting.</li>
-          <li>Put on your jacket. It’s cold outside.</li>
+          <li>She&apos;s really good at painting.</li>
+          <li>Put on your jacket. It&apos;s cold outside.</li>
           <li>We ran out of milk.</li>
           <li>I need to pick up my medicine.</li>
           <li>Can you give me a hand?</li>
-          <li>I’m interested in learning Spanish.</li>
+          <li>I&apos;m interested in learning Spanish.</li>
           <li>My flight will take off in an hour.</li>
-          <li>I’m looking for my keys.</li>
+          <li>I&apos;m looking for my keys.</li>
           <li>Make sure you lock the door before you leave.</li>
-          <li>I’m satisfied with my new car.</li>
+          <li>I&apos;m satisfied with my new car.</li>
           <li>I just came back home</li>
           <li>Korea is famous for Kimchi</li>
-          <li>it’s not worth it</li>
+          <li>it&apos;s not worth it</li>
           <li>three days in a row</li>
           <li>As I said / As I told you / As I mentioned</li>
           <li>I drove for 8 hours there and back (two ways) (back and forth)</li>
           <li>Do you recommend it?</li>
-          <li>I don’t know who to ask</li>
-          <li>I’m not confident</li>
+          <li>I don&apos;t know who to ask</li>
+          <li>I&apos;m not confident</li>
           <li>Busan was holding a beach festival</li>
-          <li>I’ll show you a picture!</li>
+          <li>I&apos;ll show you a picture!</li>
           <li>Did you get paid yet?</li>
           <li>The fee was very cost efficient</li>
           <li>The fine was 500,000 won</li>
@@ -193,26 +193,26 @@ export default function BeginnerPillarExpressionsPage() {
           <li>she wanted me to go to church</li>
           <li>I bought her a bag</li>
           <li>She hung up the phone / I picked up the phone</li>
-          <li>I’m looking forward to the community event</li>
+          <li>I&apos;m looking forward to the community event</li>
           <li>I have to take care of my kids</li>
           <li>I was busy taking care of my cats</li>
           <li>I think you should write a blog</li>
           <li>I hope you like it (move to intermediate?)</li>
           <li>I hope [it goes well] (move to intermediate?)</li>
-          <li>I hope I don’t gain weight (lose weight) (move to intermediate?)</li>
+          <li>I hope I don&apos;t gain weight (lose weight) (move to intermediate?)</li>
           <li>I hope you get better (move to intermediate?)</li>
-          <li>I’m gonna be in korea this winter</li>
+          <li>I&apos;m gonna be in korea this winter</li>
           <li>They bought me a lot of food</li>
-          <li>I’m really into wine these days</li>
-          <li>I don't like making mistakes</li>
-          <li>Why don’t you come after getting off work?</li>
+          <li>I&apos;m really into wine these days</li>
+          <li>I don&apos;t like making mistakes</li>
+          <li>Why don&apos;t you come after getting off work?</li>
           <li>Unfortunately,</li>
           <li>Thankfully,</li>
           <li>To tell you about myself,</li>
           <li>I was deciding [whether to drive or to ride a bike].</li>
           <li>Whether to do A or B</li>
-          <li>I don’t think this should be a habit</li>
-          <li>you dont have to be sorry. it’s okay</li>
+          <li>I don&apos;t think this should be a habit</li>
+          <li>you dont have to be sorry. it&apos;s okay</li>
           <li>By the way, where is the venue again?</li>
           <li>she owes me 30,000won</li>
           <li>This bag costs 77,000won</li>
@@ -220,7 +220,7 @@ export default function BeginnerPillarExpressionsPage() {
           <li>In conclusion, the project was a success.</li>
           <li>In summary, we achieved our goals this year.</li>
           <li>All in all, it was a great experience.</li>
-          <li>I’ve worked out for 5 years now</li>
+          <li>I&apos;ve worked out for 5 years now</li>
           <li>In the end, everything worked out fine.</li>
           <li>it was a waste of money</li>
           <li>Normally,</li>
@@ -229,30 +229,30 @@ export default function BeginnerPillarExpressionsPage() {
           <li>for the whole day</li>
           <li>she decided not to go to spain</li>
           <li>an introvert / an extrovert</li>
-          <li>how do you say “편리하다" in english? you say “convenient”</li>
-          <li>what does “convenient” mean? it means “편리하다"</li>
+          <li>how do you say &quot;편리하다&quot; in english? you say &quot;convenient&quot;</li>
+          <li>what does &quot;convenient&quot; mean? it means &quot;편리하다&quot;</li>
           <li>yesterday was my day off</li>
           <li>I want you to have fun today!</li>
-          <li>it’s exactly the same as last time</li>
+          <li>it&apos;s exactly the same as last time</li>
           <li>I am deciding whether to meet her again or not</li>
           <li>other than the meeting, did you do anything fun?</li>
-          <li>can’t I attend the next event?</li>
-          <li>isn’t that rude?</li>
+          <li>can&apos;t I attend the next event?</li>
+          <li>isn&apos;t that rude?</li>
           <li>I can come whenever you want</li>
           <li>I was busy with work</li>
-          <li>I’m just waiting for her to contact me.</li>
+          <li>I&apos;m just waiting for her to contact me.</li>
           <li>I had a hard time / I had a good time</li>
-          <li>let’s start at like 10 ish</li>
+          <li>let&apos;s start at like 10 ish</li>
           <li>Appointment</li>
           <li>good luck with your exams</li>
           <li>I hope you get better</li>
           <li>I hope [it goes well]</li>
-          <li>I hope I don’t gain weight</li>
+          <li>I hope I don&apos;t gain weight</li>
           <li>I hope you get better</li>
-          <li>let’s split the bill</li>
+          <li>let&apos;s split the bill</li>
           <li>oh sorry I have to take this call.</li>
-          <li>can I take this call? it’s important.</li>
-          <li>Do you mind [if I do ~]? &gt; no, I don’t mind</li>
+          <li>can I take this call? it&apos;s important.</li>
+          <li>Do you mind [if I do ~]? &gt; no, I don&apos;t mind</li>
           <li>I bought A instead of B</li>
         </ul>
       </section>

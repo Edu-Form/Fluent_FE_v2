@@ -25,7 +25,7 @@ export default function Page() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
             <div>
               <p>How are you today?</p>
-              <p className="text-gray-500 text-sm">I’m good and you?</p>
+              <p className="text-gray-500 text-sm">I&apos;m good and you?</p>
             </div>
             <div>
               <p>How was your day?</p>
@@ -37,22 +37,22 @@ export default function Page() {
             </div>
             <div>
               <p>How have you been?</p>
-              <p className="text-gray-500 text-sm">I’ve been good</p>
+              <p className="text-gray-500 text-sm">I&apos;ve been good</p>
             </div>
             <div>
               <p>How is it going?</p>
-              <p className="text-gray-500 text-sm">It’s going well</p>
+              <p className="text-gray-500 text-sm">It&apos;s going well</p>
             </div>
             <div>
               <p>How are you doing?</p>
-              <p className="text-gray-500 text-sm">I’m doing well</p>
+              <p className="text-gray-500 text-sm">I&apos;m doing well</p>
             </div>
             <div>
-              <p>What’s going on?</p>
+              <p>What&apos;s going on?</p>
               <p className="text-gray-500 text-sm">Nothing special</p>
             </div>
             <div>
-              <p>What’s up?</p>
+              <p>What&apos;s up?</p>
               <p className="text-gray-500 text-sm">Nothing much</p>
             </div>
             <div>
@@ -61,11 +61,11 @@ export default function Page() {
             </div>
             <div>
               <p>Is everything going well?</p>
-              <p className="text-gray-500 text-sm">Yeah, everything’s good</p>
+              <p className="text-gray-500 text-sm">Yeah, everything&apos;s good</p>
             </div>
             <div>
-              <p>What’s on your mind?</p>
-              <p className="text-gray-500 text-sm">Nothing much (there’s nothing on my mind)</p>
+              <p>What&apos;s on your mind?</p>
+              <p className="text-gray-500 text-sm">Nothing much (there&apos;s nothing on my mind)</p>
             </div>
           </div>
           <p className="italic text-sm mt-2">…and more!</p>
