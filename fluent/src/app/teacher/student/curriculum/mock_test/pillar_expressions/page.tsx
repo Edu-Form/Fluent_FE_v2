@@ -211,7 +211,7 @@ export default function BeginnerPillarExpressionsPage() {
           <li>I hope you like it (move to intermediate?)</li>
           <li>I hope [it goes well] (move to intermediate?)</li>
           <li>
-            I hope I don’t gain weight (lose weight) (move to intermediate?)
+            I hope I don&apos;t gain weight (lose weight) (move to intermediate?)
           </li>
           <li>I hope you get better (move to intermediate?)</li>
           <li>I&apos;m gonna be in korea this winter</li>
