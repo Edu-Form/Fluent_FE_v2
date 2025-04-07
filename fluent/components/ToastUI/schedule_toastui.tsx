@@ -124,10 +124,12 @@ const ScheduleToastUI: React.FC<ToastUIProps> = ({ data, onDateSelect }) => {
         color: #000000 !important;
       }
       .toastui-calendar-event-time-content {
-        background-color: #e6f4ff !important;
+      padding: 0 0.5rem;
+      border-radius: 2rem;
+        background-color: #cfe3ff !important;
       }
         .toastui-calendar-weekday-event-dot {
-        background-color: #3f4166 !important;
+        background-color: #5389ff !important;
       }
     `;
     document.head.appendChild(styleElement);

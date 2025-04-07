@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { Calendar as Plus, Layers } from "lucide-react";
+import { Calendar as Plus } from "lucide-react";
 import "react-day-picker/dist/style.css";
 import AddRoom from "@/components/addroom";
 import VariousRoom from "@/components/VariousRoom";
@@ -30,7 +30,7 @@ const SchedulePage = () => {
   const openAddSchedule = () => setIsModalOpen(true);
   const closeAddSchedule = () => setIsModalOpen(false);
 
-  const openVariousSchedule = () => setIsVariousRoomOpen(true);
+  // const openVariousSchedule = () => setIsVariousRoomOpen(true);
   const closeVariousSchedule = () => setIsVariousRoomOpen(false);
 
   const URL = `/api/schedules/${type}/${user}`;
@@ -423,13 +423,13 @@ const SchedulePage = () => {
             <Plus size={16} />
             수업 추가
           </button>
-          <button
+          {/* <button
             onClick={openVariousSchedule}
             className="action-button secondary-button"
           >
             <Layers size={16} />
             여러 수업 추가
-          </button>
+          </button> */}
         </div>
       </div>
 
