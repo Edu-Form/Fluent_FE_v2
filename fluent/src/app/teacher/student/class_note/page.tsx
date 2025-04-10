@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import "react-day-picker/dist/style.css";
+import CurriculumLayout from "@/components/CurriculumnLayout"; // Import the CurriculumLayout component
 
 // 날짜 포맷 함수들 유지
 const formatToISO = (date: string | undefined): string => {
@@ -557,21 +558,25 @@ const QuizletPageContent: React.FC = () => {
   );
 };
 
-// 서버 렌더링에 안전한 로딩 폴백
-const LoadingFallback: React.FC = () => (
-  <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
-    <div className="bg-white rounded-3xl shadow-lg p-6 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-[#3182F6] border-t-transparent rounded-full animate-spin"></div>
-      <p className="ml-3 text-[#4E5968]">로딩 중...</p>
-    </div>
-  </div>
-);
 
 // 메인 내보내기
-export default function QuizletPage(): ReactNode {
+export default function QuizletPageWrapper(): ReactNode {
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <QuizletPageContent />
+    <Suspense fallback={<div>Loading Quizlet Page...</div>}>
+      <QuizletPage />
     </Suspense>
+  );
+}
+
+function QuizletPage(): ReactNode {
+  const searchParams = useSearchParams();
+  const user = searchParams.get("user") || "";
+  const id = searchParams.get("id") || "";
+  const student_name = searchParams.get("student_name") || "";
+
+  return (
+    <CurriculumLayout user={user} id={id} student_name={student_name}>
+      <QuizletPageContent />
+    </CurriculumLayout>
   );
 }

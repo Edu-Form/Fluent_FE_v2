@@ -3,9 +3,15 @@
 "use client";
 
 import React from "react";
+import CurriculumLayout from "@/components/CurriculumnLayout";
 
-export default function ThematicQuestionsPage() {
+export default function ThematicQuestionsPage({ searchParams }: { searchParams: any }) {
+  const user = searchParams.user || "";
+  const id = searchParams.id || "";
+  const student_name = searchParams.student_name || "";
   return (
+    <CurriculumLayout user={user} id={id} student_name={student_name}>
+      
     <div className="p-6 space-y-6 max-h-[95vh] overflow-auto">
       <h1 className="text-2xl font-bold mb-4">📘 긴 답변 (Bulk Answers)</h1>
 
@@ -14,7 +20,7 @@ export default function ThematicQuestionsPage() {
         <h2 className="text-xl font-semibold mb-2">1️⃣ Family</h2>
         <ul className="list-decimal list-inside space-y-1">
           <li>Tell me about your family in detail. How many members are there? What do they do?</li>
-          <li>Let’s have a short conversation. Please ask me at least 5 questions about my family during the conversation.</li>
+          <li>Let&quot;s have a short conversation. Please ask me at least 5 questions about my family during the conversation.</li>
         </ul>
       </section>
 
@@ -32,7 +38,7 @@ export default function ThematicQuestionsPage() {
         <ul className="list-decimal list-inside space-y-1">
           <li>Tell me about your house in detail.</li>
           <li>Tell me about your room.</li>
-          <li>Let’s have a short conversation. Please ask me at least 5 questions about my house and neighborhood.</li>
+          <li>Let&quot;s have a short conversation. Please ask me at least 5 questions about my house and neighborhood.</li>
         </ul>
       </section>
 
@@ -76,5 +82,6 @@ export default function ThematicQuestionsPage() {
 
       <h2 className="text-2xl font-bold">🕒 Timer: 40 minute mark</h2>
     </div>
+    </CurriculumLayout>
   );
 }

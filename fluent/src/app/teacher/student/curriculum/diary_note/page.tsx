@@ -2,11 +2,11 @@
 
 import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import CurriculumLayout from "@/components/CurriculumnLayout"; // Import the CurriculumLayout component
 import "react-day-picker/dist/style.css";
 
 // 날짜 포맷 함수들 유지
 const formatToISO = (date: string | undefined): string => {
-  // 기존 함수 유지
   try {
     if (!date) return "";
 
@@ -16,7 +16,6 @@ const formatToISO = (date: string | undefined): string => {
       return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
     }
 
-    // 이미 ISO 형식인 경우 검증 후 반환
     if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
       return date;
     }
@@ -29,7 +28,6 @@ const formatToISO = (date: string | undefined): string => {
 };
 
 const today_formatted = (): string => {
-  // 기존 함수 유지
   try {
     const today = new Date();
     const year = today.getFullYear();
@@ -38,16 +36,14 @@ const today_formatted = (): string => {
     return `${year}-${month}-${day}`;
   } catch (error) {
     console.error("오늘 날짜 포맷 오류:", error);
-    return new Date().toISOString().split("T")[0]; // 대체 방법
+    return new Date().toISOString().split("T")[0];
   }
 };
 
 const formatToSave = (date: string | undefined): string => {
-  // 기존 함수 유지
   try {
     if (!date) return "";
 
-    // 유효한 날짜 형식인지 확인
     if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) return "";
 
     const [year, month, day] = date.split("-");
@@ -60,7 +56,6 @@ const formatToSave = (date: string | undefined): string => {
   }
 };
 
-// 퀴즐렛 페이지 내용 컴포넌트
 const DiaryPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -181,7 +176,7 @@ const DiaryPageContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[95vh] flex flex-col overflow-auto bg-[#F9FAFB]">
+    <div className="max-h-[95vh] w-[85vw] flex flex-col overflow-hidden bg-[#F9FAFB]">
       {/* 로딩 오버레이 */}
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
@@ -385,7 +380,7 @@ const DiaryPageContent: React.FC = () => {
         className="flex-grow flex flex-col overflow-hidden"
       >
         {/* 메인 텍스트 영역 - 화면에 꽉 채움 */}
-        <div className="flex-grow flex flex-col relative">
+        <div className="min-h-[95vh] flex-grow flex flex-col relative">
           <textarea
             id="original_text"
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -507,21 +502,24 @@ const DiaryPageContent: React.FC = () => {
   );
 };
 
-// 서버 렌더링에 안전한 로딩 폴백
-const LoadingFallback: React.FC = () => (
-  <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
-    <div className="bg-white rounded-3xl shadow-lg p-6 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-[#3182F6] border-t-transparent rounded-full animate-spin"></div>
-      <p className="ml-3 text-[#4E5968]">로딩 중...</p>
-    </div>
-  </div>
-);
-
 // 메인 내보내기
-export default function QuizletPage(): ReactNode {
+export default function DiaryPageWrapper(): ReactNode {
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <DiaryPageContent />
+    <Suspense fallback={<div>Loading Diary Page...</div>}>
+      <DiaryPage />
     </Suspense>
+  );
+}
+
+function DiaryPage(): ReactNode {
+  const searchParams = useSearchParams();
+  const user = searchParams.get("user") || "";
+  const id = searchParams.get("id") || "";
+  const student_name = searchParams.get("student_name") || "";
+
+  return (
+    <CurriculumLayout user={user} id={id} student_name={student_name}>
+      <DiaryPageContent />
+    </CurriculumLayout>
   );
 }

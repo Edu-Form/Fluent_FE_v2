@@ -1,31 +1,29 @@
 "use client";
-import { useEffect, useState } from "react";
+
 import { useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import CurriculumLayout from "@/components/CurriculumnLayout"; // Import the CurriculumLayout component
+import { ReactNode } from "react";
 
-import { Suspense } from "react";
-
-export default function ClassNotePage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ClassNoteContent />
-    </Suspense>
-  );
-}
-
-const ClassNoteContent = async () => {
+const ClassNoteContent = () => {
   const searchParams = useSearchParams();
   const itemId = searchParams.get("item_id");
+  const [text, setText] = useState("");
 
-  const fetchText = async () => {
-    const res = await fetch(`/api/quizlet/text/${itemId}`);
-    const data = await res.json();
-    return data[0].original_text;
-  };
+  useEffect(() => {
+    const fetchText = async () => {
+      if (itemId) {
+        const res = await fetch(`/api/quizlet/text/${itemId}`);
+        const data = await res.json();
+        setText(data[0].original_text);
+      }
+    };
 
-  const text = itemId ? await fetchText() : "";
+    fetchText();
+  }, [itemId]);
 
   return (
-    <div className="max-h-[95vh] overflow-auto">
+    <div className="max-h-[95vh] w-[85vw] overflow-auto">
       <h1>Class Note</h1>
       <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded text-sm leading-relaxed">
         {text}
@@ -33,5 +31,29 @@ const ClassNoteContent = async () => {
     </div>
   );
 };
+
+// 메인 내보내기
+export default function NotePageWrapper(): ReactNode {
+  return (
+    <Suspense fallback={<div>Loading Class Note Page...</div>}>
+      <ClassNotePage />
+    </Suspense>
+  );
+}
+
+function ClassNotePage(): ReactNode {
+  const searchParams = useSearchParams();
+  const user = searchParams.get("user") || "";
+  const id = searchParams.get("id") || "";
+  const student_name = searchParams.get("student_name") || "";
+
+  return (
+    <CurriculumLayout user={user} id={id} student_name={student_name}>
+      <ClassNoteContent />
+    </CurriculumLayout>
+  );
+}
+
+
 
 

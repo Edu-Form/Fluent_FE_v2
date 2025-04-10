@@ -2,26 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
-type LayoutProps = {
+type CurriculumLayoutProps = {
   children: ReactNode;
+  user: string;
+  id: string;
+  student_name: string;
 };
 
-export default function Layout({ children }: LayoutProps) {
+export default function CurriculumLayout({
+  children,
+  user,
+  id,
+  student_name,
+}: CurriculumLayoutProps) {
   const pathname = usePathname();
   const [Quizletopen, setQuizletOpen] = useState(false);
   const [Diaryopen, setDiaryOpen] = useState(false);
   const [MockTestopen, setMockTestOpen] = useState(false);
   const [textData, setTextData] = useState<[]>([]);
   const [text2Data, setText2Data] = useState<[]>([]);
-
-  const searchParams = useSearchParams();
-  const user = searchParams.get("user");
-  const id = searchParams.get("id");
-  const student_name = searchParams.get("student_name");
 
   useEffect(() => {
     const fetchQuizletData = async () => {
@@ -34,7 +35,7 @@ export default function Layout({ children }: LayoutProps) {
         }
 
         const quizletData = await response.json();
-        setTextData(quizletData); // Assuming textData is an array
+        setTextData(quizletData);
       } catch (error) {
         console.error("Error fetching quizlet data:", error);
       }
@@ -50,9 +51,9 @@ export default function Layout({ children }: LayoutProps) {
         }
 
         const diaryData = await response.json();
-        setText2Data(diaryData); // Assuming textData is an array
+        setText2Data(diaryData);
       } catch (error) {
-        console.error("Error fetching quizlet data:", error);
+        console.error("Error fetching diary data:", error);
       }
     };
 
@@ -166,7 +167,7 @@ export default function Layout({ children }: LayoutProps) {
               </nav>
             </>
           )}
-
+          
           <h2
             className="text-xl font-bold cursor-pointer flex items-center gap-1"
             onClick={() => setMockTestOpen(!MockTestopen)}

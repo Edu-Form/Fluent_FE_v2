@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 
-const ClassNotePage = () => {
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import CurriculumLayout from "@/components/CurriculumnLayout"; // Import the CurriculumLayout component
+import { ReactNode } from "react";
+
+const ClassNoteContent = () => {
   const searchParams = useSearchParams();
   const itemId = searchParams.get("item_id");
   const [text, setText] = useState("");
@@ -20,7 +22,7 @@ const ClassNotePage = () => {
   }, [itemId]);
 
   return (
-    <div className="max-h-[95vh] overflow-auto">
+    <div className="max-h-[95vh] w-[85vw] overflow-auto">
       <h1>Class Note</h1>
       <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded text-sm leading-relaxed">
         {text}
@@ -29,10 +31,24 @@ const ClassNotePage = () => {
   );
 };
 
-export default function WrappedClassNotePage() {
+// 메인 내보내기
+export default function ClassNotePageWrapper(): ReactNode {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div>Loading Class Note Page...</div>}>
       <ClassNotePage />
     </Suspense>
+  );
+}
+
+function ClassNotePage(): ReactNode {
+  const searchParams = useSearchParams();
+  const user = searchParams.get("user") || "";
+  const id = searchParams.get("id") || "";
+  const student_name = searchParams.get("student_name") || "";
+
+  return (
+    <CurriculumLayout user={user} id={id} student_name={student_name}>
+      <ClassNoteContent />
+    </CurriculumLayout>
   );
 }

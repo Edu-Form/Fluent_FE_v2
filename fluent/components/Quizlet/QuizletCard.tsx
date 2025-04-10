@@ -13,6 +13,7 @@ import {
 } from "react-icons/bs";
 import { Download } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { useCallback } from "react"; // Ensure useCallback is imported
 
 // QuizletCardProps 인터페이스 정의
 interface QuizletCardProps {
@@ -224,21 +225,21 @@ const QuizletCardContent = ({
     audio.play();
 }
 
-  const readCardText = () => {
+  const readCardText = useCallback(() => {
     const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
     TTSAudio(text); // Call the Audio function with the selected text
-  };
+  }, [isFlipped, cards, currentCard]);
 
-  const handleNextCard = () => {
+  const handleNextCard = useCallback(() => {
     console.log("ArrowRight");
     setIsFlipped(false);
     setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
-  };
-
-  const handlePrevCard = () => {
+  }, [cards.length]);
+  
+  const handlePrevCard = useCallback(() => {
     setIsFlipped(false);
     setCurrentCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
-  };
+  }, [cards.length]);
 
   useEffect(() => {
     // 컴포넌트가 마운트되거나 content가 변경될 때 카드 초기화

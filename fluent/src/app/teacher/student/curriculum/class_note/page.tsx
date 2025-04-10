@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import CurriculumLayout from "@/components/CurriculumnLayout"; // Import the CurriculumLayout component
 import "react-day-picker/dist/style.css";
 
 // 날짜 포맷 함수들 유지
@@ -61,7 +62,7 @@ const formatToSave = (date: string | undefined): string => {
 };
 
 // 퀴즐렛 페이지 내용 컴포넌트
-const QuizletPageContent: React.FC = () => {
+const ClassPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isMounted, setIsMounted] = useState<boolean>(false);
@@ -200,7 +201,7 @@ const QuizletPageContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[95vh] flex flex-col overflow-auto bg-[#F9FAFB]">
+    <div className="max-h-[95vh] w-[85vw] flex flex-col overflow-hidden bg-[#F9FAFB]">
       {/* 로딩 오버레이 */}
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
@@ -434,7 +435,7 @@ const QuizletPageContent: React.FC = () => {
         className="flex-grow flex flex-col overflow-hidden"
       >
         {/* 메인 텍스트 영역 - 화면에 꽉 채움 */}
-        <div className="flex-grow flex flex-col relative">
+        <div className="min-h-[95vh] flex-grow flex flex-col relative">
           <textarea
             id="original_text"
             value={original_text}
@@ -557,21 +558,25 @@ const QuizletPageContent: React.FC = () => {
   );
 };
 
-// 서버 렌더링에 안전한 로딩 폴백
-const LoadingFallback: React.FC = () => (
-  <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center">
-    <div className="bg-white rounded-3xl shadow-lg p-6 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-[#3182F6] border-t-transparent rounded-full animate-spin"></div>
-      <p className="ml-3 text-[#4E5968]">로딩 중...</p>
-    </div>
-  </div>
-);
-
 // 메인 내보내기
-export default function QuizletPage(): ReactNode {
+export default function ClassPageWrapper(): ReactNode {
   return (
-    <Suspense fallback={<LoadingFallback />}>
-      <QuizletPageContent />
+    <Suspense fallback={<div>Loading Diary Page...</div>}>
+      <ClassPage />
     </Suspense>
   );
 }
+
+function ClassPage(): ReactNode {
+  const searchParams = useSearchParams();
+  const user = searchParams.get("user") || "";
+  const id = searchParams.get("id") || "";
+  const student_name = searchParams.get("student_name") || "";
+
+  return (
+    <CurriculumLayout user={user} id={id} student_name={student_name}>
+      <ClassPageContent />
+    </CurriculumLayout>
+  );
+}
+
