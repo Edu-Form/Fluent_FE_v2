@@ -18,9 +18,9 @@ export default function CurriculumLayout({
   student_name,
 }: CurriculumLayoutProps) {
   const pathname = usePathname();
-  const [Quizletopen, setQuizletOpen] = useState(false);
-  const [Diaryopen, setDiaryOpen] = useState(false);
-  const [MockTestopen, setMockTestOpen] = useState(false);
+  const [Quizletopen, setQuizletOpen] = useState(true);
+  const [Diaryopen, setDiaryOpen] = useState(true);
+  const [MockTestopen, setMockTestOpen] = useState(true);
   const [textData, setTextData] = useState<[]>([]);
   const [text2Data, setText2Data] = useState<[]>([]);
 
@@ -112,7 +112,7 @@ export default function CurriculumLayout({
                       </Link>
                     ))
                 ) : (
-                  <p className="text-gray-400">Loading...</p>
+                  <p className="text-gray-400"></p>
                 )}
               </nav>
             </>
@@ -162,12 +162,12 @@ export default function CurriculumLayout({
                       </Link>
                     ))
                 ) : (
-                  <p className="text-gray-400">Loading...</p>
+                  <p className="text-gray-400"></p>
                 )}
               </nav>
             </>
           )}
-          
+
           <h2
             className="text-xl font-bold cursor-pointer flex items-center gap-1"
             onClick={() => setMockTestOpen(!MockTestopen)}

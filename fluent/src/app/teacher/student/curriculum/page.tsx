@@ -10,7 +10,6 @@ export default function ClassNotePage({ searchParams }: { searchParams: any }) {
   return (
     <CurriculumLayout user={user} id={id} student_name={student_name}>
       <div>
-      &quot;&quot;
       </div>
     </CurriculumLayout>
   );

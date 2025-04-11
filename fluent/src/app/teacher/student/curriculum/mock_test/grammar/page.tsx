@@ -3,9 +3,14 @@
 "use client";
 
 import React from "react";
+import CurriculumLayout from "@/components/CurriculumnLayout";
 
-export default function GrammarQuestionsPage() {
+export default function GrammarQuestionsPage({ searchParams }: { searchParams: any }) {
+  const user = searchParams.user || "";
+  const id = searchParams.id || "";
+  const student_name = searchParams.student_name || "";
   return (
+    <CurriculumLayout user={user} id={id} student_name={student_name}>
     <div className="p-6 space-y-8 max-h-[95vh] overflow-auto">
       <h1 className="text-2xl font-bold mb-4">📘 Grammar Questions (번역시험)</h1>
 
@@ -236,5 +241,6 @@ export default function GrammarQuestionsPage() {
         </section>
 
     </div>
-  );
+  </ CurriculumLayout>
+);
 }

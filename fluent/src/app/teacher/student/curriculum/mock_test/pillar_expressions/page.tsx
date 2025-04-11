@@ -3,9 +3,14 @@
 "use client";
 
 import React from "react";
+import CurriculumLayout from "@/components/CurriculumnLayout";
 
-export default function BeginnerPillarExpressionsPage() {
+export default function BeginnerPillarExpressionsPage({ searchParams }: { searchParams: any }) {
+  const user = searchParams.user || "";
+  const id = searchParams.id || "";
+  const student_name = searchParams.student_name || "";
   return (
+    <CurriculumLayout user={user} id={id} student_name={student_name}>
     <div className="p-6 space-y-6 max-h-[95vh] overflow-auto">
       <h1 className="text-2xl font-bold mb-4">
         📘 Beginner Pillar Expressions
@@ -272,5 +277,6 @@ export default function BeginnerPillarExpressionsPage() {
 
       <h2 className="text-2xl font-bold">🕒 Timer: 45 minute mark</h2>
     </div>
+  </CurriculumLayout>
   );
 }
