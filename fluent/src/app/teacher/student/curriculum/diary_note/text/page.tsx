@@ -34,7 +34,7 @@ const ClassNoteContent = () => {
 // 메인 내보내기
 export default function ClassNotePageWrapper(): ReactNode {
   return (
-    <Suspense fallback={<div>Loading Class Note Page...</div>}>
+    <Suspense fallback={<div></div>}>
       <ClassNotePage />
     </Suspense>
   );
