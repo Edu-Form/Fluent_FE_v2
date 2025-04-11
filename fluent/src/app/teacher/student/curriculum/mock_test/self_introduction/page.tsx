@@ -8,7 +8,7 @@ export default function Page({ searchParams }: { searchParams: any }) {
   const student_name = searchParams.student_name || "";
   return (
     <CurriculumLayout user={user} id={id} student_name={student_name}>
-    <div className="max-h-[95vh] overflow-auto bg-[#F9FAFB] p-6 text-gray-800">
+    <div className="max-h-[95vh] w-[85vw] overflow-auto bg-[#F9FAFB] p-6 text-gray-800">
       <div className=" mx-auto space-y-8">
         {/* Timer */}
         <div>

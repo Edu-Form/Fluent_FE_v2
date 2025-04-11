@@ -12,7 +12,7 @@ export default function ThematicQuestionsPage({ searchParams }: { searchParams: 
   return (
     <CurriculumLayout user={user} id={id} student_name={student_name}>
       
-    <div className="p-6 space-y-6 max-h-[95vh] overflow-auto">
+    <div className="p-6 space-y-6 max-h-[95vh] w-[85vw] overflow-auto">
       <h1 className="text-2xl font-bold mb-4">📘 긴 답변 (Bulk Answers)</h1>
 
       {/* 1️⃣ Family */}
