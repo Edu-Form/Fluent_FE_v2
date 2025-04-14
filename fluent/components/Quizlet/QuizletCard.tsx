@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { FiCalendar } from "react-icons/fi";
@@ -13,7 +13,30 @@ import {
 } from "react-icons/bs";
 import { Download } from "lucide-react";
 import { jsPDF } from "jspdf";
-import { useCallback } from "react"; // Ensure useCallback is imported
+
+// 로딩 스피너 컴포넌트
+const LoadingSpinner = () => (
+  <svg
+    className="animate-spin h-5 w-5 text-white"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    ></circle>
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    ></path>
+  </svg>
+);
 
 // QuizletCardProps 인터페이스 정의
 interface QuizletCardProps {
@@ -64,6 +87,9 @@ const QuizletCardContent = ({
     [key: number]: boolean;
   }>({});
   const [isBookmark, setIsBookmark] = useState(false);
+
+  // TTS 로딩 상태 추가
+  const [isTTSLoading, setIsTTSLoading] = useState(false);
 
   // 즐겨찾기 알림을 위한 상태 추가
   const [showAlert, setShowAlert] = useState(false);
@@ -189,53 +215,63 @@ const QuizletCardContent = ({
     doc.save(`${content.date} ${content.student_name}'s Quizlet.pdf`);
   };
 
-  // function Audio(text: string) {
-  //   if ("speechSynthesis" in window) {
-  //     console.log("Audio activated.");
-  //     const speech = new SpeechSynthesisUtterance(text);
-  //     speech.lang = "en-US";
-  //     speech.pitch = 1;
-  //     speech.rate = 1;
-  //     window.speechSynthesis.speak(speech);
-  //   } else {
-  //     console.log("Speech synthesis is not supported in this browser.");
-  //   }
-  // }
-
+  // 수정된 TTS 함수
   async function TTSAudio(text: string) {
-    const response = await fetch("/api/quizlet/tts", {
+    setIsTTSLoading(true); // 로딩 시작
+
+    try {
+      const response = await fetch("/api/quizlet/tts", {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text })
-    });
+        body: JSON.stringify({ text }),
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
         console.error("Error:", await response.text());
+        setIsTTSLoading(false); // 에러 발생 시 로딩 종료
         return;
+      }
+
+      // Get the audio response as a blob
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+
+      // Play the audio
+      const audio = new Audio(audioUrl);
+
+      // 오디오 재생이 끝나면 로딩 상태 해제
+      audio.onended = () => {
+        setIsTTSLoading(false);
+      };
+
+      // 오디오 재생 실패 시 로딩 상태 해제
+      audio.onerror = () => {
+        console.error("Audio playback failed");
+        setIsTTSLoading(false);
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error("TTS error:", error);
+      setIsTTSLoading(false); // 에러 발생 시 로딩 종료
     }
-
-    // Get the audio response as a blob
-    const audioBlob = await response.blob();
-    const audioUrl = URL.createObjectURL(audioBlob);
-
-    // Play the audio
-    const audio = new Audio(audioUrl);
-    audio.play();
-}
+  }
 
   const readCardText = useCallback(() => {
+    if (isTTSLoading) return; // 이미 로딩 중이면 중복 실행 방지
+
     const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
-    TTSAudio(text); // Call the Audio function with the selected text
-  }, [isFlipped, cards, currentCard]);
+    TTSAudio(text); // 선택된 텍스트로 TTS 함수 호출
+  }, [isFlipped, cards, currentCard, isTTSLoading]);
 
   const handleNextCard = useCallback(() => {
     console.log("ArrowRight");
     setIsFlipped(false);
     setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
   }, [cards.length]);
-  
+
   const handlePrevCard = useCallback(() => {
     setIsFlipped(false);
     setCurrentCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
@@ -423,7 +459,7 @@ const QuizletCardContent = ({
         <div className="flex items-center space-x-2">
           <button
             onClick={downloadQuizlet}
-            className="flex items-center justify-center gap-2 p-2 px-4 rounded-full bg-blue-500 backdrop-blur-sm text-white hover:bg-white hover:text-[#436bff] shadow-sm transition-colors"
+            className="flex items-center justify-center gap-2 p-2 px-4 rounded-full bg-blue-500 backdrop-blur-sm text-white hover:bg-blue-200 hover:text-[#436bff] shadow-sm transition-colors"
           >
             PDF <Download className="w-5 h-5" />
           </button>
@@ -433,11 +469,22 @@ const QuizletCardContent = ({
           >
             <FiCalendar className="w-5 h-5" />
           </button>
+
+          {/* TTS 버튼 - 로딩 상태에 따라 스타일과 내용 변경 */}
           <button
             onClick={readCardText}
-            className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
+            disabled={isTTSLoading}
+            className={`p-2 rounded-full ${
+              isTTSLoading
+                ? "bg-blue-500 text-white"
+                : "bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-blue-500 hover:text-white"
+            } shadow-sm transition-colors`}
           >
-            <HiOutlineSpeakerWave className="w-5 h-5" />
+            {isTTSLoading ? (
+              <LoadingSpinner />
+            ) : (
+              <HiOutlineSpeakerWave className="w-5 h-5" />
+            )}
           </button>
 
           <button
@@ -473,7 +520,7 @@ const QuizletCardContent = ({
           onClick={handlePrevCard}
           className="w-16 flex items-center justify-center cursor-pointer  hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
         >
-          <IoIosArrowBack className="text-4xl" />
+          <IoIosArrowBack className="text-4xl " />
         </div>
 
         <div
@@ -506,7 +553,7 @@ const QuizletCardContent = ({
               )}
 
               <div className="text-center w-full overflow-auto">
-                <h2 className="text-2xl font-bold leading-tight sm:text-7xl max-h-[400px] overflow-auto">
+                <h2 className="text-2xl font-bold leading-tight sm:text-7xl max-h-[400px]">
                   {isFlipped ? cards[currentCard][0] : cards[currentCard][1]}
                 </h2>
                 <p
@@ -583,7 +630,7 @@ const QuizletCardContent = ({
       <AnimatePresence>
         {showAlert && (
           <motion.div
-            className="fixed inset-0 flex items-center justify-center z-50 bg-gray-300 bg-opacity-50 backdrop-blur-sm"
+            className="fixed inset-0 flex items-center justify-center z-50 bg-gray-300  bg-opacity-50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

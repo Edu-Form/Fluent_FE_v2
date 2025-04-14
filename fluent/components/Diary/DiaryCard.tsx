@@ -1,6 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useMemo } from "react";
-import { FiChevronLeft, FiChevronRight, FiCalendar } from "react-icons/fi";
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiCalendar,
+  FiChevronDown,
+  FiChevronUp,
+} from "react-icons/fi";
 import { MdAutoFixHigh } from "react-icons/md";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -17,6 +23,47 @@ interface ErrorItem {
   errorEnd?: number;
   // 다른 필드가 있다면 추가할 수 있습니다
 }
+
+// Accordion 컴포넌트
+const Accordion = ({
+  title,
+  children,
+  isOpen = true,
+  toggleAccordion,
+}: {
+  title: string;
+  children: React.ReactNode;
+  isOpen?: boolean;
+  toggleAccordion: () => void;
+}) => {
+  return (
+    <div className="mb-4 sm:mb-6 border border-gray-200 rounded-lg overflow-hidden">
+      <div
+        className="text-sm sm:text-base font-bold text-gray-900 p-3 sm:p-5 cursor-pointer bg-gray-50 hover:bg-gray-100 flex items-center justify-between"
+        onClick={toggleAccordion}
+      >
+        <div className="flex items-center">{title}</div>
+        <div className="text-gray-500">
+          {isOpen ? <FiChevronUp size={20} /> : <FiChevronDown size={20} />}
+        </div>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+          >
+            <div className="p-3 sm:p-6 bg-white">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const content = {
   write: "일기 작성하기",
@@ -38,6 +85,11 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const [selectedError, setSelectedError] = useState<ErrorItem | null>(null);
   const [, setHighlightedText] = useState<string>("");
   const [sidebarOpen, setSidebarOpen] = useState(false); // For mobile view
+
+  // Accordion 상태 관리
+  const [summaryOpen, setSummaryOpen] = useState(true);
+  const [expressionsOpen, setExpressionsOpen] = useState(true);
+  const [correctedOpen, setCorrectedOpen] = useState(true);
 
   const openIsModal = () => setIsModalOpen(true);
   const closeIsModal = () => setIsModalOpen(false);
@@ -403,64 +455,51 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                     {renderHighlightedText()}
                   </div>
 
-                  {/* Summary Section*/}
-                  <details
-                    className="mb-4 sm:mb-6 border border-gray-200 rounded-lg"
-                    open
+                  {/* Accordion 으로 교체함 -> detail 도 좋았음 나중에 참고 detail open*/}
+                  <Accordion
+                    title="요약"
+                    isOpen={summaryOpen}
+                    toggleAccordion={() => setSummaryOpen(!summaryOpen)}
                   >
-                    <summary className="text-sm sm:text-base font-bold text-gray-900 p-3 sm:p-5 cursor-pointer bg-gray-50 hover:bg-gray-100">
-                      <div className="flex items-center">요약</div>
-                    </summary>
-                    <div className="p-3 sm:p-6 bg-white">
-                      <p className="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                        {diarySummary}
-                      </p>
-                    </div>
-                  </details>
+                    <p className="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                      {diarySummary}
+                    </p>
+                  </Accordion>
 
-                  {/* Key Expressions*/}
-                  <details
-                    className="mb-4 sm:mb-6 border border-gray-200 rounded-lg"
-                    open
+                  <Accordion
+                    title="주요 표현"
+                    isOpen={expressionsOpen}
+                    toggleAccordion={() => setExpressionsOpen(!expressionsOpen)}
                   >
-                    <summary className="text-sm sm:text-base font-bold text-gray-900 p-3 sm:p-5 cursor-pointer bg-gray-50 hover:bg-gray-100">
-                      <div className="flex items-center">주요 표현</div>
-                    </summary>
-                    <div className="p-3 sm:p-6 bg-white">
-                      <div className="space-y-2 sm:space-y-3">
-                        {diaryExpressions
-                          .split("\n")
-                          .filter((line: any) => line.trim())
-                          .map((expression: any, idx: any) => (
-                            <div
-                              key={idx}
-                              className="bg-blue-50 border border-blue-100 rounded-lg p-2 sm:p-4 flex items-start"
-                            >
-                              <span className="bg-blue-100 text-blue-800 w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center mr-2 sm:mr-4 flex-shrink-0 text-xs sm:text-sm">
-                                {idx + 1}
-                              </span>
-                              <p className="text-gray-700 text-xs sm:text-sm">
-                                {expression}
-                              </p>
-                            </div>
-                          ))}
-                      </div>
+                    <div className="space-y-2 sm:space-y-3">
+                      {diaryExpressions
+                        .split("\n")
+                        .filter((line: any) => line.trim())
+                        .map((expression: any, idx: any) => (
+                          <div
+                            key={idx}
+                            className="bg-blue-50 border border-blue-100 rounded-lg p-2 sm:p-4 flex items-start"
+                          >
+                            <span className="bg-blue-100 text-blue-800 w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center mr-2 sm:mr-4 flex-shrink-0 text-xs sm:text-sm">
+                              {idx + 1}
+                            </span>
+                            <p className="text-gray-700 text-xs sm:text-sm">
+                              {expression}
+                            </p>
+                          </div>
+                        ))}
                     </div>
-                  </details>
+                  </Accordion>
 
-                  <details
-                    className="mb-4 sm:mb-6 border border-gray-200 rounded-lg"
-                    open
+                  <Accordion
+                    title="수정된 일기"
+                    isOpen={correctedOpen}
+                    toggleAccordion={() => setCorrectedOpen(!correctedOpen)}
                   >
-                    <summary className="text-sm sm:text-base font-bold text-gray-900 p-3 sm:p-5 cursor-pointer bg-gray-50 hover:bg-gray-100">
-                      <div className="flex items-center">수정된 일기</div>
-                    </summary>
-                    <div className="p-3 sm:p-6 bg-white">
-                      <p className="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                        {diary.corrected_diary || ""}
-                      </p>
-                    </div>
-                  </details>
+                    <p className="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                      {diary.corrected_diary || ""}
+                    </p>
+                  </Accordion>
                 </div>
               </div>
 
