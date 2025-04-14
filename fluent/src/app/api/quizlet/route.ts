@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "Translate the following lines of text from English to Korean. Return each translation on a new line:\n\n",
+          "Translate the following English text into Korean.\n\nGuidelines:\n- Do not paraphrase. Aim for the most accurate, mirrored translation possible.\n- It is acceptable if the Korean sounds slightly unnatural in favor of a more accurate structure.\n- Use a semi-formal tone ending with ~했어, not ~했다.\n- Keep English terms that Koreans would typically use in English (e.g., product names, company names, or commonly known terms), but write them out phonetically in Korean (e.g., \"openai\" → \"오픈에이아이\").\n- Return each translated line on a new line, matching the order of the original.\n\n"
         },
         { role: "user", content: eng_quizlet_text },
       ],
