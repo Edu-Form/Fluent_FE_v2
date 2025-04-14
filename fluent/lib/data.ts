@@ -188,6 +188,37 @@ export async function saveScheduleData(schedule: any) {
   }
 }
 
+
+export async function deleteScheduleData(schedule_id: string): Promise<{ status: number; message: string }> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const objectId = new ObjectId(schedule_id); 
+
+    // Optional: Check if the schedule exists first
+    const existingSchedule = await db
+      .collection("quizlet")
+      .find({ _id: objectId })
+      .toArray();
+
+    console.log("Existing schedule:", existingSchedule);
+
+    if (existingSchedule.length === 0) {
+      return { status: 404, message: `Schedule with ID ${schedule_id} doesn't exist` };
+    }
+
+    const result = await db.collection("quizlet").deleteOne({ _id: objectId });
+
+    return { status: 200, message: `Schedule with ID ${schedule_id} deleted successfully` };
+  } catch (error) {
+    console.error("Error in deleteScheduleById:", error);
+    return { status: 500, message: "Database error" };
+  }
+}
+
+
+
+
 export async function getTodayScheduleData(date: string, user: string) {
   try {
     const client = await clientPromise;
