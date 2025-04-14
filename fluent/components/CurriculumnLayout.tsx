@@ -67,6 +67,20 @@ export default function CurriculumLayout({
       <div className="w-[20vw] bg-gray-800 text-white p-4 flex flex-col space-y-4 overflow-auto">
         <h1 className="font-bold">Curriculum</h1>
         <div className="w-[20vw] bg-gray-800 text-white p-4 flex flex-col space-y-2">
+          <Link
+            href={`/teacher/student/curriculum/class_record?user=${user}&type=teacher&id=${id}&student_name=${student_name}`}
+          >
+            <span
+              className={` text-xl font-bold block p-2 rounded ml-3 ${
+                pathname ===
+                `/teacher/student/curriculum/class_record?user=${user}&type=teacher&id=${id}&student_name=${student_name}`
+                  ? "bg-gray-700"
+                  : ""
+              }`}
+            >
+              Class Notes
+            </span>
+          </Link>
           <h2
             className="text-xl font-bold cursor-pointer flex items-center gap-1"
             onClick={() => setQuizletOpen(!Quizletopen)}
