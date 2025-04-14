@@ -529,7 +529,7 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                   {teacherName && teacherName.charAt(0).toUpperCase()}
                 </div>
                 <h2 className="text-lg font-semibold">
-                  {teacherName} 선생님의 다중 수업 등록
+                  {teacherName} 선생님 수업 등록
                 </h2>
               </div>
 
@@ -633,10 +633,7 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                 </div>
 
                 {/* 선택 요약 */}
-                {(selectedDates.length > 0 ||
-                  commonTime ||
-                  studentName ||
-                  commonRoom) && (
+                {
                   <div className="mt-8 bg-gray-50 p-4 rounded-lg">
                     <h3 className="text-sm font-medium text-gray-700 mb-2">
                       수업 등록 정보
@@ -668,7 +665,7 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                       </div>
                     </div>
                   </div>
-                )}
+                }
 
                 {/* 다음 단계 버튼 */}
                 <button
@@ -711,16 +708,13 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                     {schedules.length}개 수업 등록 확인 - {studentName} 학생
                   </h2>
                   <p className="text-sm text-gray-500">
-                    공통 수업 시간: {commonTime}:00
+                    수업 시간: {commonTime}:00
                   </p>
                 </div>
               </div>
 
               {/* 등록 요약 */}
               <div className="bg-white p-5 rounded-lg shadow-sm mb-6">
-                <h3 className="text-sm font-medium text-gray-700 mb-3">
-                  등록 상태 요약
-                </h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="bg-green-50 p-3 rounded-lg">
                     <p className="text-xs text-gray-500">등록 가능</p>
@@ -736,7 +730,7 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                   </div>
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-xs text-gray-500">전체 수업</p>
-                    <p className="text-2xl font-bold text-gray-600">
+                    <p className="text-2xl font-bold text-slate-600">
                       {schedules.length}
                     </p>
                   </div>
@@ -744,128 +738,132 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
               </div>
 
               {/* 수업 목록 및 충돌 상태 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {schedules.map((schedule) => (
-                  <div
-                    key={schedule.id}
-                    className={`p-4 rounded-lg border ${
-                      schedule.status === "conflict"
-                        ? "border-red-200 bg-red-50"
-                        : schedule.status === "success"
-                        ? "border-green-200 bg-green-50"
-                        : "border-gray-200 bg-gray-50"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                            schedule.status === "conflict"
-                              ? "bg-red-100 text-red-500"
-                              : schedule.status === "success"
-                              ? "bg-green-100 text-green-500"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
-                        >
+              <div className="flex flex-col h-1/2 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ">
+                  {schedules.map((schedule) => (
+                    <div
+                      key={schedule.id}
+                      className={`p-4 rounded-lg border ${
+                        schedule.status === "conflict"
+                          ? "border-red-200 bg-red-50"
+                          : schedule.status === "success"
+                          ? "border-green-200 bg-green-50"
+                          : "border-gray-200 bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center">
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                              schedule.status === "conflict"
+                                ? "bg-red-100 text-red-500"
+                                : schedule.status === "success"
+                                ? "bg-green-100 text-green-500"
+                                : "bg-gray-100 text-gray-500"
+                            }`}
+                          >
+                            {schedule.status === "conflict" ? (
+                              <AlertCircle size={16} />
+                            ) : schedule.status === "success" ? (
+                              <CheckCircle size={16} />
+                            ) : (
+                              <Clock size={16} />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium">
+                              {schedule.formattedDate}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {schedule.time}:00 | 강의실: {schedule.room}호
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center">
                           {schedule.status === "conflict" ? (
-                            <AlertCircle size={16} />
+                            <span className="px-2 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-full mr-2">
+                              충돌
+                            </span>
                           ) : schedule.status === "success" ? (
-                            <CheckCircle size={16} />
+                            <span className="px-2 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-full mr-2">
+                              가능
+                            </span>
                           ) : (
-                            <Clock size={16} />
+                            <span className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full mr-2">
+                              대기
+                            </span>
                           )}
-                        </div>
-                        <div>
-                          <div className="font-medium">
-                            {schedule.formattedDate}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {schedule.time}:00 | 강의실: {schedule.room}호
-                          </div>
+                          <button
+                            onClick={() => removeSchedule(schedule.id)}
+                            className="text-gray-400 hover:text-red-500 p-1"
+                          >
+                            <Trash size={16} />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center">
-                        {schedule.status === "conflict" ? (
-                          <span className="px-2 py-1 text-xs font-medium text-red-600 bg-red-100 rounded-full mr-2">
-                            충돌
-                          </span>
-                        ) : schedule.status === "success" ? (
-                          <span className="px-2 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-full mr-2">
-                            가능
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full mr-2">
-                            대기
-                          </span>
-                        )}
-                        <button
-                          onClick={() => removeSchedule(schedule.id)}
-                          className="text-gray-400 hover:text-red-500 p-1"
-                        >
-                          <Trash size={16} />
-                        </button>
-                      </div>
-                    </div>
 
-                    {/* 충돌이 있는 경우 다른 강의실 선택 UI */}
-                    {schedule.status === "conflict" && (
-                      <div className="mt-2 border-t border-red-200 pt-2">
-                        <p className="text-sm text-red-500 mb-2">
-                          다른 강의실 선택:
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {roomList
-                            .filter((r) => r !== schedule.room)
-                            .map((roomName) => (
-                              <button
-                                key={roomName}
-                                onClick={() =>
-                                  changeRoomForSchedule(schedule.id, roomName)
-                                }
-                                className="px-2 py-1 text-xs bg-white border border-gray-300 rounded-md hover:bg-gray-100"
-                              >
-                                {roomName}호
-                              </button>
-                            ))}
+                      {/* 충돌이 있는 경우 다른 강의실 선택 UI */}
+                      {schedule.status === "conflict" && (
+                        <div className="mt-2 border-t border-red-200 pt-2">
+                          <p className="text-sm text-red-500 mb-2">
+                            다른 강의실 선택
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {roomList
+                              .filter((r) => r !== schedule.room)
+                              .map((roomName) => (
+                                <button
+                                  key={roomName}
+                                  onClick={() =>
+                                    changeRoomForSchedule(schedule.id, roomName)
+                                  }
+                                  className="px-2 py-1 text-xs bg-white border border-gray-300 rounded-md hover:bg-gray-100"
+                                >
+                                  {roomName}호
+                                </button>
+                              ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* 하단 버튼 */}
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={goBack}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  이전
-                </button>
-                <button
-                  onClick={saveClasses}
-                  disabled={
-                    schedules.length === 0 ||
-                    schedules.some((s) => s.status === "conflict") ||
-                    isSubmitting
-                  }
-                  className={`px-6 py-2 rounded-lg font-medium flex items-center ${
-                    schedules.length > 0 &&
-                    !schedules.some((s) => s.status === "conflict") &&
-                    !isSubmitting
-                      ? "bg-blue-500 text-white hover:bg-blue-600"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader size={18} className="animate-spin mr-2" />
-                      등록 중...
-                    </>
-                  ) : (
-                    "수업 등록하기"
-                  )}
-                </button>
+              <div>
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    onClick={goBack}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    이전
+                  </button>
+                  <button
+                    onClick={saveClasses}
+                    disabled={
+                      schedules.length === 0 ||
+                      schedules.some((s) => s.status === "conflict") ||
+                      isSubmitting
+                    }
+                    className={`px-6 py-2 rounded-lg font-medium flex items-center ${
+                      schedules.length > 0 &&
+                      !schedules.some((s) => s.status === "conflict") &&
+                      !isSubmitting
+                        ? "bg-blue-500 text-white hover:bg-blue-600"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader size={18} className="animate-spin mr-2" />
+                        등록 중...
+                      </>
+                    ) : (
+                      "수업 등록하기"
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
