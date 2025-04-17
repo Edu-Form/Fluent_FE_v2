@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { saveScheduleData, deleteScheduleData } from "@/lib/data";
+import { saveScheduleData} from "@/lib/data";
 import { deductCredit } from "@/lib/data";
 
 export async function POST(request: Request) {
@@ -21,19 +21,3 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
-  try {
-    const { schedule_id } = await request.json();
-
-    if (!schedule_id) {
-      return NextResponse.json({ message: "No schedule ID provided" }, { status: 400 });
-    }
-
-    const { status, message } = await deleteScheduleData(schedule_id);
-
-    return NextResponse.json({ message }, { status });
-  } catch (error) {
-    console.error("Error deleting schedule:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  }
-}
