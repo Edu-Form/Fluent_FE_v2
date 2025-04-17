@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Calendar from "@toast-ui/calendar";
 import "@toast-ui/calendar/dist/toastui-calendar.min.css";
 import axios from "axios"; // Axios를 사용하여 API 호출
-import { API } from "@/utils/api";
 
 interface ToastUIProps {
   data: {
