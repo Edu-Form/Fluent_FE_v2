@@ -210,7 +210,7 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
 
     try {
       const response = await axios.delete(
-        `${API}/api/schedules/${selectedEvent.schedule_id}`
+        `/api/schedules/${selectedEvent.schedule_id}`
       );
 
       if (response.status === 200) {
