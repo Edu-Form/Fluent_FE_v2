@@ -18,7 +18,7 @@ export async function getStudentQuizletData(student_name: string) {
     const filteredQuizlets = await db
       .collection("quizlet")
       .find({ student_name })
-      .sort({ date: -1 })
+      .sort({ date: 1 })
       .toArray(); // Convert cursor to an array
 
     if (!filteredQuizlets || filteredQuizlets.length === 0) {
