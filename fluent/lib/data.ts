@@ -198,7 +198,7 @@ export async function deleteScheduleData(
 
     // Optional: Check if the schedule exists first
     const existingSchedule = await db
-      .collection("quizlet")
+      .collection("schedules")
       .find({ _id: objectId })
       .toArray();
 
