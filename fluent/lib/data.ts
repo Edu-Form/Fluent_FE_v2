@@ -193,7 +193,7 @@ export async function deleteScheduleData(
 ): Promise<{ status: number; message: string }> {
   try {
     const client = await clientPromise;
-    const db = client.db("room_allocation_db");
+    const db = client.db("school_management");
     const objectId = new ObjectId(schedule_id);
 
     // Optional: Check if the schedule exists first
