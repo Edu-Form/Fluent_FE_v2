@@ -211,7 +211,7 @@ export async function deleteScheduleData(
       };
     }
 
-    await db.collection("quizlet").deleteOne({ _id: objectId });
+    await db.collection("schedules").deleteOne({ _id: objectId });
 
     return {
       status: 200,
