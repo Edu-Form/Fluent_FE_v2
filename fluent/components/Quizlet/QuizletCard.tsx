@@ -13,6 +13,7 @@ import {
 } from "react-icons/bs";
 import { Download } from "lucide-react";
 import { jsPDF } from "jspdf";
+import { useSwipeable } from "react-swipeable"; // Import the react-swipeable hook
 
 // 로딩 스피너 컴포넌트
 const LoadingSpinner = () => (
@@ -87,6 +88,9 @@ const QuizletCardContent = ({
     [key: number]: boolean;
   }>({});
   const [isBookmark, setIsBookmark] = useState(false);
+
+  const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState(0);
 
   // TTS 로딩 상태 추가
   const [isTTSLoading, setIsTTSLoading] = useState(false);
@@ -267,15 +271,47 @@ const QuizletCardContent = ({
   }, [isFlipped, cards, currentCard, isTTSLoading]);
 
   const handleNextCard = useCallback(() => {
-    console.log("ArrowRight");
+    console.log("Next Card");
     setIsFlipped(false);
     setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
   }, [cards.length]);
 
   const handlePrevCard = useCallback(() => {
+    console.log("Previous Card");
     setIsFlipped(false);
     setCurrentCard((prev) => (prev === 0 ? cards.length - 1 : prev - 1));
   }, [cards.length]);
+
+  // 스와이프 핸들러 설정
+  const swipeHandlers = useSwipeable({
+    onSwiping: (eventData) => {
+      //수평선으로 스와이프
+      if (eventData.dir === "Left" || eventData.dir === "Right") {
+        setSwipeDirection(eventData.dir);
+        setSwipeOffset(eventData.deltaX);
+      }
+    },
+    onSwiped: (eventData) => {
+      const threshold = 75; // 어느정도되면 스와이프인지 판단하는 기준
+
+      if (eventData.dir === "Left" && Math.abs(eventData.deltaX) > threshold) {
+        handleNextCard();
+      } else if (
+        eventData.dir === "Right" &&
+        Math.abs(eventData.deltaX) > threshold
+      ) {
+        handlePrevCard();
+      }
+
+      // Reset swipe state
+      setSwipeDirection(null);
+      setSwipeOffset(0);
+    },
+    trackMouse: true, // 마우스 스와이프 지원
+    preventScrollOnSwipe: true,
+    delta: 10, // 스와이프 감도 조정
+    trackTouch: true, // 터치 스와이프 지원
+  });
 
   useEffect(() => {
     // 컴포넌트가 마운트되거나 content가 변경될 때 카드 초기화
@@ -514,24 +550,36 @@ const QuizletCardContent = ({
         </div>
       </div>
 
-      {/* 카드 컨텐츠  */}
+      {/* 카드 컨텐츠 - 손가락으로 스와이프 가능하게 수정 */}
       <div className="flex-grow flex items-stretch h-full">
         <div
           onClick={handlePrevCard}
-          className="w-16 flex items-center justify-center cursor-pointer  hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
+          className="w-16 flex items-center justify-center cursor-pointer hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
         >
-          <IoIosArrowBack className="text-4xl " />
+          <IoIosArrowBack className="text-4xl" />
         </div>
 
         <div
-          className="flex-grow flex flex-col items-center justify-center"
-          onClick={() => setIsFlipped(!isFlipped)}
+          {...swipeHandlers}
+          className="flex-grow flex flex-col items-center justify-center touch-pan-y"
         >
-          <div className="w-full h-full flex items-center justify-center">
+          <motion.div
+            className="w-full h-full flex items-center justify-center"
+            animate={{
+              x: swipeOffset,
+              opacity: swipeDirection ? 0.9 : 1,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 25,
+            }}
+          >
             <div
+              onClick={() => setIsFlipped(!isFlipped)}
               className={`w-full sm:max-w-4xl sm:h-4/5 bg-white rounded-3xl hover:bg-[#e9f2ff] shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
                 isFlipped
-                  ? "text-black border-4 border-sky-200  hover:bg-[#e9f2ff] scale-105  shadow-sky-100 "
+                  ? "text-black border-4 border-sky-200 hover:bg-[#e9f2ff] scale-105 shadow-sky-100"
                   : ""
               }`}
             >
@@ -565,7 +613,7 @@ const QuizletCardContent = ({
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
 
         <div
@@ -576,6 +624,30 @@ const QuizletCardContent = ({
         </div>
       </div>
 
+      {/* Swipe indicators - 스와이프 중에 나타나는 방향 표시 */}
+      <AnimatePresence>
+        {swipeDirection === "Left" && (
+          <motion.div
+            initial={{ opacity: 0, right: 20 }}
+            animate={{ opacity: 0.7, right: 10 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-1/2 transform -translate-y-1/2 bg-gray-200 p-4 rounded-full"
+          >
+            <IoIosArrowForward className="text-3xl text-gray-600" />
+          </motion.div>
+        )}
+        {swipeDirection === "Right" && (
+          <motion.div
+            initial={{ opacity: 0, left: 20 }}
+            animate={{ opacity: 0.7, left: 10 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-1/2 transform -translate-y-1/2 bg-gray-200 p-4 rounded-full"
+          >
+            <IoIosArrowBack className="text-3xl text-gray-600" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 카드 페이지 인디케이터 */}
       <div className="absolute bottom-10 left-0 right-0 flex justify-center">
         <div className="px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
@@ -585,7 +657,7 @@ const QuizletCardContent = ({
         </div>
       </div>
 
-      {/* Date Selection Popup */}
+      {/* 날짜 선택 팝업 */}
       {isDatePickerOpen && (
         <div className="absolute top-14 right-4 mt-2 z-50 bg-white rounded-lg shadow-lg">
           <div className="p-2 max-h-60 overflow-y-auto">
@@ -626,11 +698,11 @@ const QuizletCardContent = ({
         </div>
       )}
 
-      {/* 커스텀 알림창 */}
+      {/* 즐겨찾기 없음 알림창 */}
       <AnimatePresence>
         {showAlert && (
           <motion.div
-            className="fixed inset-0 flex items-center justify-center z-50 bg-gray-300  bg-opacity-50 backdrop-blur-sm"
+            className="fixed inset-0 flex items-center justify-center z-50 bg-gray-300 bg-opacity-50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -659,6 +731,45 @@ const QuizletCardContent = ({
 
               <p className="text-gray-800 font-medium text-center text-lg">
                 등록된 즐겨찾기가 없습니다
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 스와이프 사용법 안내 - 처음 실행 시 나타나는 안내 화면 */}
+      <AnimatePresence>
+        {cards.length > 0 && (
+          <motion.div
+            className="absolute inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center pointer-events-none"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ delay: 1.5, duration: 1 }}
+          >
+            <motion.div
+              className="text-white text-center"
+              initial={{ y: 20 }}
+              animate={{ y: 0 }}
+              transition={{ delay: 0.3, type: "spring" }}
+            >
+              <div className="flex items-center justify-center gap-8 mb-6">
+                <motion.div
+                  animate={{ x: [-20, 0] }}
+                  transition={{ repeat: 2, duration: 0.5 }}
+                >
+                  <IoIosArrowBack className="text-4xl" />
+                </motion.div>
+                <motion.div
+                  animate={{ x: [0, 20] }}
+                  transition={{ repeat: 2, duration: 0.5, delay: 0.2 }}
+                >
+                  <IoIosArrowForward className="text-4xl" />
+                </motion.div>
+              </div>
+              <p className="text-xl font-medium mb-2">스와이프로 카드 넘기기</p>
+              <p className="text-sm text-gray-300">
+                오른쪽/왼쪽으로 밀어서 이동
               </p>
             </motion.div>
           </motion.div>
@@ -707,3 +818,4 @@ export default function QuizletCard({
     </Suspense>
   );
 }
+export { QuizletCardContent };
