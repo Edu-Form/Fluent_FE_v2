@@ -11,34 +11,89 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No data provided" }, { status: 400 });
     }
 
-    const { original_text } = diaryData;
+    const { original_text, level } = diaryData;
 
-    // /// Diary Correction Version 1
-    // const ai_diary_correction = async (original_text: string) => {
-    //   const completion = await openaiClient.chat.completions.create({
-    //     model: "gpt-4",
-    //     messages: [
-    //       {
-    //         role: "system",
-    //         content:
-    //           "Your task is to correct a student's diary sentences with a limited number of corrections to improve their writing skills.\n" +
-    //           "Guidelines:\n" +
-    //           "- Focus on identifying only crucial English grammar mistakes.\n" +
-    //           "- Only correct the language aspect, refraining from altering spaces, commas, and similar punctuation.\n" +
-    //           "- Correct each sentence individually without combining them.\n" +
-    //           "- Respond only with the corrected text, without sentences like: " +
-    //           "'Sure / Certainly. Here are the corrections based on the given criteria.'",
-    //       },
-    //       {
-    //         role: "user",
-    //         content: `Here's the text to correct: ${original_text}`,
-    //       },
-    //     ],
-    //   });
+    const levelInstructions = {
+      level1: `
+        Limit the editing vocabulary & grammar to a preschooler ~ 1st grader.
+        Use only simple sentence structures.
+        No noun clauses.
+        No relative pronouns.
+        No gerunds.
+        No to-infinitives.
+        Feel free to vary sentence structure a little bit to make it sound more natural.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
+      level2: `
+        Limit the editing vocabulary & grammar to a 1st grader ~ 3rd grader.
+        Use only simple sentence structures but the sentences can get slightly longer.
+        No noun clauses.
+        No relative pronouns.
+        Encouraged to use simple gerunds.
+        Encouraged to use simple to-infinitives.
+        Feel free to vary sentence structure a little bit to make it sound more natural.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
+      level3: `
+        Limit the editing vocabulary & grammar to a 3rd grader ~ 6th grader.
+        You can creatively make the sentences slightly longer with simple grammar.
+        No noun clauses.
+        No relative pronouns.
+        Encouraged to use simple gerunds.
+        Encouraged to use simple to-infinitives.
+        Encouraged to use while / during / for.
+        Encouraged to use simple phrases and idioms to make the diary more natural (e.g., in the morning / on the weekend / went to bed).
+        Feel free to vary sentence structure a little bit to make it sound more natural.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
+      level4:`
+        Limit the editing vocabulary & grammar to a 3rd grader ~ 6th grader.
+        You can creatively make the sentences slightly longer with simple grammar.
+        No noun clauses.
+        No relative pronouns.
+        Encouraged to use simple gerunds.
+        Encouraged to use to-infinitives.
+        Encouraged to use while / during / for.
+        Encouraged to use simple phrases and idioms to make the diary more natural (e.g., in the morning / on the weekend / went to bed).
+        Creatively write more within the same level and context to make the diary more interesting.
+        Feel free to vary sentence structure a little bit to make it sound more natural.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
+      level5: `
+        Limit the editing vocabulary & grammar to a 5th ~ 6th grader.
+        You can creatively make the sentences slightly longer with simple grammar.
+        No noun clauses.
+        No relative pronouns.
+        Encouraged to use simple gerunds.
+        Encouraged to use simple to-infinitives.
+        Encouraged to use while / during / for.
+        Creatively write more within the same level and context to make the diary more interesting.
+        From a level 5 diary, edit the diary to focus on one major event instead of listing out simply what they did.
+        Emphasize characters and dialogue.
+        Start using quotes with expressions like "I was like", "she said", "he asked".
+        Feel free to vary sentence structure a little bit to make it sound more natural.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
+      level6:`
+        Limit the editing vocabulary & grammar to a 7th grader.
+        You can creatively make the sentences slightly longer with simple grammar.
+        No noun clauses.
+        No relative pronouns.
+        Encouraged to use simple gerunds.
+        Encouraged to use simple to-infinitives.
+        Encouraged to use while / during / for.
+        Encouraged to use casual native phrases and idioms to make the diary more natural.
+        Creatively write more within the same level and context to make the diary more interesting.
+        From a level 5 diary onwards, edit the diary to focus on one major event instead of listing out simply what they did.
+        Emphasize characters and dialogue.
+        Start using harder quotes and summarization expressions like "she said that ~", "I told her to", "he asked me if", "I thought that", "I heard that".
+        Feel free to vary sentence structure a little bit to make it sound more natural.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
 
-    //   return completion.choices[0]?.message?.content?.trim() ?? "";
-    // };
-    /// Diary Correction with Error Details
+    };
+
+    const selectedLevelInstruction = levelInstructions[`level${level as 1 | 2 | 3 | 4 | 5 | 6}`] || "";
     
     
     const ai_diary_correction = async (original_text: string) => {
@@ -63,6 +118,7 @@ export async function POST(request: Request) {
             - errorExplain MUST be in Korean. 
             - Ignore punctuation mistakes like commas, periods, and spaces.
             - Respond ONLY with a valid JSON object: { "errors": [...] }.
+            - Level-based instructions: ${selectedLevelInstruction}
             `,
           },
           {
@@ -104,7 +160,8 @@ export async function POST(request: Request) {
               "- Keep the original meaning and tone of the diary entry.\n" +
               "- Do not change the style unless necessary for proper grammar.\n" +
               "- Keep the language natural and suitable for a student.\n" +
-              "- Return only the corrected diary without additional commentary.",
+              "- Return only the corrected diary without additional commentary." +
+              `- Level-based instructions: ${selectedLevelInstruction}`
           },
           {
             role: "user",

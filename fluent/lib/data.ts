@@ -354,6 +354,7 @@ export async function saveDiaryData(
       student_name: diary.student_name,
       class_date: diary.class_date,
       date: diary.date,
+      level: diary.level,
       original_text: diary.original_text,
       diary_correction: diary_correction,
       corrected_diary: corrected_diary,

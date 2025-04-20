@@ -87,6 +87,16 @@ const DiaryPageContent: React.FC = () => {
   const [original_text, setOriginal_text] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [level, setLevel] = useState<number | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (!isNaN(value)) {
+      setLevel(value);
+    } else {
+      setLevel(null); // Reset if input is invalid
+    }
+  };
 
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
@@ -232,6 +242,20 @@ const DiaryPageContent: React.FC = () => {
                 </span>
               </div>
             )}
+            <div className="flex items-center gap-2">
+              <label htmlFor="level" className="text-sm font-medium">
+                Level:
+              </label>
+              <input
+                id="level"
+                type="number"
+                min={1}
+                max={6}
+                value={level ?? ''}
+                onChange={handleChange}
+                className="border rounded px-2 py-1 w-16"
+              />
+            </div>
           </div>
 
           <div className="flex items-center space-x-3">
