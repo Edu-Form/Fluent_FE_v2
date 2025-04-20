@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense, useEffect, useCallback } from "react";
+import { useState, Suspense, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { FiCalendar } from "react-icons/fi";
@@ -10,6 +10,8 @@ import {
   BsStarFill,
   BsBookmarkStar,
   BsBookmarkStarFill,
+  BsPlayFill,
+  BsPauseFill,
 } from "react-icons/bs";
 import { Download } from "lucide-react";
 import { jsPDF } from "jspdf";
@@ -92,11 +94,45 @@ const QuizletCardContent = ({
   const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
 
+  // 자동 재생 상태 추가
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [autoPlay, setAutoPlay] = useState(3000); // 기본 3초 간격
+
   // TTS 로딩 상태 추가
   const [isTTSLoading, setIsTTSLoading] = useState(false);
 
   // 즐겨찾기 알림을 위한 상태 추가
   const [showAlert, setShowAlert] = useState(false);
+
+  // 자동 재생 기능 시작/중지
+  const toggleAutoPlay = useCallback(() => {
+    setIsAutoPlaying((prev) => !prev);
+  }, []);
+
+  // 자동 재생 기능 구현
+  useEffect(() => {
+    // 타이머 정리 함수
+    const clearAutoPlayTimer = () => {
+      if (autoPlayTimerRef.current) {
+        clearInterval(autoPlayTimerRef.current);
+        autoPlayTimerRef.current = null;
+      }
+    };
+
+    // 자동 재생이 활성화되면 타이머 시작
+    if (isAutoPlaying) {
+      autoPlayTimerRef.current = setInterval(() => {
+        setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
+        setIsFlipped(false); // 카드가 변경될 때 앞면으로 초기화
+      }, autoPlay);
+    } else {
+      clearAutoPlayTimer(); // 자동 재생이 비활성화되면 타이머 정리
+    }
+
+    // 컴포넌트 언마운트 시 타이머 정리
+    return clearAutoPlayTimer;
+  }, [isAutoPlaying, autoPlay, cards.length]);
 
   // currentCard가 변경될 때마다 즐겨찾기 상태 체크
   useEffect(() => {
@@ -347,6 +383,10 @@ const QuizletCardContent = ({
         handlePrevCard();
       } else if (event.key === "ArrowDown") {
         setIsFlipped((prev) => !prev);
+      } else if (event.key === " " || event.key === "Spacebar") {
+        // 스페이스바로 자동 재생 토글
+        toggleAutoPlay();
+        event.preventDefault(); // 스페이스바의 기본 스크롤 동작 방지
       }
     };
 
@@ -354,7 +394,7 @@ const QuizletCardContent = ({
     return () => {
       window.removeEventListener("keydown", handleKeyPress);
     };
-  }, [handleNextCard, handlePrevCard]);
+  }, [handleNextCard, handlePrevCard, toggleAutoPlay]);
 
   // 키보드 / 키로 읽기 기능
   useEffect(() => {
@@ -550,13 +590,13 @@ const QuizletCardContent = ({
         </div>
       </div>
 
-      {/* 카드 컨텐츠 - 손가락으로 스와이프 가능하게 수정 */}
+      {/* 카드 컨텐츠  */}
       <div className="flex-grow flex items-stretch h-full">
         <div
           onClick={handlePrevCard}
           className="w-16 flex items-center justify-center cursor-pointer hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
         >
-          <IoIosArrowBack className="text-4xl" />
+          <IoIosArrowBack className="text-4xl hidden md:block" />
         </div>
 
         <div
@@ -577,9 +617,17 @@ const QuizletCardContent = ({
           >
             <div
               onClick={() => setIsFlipped(!isFlipped)}
-              className={`w-full sm:max-w-4xl sm:h-4/5 bg-white rounded-3xl hover:bg-[#e9f2ff] shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
+              className={`w-full sm:max-w-4xl sm:h-4/5 ${
+                isAutoPlaying
+                  ? "bg-purple-50 border-2 border-purple-300 shadow-purple-100"
+                  : "bg-white hover:bg-[#e9f2ff]"
+              } rounded-3xl shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
                 isFlipped
                   ? "text-black border-4 border-sky-200 hover:bg-[#e9f2ff] scale-105 shadow-sky-100"
+                  : ""
+              } ${
+                isAutoPlaying && !isFlipped
+                  ? "border-purple-300 shadow-purple-200"
                   : ""
               }`}
             >
@@ -620,9 +668,82 @@ const QuizletCardContent = ({
           onClick={handleNextCard}
           className="w-16 flex items-center justify-center cursor-pointer hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
         >
-          <IoIosArrowForward className="text-4xl" />
+          <IoIosArrowForward className="text-4xl hidden md:block" />
         </div>
       </div>
+
+      {/* 자동 재생 플로팅 버튼 */}
+      <motion.button
+        onClick={toggleAutoPlay}
+        className={`absolute right-6 bottom-24 p-4 rounded-full shadow-lg ${
+          isAutoPlaying ? "bg-blue-500 text-white" : "bg-white text-blue-500"
+        } z-20`}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      >
+        {isAutoPlaying ? (
+          <BsPauseFill className="w-6 h-6" />
+        ) : (
+          <BsPlayFill className="w-6 h-6" />
+        )}
+      </motion.button>
+
+      {/* 자동 재생 속도 조절 버튼 (자동 재생이 활성화된 경우에만 표시) */}
+      <AnimatePresence>
+        {isAutoPlaying && (
+          <motion.div
+            className="absolute right-6 bottom-40 bg-white rounded-full shadow-lg p-2 flex flex-col items-center gap-2 z-20"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+          >
+            <button
+              onClick={() => setAutoPlay(Math.max(1000, autoPlay - 500))}
+              className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+              title="더 빠르게"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+            </button>
+            <span className="text-xs font-medium text-gray-500">
+              {(autoPlay / 1000).toFixed(1)}초
+            </span>
+            <button
+              onClick={() => setAutoPlay(Math.min(10000, autoPlay + 500))}
+              className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
+              title="더 느리게"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Swipe indicators - 스와이프 중에 나타나는 방향 표시 */}
       <AnimatePresence>
@@ -737,11 +858,26 @@ const QuizletCardContent = ({
         )}
       </AnimatePresence>
 
+      {/* 자동재생 시작 알림 메시지 */}
+      <AnimatePresence>
+        {isAutoPlaying && (
+          <motion.div
+            className="absolute transform -translate-x-1/2 md:right-1/4  md:bottom-20 bg-black bg-opacity-70 text-white px-6 py-3 rounded-full"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            자동 재생 중 ({(autoPlay / 1000).toFixed(1)}초 간격)
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 스와이프 사용법 안내 - 처음 실행 시 나타나는 안내 화면 */}
       <AnimatePresence>
         {cards.length > 0 && (
           <motion.div
-            className="absolute inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center pointer-events-none"
+            className="absolute inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center pointer-events-none md:hidden"
             initial={{ opacity: 1 }}
             animate={{ opacity: 0 }}
             exit={{ opacity: 0 }}

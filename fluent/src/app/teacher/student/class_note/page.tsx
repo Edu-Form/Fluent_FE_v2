@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import "react-day-picker/dist/style.css";
-import CurriculumLayout from "@/components/CurriculumnLayout"; // Import the CurriculumLayout component
 
 // 날짜 포맷 함수들 유지
 const formatToISO = (date: string | undefined): string => {
@@ -558,7 +557,6 @@ const QuizletPageContent: React.FC = () => {
   );
 };
 
-
 // 메인 내보내기
 export default function QuizletPageWrapper(): ReactNode {
   return (
@@ -569,12 +567,5 @@ export default function QuizletPageWrapper(): ReactNode {
 }
 
 function QuizletPage(): ReactNode {
-  const searchParams = useSearchParams();
-  const user = searchParams.get("user") || "";
-  const id = searchParams.get("id") || "";
-  const student_name = searchParams.get("student_name") || "";
-
-  return (
-    <QuizletPageContent />
-  );
+  return <QuizletPageContent />;
 }
