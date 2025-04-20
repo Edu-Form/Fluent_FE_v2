@@ -109,7 +109,7 @@ const ClassPageContent: React.FC = () => {
     }
   }, [next_class_date]);
 
-  const postQuizlet = async (e: React.FormEvent): Promise<void> => {
+  const postCurriculum = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setLoading(true);
 
@@ -120,7 +120,7 @@ const ClassPageContent: React.FC = () => {
       }
 
       if (!original_text || original_text.trim().length === 0) {
-        throw new Error("퀴즐렛 내용을 입력해주세요.");
+        throw new Error("수업 내용을 입력해주세요.");
       }
 
       const payload = {
@@ -130,7 +130,7 @@ const ClassPageContent: React.FC = () => {
         original_text,
       };
 
-      const response = await fetch(`/api/quizlet/`, {
+      const response = await fetch(`/api/curriculum/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -139,23 +139,32 @@ const ClassPageContent: React.FC = () => {
         body: JSON.stringify(payload),
       });
 
-      console.log(payload);
+      console.log("Response:", response);
 
       if (response.ok) {
+        const responseData = await response.json(); // Parse the response JSON
+        const itemId = responseData.result?.id; 
+
+        if (!itemId) {
+          throw new Error("저장된 데이터의 ID를 가져올 수 없습니다.");
+        }
+
         setSaveSuccess(true);
         setTimeout(() => {
           try {
             // 안전한 리다이렉션 처리
-            const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+            const redirectUrl = `/teacher/student/curriculum/class_record/text?user=${encodeURIComponent(
               user
             )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-              user_id
-            )}`;
+              user_id)}&student_name=${encodeURIComponent(student_name)}&item_id=${itemId}`;
             router.push(redirectUrl);
           } catch (error) {
             console.error("리다이렉션 오류:", error);
             // 오류 발생 시 기본 경로로 이동
-            router.push("/teacher/home");
+            router.push(`/teacher/home?user=${encodeURIComponent(
+              user
+            )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+              user_id)}`);
           }
         }, 1500);
       } else {
@@ -165,7 +174,7 @@ const ClassPageContent: React.FC = () => {
         throw new Error(errorData.message || "저장에 실패했습니다.");
       }
     } catch (error) {
-      console.error("퀴즐렛 저장 오류:", error);
+      console.error("커리큘럼 저장 오류:", error);
       alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
     } finally {
       setLoading(false);
@@ -333,7 +342,7 @@ const handleText3 = async () => {
             </div>
             <h2 className="text-xl font-bold text-[#191F28] mb-2">저장 완료</h2>
             <p className="text-[#4E5968] text-center">
-              퀴즐렛이 성공적으로 저장되었습니다.
+              커리큘럼이 성공적으로 저장되었습니다.
               <br />
               교사 홈 페이지로 이동합니다.
             </p>
@@ -514,39 +523,9 @@ const handleText3 = async () => {
                     <line x1="12" y1="16" x2="12.01" y2="16"></line>
                   </svg>
                   <h3 className="text-sm font-bold text-[#3182F6]">
-                    작성 가이드
+                    Curriculumn 1, 2, 3버튼을 클릭해서 템플릿을 불러오세요.
                   </h3>
                 </div>
-                <ul className="text-xs text-[#4E5968] space-y-2">
-                  <li className="flex items-start">
-                    <span className="text-[#f63131] mr-2 text-sm leading-5">
-                      •
-                    </span>
-                    <span className="font-medium">
-                      번호를 꼭 적어주세요 1. 2. 3. 으로!!
-                    </span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-[#3182F6] mr-2 text-sm leading-5">
-                      •
-                    </span>
-                    <span>수업 중 배운 중요한 내용을 요약해 주세요.</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-[#3182F6] mr-2 text-sm leading-5">
-                      •
-                    </span>
-                    <span>
-                      학생이 어려워하는 부분을 중점적으로 기록해 주세요.
-                    </span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-[#3182F6] mr-2 text-sm leading-5">
-                      •
-                    </span>
-                    <span>다음 수업에서 복습할 내용을 포함해 주세요.</span>
-                  </li>
-                </ul>
               </div>
             </div>
 
@@ -584,7 +563,7 @@ const handleText3 = async () => {
       </header>
 
       <form
-        onSubmit={postQuizlet}
+        onSubmit={postCurriculum}
         className="flex-grow flex flex-col overflow-hidden"
       >
         {/* 메인 텍스트 영역 - 화면에 꽉 채움 */}
@@ -595,8 +574,8 @@ const handleText3 = async () => {
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setOriginal_text(e.target.value)
             }
-            className="flex-grow w-full p-10 text-5xl font-bold focus:outline-none bg-white text-[#333D4B] resize-none"
-            placeholder="1. Fluent  2. 퀴즐렛 이런식으로 번호를 먼저 입력하세요."
+            className="flex-grow w-full p-10 text-xl font-bold focus:outline-none bg-white text-[#333D4B] resize-none"
+            placeholder="Curriculumn 1, 2, 3 버튼을 클릭해서 템플릿을 불러오세요."
             disabled={loading}
           ></textarea>
 

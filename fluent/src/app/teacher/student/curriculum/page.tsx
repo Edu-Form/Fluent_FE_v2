@@ -9,7 +9,7 @@ export default function ClassNotePage({ searchParams }: { searchParams: any }) {
 
   return (
     <CurriculumLayout user={user} id={id} student_name={student_name}>
-      <div>
+      <div className="max-h-[95vh] w-[85vw]">
       </div>
     </CurriculumLayout>
   );

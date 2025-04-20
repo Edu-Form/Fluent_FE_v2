@@ -575,8 +575,6 @@ function QuizletPage(): ReactNode {
   const student_name = searchParams.get("student_name") || "";
 
   return (
-    <CurriculumLayout user={user} id={id} student_name={student_name}>
-      <QuizletPageContent />
-    </CurriculumLayout>
+    <QuizletPageContent />
   );
 }

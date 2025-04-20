@@ -33,6 +33,30 @@ export async function getStudentQuizletData(student_name: string) {
   }
 }
 
+export async function getStudentCurriculumData(student_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    // Find the quizlets related to the student name, sorted by date
+    const filteredCurriculum = await db
+      .collection("curriculum")
+      .find({ student_name })
+      .sort({ date: 1 })
+      .toArray(); // Convert cursor to an array
+
+    if (!filteredCurriculum || filteredCurriculum.length === 0) {
+      return null; // Return null if no quizlets are found
+    }
+
+    // Serialize the documents before returning (optional, but generally recommended)
+    return filteredCurriculum.map(serialize_document);
+  } catch (error) {
+    console.error("Error fetching curriculum:", error);
+    return null;
+  }
+}
+
 export async function getStudentDiaryData(student_name: string) {
   try {
     const client = await clientPromise;
@@ -386,6 +410,35 @@ export async function saveQuizletData(
   }
 }
 
+export async function saveCurriculumData(
+  curriculum: any
+) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const modified_curriculum = {
+      student_name: curriculum.student_name,
+      class_date: curriculum.class_date,
+      date: curriculum.date,
+      original_text: curriculum.original_text,
+    };
+
+    const result = await db.collection("curriculum").insertOne(modified_curriculum);
+
+    return {
+      status_code: 200,
+      id: result.insertedId.toString(),
+      student_name: curriculum.student_name,
+      date: curriculum.date,
+      curriculum: curriculum.original_text,
+    };
+  } catch (error) {
+    console.error("Error saving quizlet:", error);
+    throw new Error("Database error");
+  }
+}
+
 export async function getTeacherStatus(teacherName: string) {
   try {
     const client = await clientPromise;
@@ -424,6 +477,24 @@ export const getQuizletNoteData = async (_id: string) => {
     return quizletNote; // Serialize and return
   } catch (error) {
     console.error("Error fetching Quizlet Note:", error);
+    throw new Error("Database error");
+  }
+};
+
+export const getCurriculumNoteData = async (_id: string) => {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const objectId = new ObjectId(_id);
+
+    const curriculumNote = await db
+      .collection("curriculum")
+      .find({ _id: objectId })
+      .toArray(); // Convert to array (MongoDB cursor)
+    console.log(curriculumNote);
+    return curriculumNote; // Serialize and return
+  } catch (error) {
+    console.error("Error fetching Curriculum Note:", error);
     throw new Error("Database error");
   }
 };
