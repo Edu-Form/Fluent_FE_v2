@@ -94,10 +94,12 @@ const QuizletCardContent = ({
   const [swipeDirection, setSwipeDirection] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState(0);
 
-  // 자동 재생 상태 추가
+  // 자동 재생 관련 상태 및 변수
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [autoPlay, setAutoPlay] = useState(3000); // 기본 3초 간격
+  const [autoPlayPhase, setAutoPlayPhase] = useState(0);
+  // 0: 초기 상태(한글 표시), 1: 영어 표시 단계
 
   // TTS 로딩 상태 추가
   const [isTTSLoading, setIsTTSLoading] = useState(false);
@@ -108,6 +110,9 @@ const QuizletCardContent = ({
   // 자동 재생 기능 시작/중지
   const toggleAutoPlay = useCallback(() => {
     setIsAutoPlaying((prev) => !prev);
+    // 자동 재생 시작시 초기 상태로 설정
+    setAutoPlayPhase(0);
+    setIsFlipped(false);
   }, []);
 
   // 자동 재생 기능 구현
@@ -123,8 +128,17 @@ const QuizletCardContent = ({
     // 자동 재생이 활성화되면 타이머 시작
     if (isAutoPlaying) {
       autoPlayTimerRef.current = setInterval(() => {
-        setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
-        setIsFlipped(false); // 카드가 변경될 때 앞면으로 초기화
+        // 현재 단계에 따라 다른 동작 수행
+        if (autoPlayPhase === 0) {
+          // 한글 카드 보여주는 단계 -> 영어 카드로 전환
+          setIsFlipped(true);
+          setAutoPlayPhase(1);
+        } else {
+          // 영어 카드 보여주는 단계 -> 다음 카드로 넘어가고 한글 표시
+          setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
+          setIsFlipped(false);
+          setAutoPlayPhase(0);
+        }
       }, autoPlay);
     } else {
       clearAutoPlayTimer(); // 자동 재생이 비활성화되면 타이머 정리
@@ -132,7 +146,7 @@ const QuizletCardContent = ({
 
     // 컴포넌트 언마운트 시 타이머 정리
     return clearAutoPlayTimer;
-  }, [isAutoPlaying, autoPlay, cards.length]);
+  }, [isAutoPlaying, autoPlay, cards.length, autoPlayPhase]);
 
   // currentCard가 변경될 때마다 즐겨찾기 상태 체크
   useEffect(() => {
@@ -620,16 +634,22 @@ const QuizletCardContent = ({
               className={`w-full sm:max-w-4xl sm:h-4/5 ${
                 isAutoPlaying
                   ? "bg-purple-50 border-2 border-purple-300 shadow-purple-100"
-                  : "bg-white hover:bg-[#e9f2ff]"
+                  : "bg-white hover:bg-sky-50"
               } rounded-3xl shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
                 isFlipped
-                  ? "text-black border-4 border-sky-200 hover:bg-[#e9f2ff] scale-105 shadow-sky-100"
+                  ? "text-black border-2  border-sky-200 scale-105 shadow-sky-100"
                   : ""
               } ${
                 isAutoPlaying && !isFlipped
-                  ? "border-purple-300 shadow-purple-200"
+                  ? "border-purple-300 shadow-purple-100"
                   : ""
-              }`}
+              }
+              ${
+                isAutoPlaying && isFlipped
+                  ? "border-pink-200 shadow-pink-200 bg-pink-50"
+                  : ""
+              }
+              ${isCheckedView ? "bg-[#f0f8ff]" : ""}`}
             >
               {/* 즐겨찾기 버튼을 카드 내부 오른쪽 상단에 배치 */}
               {!isCheckedView && (
@@ -691,7 +711,27 @@ const QuizletCardContent = ({
         )}
       </motion.button>
 
-      {/* 자동 재생 속도 조절 버튼 (자동 재생이 활성화된 경우에만 표시) */}
+      {/* 자동재생 시작 알림 메시지 */}
+      <AnimatePresence>
+        {isAutoPlaying && (
+          <motion.div
+            className={`absolute transform -translate-x-1/2 right-24 bottom-24 md:right-24  md:bottom-24 bg-black bg-opacity-70 text-white px-6 py-3 rounded-full ${
+              autoPlayPhase === 0
+                ? "bg-purple-400 bg-opacity-50 shadow-lg "
+                : "bg-pink-400 bg-opacity-50 shadow-lg "
+            }`}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            자동재생 중({(autoPlay / 1000).toFixed(1)}초 간격)
+            {autoPlayPhase === 0 ? " 한글 표시" : " 영어 표시"}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 자동 재생 속도 조절 버튼  */}
       <AnimatePresence>
         {isAutoPlaying && (
           <motion.div
@@ -858,22 +898,7 @@ const QuizletCardContent = ({
         )}
       </AnimatePresence>
 
-      {/* 자동재생 시작 알림 메시지 */}
-      <AnimatePresence>
-        {isAutoPlaying && (
-          <motion.div
-            className="absolute transform -translate-x-1/2 md:right-1/4  md:bottom-20 bg-black bg-opacity-70 text-white px-6 py-3 rounded-full"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            자동 재생 중 ({(autoPlay / 1000).toFixed(1)}초 간격)
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 스와이프 사용법 안내 - 처음 실행 시 나타나는 안내 화면 */}
+      {/* 스와이프 사용법 안내 */}
       <AnimatePresence>
         {cards.length > 0 && (
           <motion.div
