@@ -134,6 +134,7 @@ const DiaryPageContent: React.FC = () => {
 
       const payload = {
         student_name: student_name || "",
+        level,
         class_date,
         date,
         original_text,

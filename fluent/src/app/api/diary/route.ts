@@ -22,7 +22,7 @@ export async function POST(request: Request) {
         No gerunds.
         No to-infinitives.
         Feel free to vary sentence structure a little bit to make it sound more natural.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        If there is any Korean that the student used because they didnt know how to write it in English, please translate those as well to naturally fit into the diary.
       `,
       level2: `
         Limit the editing vocabulary & grammar to a 1st grader ~ 3rd grader.

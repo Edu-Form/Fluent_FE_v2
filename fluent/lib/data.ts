@@ -340,7 +340,7 @@ export async function getUserData(
 }
 
 export async function saveDiaryData(
-  diary: any,
+  diaryData: any,
   diary_correction: any,
   corrected_diary: string,
   diary_expressions: string,
@@ -351,11 +351,11 @@ export async function saveDiaryData(
     const db = client.db("room_allocation_db");
 
     const modified_diary = {
-      student_name: diary.student_name,
-      class_date: diary.class_date,
-      date: diary.date,
-      level: diary.level,
-      original_text: diary.original_text,
+      student_name: diaryData.student_name,
+      class_date: diaryData.class_date,
+      date: diaryData.date,
+      level: diaryData.level,
+      original_text: diaryData.original_text,
       diary_correction: diary_correction,
       corrected_diary: corrected_diary,
       diary_expressions: diary_expressions,
@@ -367,8 +367,8 @@ export async function saveDiaryData(
     return {
       status_code: 200,
       id: result.insertedId.toString(),
-      student_name: diary.student_name,
-      date: diary.date,
+      student_name: diaryData.student_name,
+      date: diaryData.date,
       message: modified_diary,
     };
   } catch (error) {
