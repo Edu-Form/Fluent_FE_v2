@@ -130,7 +130,7 @@ const ClassPageContent: React.FC = () => {
         original_text,
       };
 
-      const response = await fetch("/api/quizlet/numbering", {
+      const response = await fetch(`/api/quizlet/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -142,29 +142,20 @@ const ClassPageContent: React.FC = () => {
       console.log("Response:", response);
 
       if (response.ok) {
-        const responseData = await response.json(); // Parse the response JSON
-        const itemId = responseData.result?.id; 
-
-        if (!itemId) {
-          throw new Error("저장된 데이터의 ID를 가져올 수 없습니다.");
-        }
-
         setSaveSuccess(true);
         setTimeout(() => {
           try {
             // 안전한 리다이렉션 처리
-            const redirectUrl = `/teacher/student/curriculum/class_record/text?user=${encodeURIComponent(
+            const redirectUrl = `/teacher/home?user=${encodeURIComponent(
               user
             )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-              user_id)}&student_name=${encodeURIComponent(student_name)}&item_id=${itemId}`;
+              user_id
+            )}`;
             router.push(redirectUrl);
           } catch (error) {
             console.error("리다이렉션 오류:", error);
             // 오류 발생 시 기본 경로로 이동
-            router.push(`/teacher/home?user=${encodeURIComponent(
-              user
-            )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-              user_id)}`);
+            router.push("/teacher/home");
           }
         }, 1500);
       } else {
@@ -311,7 +302,7 @@ const handleText3 = async () => {
   }
 
   return (
-    <div className="max-h-[95vh] w-[85vw] flex flex-col overflow-hidden bg-[#F9FAFB]">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#F9FAFB]">
       {/* 로딩 오버레이 */}
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
@@ -700,15 +691,8 @@ export default function ClassPageWrapper(): ReactNode {
 }
 
 function ClassPage(): ReactNode {
-  const searchParams = useSearchParams();
-  const user = searchParams.get("user") || "";
-  const id = searchParams.get("id") || "";
-  const student_name = searchParams.get("student_name") || "";
-
   return (
-    <CurriculumLayout user={user} id={id} student_name={student_name}>
-      <ClassPageContent />
-    </CurriculumLayout>
+    <ClassPageContent />
   );
 }
 

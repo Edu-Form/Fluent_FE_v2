@@ -13,7 +13,7 @@ const CurriculumContent = () => {
   useEffect(() => {
     const fetchText = async () => {
       if (itemId) {
-        const res = await fetch(`/api/curriculum/text/${itemId}`);
+        const res = await fetch(`/api/quizlet/text/${itemId}`);
         const data = await res.json();
         setText(data[0].original_text);
       }
@@ -22,12 +22,49 @@ const CurriculumContent = () => {
     fetchText();
   }, [itemId]);
 
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value); // Update the state when the text is edited
+  };
+
+  const saveText = async () => {
+    if (itemId) {
+      try {
+        const response = await fetch(`/api/quizlet/text/${itemId}`, {
+          method: "PUT", // Use PUT or POST depending on your API
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ original_text: text }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to save the text.");
+        }
+
+        alert("Text saved successfully!");
+      } catch (error) {
+        console.error("Error saving text:", error);
+        alert("Failed to save the text.");
+      }
+    }
+  };
+
   return (
     <div className="max-h-[95vh] w-[85vw] overflow-auto">
       <h1>Class Note</h1>
-      <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded text-sm leading-relaxed">
-        {text}
-      </pre>
+      <textarea
+        className="w-full h-[80vh] bg-gray-100 p-4 rounded text-sm leading-relaxed"
+        value={text}
+        onChange={handleTextChange} // Handle text changes
+      />
+      <div className="flex justify-end mt-4">
+        <button
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+          onClick={saveText} // Save the edited text
+        >
+          Save
+        </button>
+      </div>
     </div>
   );
 };

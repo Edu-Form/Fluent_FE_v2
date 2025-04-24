@@ -482,6 +482,32 @@ export const getQuizletNoteData = async (_id: string) => {
   }
 };
 
+export async function updateQuizletNoteData(quizlet_id: string, original_text: string) {
+  try {
+    const client = await clientPromise; // Ensure the MongoDB client is connected
+    const db = client.db("room_allocation_db"); // Use the correct database
+
+    // Convert the quizlet_id to an ObjectId
+    const objectId = new ObjectId(quizlet_id);
+
+    // Update the document in the "quizlet" collection
+    const result = await db.collection("quizlet").updateOne(
+      { _id: objectId }, // Match the document by its ObjectId
+      { $set: { original_text } } // Update the `original_text` field
+    );
+
+    if (result.modifiedCount === 0) {
+      return null; // No document was updated
+    }
+
+    // Return the updated data
+    return { quizlet_id, original_text };
+  } catch (error) {
+    console.error("Error updating quizlet note data:", error);
+    throw new Error("Failed to update quizlet note data");
+  }
+}
+
 export const getCurriculumNoteData = async (_id: string) => {
   try {
     const client = await clientPromise;

@@ -249,7 +249,7 @@ const HomePageContent = () => {
 
                           <td className="px-3 py-3 text-center">
                             <Link
-                              href={`/teacher/student/class_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
+                              href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
                               className="inline-flex items-center justify-center"
                             >
                               <div

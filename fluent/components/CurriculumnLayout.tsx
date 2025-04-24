@@ -59,23 +59,6 @@ export default function CurriculumLayout({
       }
     };
 
-    const fetchCurriculumData = async () => {
-      try {
-        const response = await fetch(`/api/curriculum/student/${student_name}`);
-
-        if (!response.ok) {
-          setText2Data([]);
-          return;
-        }
-
-        const curriculumData = await response.json();
-        setText3Data(curriculumData);
-      } catch (error) {
-        console.error("Error fetching diary data:", error);
-      }
-    };
-
-    fetchCurriculumData();
     fetchQuizletData();
     fetchDiaryData();
   }, [student_name]);
@@ -84,16 +67,14 @@ export default function CurriculumLayout({
     <div className="flex h-screen">
       {/* Sidebar */}
       <div className="w-[20vw] bg-gray-800 text-white p-4 flex flex-col space-y-4 overflow-auto">
-        <h1 className="font-bold">Curriculum</h1>
-        <div className="w-[20vw] bg-gray-800 text-white p-4 flex flex-col space-y-2">
-
+        <div className="flex flex-col space-y-4">
           <h2
             className="text-xl font-bold cursor-pointer flex items-center gap-1"
-            onClick={() => setCurriculumOpen(!Curriculumopen)}
+            onClick={() => setQuizletOpen(!Quizletopen)}
           >
-            {Curriculumopen ? "🔻" : "▶️"} Curriculum
+            {Quizletopen ? "🔻" : "▶️"} Class Notes
           </h2>
-          {Curriculumopen && (
+          {Quizletopen && (
             <>
               <Link
                 href={`/teacher/student/curriculum/class_record?user=${user}&type=teacher&id=${id}&student_name=${student_name}`}
@@ -106,12 +87,12 @@ export default function CurriculumLayout({
                       : ""
                   }`}
                 >
-                  수업 Notes 작성하기
+                Class Note 작성하기
                 </span>
               </Link>
               <nav className="">
-                {Array.isArray(text3Data) && text3Data.length > 0 ? (
-                  text3Data
+                {Array.isArray(textData) && textData.length > 0 ? (
+                  textData
                     .slice()
                     .reverse()
                     .map((item: any, index) => (
@@ -123,56 +104,6 @@ export default function CurriculumLayout({
                           className={`ml-3 block p-2 rounded ${
                             pathname ===
                             `/teacher/student/curriculum/class_record/text?user=${user}&type=teacher&id=${id}&student_name=${student_name}&item_id=${item._id}`
-                              ? "bg-gray-700"
-                              : ""
-                          }`}
-                        >
-                          {item.class_date}
-                        </span>
-                      </Link>
-                    ))
-                ) : (
-                  <p className="text-gray-400"></p>
-                )}
-              </nav>
-            </>
-          )}
-          <h2
-            className="text-xl font-bold cursor-pointer flex items-center gap-1"
-            onClick={() => setQuizletOpen(!Quizletopen)}
-          >
-            {Quizletopen ? "🔻" : "▶️"} Quizlet Notes
-          </h2>
-          {Quizletopen && (
-            <>
-              <Link
-                href={`/teacher/student/curriculum/class_note?user=${user}&type=teacher&id=${id}&student_name=${student_name}`}
-              >
-                <span
-                  className={`block p-2 rounded ml-3 ${
-                    pathname ===
-                    `/teacher/student/curriculum/class_note?user=${user}&type=teacher&id=${id}&student_name=${student_name}`
-                      ? "bg-gray-700"
-                      : ""
-                  }`}
-                >
-                  새로운 Quizlet 만들기
-                </span>
-              </Link>
-              <nav className="">
-                {Array.isArray(textData) && textData.length > 0 ? (
-                  textData
-                    .slice()
-                    .reverse()
-                    .map((item: any, index) => (
-                      <Link
-                        key={index}
-                        href={`/teacher/student/curriculum/class_note/text?user=${user}&type=teacher&id=${id}&student_name=${student_name}&item_id=${item._id}`}
-                      >
-                        <span
-                          className={`ml-3 block p-2 rounded ${
-                            pathname ===
-                            `/teacher/student/curriculum/class_note/text?user=${user}&type=teacher&id=${id}&student_name=${student_name}&item_id=${item._id}`
                               ? "bg-gray-700"
                               : ""
                           }`}
