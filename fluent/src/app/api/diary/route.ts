@@ -90,10 +90,64 @@ export async function POST(request: Request) {
         Feel free to vary sentence structure a little bit to make it sound more natural.
         If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
       `,
+      level7: `
+        Limit the editing vocabulary & grammar to an 8th grader.
+        You can creatively make the sentences longer with slightly more complex grammar.
+        Allowed to use noun clauses and relative pronouns sparingly.
+        Encouraged to use simple gerunds and to-infinitives.
+        Encouraged to use while / during / for.
+        Encouraged to use casual native phrases, idioms, and expressions to make the diary more natural.
+        Creatively write more within the same level and context to make the diary more interesting.
+        Focus on one major event or theme instead of listing out everything.
+        Emphasize characters and dialogue.
+        Actively use quotes and summarization expressions like "he mentioned that", "I realized that", "she told me to", "I wondered if".
+        Feel free to vary sentence structure to make the diary sound natural and engaging.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
+
+      level8: `
+        Limit the editing vocabulary & grammar to a 9th grader.
+        You can creatively use longer and more varied sentence structures.
+        Allowed to use noun clauses and relative pronouns.
+        Encouraged to use gerunds, to-infinitives, participle phrases, and transitional words.
+        Encouraged to use casual but vivid phrases, idioms, and expressions to make the diary come alive.
+        Creatively write more within the same level and context to enhance the diary’s narrative.
+        Focus on one major event or emotion instead of just listing actions.
+        Deepen characters and dialogue with more feelings and thoughts.
+        Actively use quotes and summarization expressions like "she reminded me that", "I asked him if", "I figured out that", "he explained that".
+        Feel free to vary sentence structure to create a more dynamic and natural diary entry.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
+
+      level9: `
+        Limit the editing vocabulary & grammar to a 10th grader.
+        You can creatively use complex and compound sentences.
+        Fully allowed to use noun clauses, relative pronouns, participle phrases, and a wider range of conjunctions.
+        Strongly encouraged to use vivid and natural expressions, idioms, and nuanced emotional vocabulary.
+        Creatively expand within the same level and context to develop a rich, engaging story.
+        Focus on one major event, emotion, or reflection to give the diary a clear center.
+        Deepen character interactions and dialogue to show personality and emotional growth.
+        Actively use quotes, indirect speech, and summarization expressions like "he wondered if", "I felt that", "she insisted that".
+        Vary sentence structures and rhythm to create a more natural, flowing diary style.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,
+
+      level10: `
+        Limit the editing vocabulary & grammar to an 11th grader.
+        You can fully use complex sentences, figurative language, and sophisticated expressions.
+        Fully allowed and encouraged to use noun clauses, relative pronouns, participle phrases, advanced conjunctions, and transitions.
+        Use vivid and emotionally rich language to create an engaging and authentic voice.
+        Creatively expand within the same level and context to craft a cohesive and compelling narrative.
+        Focus on one major theme, event, or deep reflection rather than a list of activities.
+        Develop characters, dialogue, and inner thoughts with nuance and depth.
+        Actively use quotes, indirect speech, and summarization expressions like "I realized that", "he confessed that", "she questioned whether", "I knew that".
+        Vary sentence structures intentionally to create flow, voice, and emotional impact.
+        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+      `,    // Check if the level is valid
 
     };
 
-    const selectedLevelInstruction = levelInstructions[`level${level as 1 | 2 | 3 | 4 | 5 | 6}`] || "";
+    const selectedLevelInstruction = levelInstructions[`level${level as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`] || "";
     
     
     const ai_diary_correction = async (original_text: string) => {
