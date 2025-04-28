@@ -225,7 +225,7 @@ const DiaryPageContent: React.FC = () => {
             <p className="text-[#4E5968] text-center">
               다이어리가 성공적으로 저장되었습니다.
               <br />
-              교사 홈 페이지로 이동합니다.
+              교사 홈페이지로 이동합니다.
             </p>
           </div>
         </div>
@@ -252,7 +252,7 @@ const DiaryPageContent: React.FC = () => {
                 type="number"
                 min={1}
                 max={6}
-                value={level ?? ''}
+                value={level ?? ""}
                 onChange={handleChange}
                 className="border rounded px-2 py-1 w-16"
               />
