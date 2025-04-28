@@ -52,6 +52,11 @@ interface QuizletCardProps {
   cards: any[];
 }
 
+// 오디오 버퍼를 위한 인터페이스 정의
+interface AudioBuffers {
+  [key: string]: string;
+}
+
 function shuffleCards(cards: string[][]) {
   // Use a traditional Fisher-Yates (Durstenfeld) shuffle algorithm
   for (let i = cards.length - 1; i > 0; i--) {
@@ -77,6 +82,13 @@ const QuizletCardContent = ({
   const engWords = content.eng_quizlet || [];
   const korWords = content.kor_quizlet || [];
 
+  // 버튼 쿨다운 관련 상태 추가
+  const [autoPlayButtonCooldown, setAutoPlayButtonCooldown] = useState(false);
+  const [pauseButtonCooldown, setPauseButtonCooldown] = useState(false);
+  const [stopButtonCooldown, setStopButtonCooldown] = useState(false);
+  // 쿨다운 시간 (밀리초)
+  const cooldownTime = 3000; // 3초
+
   // 단어 쌍 생성
   const [cards, setCards] = useState(
     engWords.map((eng, index) => [eng, korWords[index] || "", "0"])
@@ -97,56 +109,193 @@ const QuizletCardContent = ({
   // 자동 재생 관련 상태 및 변수
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [autoPlay, setAutoPlay] = useState(3000); // 기본 3초 간격
-  const [autoPlayPhase, setAutoPlayPhase] = useState(0);
+  const [autoPlay] = useState(3000); // 기본 3초 간격
+  const [, setAutoPlayPhase] = useState(0);
   // 0: 초기 상태(한글 표시), 1: 영어 표시 단계
 
   // TTS 로딩 상태 추가
   const [isTTSLoading, setIsTTSLoading] = useState(false);
 
+  // 오디오 버퍼 상태 추가
+  const [audioBuffers, setAudioBuffers] = useState<AudioBuffers>({});
+  const [isPreparingAudio, setIsPreparingAudio] = useState<boolean>(false);
+
+  // 자동 재생 일시 정지 상태 추가
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+
   // 즐겨찾기 알림을 위한 상태 추가
   const [showAlert, setShowAlert] = useState(false);
 
-  // 자동 재생 기능 시작/중지
-  const toggleAutoPlay = useCallback(() => {
-    setIsAutoPlaying((prev) => !prev);
-    // 자동 재생 시작시 초기 상태로 설정
+  // 모든 카드의 TTS 데이터를 미리 준비하는 함수
+  async function prepareAllAudioData(): Promise<AudioBuffers> {
+    setIsPreparingAudio(true);
+    const buffers: AudioBuffers = {};
+
+    try {
+      // 각 카드의 한국어와 영어 텍스트에 대해 TTS 데이터 준비
+      for (let i = 0; i < cards.length; i++) {
+        // 한국어 오디오 준비
+        const korResponse = await fetch("/api/quizlet/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: cards[i][1] }),
+        });
+
+        // 영어 오디오 준비
+        const engResponse = await fetch("/api/quizlet/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: cards[i][0] }),
+        });
+
+        if (korResponse.ok && engResponse.ok) {
+          const korBlob = await korResponse.blob();
+          const engBlob = await engResponse.blob();
+
+          buffers[`${i}_kor`] = URL.createObjectURL(korBlob);
+          buffers[`${i}_eng`] = URL.createObjectURL(engBlob);
+        }
+      }
+
+      setAudioBuffers(buffers);
+    } catch (error) {
+      console.error("Error preparing audio data:", error);
+    }
+
+    setIsPreparingAudio(false);
+    return buffers;
+  }
+
+  // 자동 재생 토글 시 오디오 데이터 준비
+  const toggleAutoPlay = useCallback(async (): Promise<void> => {
+    if (autoPlayButtonCooldown) return; // 쿨다운 중이면 실행하지 않음
+
+    setAutoPlayButtonCooldown(true);
+    setTimeout(() => setAutoPlayButtonCooldown(false), cooldownTime);
+
+    if (!isAutoPlaying) {
+      // 자동 재생 시작
+      setIsPreparingAudio(true);
+
+      // 자동 재생 시작 전에 오디오 데이터 준비
+      if (Object.keys(audioBuffers).length < cards.length * 2) {
+        const buffers = await prepareAllAudioData();
+        if (Object.keys(buffers).length < cards.length * 2) {
+          // 준비 실패 시 자동 재생 시작하지 않음
+          setIsPreparingAudio(false);
+          return;
+        }
+      }
+
+      setIsPreparingAudio(false);
+      setIsAutoPlaying(true);
+      setIsPaused(false);
+      setAutoPlayPhase(0);
+      setIsFlipped(false);
+      setCurrentCard(0);
+    } else {
+      // 자동 재생 중지
+      stopAutoPlay();
+    }
+  }, [isAutoPlaying, cards.length, audioBuffers]);
+
+  // 자동 재생 일시 정지 토글
+  const togglePause = useCallback((): void => {
+    if (pauseButtonCooldown) return; // 쿨다운 중이면 실행하지 않음
+
+    setPauseButtonCooldown(true);
+    setTimeout(() => setPauseButtonCooldown(false), cooldownTime);
+
+    setIsPaused((prev) => !prev);
+  }, [pauseButtonCooldown]);
+
+  // 자동 재생 완전 중지
+  const stopAutoPlay = useCallback((): void => {
+    if (stopButtonCooldown) return; // 쿨다운 중이면 실행하지 않음
+
+    setStopButtonCooldown(true);
+    setTimeout(() => setStopButtonCooldown(false), cooldownTime);
+
+    // 현재 타이머 정리
+    if (autoPlayTimerRef.current) {
+      clearTimeout(autoPlayTimerRef.current);
+      autoPlayTimerRef.current = null;
+    }
+
+    // 자동 재생 상태 초기화
+    setIsAutoPlaying(false);
+    setIsPaused(false);
     setAutoPlayPhase(0);
-    setIsFlipped(false);
   }, []);
 
   // 자동 재생 기능 구현
   useEffect(() => {
-    // 타이머 정리 함수
-    const clearAutoPlayTimer = () => {
+    const clearAutoPlayTimer = (): void => {
       if (autoPlayTimerRef.current) {
-        clearInterval(autoPlayTimerRef.current);
+        clearTimeout(autoPlayTimerRef.current);
         autoPlayTimerRef.current = null;
       }
     };
 
-    // 자동 재생이 활성화되면 타이머 시작
-    if (isAutoPlaying) {
-      autoPlayTimerRef.current = setInterval(() => {
-        // 현재 단계에 따라 다른 동작 수행
-        if (autoPlayPhase === 0) {
-          // 한글 카드 보여주는 단계 -> 영어 카드로 전환
-          setIsFlipped(true);
-          setAutoPlayPhase(1);
-        } else {
-          // 영어 카드 보여주는 단계 -> 다음 카드로 넘어가고 한글 표시
-          setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
-          setIsFlipped(false);
-          setAutoPlayPhase(0);
+    if (isAutoPlaying && !isPaused) {
+      const playCurrentAudio = async (): Promise<void> => {
+        const audioKey = isFlipped
+          ? `${currentCard}_eng`
+          : `${currentCard}_kor`;
+
+        if (audioBuffers[audioKey]) {
+          const audio = new Audio(audioBuffers[audioKey]);
+
+          // 오디오 재생이 끝나면 다음 단계로 진행
+          return new Promise<void>((resolve) => {
+            audio.onended = (): void => resolve();
+            audio.onerror = (): void => resolve(); // 에러 발생해도 계속 진행
+            audio.play().catch(() => resolve()); // 재생 실패해도 계속 진행
+          });
         }
-      }, autoPlay);
-    } else {
-      clearAutoPlayTimer(); // 자동 재생이 비활성화되면 타이머 정리
+
+        return Promise.resolve(); // 오디오가 없으면 즉시 다음 단계로 진행
+      };
+
+      const handleAutoPlayStep = async (): Promise<void> => {
+        // 현재 오디오 재생
+        await playCurrentAudio();
+
+        // 일시정지 상태 확인
+        if (isPaused) return;
+
+        // 다음 단계 결정
+        if (isFlipped) {
+          // 영어 카드를 보여주고 있었다면, 다음 카드로 이동
+          setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
+          setIsFlipped(false); // 한글 카드로 전환
+        } else {
+          // 한글 카드를 보여주고 있었다면, 영어 카드로 뒤집기
+          setIsFlipped(true);
+        }
+
+        // 다음 단계 예약 (일시정지 상태가 아닐 때만)
+        if (!isPaused) {
+          autoPlayTimerRef.current = setTimeout(() => {
+            handleAutoPlayStep();
+          }, autoPlay);
+        }
+      };
+
+      // 첫 단계 시작
+      handleAutoPlayStep();
     }
 
-    // 컴포넌트 언마운트 시 타이머 정리
     return clearAutoPlayTimer;
-  }, [isAutoPlaying, autoPlay, cards.length, autoPlayPhase]);
+  }, [
+    isAutoPlaying,
+    isPaused,
+    isFlipped,
+    currentCard,
+    cards.length,
+    audioBuffers,
+    autoPlay,
+  ]);
 
   // currentCard가 변경될 때마다 즐겨찾기 상태 체크
   useEffect(() => {
@@ -385,12 +534,17 @@ const QuizletCardContent = ({
         initialFavorites[index] = false;
       });
       setFavoriteCards(initialFavorites);
+
+      // 오디오 버퍼 초기화
+      setAudioBuffers({});
     }
   }, [content]);
 
   // 키보드 방향키 카드 네비게이션
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
+      if (isAutoPlaying || isPreparingAudio) return; // 자동 재생 중에는 키보드 네비게이션 비활성화
+
       if (event.key === "ArrowRight") {
         handleNextCard();
       } else if (event.key === "ArrowLeft") {
@@ -408,11 +562,19 @@ const QuizletCardContent = ({
     return () => {
       window.removeEventListener("keydown", handleKeyPress);
     };
-  }, [handleNextCard, handlePrevCard, toggleAutoPlay]);
+  }, [
+    handleNextCard,
+    handlePrevCard,
+    toggleAutoPlay,
+    isAutoPlaying,
+    isPreparingAudio,
+  ]);
 
   // 키보드 / 키로 읽기 기능
   useEffect(() => {
     const handleSlashKey = (event: KeyboardEvent) => {
+      if (isAutoPlaying || isPreparingAudio) return; // 자동 재생 중에는 TTS 비활성화
+
       if (event.key === "Enter") {
         readCardText();
       }
@@ -423,7 +585,14 @@ const QuizletCardContent = ({
     return () => {
       window.removeEventListener("keydown", handleSlashKey);
     };
-  }, [content, currentCard, isFlipped, readCardText]);
+  }, [
+    content,
+    currentCard,
+    isFlipped,
+    readCardText,
+    isAutoPlaying,
+    isPreparingAudio,
+  ]);
 
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {
@@ -549,13 +718,23 @@ const QuizletCardContent = ({
         <div className="flex items-center space-x-2">
           <button
             onClick={downloadQuizlet}
-            className="flex items-center justify-center gap-2 p-2 px-4 rounded-full bg-blue-500 backdrop-blur-sm text-white hover:bg-blue-200 hover:text-[#436bff] shadow-sm transition-colors"
+            disabled={isAutoPlaying || isPreparingAudio}
+            className={`flex items-center justify-center gap-2 p-2 px-4 rounded-full ${
+              isAutoPlaying || isPreparingAudio
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-500 backdrop-blur-sm text-white hover:bg-blue-200 hover:text-[#436bff]"
+            } shadow-sm transition-colors`}
           >
             PDF <Download className="w-5 h-5" />
           </button>
           <button
             onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-            className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
+            disabled={isAutoPlaying || isPreparingAudio}
+            className={`p-2 rounded-full ${
+              isAutoPlaying || isPreparingAudio
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white"
+            } shadow-sm transition-colors`}
           >
             <FiCalendar className="w-5 h-5" />
           </button>
@@ -563,10 +742,12 @@ const QuizletCardContent = ({
           {/* TTS 버튼 - 로딩 상태에 따라 스타일과 내용 변경 */}
           <button
             onClick={readCardText}
-            disabled={isTTSLoading}
+            disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
             className={`p-2 rounded-full ${
               isTTSLoading
                 ? "bg-blue-500 text-white"
+                : isAutoPlaying || isPreparingAudio
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-blue-500 hover:text-white"
             } shadow-sm transition-colors`}
           >
@@ -579,7 +760,12 @@ const QuizletCardContent = ({
 
           <button
             onClick={playCheckedCards}
-            className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-sm transition-colors"
+            disabled={isAutoPlaying || isPreparingAudio}
+            className={`p-2 rounded-full ${
+              isAutoPlaying || isPreparingAudio
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-white/80 backdrop-blur-sm hover:bg-white"
+            } shadow-sm transition-colors`}
           >
             {isBookmark ? (
               <BsBookmarkStarFill className="w-5 h-5 text-yellow-500" />
@@ -590,7 +776,12 @@ const QuizletCardContent = ({
 
           <button
             onClick={shuffled}
-            className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white shadow-sm transition-colors"
+            disabled={isAutoPlaying || isPreparingAudio}
+            className={`p-2 rounded-full ${
+              isAutoPlaying || isPreparingAudio
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-white/80 backdrop-blur-sm text-gray-600 hover:bg-white"
+            } shadow-sm transition-colors`}
           >
             <BsShuffle className="w-5 h-5" />
           </button>
@@ -607,14 +798,20 @@ const QuizletCardContent = ({
       {/* 카드 컨텐츠  */}
       <div className="flex-grow flex items-stretch h-full">
         <div
-          onClick={handlePrevCard}
-          className="w-16 flex items-center justify-center cursor-pointer hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
+          onClick={
+            isAutoPlaying || isPreparingAudio ? undefined : handlePrevCard
+          }
+          className={`w-16 flex items-center justify-center ${
+            isAutoPlaying || isPreparingAudio
+              ? "text-gray-300 cursor-not-allowed"
+              : "cursor-pointer hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
+          }`}
         >
           <IoIosArrowBack className="text-4xl hidden md:block" />
         </div>
 
         <div
-          {...swipeHandlers}
+          {...(!isAutoPlaying && !isPreparingAudio ? swipeHandlers : {})}
           className="flex-grow flex flex-col items-center justify-center touch-pan-y"
         >
           <motion.div
@@ -630,14 +827,20 @@ const QuizletCardContent = ({
             }}
           >
             <div
-              onClick={() => setIsFlipped(!isFlipped)}
+              onClick={
+                isAutoPlaying || isPreparingAudio
+                  ? undefined
+                  : () => setIsFlipped(!isFlipped)
+              }
               className={`w-full sm:max-w-4xl sm:h-4/5 ${
                 isAutoPlaying
                   ? "bg-purple-50 border-2 border-purple-300 shadow-purple-100"
-                  : "bg-white hover:bg-sky-50"
+                  : isPreparingAudio
+                  ? "bg-gray-50 border-2 border-gray-300"
+                  : "bg-white hover:bg-sky-50 cursor-pointer"
               } rounded-3xl shadow-xl flex items-center justify-center p-10 transform transition-all duration-300 relative ${
                 isFlipped
-                  ? "text-black border-2  border-sky-200 scale-105 shadow-sky-100"
+                  ? "text-black border-2 border-sky-200 scale-105 shadow-sky-100"
                   : ""
               } ${
                 isAutoPlaying && !isFlipped
@@ -652,7 +855,7 @@ const QuizletCardContent = ({
               ${isCheckedView ? "bg-[#f0f8ff]" : ""}`}
             >
               {/* 즐겨찾기 버튼을 카드 내부 오른쪽 상단에 배치 */}
-              {!isCheckedView && (
+              {!isCheckedView && !isAutoPlaying && !isPreparingAudio && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent card flip
@@ -669,118 +872,233 @@ const QuizletCardContent = ({
               )}
 
               <div className="text-center w-full overflow-auto">
-                <h2 className="text-2xl font-bold leading-tight sm:text-7xl max-h-[400px]">
-                  {isFlipped ? cards[currentCard][0] : cards[currentCard][1]}
-                </h2>
-                <p
-                  className={`mt-8 text-gray-400 sm:text-xl text-sm ${
-                    isFlipped ? "text-gray-400" : ""
-                  }`}
-                >
-                  탭하여 {isFlipped ? "한국어" : "영어"}로 전환
-                </p>
+                {isPreparingAudio ? (
+                  <div className="flex flex-col items-center justify-center space-y-6">
+                    <LoadingSpinner />
+                    <p className="text-2xl font-medium text-gray-500">
+                      오디오 준비 중...
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold leading-tight sm:text-7xl max-h-[400px]">
+                      {isFlipped
+                        ? cards[currentCard][0]
+                        : cards[currentCard][1]}
+                    </h2>
+                    <p
+                      className={`mt-8 text-gray-400 sm:text-xl text-sm ${
+                        isFlipped ? "text-gray-400" : ""
+                      }`}
+                    >
+                      {isAutoPlaying
+                        ? "자동 재생 중..."
+                        : `탭하여 ${isFlipped ? "한국어" : "영어"}로 전환`}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
         </div>
 
         <div
-          onClick={handleNextCard}
-          className="w-16 flex items-center justify-center cursor-pointer hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
+          onClick={
+            isAutoPlaying || isPreparingAudio ? undefined : handleNextCard
+          }
+          className={`w-16 flex items-center justify-center ${
+            isAutoPlaying || isPreparingAudio
+              ? "text-gray-300 cursor-not-allowed"
+              : "cursor-pointer hover:bg-[#b8d4ff] transition-colors text-gray-400 hover:text-gray-600"
+          }`}
         >
           <IoIosArrowForward className="text-4xl hidden md:block" />
         </div>
       </div>
 
-      {/* 자동 재생 플로팅 버튼 */}
-      <motion.button
-        onClick={toggleAutoPlay}
-        className={`absolute right-6 bottom-24 p-4 rounded-full shadow-lg ${
-          isAutoPlaying ? "bg-blue-500 text-white" : "bg-white text-blue-500"
-        } z-20`}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      >
-        {isAutoPlaying ? (
-          <BsPauseFill className="w-6 h-6" />
-        ) : (
-          <BsPlayFill className="w-6 h-6" />
+      {/* 자동 재생 컨트롤 버튼들 */}
+      <AnimatePresence>
+        {isAutoPlaying && (
+          <motion.div
+            className="absolute bottom-24 right-6 flex gap-2 z-20"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* 일시정지/재생 버튼 */}
+            <motion.button
+              onClick={togglePause}
+              disabled={pauseButtonCooldown}
+              className={`p-4 rounded-full ${
+                pauseButtonCooldown
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-blue-500 text-white shadow-lg"
+              }`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {pauseButtonCooldown ? (
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <circle
+                      className="text-blue-300"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeDasharray="62.83"
+                      strokeDashoffset="0"
+                      strokeLinecap="round"
+                    >
+                      <animate
+                        attributeName="stroke-dashoffset"
+                        from="0"
+                        to="62.83"
+                        dur="5s"
+                        fill="freeze"
+                      />
+                    </circle>
+                  </svg>
+                </div>
+              ) : isPaused ? (
+                <BsPlayFill className="w-6 h-6" />
+              ) : (
+                <BsPauseFill className="w-6 h-6" />
+              )}
+            </motion.button>
+            {/* 중지 버튼 */}
+            <motion.button
+              onClick={stopAutoPlay}
+              disabled={stopButtonCooldown}
+              className={`p-4 rounded-full ${
+                stopButtonCooldown
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-gray-700 text-white shadow-lg"
+              }`}
+              whileHover={{ scale: stopButtonCooldown ? 1 : 1.1 }}
+              whileTap={{ scale: stopButtonCooldown ? 1 : 0.95 }}
+            >
+              {stopButtonCooldown ? (
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <circle
+                      className="text-gray-300"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeDasharray="62.83"
+                      strokeDashoffset="0"
+                      strokeLinecap="round"
+                    >
+                      <animate
+                        attributeName="stroke-dashoffset"
+                        from="0"
+                        to="62.83"
+                        dur="5s"
+                        fill="freeze"
+                      />
+                    </circle>
+                  </svg>
+                </div>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                </svg>
+              )}
+            </motion.button>
+          </motion.div>
         )}
-      </motion.button>
+      </AnimatePresence>
+
+      {/* 자동 재생 시작 버튼 */}
+      <AnimatePresence>
+        {!isAutoPlaying && (
+          <motion.button
+            onClick={toggleAutoPlay}
+            disabled={isPreparingAudio || autoPlayButtonCooldown}
+            className={`absolute right-6 bottom-24 p-4 rounded-full shadow-lg ${
+              isPreparingAudio || autoPlayButtonCooldown
+                ? "bg-gray-400 text-white cursor-not-allowed"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            } z-20`}
+            whileHover={{
+              scale: isPreparingAudio || autoPlayButtonCooldown ? 1 : 1.1,
+            }}
+            whileTap={{
+              scale: isPreparingAudio || autoPlayButtonCooldown ? 1 : 0.95,
+            }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20, transition: { duration: 0.2 } }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+          >
+            {isPreparingAudio ? (
+              <LoadingSpinner />
+            ) : autoPlayButtonCooldown ? (
+              <div className="w-6 h-6 flex items-center justify-center">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <circle
+                    className="text-blue-300"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                    strokeDasharray="62.83"
+                    strokeDashoffset="0"
+                    strokeLinecap="round"
+                  >
+                    <animate
+                      attributeName="stroke-dashoffset"
+                      from="0"
+                      to="62.83"
+                      dur="5s"
+                      fill="freeze"
+                    />
+                  </circle>
+                </svg>
+              </div>
+            ) : (
+              <BsPlayFill className="w-6 h-6" />
+            )}
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       {/* 자동재생 시작 알림 메시지 */}
       <AnimatePresence>
         {isAutoPlaying && (
           <motion.div
-            className={`absolute transform -translate-x-1/2 right-24 bottom-24 md:right-24  md:bottom-24 bg-black bg-opacity-70 text-white px-6 py-3 rounded-full ${
-              autoPlayPhase === 0
-                ? "bg-purple-400 bg-opacity-50 shadow-lg "
-                : "bg-pink-400 bg-opacity-50 shadow-lg "
+            className={`absolute transform -translate-x-1/2 right-40 bottom-[6.3rem] md:right-40 md:bottom-24 bg-black bg-opacity-70 text-white px-6 py-3 rounded-full ${
+              isFlipped
+                ? "bg-pink-400 bg-opacity-50 shadow-lg"
+                : "bg-purple-400 bg-opacity-50 shadow-lg"
             }`}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            자동재생 중({(autoPlay / 1000).toFixed(1)}초 간격)
-            {autoPlayPhase === 0 ? " 한글 표시" : " 영어 표시"}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 자동 재생 속도 조절 버튼  */}
-      <AnimatePresence>
-        {isAutoPlaying && (
-          <motion.div
-            className="absolute right-6 bottom-40 bg-white rounded-full shadow-lg p-2 flex flex-col items-center gap-2 z-20"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-          >
-            <button
-              onClick={() => setAutoPlay(Math.max(1000, autoPlay - 500))}
-              className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-              title="더 빠르게"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="18 15 12 9 6 15"></polyline>
-              </svg>
-            </button>
-            <span className="text-xs font-medium text-gray-500">
-              {(autoPlay / 1000).toFixed(1)}초
-            </span>
-            <button
-              onClick={() => setAutoPlay(Math.min(10000, autoPlay + 500))}
-              className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
-              title="더 느리게"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
+            {isPaused
+              ? "일시정지됨"
+              : `자동재생 중 ${isFlipped ? "영어 표시" : "한글 표시"}`}
           </motion.div>
         )}
       </AnimatePresence>

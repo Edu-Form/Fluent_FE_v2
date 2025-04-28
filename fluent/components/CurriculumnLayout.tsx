@@ -20,11 +20,9 @@ export default function CurriculumLayout({
   const pathname = usePathname();
   const [Quizletopen, setQuizletOpen] = useState(true);
   const [Diaryopen, setDiaryOpen] = useState(true);
-  const [Curriculumopen, setCurriculumOpen] = useState(true);
   const [MockTestopen, setMockTestOpen] = useState(true);
   const [textData, setTextData] = useState<[]>([]);
   const [text2Data, setText2Data] = useState<[]>([]);
-  const [text3Data, setText3Data] = useState<[]>([]);
 
   useEffect(() => {
     const fetchQuizletData = async () => {
@@ -87,7 +85,7 @@ export default function CurriculumLayout({
                       : ""
                   }`}
                 >
-                Class Note 작성하기
+                  Class Note 작성하기
                 </span>
               </Link>
               <nav className="">

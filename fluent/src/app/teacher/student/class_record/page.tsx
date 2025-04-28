@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import CurriculumLayout from "@/components/CurriculumnLayout"; // Import the CurriculumLayout component
 import "react-day-picker/dist/style.css";
 
 // 날짜 포맷 함수들 유지
@@ -223,7 +222,7 @@ const ClassPageContent: React.FC = () => {
     
     `;
 
-    const notesTemplate2 = `📚 The Second Class
+  const notesTemplate2 = `📚 The Second Class
 
     1. Small Talk (5 ~ 15 minutes) — depending on level  
     - What did you do yesterday?  
@@ -248,7 +247,7 @@ const ClassPageContent: React.FC = () => {
     
     `;
 
-    const notesTemplate3 = `📚 The Third Class
+  const notesTemplate3 = `📚 The Third Class
 
     1. Small Talk (5 ~ 15 minutes) — depending on level  
     - What did you do yesterday?  
@@ -278,19 +277,17 @@ const ClassPageContent: React.FC = () => {
     
     `;
 
-
   const handleText1 = async () => {
-      setOriginal_text(notesTemplate1); // Assuming the API returns { numbered_text: "..." }
+    setOriginal_text(notesTemplate1); // Assuming the API returns { numbered_text: "..." }
   };
 
   const handleText2 = async () => {
     setOriginal_text(notesTemplate2); // Assuming the API returns { numbered_text: "..." }
-};
+  };
 
-const handleText3 = async () => {
+  const handleText3 = async () => {
     setOriginal_text(notesTemplate3); // Assuming the API returns { numbered_text: "..." }
-};
-
+  };
 
   // 클라이언트 측 렌더링이 아직 완료되지 않았을 경우 간단한 로딩 표시
   if (!isMounted) {
@@ -691,8 +688,5 @@ export default function ClassPageWrapper(): ReactNode {
 }
 
 function ClassPage(): ReactNode {
-  return (
-    <ClassPageContent />
-  );
+  return <ClassPageContent />;
 }
-
