@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { saveScheduleData} from "@/lib/data";
-import { deductCredit } from "@/lib/data";
+// import { deductCredit } from "@/lib/data";
 
 export async function POST(request: Request) {
   try {
