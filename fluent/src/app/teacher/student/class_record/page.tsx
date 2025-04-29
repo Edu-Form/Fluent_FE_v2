@@ -60,11 +60,31 @@ const formatToSave = (date: string | undefined): string => {
   }
 };
 
+
 // 퀴즐렛 페이지 내용 컴포넌트
 const ClassPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  const handleNumbering = async () => {
+    if (!original_text.trim()) return;
+
+    try {
+      const response = await fetch("/api/quizlet/numbering", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: original_text }),
+      });
+
+      const data = await response.json();
+      setOriginal_text(data.numbered_text); // Assuming the API returns { numbered_text: "..." }
+    } catch (error) {
+      console.error("Error numbering text:", error);
+    }
+  };
 
   // URL 파라미터 안전하게 가져오기
   const getParam = (name: string): string => {
@@ -355,6 +375,33 @@ const ClassPageContent: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-3">
+
+          <button
+              onClick={handleNumbering}
+              className="flex items-center gap-2 px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm"
+              disabled={loading}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              자동 번호 매기기
+            </button>
+            
             {/* Numbering 버튼 */}
             <button
               onClick={handleText1}
