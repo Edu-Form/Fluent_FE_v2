@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-          "Translate the following English text into Korean.\n\nGuidelines:\n- Do not paraphrase. Aim for the most accurate, mirrored translation possible.\n- It is acceptable if the Korean sounds slightly unnatural in favor of a more accurate structure.\n- Use a semi-formal tone ending with ~했어, not ~했다.\n- Keep English terms that Koreans would typically use in English (e.g., product names, company names, or commonly known terms), but write them out phonetically in Korean (e.g., \"openai\" → \"오픈에이아이\").\n- Return each translated line on a new line, matching the order of the original.\n\n"
+          "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward, but also do not omit important words just to sound more natural.\n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n- Use a semi-formal tone, ending with expressions like ~했어 rather than ~했다.\n- Keep words that Koreans commonly use in English (e.g., 커뮤니티, 시스템, 데이터) in English but written phonetically in Korean.\n",
         },
         { role: "user", content: eng_quizlet_text },
       ],
