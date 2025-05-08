@@ -297,17 +297,199 @@ const ClassPageContent: React.FC = () => {
     
     `;
 
-  const handleText1 = async () => {
-    setOriginal_text(notesTemplate1); // Assuming the API returns { numbered_text: "..." }
+    const intermediateTemplate1 = `📚 The First Class
+
+1. Go Over Notion Goals (3 ~ 5 minutes)
+
+2. Small Talk (15 minutes)  
+- If you have more to talk about, feel free to extend!
+
+3. Self Introduction (15 minutes)  
+- Add content to flashcards.
+
+4. Textbook (20 minutes)  
+- Pace yourself to finish Chapter 5 in 2–3 classes.  
+- You may skip directly to the test if the student feels confident.  
+- Read at least 1 storytelling example to help with diary writing.
+
+5. App Setup (5 minutes)  
+- Download Quizlet app  
+- Download Google Docs app  
+- Send Kakao channel link
+
+📌 Homework  
+- Study Flashcards  
+- Write Storytelling Diary  
+- Chapter 5 Test: Solve & grade at home  
+- If going slowly, test can be done next class  
+- Message teacher if flashcards can’t be found
+
+🔜 Next Class  
+- Storytelling diary check through conversation  
+- Check Chapter 5 test expressions (add incorrect ones to Quizlet)
+`;
+
+const intermediateTemplate2 = `📚 The Second Class
+
+1. Student Driven Small Talk (15 minutes)  
+- Have them ask the questions first.  
+- Tell them this is intentional.
+
+2. Previous Flashcards Review (15 minutes)  
+- Ensure they memorized their self introduction  
+- Negotiate flashcard amount (30 ~ 100) — the more the better
+
+3. Storytell the Diary (15 minutes)  
+- Without reading, the student tells a fun, compact version  
+- Ask follow-up questions  
+- Give your own example storytelling  
+- Have the student ask you questions and do a 5-minute storytelling session  
+- Add anything useful to flashcards (slow expressions, new questions)
+
+4. Textbook (15 minutes)  
+- Review test results and address confusing expressions  
+- Add slow/wrong expressions to flashcards  
+- 1 chapter should take 2–3 classes  
+- If finished quickly, give intermediate level test questions as HW
+
+📌 Homework  
+- Study Flashcards  
+- Storytelling Diary (or Work Diary for business-heavy students)  
+- Solve & grade Chapter 5 test **or**  
+- Write 1–3 intermediate level test questions (storytelling section)  
+
+💬 Suggested Diary Prompts  
+- Something unexpected that happened recently  
+- A memorable fight or argument  
+- Office gossip / people you dislike  
+- A frustrating work situation  
+- Funny or upsetting stories about your kids
+
+🔜 Next Class  
+- Storytelling the intermediate level test questions
+`;
+
+const intermediateTemplate3 = `📚 The Third Class
+
+1. Student Driven Small Talk (15 minutes)
+
+2. Previous Flashcards Review (15 minutes)  
+- Re-add flashcards for important wrong answers  
+- Prioritize textbook expressions
+
+3. Storytell the Diary (15 minutes)  
+- Include quotes, characters, and story flow  
+- Student should ask you questions too
+
+4. Textbook (15 minutes)  
+- Continue textbook work and verbal checks  
+- Add slow/wrong expressions to flashcards  
+- Optionally use intermediate test questions per chapter
+
+📌 Homework  
+- Study Flashcards  
+- Storytelling Diary (or Work Diary)  
+- Solve 1 test in textbook & grade  
+- Keep steady pace — don’t just talk, progress in textbook
+
+🔜 Next Class  
+- Continue with current or next chapter
+`;
+
+
+const businessTemplate1 = `📚 The First Business Class
+
+1. Go Over Notion Goals (5 minutes)
+
+2. Casual Self Introduction Writing (15 minutes)
+
+3. Write Business Diary Together (15 minutes)  
+Example:  
+- 지금 연구하고 있는 제품에 대한 셈플 생산을 위해서 12시간 근무를 했다  
+→ Yesterday, I had a 12-hour shift making samples for our new vitamin B5 supplement.  
+- 다양한 설비를 조작하며 셈플이 나오게 실험들을 했다  
+→ So I conducted various experiments to get a secure sample.
+
+4. Small Talk (15 minutes)
+
+5. App Setup (10 minutes)  
+- Download Quizlet app  
+- Download Google Docs app  
+- Send Kakao channel link
+
+📌 Homework  
+- Write your own business diary  
+- Memorize Quizlet flashcards  
+- Write a business self introduction
+`;
+
+
+const businessTemplate2 = `📚 The Second Business Class
+
+1. Student Driven Small Talk (15 minutes)
+
+2. Previous Quizlet Review (15 minutes)
+
+3. Business or Storytelling Diary Review (15 minutes)
+
+4. Business English Curriculum (15 minutes)  
+- Business self introduction  
+- In-depth work-related conversations
+
+📌 Homework  
+- Write another business diary  
+- Memorize Quizlet flashcards  
+- Write 1 in-depth work conversation (5 ~ 15 sentences)
+`;
+
+
+  const [activeTab, setActiveTab] = useState("beginner");
+
+  type TabKey = "beginner" | "intermediate" | "business";
+
+  const templates: Record<TabKey, string[]> = {
+    beginner: [
+      notesTemplate1,
+      notesTemplate2,
+      notesTemplate3,
+    ],
+    intermediate: [
+      intermediateTemplate1, intermediateTemplate2, intermediateTemplate3
+    ],
+    business: [
+      businessTemplate1, businessTemplate2 
+    ],
   };
 
-  const handleText2 = async () => {
-    setOriginal_text(notesTemplate2); // Assuming the API returns { numbered_text: "..." }
-  };
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+  
+      const target = e.target as HTMLTextAreaElement;
+      const { selectionStart, selectionEnd } = target;
+  
+      const beforeCursor = original_text.substring(0, selectionStart);
+      const afterCursor = original_text.substring(selectionEnd);
+  
+      // Get all lines before the cursor
+      const lines = beforeCursor.split("\n");
+      const lastLine = lines[lines.length - 1];
+  
+      // Match "number. " at the beginning of the last line
+      const match = lastLine.match(/^(\d+)\.\s/);
+      const nextNumber = match ? parseInt(match[1], 10) + 1 : 1;
+  
+      const newText = beforeCursor + "\n" + nextNumber + ". " + afterCursor;
+      setOriginal_text(newText);
+  
+      // Move cursor after inserted prefix
+      requestAnimationFrame(() => {
+        const cursorPos = selectionStart + 1 + `${nextNumber}. `.length;
+        target.selectionStart = target.selectionEnd = cursorPos;
+      });
+    }
+  };  
 
-  const handleText3 = async () => {
-    setOriginal_text(notesTemplate3); // Assuming the API returns { numbered_text: "..." }
-  };
 
   // 클라이언트 측 렌더링이 아직 완료되지 않았을 경우 간단한 로딩 표시
   if (!isMounted) {
@@ -372,11 +554,24 @@ const ClassPageContent: React.FC = () => {
                 </span>
               </div>
             )}
-          </div>
-
-          <div className="flex items-center space-x-3">
-
-          <button
+            <div className="max-w-xl ml-6 mx-auto mt-6 p-4 border rounded-lg shadow-sm bg-white">
+            {/* Tabs Section */}
+            <div className="mb-6">
+              <div className="flex space-x-3">
+                {Object.keys(templates).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => setActiveTab(key)}
+                    className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-colors duration-200 ${
+                      activeTab === key
+                        ? "bg-blue-200 text-blue-900 font-semibold"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {key} Class
+                  </button>
+                ))}
+            <button
               onClick={handleNumbering}
               className="flex items-center gap-2 px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm"
               disabled={loading}
@@ -401,85 +596,30 @@ const ClassPageContent: React.FC = () => {
               </svg>
               자동 번호 매기기
             </button>
-            
-            {/* Numbering 버튼 */}
-            <button
-              onClick={handleText1}
-              className="flex items-center gap-2 px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm"
-              disabled={loading}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
-              커리큘럼 1
-            </button>
+              </div>
+            </div>
 
-            <button
-              onClick={handleText2}
-              className="flex items-center gap-2 px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm"
-              disabled={loading}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
-              커리큘럼 2
-            </button>
+            {/* Template Buttons Section */}
+            <div className="flex flex-wrap gap-3">
+              {templates[activeTab as keyof typeof templates].map((text, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setOriginal_text(text)}
+                  disabled={loading}
+                  className="px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm"
+                >
+                  {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} {idx + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+          </div>
 
-            <button
-              onClick={handleText3}
-              className="flex items-center gap-2 px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm"
-              disabled={loading}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
-              커리큘럼 3
-            </button>
+          <div className="flex items-center space-x-3">
+
+
+
+
 
             {/* 날짜 선택기 */}
             <div className="relative">
@@ -609,6 +749,7 @@ const ClassPageContent: React.FC = () => {
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setOriginal_text(e.target.value)
             }
+            onKeyDown={handleKeyDown}
             className="flex-grow w-full p-10 text-xl font-bold focus:outline-none bg-white text-[#333D4B] resize-none"
             placeholder="Curriculumn 1, 2, 3 버튼을 클릭해서 템플릿을 불러오세요."
             disabled={loading}
