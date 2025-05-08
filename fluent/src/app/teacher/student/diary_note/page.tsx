@@ -329,7 +329,7 @@ const DiaryPageContent: React.FC = () => {
                   max={6}
                   value={level ?? ""}
                   onChange={handleChange}
-                  className="border rounded px-2 py-1 w-16"
+                  className="border rounded px-2 py-1 w-16 bg-white"
                 />
               </div>
             )}

@@ -14,19 +14,13 @@ export default function RootLayout({
   const isTeacherPath = pathname?.startsWith("/teacher");
 
   return (
-    <html lang="en" className="h-full">
-      <body className="flex flex-col justify-center min-h-full bg-[#F6F7FB]">
+    <html lang="en">
+      <body className="flex flex-col  bg-[#F6F7FB]">
         {isTeacherPath ? (
           <div>{children}</div>
         ) : (
           <div className="flex flex-col">
-            {/* Main Content Section */}
-            <div className="flex-1 px-4">{children}</div>
-
-            {/* Navigation Section - Fixed at bottom */}
-            {/* <div className="flex-1 h-20">
-              <Navigation />
-            </div> */}
+            <div>{children}</div>
           </div>
         )}
       </body>
