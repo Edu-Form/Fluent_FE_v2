@@ -621,20 +621,132 @@ const QuizletCardContent = ({
       </div>
     );
   }
-
   return (
     <div className="w-full h-full flex flex-col overflow-hidden bg-gray-50">
-      {/* 상단 헤더 - 모바일 최적화 (여백 추가) */}
+      {/* 상단 헤더 - 모바일 최적화 (여백 추가) + PC 버전에서 네비게이션 버튼 추가 */}
       <div className="py-6 px-5 bg-white shadow-sm z-10">
-        <div className="flex flex-col">
-          <span
-            className="text-gray-500 text-lg mb-2 flex items-center"
-            onClick={() => setIsDatePickerOpen(true)}
-          >
-            <FiCalendar className="mr-2" />
-            {isNaN(currentDate.getTime()) ? content.date : formattedDate}
-          </span>
-          <h1 className="text-2xl font-bold mb-1">{content.student_name}</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <span
+              className="text-gray-500 text-base mb-2 flex items-center border-2 py-1 px-4 rounded-full border-gray-200 cursor-pointer hover:bg-blue-500 hover:text-white"
+              onClick={() => setIsDatePickerOpen(true)}
+            >
+              <FiCalendar className="mr-2" />
+              {isNaN(currentDate.getTime()) ? content.date : formattedDate}
+            </span>
+            <h1 className="text-2xl font-bold mb-1 ml-1">
+              {content.student_name}
+            </h1>
+          </div>
+
+          {/* PC 버전에서만 보이는 네비게이션 버튼들 */}
+          <div className="hidden md:flex items-center space-x-3">
+            {/* 다운로드 버튼 */}
+            <div className="relative group">
+              <button
+                onClick={downloadQuizlet}
+                disabled={isAutoPlaying || isPreparingAudio}
+                className={`flex items-center justify-center p-2 rounded-full ${
+                  isAutoPlaying || isPreparingAudio
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
+                } shadow-sm transition-colors`}
+                aria-label="단어장 다운로드"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
+                <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                  단어장 다운로드
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                    <div className="border-solid border-t-gray-800 border-t-4 border-x-transparent border-x-4 border-b-0 h-0 w-0"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TTS 버튼 */}
+            <div className="relative group">
+              <button
+                onClick={readCardText}
+                disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
+                className={`p-2 rounded-full ${
+                  isTTSLoading
+                    ? "bg-blue-500 text-white"
+                    : isAutoPlaying || isPreparingAudio
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
+                } shadow-sm transition-colors`}
+                aria-label="단어 읽기"
+              >
+                {isTTSLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <HiOutlineSpeakerWave className="w-5 h-5" />
+                )}
+              </button>
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
+                <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                  단어 읽기
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                    <div className="border-solid border-t-gray-800 border-t-4 border-x-transparent border-x-4 border-b-0 h-0 w-0"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 즐겨찾기 버튼 */}
+            <div className="relative group">
+              <button
+                onClick={playCheckedCards}
+                disabled={isAutoPlaying || isPreparingAudio}
+                className={`p-2 rounded-full ${
+                  isAutoPlaying || isPreparingAudio
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
+                } shadow-sm transition-colors`}
+                aria-label="즐겨찾기 단어"
+              >
+                {isBookmark ? (
+                  <BsBookmarkStarFill className="w-5 h-5 text-yellow-500" />
+                ) : (
+                  <BsBookmarkStar className="w-5 h-5" />
+                )}
+              </button>
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
+                <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                  즐겨찾기 단어
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                    <div className="border-solid border-t-gray-800 border-t-4 border-x-transparent border-x-4 border-b-0 h-0 w-0"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 섞기 버튼 */}
+            <div className="relative group">
+              <button
+                onClick={shuffled}
+                disabled={isAutoPlaying || isPreparingAudio}
+                className={`p-2 rounded-full ${
+                  isAutoPlaying || isPreparingAudio
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
+                } shadow-sm transition-colors`}
+                aria-label="단어 섞기"
+              >
+                <BsShuffle className="w-5 h-5" />
+              </button>
+              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
+                <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                  단어 섞기
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                    <div className="border-solid border-t-gray-800 border-t-4 border-x-transparent border-x-4 border-b-0 h-0 w-0"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -881,70 +993,121 @@ const QuizletCardContent = ({
         </button>
       </div>
 
-      {/* 모바일 최적화 네비게이션 바*/}
-      <div className="flex justify-center items-center py-4 bg-white">
-        <div className="bg-white/90 backdrop-blur-md border-gray-200 py-2 px-3 rounded-full shadow-lg">
-          <div className="flex items-center space-x-5">
-            <button
-              onClick={downloadQuizlet}
-              disabled={isAutoPlaying || isPreparingAudio}
-              className={`flex items-center justify-center p-2 rounded-full ${
+      {/* 모바일 탭 바 네비게이션 - 하단 고정 */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20">
+        <div className="flex justify-around items-center h-16">
+          <button
+            onClick={downloadQuizlet}
+            disabled={isAutoPlaying || isPreparingAudio}
+            className="flex flex-col items-center justify-center w-1/4 py-2"
+          >
+            <Download
+              className={`w-6 h-6 mb-1 ${
                 isAutoPlaying || isPreparingAudio
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
-              } shadow-sm transition-colors`}
+                  ? "text-gray-400"
+                  : "text-gray-600"
+              }`}
+            />
+            <span
+              className={`text-xs ${
+                isAutoPlaying || isPreparingAudio
+                  ? "text-gray-400"
+                  : "text-gray-600"
+              }`}
             >
-              <Download className="w-5 h-5" />
-            </button>
+              다운로드
+            </span>
+          </button>
 
-            <button
-              onClick={readCardText}
-              disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
-              className={`p-2 rounded-full ${
+          <button
+            onClick={readCardText}
+            disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
+            className="flex flex-col items-center justify-center w-1/4 py-2"
+          >
+            <HiOutlineSpeakerWave
+              className={`w-6 h-6 mb-1 ${
                 isTTSLoading
-                  ? "bg-blue-500 text-white"
+                  ? "text-blue-500"
                   : isAutoPlaying || isPreparingAudio
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
-              } shadow-sm transition-colors`}
+                  ? "text-gray-400"
+                  : "text-gray-600"
+              }`}
+            />
+            <span
+              className={`text-xs ${
+                isTTSLoading
+                  ? "text-blue-500"
+                  : isAutoPlaying || isPreparingAudio
+                  ? "text-gray-400"
+                  : "text-gray-600"
+              }`}
             >
-              {isTTSLoading ? (
-                <LoadingSpinner />
-              ) : (
-                <HiOutlineSpeakerWave className="w-5 h-5" />
-              )}
-            </button>
+              듣기
+            </span>
+          </button>
 
-            <button
-              onClick={playCheckedCards}
-              disabled={isAutoPlaying || isPreparingAudio}
-              className={`p-2 rounded-full ${
+          <button
+            onClick={playCheckedCards}
+            disabled={isAutoPlaying || isPreparingAudio}
+            className="flex flex-col items-center justify-center w-1/4 py-2"
+          >
+            {isBookmark ? (
+              <BsBookmarkStarFill
+                className={`w-6 h-6 mb-1 ${
+                  isAutoPlaying || isPreparingAudio
+                    ? "text-gray-400"
+                    : "text-yellow-500"
+                }`}
+              />
+            ) : (
+              <BsBookmarkStar
+                className={`w-6 h-6 mb-1 ${
+                  isAutoPlaying || isPreparingAudio
+                    ? "text-gray-400"
+                    : "text-gray-600"
+                }`}
+              />
+            )}
+            <span
+              className={`text-xs ${
                 isAutoPlaying || isPreparingAudio
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
-              } shadow-sm transition-colors`}
+                  ? "text-gray-400"
+                  : isBookmark
+                  ? "text-yellow-500"
+                  : "text-gray-600"
+              }`}
             >
-              {isBookmark ? (
-                <BsBookmarkStarFill className="w-5 h-5 text-yellow-500" />
-              ) : (
-                <BsBookmarkStar className="w-5 h-5" />
-              )}
-            </button>
+              즐겨찾기
+            </span>
+          </button>
 
-            <button
-              onClick={shuffled}
-              disabled={isAutoPlaying || isPreparingAudio}
-              className={`p-2 rounded-full ${
+          <button
+            onClick={shuffled}
+            disabled={isAutoPlaying || isPreparingAudio}
+            className="flex flex-col items-center justify-center w-1/4 py-2"
+          >
+            <BsShuffle
+              className={`w-6 h-6 mb-1 ${
                 isAutoPlaying || isPreparingAudio
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
-              } shadow-sm transition-colors`}
+                  ? "text-gray-400"
+                  : "text-gray-600"
+              }`}
+            />
+            <span
+              className={`text-xs ${
+                isAutoPlaying || isPreparingAudio
+                  ? "text-gray-400"
+                  : "text-gray-600"
+              }`}
             >
-              <BsShuffle className="w-5 h-5" />
-            </button>
-          </div>
+              섞기
+            </span>
+          </button>
         </div>
       </div>
+
+      {/* 모바일에서 하단 네비게이션 바 공간 확보 */}
+      <div className="md:hidden h-16"></div>
 
       {/* 날짜 선택 팝업 */}
       {isDatePickerOpen && (
@@ -1029,42 +1192,6 @@ const QuizletCardContent = ({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* 재생 속도 선택 버튼 */}
-      {/* {isAutoPlaying && (
-        <div className="fixed bottom-36 right-4 flex flex-col space-y-2 z-10">
-          <button
-            onClick={() => setPlaybackRate(0.6)}
-            className={`p-2 rounded-full shadow-sm text-xs font-medium ${
-              playbackRate === 0.6
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700"
-            }`}
-          >
-            0.6x
-          </button>
-          <button
-            onClick={() => setPlaybackRate(0.8)}
-            className={`p-2 rounded-full shadow-sm text-xs font-medium ${
-              playbackRate === 0.8
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700"
-            }`}
-          >
-            0.8x
-          </button>
-          <button
-            onClick={() => setPlaybackRate(1.0)}
-            className={`p-2 rounded-full shadow-sm text-xs font-medium ${
-              playbackRate === 1.0
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700"
-            }`}
-          >
-            1.0x
-          </button>
-        </div>
-      )} */}
     </div>
   );
 };
