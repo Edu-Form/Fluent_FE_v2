@@ -3,10 +3,9 @@
 import { Suspense } from "react";
 import { IconType } from "react-icons";
 import { RiHome6Fill } from "react-icons/ri";
-import { FaCalendarDays } from "react-icons/fa6";
 import { PiBookBookmarkFill } from "react-icons/pi";
 import { TbCardsFilled } from "react-icons/tb";
-import { LuLogOut } from "react-icons/lu";
+import { RiEdit2Fill } from "react-icons/ri"; // 다이어리 쓰기 아이콘 추가
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 
@@ -94,16 +93,21 @@ function NavigationComponent() {
   useEffect(() => {
     if (pathname.includes("/home") && !func) {
       setActiveIndex(0);
-    } else if (pathname.includes("/schedule")) {
-      setActiveIndex(1);
     } else if (
       pathname.includes("/quizlet") ||
       (pathname.includes("/student") && func === "quizlet")
     ) {
+      setActiveIndex(1);
+    } else if (
+      (pathname.includes("/diary") && !pathname.includes("/write")) ||
+      (pathname.includes("/student") &&
+        func === "diary" &&
+        !pathname.includes("/write"))
+    ) {
       setActiveIndex(2);
     } else if (
-      pathname.includes("/diary") ||
-      (pathname.includes("/student") && func === "diary")
+      pathname.includes("/diary/write") ||
+      (pathname.includes("/diary") && pathname.includes("/write"))
     ) {
       setActiveIndex(3);
     }
@@ -111,10 +115,6 @@ function NavigationComponent() {
 
   const handleHomeClick = () => {
     router.push(`/${type}/home?${url_data}`);
-  };
-
-  const handleScheduleClick = () => {
-    router.push(`/${type}/schedule?${url_data}`);
   };
 
   const handleCardsClick = () => {
@@ -131,6 +131,10 @@ function NavigationComponent() {
     } else {
       router.push(`/${type}/diary?${diary_url_data}`);
     }
+  };
+
+  const handleDiaryWriteClick = () => {
+    router.push(`/teacher/${type}/diary_note?${diary_url_data}`);
   };
 
   const handleLogout = () => {
@@ -163,38 +167,38 @@ function NavigationComponent() {
             }}
           />
           <NavIcon
-            Icon={FaCalendarDays}
-            isActive={activeIndex === 1}
-            label="일정"
-            onClick={() => {
-              setActiveIndex(1);
-              handleScheduleClick();
-            }}
-          />
-          <NavIcon
             Icon={TbCardsFilled}
-            isActive={activeIndex === 2}
+            isActive={activeIndex === 1}
             label="퀴즐렛"
             onClick={() => {
-              setActiveIndex(2);
+              setActiveIndex(1);
               handleCardsClick();
             }}
           />
           <NavIcon
             Icon={PiBookBookmarkFill}
-            isActive={activeIndex === 3}
-            label="일기"
+            isActive={activeIndex === 2}
+            label="다이어리"
             onClick={() => {
-              setActiveIndex(3);
+              setActiveIndex(2);
               handleBookmarkClick();
             }}
           />
           <NavIcon
+            Icon={RiEdit2Fill}
+            isActive={activeIndex === 3}
+            label="쓰기"
+            onClick={() => {
+              setActiveIndex(3);
+              handleDiaryWriteClick();
+            }}
+          />
+          {/* <NavIcon
             Icon={LuLogOut}
             isActive={false}
             label="로그아웃"
             onClick={() => setShowLogoutConfirm(true)}
-          />
+          /> */}
         </div>
         {/* 아이폰 하단 안전 영역 */}
         <div className="h-safe-bottom bg-white" />
