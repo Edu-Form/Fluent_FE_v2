@@ -133,9 +133,9 @@ function NavigationComponent() {
     }
   };
 
-  const handleDiaryWriteClick = () => {
-    router.push(`/teacher/${type}/diary_note?${diary_url_data}`);
-  };
+  // const handleDiaryWriteClick = () => {
+  //   router.push(`/teacher/${type}/diary_note?${diary_url_data}`);
+  // };
 
   const handleLogout = () => {
     localStorage.removeItem("userToken");
@@ -184,7 +184,7 @@ function NavigationComponent() {
               handleBookmarkClick();
             }}
           />
-          <NavIcon
+          {/* <NavIcon
             Icon={RiEdit2Fill}
             isActive={activeIndex === 3}
             label="쓰기"
@@ -192,7 +192,7 @@ function NavigationComponent() {
               setActiveIndex(3);
               handleDiaryWriteClick();
             }}
-          />
+          /> */}
           {/* <NavIcon
             Icon={LuLogOut}
             isActive={false}
