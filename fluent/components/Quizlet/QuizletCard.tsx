@@ -634,13 +634,16 @@ const QuizletCardContent = ({
               <FiCalendar className="mr-2" />
               {isNaN(currentDate.getTime()) ? content.date : formattedDate}
             </span>
-            <h1 className="text-2xl font-bold mb-1 ml-1">
-              {content.student_name}
-            </h1>
           </div>
+        </div>
 
-          {/* PC 버전에서만 보이는 네비게이션 버튼들 */}
-          <div className="hidden md:flex items-center space-x-3">
+        {/* PC 버전에서만 보이는 네비게이션 버튼들 */}
+        <div className="flex  md:flex items-center justify-between space-x-3">
+          <h1 className="text-2xl font-bold mb-1 ml-1">
+            {content.student_name}
+          </h1>
+
+          <div className="flex space-x-3">
             {/* 다운로드 버튼 */}
             <div className="relative group">
               <button
@@ -994,7 +997,7 @@ const QuizletCardContent = ({
       </div>
 
       {/* 모바일 탭 바 네비게이션 */}
-      <div className="md:hidden sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20">
+      {/* <div className="md:hidden bg-white border-t border-gray-200 py-3">
         <div className="flex justify-around items-center h-16">
           <button
             onClick={downloadQuizlet}
@@ -1104,7 +1107,7 @@ const QuizletCardContent = ({
             </span>
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* 날짜 선택 팝업 */}
       {isDatePickerOpen && (
