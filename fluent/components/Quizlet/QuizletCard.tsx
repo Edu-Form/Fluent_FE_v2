@@ -993,8 +993,8 @@ const QuizletCardContent = ({
         </button>
       </div>
 
-      {/* 모바일 탭 바 네비게이션 - 하단 고정 */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20">
+      {/* 모바일 탭 바 네비게이션 */}
+      <div className="md:hidden sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20">
         <div className="flex justify-around items-center h-16">
           <button
             onClick={downloadQuizlet}
@@ -1105,9 +1105,6 @@ const QuizletCardContent = ({
           </button>
         </div>
       </div>
-
-      {/* 모바일에서 하단 네비게이션 바 공간 확보 */}
-      <div className="md:hidden h-16"></div>
 
       {/* 날짜 선택 팝업 */}
       {isDatePickerOpen && (
