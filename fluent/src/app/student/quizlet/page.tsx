@@ -199,7 +199,7 @@ export default function Page() {
     <>
       <div className="h-screen flex flex-col">
         <Suspense fallback={<LoadingScreen message="Loading..." />}>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 ">
             <QuizletPageContent />
           </div>
           {/* 네비게이션 바 */}
