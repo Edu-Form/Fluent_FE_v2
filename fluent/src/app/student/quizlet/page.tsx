@@ -1,11 +1,24 @@
 "use client";
 
+// TypeScript로 변환한 코드
+
 import dynamic from "next/dynamic";
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiCalendar, FiX } from "react-icons/fi";
 import { useSearchParams } from "next/navigation";
 import Navigation from "@/components/navigation";
+
+// QuizletCardProps 인터페이스 정의
+interface QuizletCardProps {
+  _id: string;
+  date: string;
+  student_name: string;
+  eng_quizlet: string[];
+  kor_quizlet: string[];
+  original_text: string;
+  cards: any[];
+}
 
 // 동적 컴포넌트 로딩
 const QuizletCard = dynamic(() => import("@/components/Quizlet/QuizletCard"), {
@@ -27,7 +40,7 @@ const QuizletPageContent = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [data, setData] = useState<QuizletCardProps[]>([]);
   const [currentCard, setCurrentCard] = useState<QuizletCardProps>({
     _id: "",
@@ -38,16 +51,23 @@ const QuizletPageContent = () => {
     original_text: "",
     cards: [],
   });
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [, setLoading] = useState(true);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const fetchQuizletData = useCallback(async () => {
+    if (!user || !type) return;
+
     try {
       const response = await fetch(`/api/quizlet/${type}/${user}`);
       const quizletData: QuizletCardProps[] = await response.json();
-      const sortedData = quizletData.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
+
+      // 여기서는 날짜를 Date 객체로 변환하지 않고 문자열 그대로 정렬
+      // 날짜 형식이 일관적이라면(YYYY-MM-DD) 문자열 정렬도 잘 작동함
+      const sortedData = [...quizletData].sort((a, b) => {
+        // 간단히 최신 데이터가 앞에 오도록 내림차순 정렬
+        return b.date.localeCompare(a.date);
+      });
+
       setData(sortedData);
       if (sortedData.length > 0) {
         setCurrentCard(sortedData[0]);
@@ -83,18 +103,15 @@ const QuizletPageContent = () => {
     );
   }
 
-  const currentDate = currentCard ? new Date(currentCard.date) : new Date();
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1;
-  const day = currentDate.getDate();
-  const weekday = currentDate.toLocaleDateString("en-US", { weekday: "long" });
+  // 서버에서 받은 날짜 문자열 형식으로 표시
+  const displayDate = currentCard.date || "날짜 정보 없음";
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
       {/* 상단 날짜 표시 */}
-      <div className="relative bg-gradient-to-r from-[#3f4166] to-[#2a2b44] text-white p-2 sm:p-4">
+      <div className="relative bg-blue-500 text-white p-2 sm:p-4">
         <h1 className="text-lg sm:text-2xl font-bold text-center">
-          {year}년 {month}월 {day}일 {weekday}
+          {displayDate}
         </h1>
         {/* 날짜 선택 버튼 */}
         <div
@@ -140,12 +157,7 @@ const QuizletPageContent = () => {
                       className="w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
                     >
                       <span className="text-base text-gray-800">
-                        {new Date(item.date).toLocaleDateString("ko-KR", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          weekday: "long",
-                        })}
+                        {item.date}
                       </span>
                     </button>
                   ))}
@@ -156,8 +168,8 @@ const QuizletPageContent = () => {
         </AnimatePresence>
       </div>
 
-      {/* 카드 컨테이너 - 화면 꽉 차게 수정 */}
-      <div className="flex-1 relative overflow-hidden">
+      {/* 카드 컨테이너 - 네비게이션 바를 위한 하단 여백 추가 */}
+      <div className="flex-1 relative overflow-hidden pb-16">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -174,38 +186,22 @@ const QuizletPageContent = () => {
           </motion.div>
         </AnimatePresence>
       </div>
-
-      {/* 페이지네이션 인디케이터 */}
-      <div className="py-2 flex justify-center gap-2 bg-white">
-        {data.map((_, idx) => (
-          <button
-            key={idx}
-            onClick={() => {
-              setCurrentIndex(idx);
-              setCurrentCard(data[idx]);
-            }}
-            className={`w-2 h-2 rounded-full ${
-              idx === currentIndex ? "bg-[#3f4166]" : "bg-gray-300"
-            }`}
-          />
-        ))}
-      </div>
     </div>
   );
 };
 
 export default function Page() {
   return (
-    <>
-      <div className="h-screen flex flex-col">
-        <Suspense fallback={<LoadingScreen message="Loading..." />}>
-          <div className="flex-1 ">
-            <QuizletPageContent />
-          </div>
-          {/* 네비게이션 바 */}
+    <div className="h-screen flex flex-col">
+      <Suspense fallback={<LoadingScreen message="Loading..." />}>
+        <div className="flex-1 overflow-hidden">
+          <QuizletPageContent />
+        </div>
+        {/* 네비게이션 바 - sticky로 적용 */}
+        <div className="sticky bottom-0 left-0 right-0 z-20">
           <Navigation mobileOnly={true} defaultActiveIndex={2} />
-        </Suspense>
-      </div>
-    </>
+        </div>
+      </Suspense>
+    </div>
   );
 }
