@@ -197,10 +197,7 @@ export default function Page() {
         <div className="flex-1 overflow-hidden">
           <QuizletPageContent />
         </div>
-        {/* 네비게이션 바 - sticky로 적용 */}
-        <div className="sticky bottom-0 left-0 right-0 z-20">
-          <Navigation mobileOnly={true} defaultActiveIndex={2} />
-        </div>
+        <Navigation mobileOnly={true} defaultActiveIndex={2} />
       </Suspense>
     </div>
   );
