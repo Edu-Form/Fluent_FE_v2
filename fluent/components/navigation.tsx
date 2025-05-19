@@ -155,7 +155,7 @@ function NavigationComponent() {
         />
       )}
 
-      <div className="flex w-full justify-center bg-white shadow-lg z-40">
+      <div className="flex w-full justify-center bg-white shadow-lg z-40 ">
         <div className="flex w-full justify-around items-center py-2">
           <NavIcon
             Icon={RiHome6Fill}
@@ -203,6 +203,9 @@ function NavigationComponent() {
         {/* 아이폰 하단 안전 영역 */}
         <div className="h-safe-bottom bg-white" />
       </div>
+
+      {/* 하단 네비게이션 공간 확보를 위한 패딩 */}
+      <div className="bg-white pb-16" />
     </>
   );
 }
