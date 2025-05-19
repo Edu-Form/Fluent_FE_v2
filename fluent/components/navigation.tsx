@@ -155,8 +155,8 @@ function NavigationComponent() {
         />
       )}
 
-      <div className="flex w-full justify-center bg-white shadow-lg z-40 ">
-        <div className="flex w-full justify-around items-center py-2">
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg z-40">
+        <div className="flex justify-around items-center py-2">
           <NavIcon
             Icon={RiHome6Fill}
             isActive={activeIndex === 0}
@@ -205,7 +205,7 @@ function NavigationComponent() {
       </div>
 
       {/* 하단 네비게이션 공간 확보를 위한 패딩 */}
-      <div className="bg-white pb-16" />
+      <div className="pb-16" />
     </>
   );
 }

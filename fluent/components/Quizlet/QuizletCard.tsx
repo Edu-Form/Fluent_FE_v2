@@ -724,7 +724,7 @@ const QuizletCardContent = ({
 
       {/* 카드 컨텐츠 영역 - 반응형 높이 조정 */}
       <div
-        className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0"
+        className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0 relative"
         {...(!isAutoPlaying && !isPreparingAudio ? swipeHandlers : {})}
       >
         <motion.div
@@ -799,109 +799,113 @@ const QuizletCardContent = ({
             </div>
           </div>
         </motion.div>
-      </div>
 
-      {/* 탐색 컨트롤 - 버튼 크기 조정 */}
-      <div className="flex justify-between items-center px-3 sm:px-6 py-3 sm:py-5 bg-white border-t border-gray-100">
-        <button
-          onClick={handlePrevCard}
-          disabled={isAutoPlaying || isPreparingAudio}
-          className={`p-2 sm:p-3 rounded-full ${
-            isAutoPlaying || isPreparingAudio
-              ? "bg-gray-100 text-gray-300"
-              : "bg-blue-100 text-blue-600 active:bg-blue-200"
-          }`}
-        >
-          <IoIosArrowBack className="text-xl sm:text-3xl" />
-        </button>
-
-        <div className="flex space-x-2 sm:space-x-3">
-          {/* 즐겨찾기 버튼 */}
-          <button
-            onClick={checkCurrentCard}
-            disabled={isAutoPlaying || isPreparingAudio}
-            className={`p-2 sm:p-3 rounded-full ${
-              isAutoPlaying || isPreparingAudio
-                ? "bg-gray-300 text-gray-500"
-                : favoriteCards[currentCard]
-                ? "bg-yellow-100 text-yellow-500"
-                : "bg-gray-100 text-gray-600 active:bg-gray-200"
-            }`}
-          >
-            {favoriteCards[currentCard] ? (
-              <BsStarFill className="text-lg sm:text-2xl" />
-            ) : (
-              <BsStar className="text-lg sm:text-2xl" />
-            )}
-          </button>
-
-          {/* 재생 버튼 */}
-          <button
-            onClick={isAutoPlaying ? togglePause : toggleAutoPlay}
-            disabled={
-              isPreparingAudio || autoPlayButtonCooldown || pauseButtonCooldown
-            }
-            className={`p-2 sm:p-4 rounded-full ${
-              isPreparingAudio || autoPlayButtonCooldown || pauseButtonCooldown
-                ? "bg-gray-300 text-gray-500"
-                : isAutoPlaying
-                ? "bg-blue-500 text-white"
-                : "bg-gray-100 text-gray-600 active:bg-gray-200"
-            }`}
-          >
-            {isPreparingAudio ? (
-              <LoadingSpinner />
-            ) : isAutoPlaying ? (
-              isPaused ? (
-                <BsPlayFill className="text-lg sm:text-2xl" />
-              ) : (
-                <BsPauseFill className="text-lg sm:text-2xl" />
-              )
-            ) : (
-              <BsPlayFill className="text-lg sm:text-2xl" />
-            )}
-          </button>
-
-          {/* 정지 버튼 - 자동 재생 중에만 표시 */}
-          {isAutoPlaying && (
+        {/* 탐색 컨트롤 - 모바일 네비게이션 스타일 */}
+        <div className="fixed bottom-28 left-0 w-full px-4 flex justify-center">
+          <div className="flex items-center justify-center space-x-3 py-2 px-4 bg-white rounded-full shadow-lg border border-gray-200">
             <button
-              onClick={stopAutoPlay}
-              disabled={stopButtonCooldown}
-              className={`p-2 sm:p-4 rounded-full ${
-                stopButtonCooldown
-                  ? "bg-gray-400 text-white"
-                  : "bg-gray-700 text-white"
+              onClick={handlePrevCard}
+              disabled={isAutoPlaying || isPreparingAudio}
+              className={`p-2 rounded-full ${
+                isAutoPlaying || isPreparingAudio
+                  ? "bg-gray-100 text-gray-300"
+                  : "bg-blue-100 text-blue-600 active:bg-blue-200"
               }`}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-lg sm:text-2xl"
-              >
-                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-              </svg>
+              <IoIosArrowBack className="text-lg" />
             </button>
-          )}
-        </div>
 
-        <button
-          onClick={handleNextCard}
-          disabled={isAutoPlaying || isPreparingAudio}
-          className={`p-2 sm:p-3 rounded-full ${
-            isAutoPlaying || isPreparingAudio
-              ? "bg-gray-100 text-gray-300"
-              : "bg-blue-100 text-blue-600 active:bg-blue-200"
-          }`}
-        >
-          <IoIosArrowForward className="text-xl sm:text-3xl" />
-        </button>
+            {/* 즐겨찾기 버튼 */}
+            <button
+              onClick={checkCurrentCard}
+              disabled={isAutoPlaying || isPreparingAudio}
+              className={`p-2 rounded-full ${
+                isAutoPlaying || isPreparingAudio
+                  ? "bg-gray-300 text-gray-500"
+                  : favoriteCards[currentCard]
+                  ? "bg-yellow-100 text-yellow-500"
+                  : "bg-gray-100 text-gray-600 active:bg-gray-200"
+              }`}
+            >
+              {favoriteCards[currentCard] ? (
+                <BsStarFill className="text-lg" />
+              ) : (
+                <BsStar className="text-lg" />
+              )}
+            </button>
+
+            {/* 재생 버튼 */}
+            <button
+              onClick={isAutoPlaying ? togglePause : toggleAutoPlay}
+              disabled={
+                isPreparingAudio ||
+                autoPlayButtonCooldown ||
+                pauseButtonCooldown
+              }
+              className={`p-2 rounded-full ${
+                isPreparingAudio ||
+                autoPlayButtonCooldown ||
+                pauseButtonCooldown
+                  ? "bg-gray-300 text-gray-500"
+                  : isAutoPlaying
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-100 text-gray-600 active:bg-gray-200"
+              }`}
+            >
+              {isPreparingAudio ? (
+                <LoadingSpinner />
+              ) : isAutoPlaying ? (
+                isPaused ? (
+                  <BsPlayFill className="text-xl" />
+                ) : (
+                  <BsPauseFill className="text-xl" />
+                )
+              ) : (
+                <BsPlayFill className="text-xl" />
+              )}
+            </button>
+
+            {/* 정지 버튼 - 자동 재생 중에만 표시 */}
+            {isAutoPlaying && (
+              <button
+                onClick={stopAutoPlay}
+                disabled={stopButtonCooldown}
+                className={`p-2 rounded-full ${
+                  stopButtonCooldown
+                    ? "bg-gray-400 text-white"
+                    : "bg-gray-700 text-white"
+                }`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-lg"
+                >
+                  <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                </svg>
+              </button>
+            )}
+
+            <button
+              onClick={handleNextCard}
+              disabled={isAutoPlaying || isPreparingAudio}
+              className={`p-2 rounded-full ${
+                isAutoPlaying || isPreparingAudio
+                  ? "bg-gray-100 text-gray-300"
+                  : "bg-blue-100 text-blue-600 active:bg-blue-200"
+              }`}
+            >
+              <IoIosArrowForward className="text-lg" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 모달 다이얼로그들 - z-index 및 포지셔닝 조정 */}
