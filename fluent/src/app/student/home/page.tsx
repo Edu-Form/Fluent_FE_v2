@@ -125,7 +125,7 @@ const HomePage = () => {
 
   // 모바일 레이아웃 컴포넌트
   const MobileLayout = () => (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 pb-20">
       <div className="rounded-lg bg-white shadow-lg">
         <Suspense fallback={<SkeletonLoader />}>
           <Alert />
@@ -225,14 +225,11 @@ const HomePage = () => {
       <Suspense fallback={<CarouselLoader />}>
         <ImageCarousel />
       </Suspense>
-
-      {/* 모바일에서 하단 여백 추가 */}
-      <div className="h-16" />
     </div>
   );
 
   return (
-    <div className="flex flex-col w-full h-full p-2 sm:p-4 gap-2 sm:gap-4 bg-gray-50">
+    <div className="flex flex-col w-full min-h-screen p-2 sm:p-4 gap-2 sm:gap-4 bg-gray-50">
       {/* 모바일 레이아웃 */}
       <div className="block md:hidden">
         <MobileLayout />

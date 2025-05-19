@@ -622,153 +622,111 @@ const QuizletCardContent = ({
     );
   }
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden bg-gray-50">
-      {/* 상단 헤더 - 모바일 최적화 (여백 추가) + PC 버전에서 네비게이션 버튼 추가 */}
-      <div className="py-6 px-5 bg-white shadow-sm z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <span
-              className="text-gray-500 text-base mb-2 flex items-center border-2 py-1 px-4 rounded-full border-gray-200 cursor-pointer hover:bg-blue-500 hover:text-white"
-              onClick={() => setIsDatePickerOpen(true)}
-            >
-              <FiCalendar className="mr-2" />
+    <div className="w-full h-full flex flex-col bg-gray-50">
+      {/* 헤더 영역 - 반응형으로 개선 */}
+      <div className="py-3 px-3 sm:py-4 sm:px-4 bg-white shadow-sm z-10">
+        {/* 날짜 선택 및 학생 이름 */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-0">
+          <span
+            className="text-gray-500 text-sm flex items-center border border-gray-200 rounded-full py-1 px-3 mb-2 sm:mb-0 cursor-pointer hover:bg-blue-500 hover:text-white max-w-fit"
+            onClick={() => setIsDatePickerOpen(true)}
+          >
+            <FiCalendar className="mr-1" />
+            <span className="truncate">
               {isNaN(currentDate.getTime()) ? content.date : formattedDate}
             </span>
-          </div>
+          </span>
+
+          <h1 className="text-xl font-bold">{content.student_name}</h1>
         </div>
 
-        {/* PC 버전에서만 보이는 네비게이션 버튼들 */}
-        <div className="flex  md:flex items-center justify-between space-x-3">
-          <h1 className="text-2xl font-bold mb-1 ml-1">
-            {content.student_name}
-          </h1>
+        {/* 기능 버튼들 - 모바일에서는 공간 절약을 위해 크기 축소 */}
+        <div className="flex justify-between items-center mt-2">
+          <div className="flex space-x-2">
+            <button
+              onClick={downloadQuizlet}
+              disabled={isAutoPlaying || isPreparingAudio}
+              className={`p-1.5 sm:p-2 rounded-full ${
+                isAutoPlaying || isPreparingAudio
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
+              } shadow-sm`}
+              title="단어장 다운로드"
+            >
+              <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
 
-          <div className="flex space-x-3">
-            {/* 다운로드 버튼 */}
-            <div className="relative group">
-              <button
-                onClick={downloadQuizlet}
-                disabled={isAutoPlaying || isPreparingAudio}
-                className={`flex items-center justify-center p-2 rounded-full ${
-                  isAutoPlaying || isPreparingAudio
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
-                } shadow-sm transition-colors`}
-                aria-label="단어장 다운로드"
-              >
-                <Download className="w-5 h-5" />
-              </button>
-              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
-                <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                  단어장 다운로드
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                    <div className="border-solid border-t-gray-800 border-t-4 border-x-transparent border-x-4 border-b-0 h-0 w-0"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <button
+              onClick={readCardText}
+              disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
+              className={`p-1.5 sm:p-2 rounded-full ${
+                isTTSLoading
+                  ? "bg-blue-500 text-white"
+                  : isAutoPlaying || isPreparingAudio
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
+              } shadow-sm`}
+              title="단어 읽기"
+            >
+              {isTTSLoading ? (
+                <LoadingSpinner />
+              ) : (
+                <HiOutlineSpeakerWave className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
+            </button>
 
-            {/* TTS 버튼 */}
-            <div className="relative group">
-              <button
-                onClick={readCardText}
-                disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
-                className={`p-2 rounded-full ${
-                  isTTSLoading
-                    ? "bg-blue-500 text-white"
-                    : isAutoPlaying || isPreparingAudio
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
-                } shadow-sm transition-colors`}
-                aria-label="단어 읽기"
-              >
-                {isTTSLoading ? (
-                  <LoadingSpinner />
-                ) : (
-                  <HiOutlineSpeakerWave className="w-5 h-5" />
-                )}
-              </button>
-              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
-                <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                  단어 읽기
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                    <div className="border-solid border-t-gray-800 border-t-4 border-x-transparent border-x-4 border-b-0 h-0 w-0"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <button
+              onClick={playCheckedCards}
+              disabled={isAutoPlaying || isPreparingAudio}
+              className={`p-1.5 sm:p-2 rounded-full ${
+                isAutoPlaying || isPreparingAudio
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
+              } shadow-sm`}
+              title="즐겨찾기 단어"
+            >
+              {isBookmark ? (
+                <BsBookmarkStarFill
+                  className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                    isBookmark ? "text-yellow-500" : ""
+                  }`}
+                />
+              ) : (
+                <BsBookmarkStar className="w-4 h-4 sm:w-5 sm:h-5" />
+              )}
+            </button>
 
-            {/* 즐겨찾기 버튼 */}
-            <div className="relative group">
-              <button
-                onClick={playCheckedCards}
-                disabled={isAutoPlaying || isPreparingAudio}
-                className={`p-2 rounded-full ${
-                  isAutoPlaying || isPreparingAudio
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
-                } shadow-sm transition-colors`}
-                aria-label="즐겨찾기 단어"
-              >
-                {isBookmark ? (
-                  <BsBookmarkStarFill className="w-5 h-5 text-yellow-500" />
-                ) : (
-                  <BsBookmarkStar className="w-5 h-5" />
-                )}
-              </button>
-              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
-                <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                  즐겨찾기 단어
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                    <div className="border-solid border-t-gray-800 border-t-4 border-x-transparent border-x-4 border-b-0 h-0 w-0"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 섞기 버튼 */}
-            <div className="relative group">
-              <button
-                onClick={shuffled}
-                disabled={isAutoPlaying || isPreparingAudio}
-                className={`p-2 rounded-full ${
-                  isAutoPlaying || isPreparingAudio
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
-                } shadow-sm transition-colors`}
-                aria-label="단어 섞기"
-              >
-                <BsShuffle className="w-5 h-5" />
-              </button>
-              <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 hidden group-hover:block">
-                <div className="bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                  단어 섞기
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2">
-                    <div className="border-solid border-t-gray-800 border-t-4 border-x-transparent border-x-4 border-b-0 h-0 w-0"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <button
+              onClick={shuffled}
+              disabled={isAutoPlaying || isPreparingAudio}
+              className={`p-1.5 sm:p-2 rounded-full ${
+                isAutoPlaying || isPreparingAudio
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
+              } shadow-sm`}
+              title="단어 섞기"
+            >
+              <BsShuffle className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
           </div>
         </div>
       </div>
 
       {/* 진행 바 */}
-      <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden">
+      <div className="w-full bg-gray-200 h-1">
         <div
-          className="bg-blue-500 h-1 rounded-full"
+          className="bg-blue-500 h-1"
           style={{
             width: `${((currentCard + 1) / cards.length) * 100}%`,
           }}
         ></div>
       </div>
 
-      {/* 카드 컨텐츠 영역 - 화면 꽉 차게 비율 맞춤 */}
+      {/* 카드 컨텐츠 영역 - 반응형 높이 조정 */}
       <div
-        className="flex-grow flex items-center justify-center px-4 pb-2 pt-2"
+        className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0"
         {...(!isAutoPlaying && !isPreparingAudio ? swipeHandlers : {})}
       >
-        {/* 카드 내용 (화면 꽉 차게) */}
         <motion.div
           className="w-full h-full flex items-center justify-center"
           animate={{
@@ -785,39 +743,40 @@ const QuizletCardContent = ({
             onClick={() =>
               !isAutoPlaying && !isPreparingAudio && setIsFlipped(!isFlipped)
             }
-            className={`w-full h-[60vh] flex flex-col items-center justify-center py-4 ${
+            className={`w-full flex-1 flex flex-col items-center justify-center py-3 px-2 sm:py-4 sm:px-4 ${
               isAutoPlaying
                 ? "bg-purple-50"
                 : isPreparingAudio
                 ? "bg-gray-50"
                 : "bg-white active:bg-sky-50"
-            } rounded-2xl shadow-md ${
+            } rounded-xl shadow-md ${
               isFlipped
                 ? "text-blue-600 border-2 border-sky-200"
                 : "border border-gray-200"
             } ${isAutoPlaying && !isFlipped ? "border-purple-300" : ""}
-     ${isAutoPlaying && isFlipped ? "border-pink-200 bg-pink-50" : ""}
-     ${isCheckedView ? "bg-[#f0f8ff]" : ""}`}
+            ${isAutoPlaying && isFlipped ? "border-pink-200 bg-pink-50" : ""}
+            ${isCheckedView ? "bg-[#f0f8ff]" : ""}`}
+            style={{ minHeight: "40vh", maxHeight: "60vh" }}
           >
             {isPreparingAudio ? (
-              <div className="flex flex-col items-center justify-center space-y-6">
-                <div className="w-8 h-8 flex items-center justify-center">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
                   <LoadingSpinner />
                 </div>
-                <p className="text-xl font-medium text-gray-500">
+                <p className="text-base sm:text-xl font-medium text-gray-500">
                   오디오 준비 중...
                 </p>
               </div>
             ) : (
               <>
-                <div className="text-center px-6 flex-grow flex flex-col items-center justify-center">
-                  {/* 메인 카드 텍스트 */}
-                  <h2 className="text-4xl sm:text-5xl font-bold mb-8">
+                <div className="text-center px-2 sm:px-6 flex-grow flex flex-col items-center justify-center">
+                  {/* 메인 카드 텍스트 - 반응형 폰트 크기 */}
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-8 break-words text-center max-w-full">
                     {isFlipped ? cards[currentCard][0] : cards[currentCard][1]}
                   </h2>
 
-                  {/*  텍스트 */}
-                  <p className={`text-gray-400 text-sm`}>
+                  {/* 안내 텍스트 */}
+                  <p className="text-gray-400 text-xs sm:text-sm">
                     {isAutoPlaying
                       ? isPaused
                         ? "일시정지됨"
@@ -825,106 +784,81 @@ const QuizletCardContent = ({
                       : `화면을 탭하여 ${isFlipped ? "한국어" : "영어"}로 전환`}
                   </p>
                 </div>
-
-                {/* 카드 진행 상황 인디케이터 */}
-                <div className="mt-4 px-6 w-full">
-                  <div className="flex justify-between mt-2 text-xs text-gray-500">
-                    <span></span>
-                    <span className="font-semibold text-xs border-2 border-blue-500 px-3 py-1.5 rounded-full bg-white text-blue-500">
-                      {currentCard + 1} / {cards.length}
-                    </span>
-                    <span></span>
-                  </div>
-                </div>
               </>
             )}
+
+            {/* 카드 진행 상황 인디케이터 */}
+            <div className="mt-4 px-6 w-full">
+              <div className="flex justify-between mt-2 text-xs text-gray-500">
+                <span></span>
+                <span className="font-semibold text-xs border-2 border-blue-500 px-3 py-1.5 rounded-full bg-white text-blue-500">
+                  {currentCard + 1} / {cards.length}
+                </span>
+                <span></span>
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>
 
-      {/* 탐색 컨트롤 - 큰 이전/다음 버튼 */}
-      <div className="flex justify-between items-center px-6 py-5 bg-white border-t border-gray-100">
+      {/* 탐색 컨트롤 - 버튼 크기 조정 */}
+      <div className="flex justify-between items-center px-3 sm:px-6 py-3 sm:py-5 bg-white border-t border-gray-100">
         <button
           onClick={handlePrevCard}
           disabled={isAutoPlaying || isPreparingAudio}
-          className={`p-3 rounded-full ${
+          className={`p-2 sm:p-3 rounded-full ${
             isAutoPlaying || isPreparingAudio
               ? "bg-gray-100 text-gray-300"
               : "bg-blue-100 text-blue-600 active:bg-blue-200"
-          } transition-colors`}
+          }`}
         >
-          <IoIosArrowBack className="text-3xl" />
+          <IoIosArrowBack className="text-xl sm:text-3xl" />
         </button>
 
-        <div className="flex space-x-3">
-          {/* 즐겨찾기 버튼 - 크기 증가 */}
+        <div className="flex space-x-2 sm:space-x-3">
+          {/* 즐겨찾기 버튼 */}
           <button
             onClick={checkCurrentCard}
             disabled={isAutoPlaying || isPreparingAudio}
-            className={`p-3 rounded-full ${
+            className={`p-2 sm:p-3 rounded-full ${
               isAutoPlaying || isPreparingAudio
                 ? "bg-gray-300 text-gray-500"
                 : favoriteCards[currentCard]
                 ? "bg-yellow-100 text-yellow-500"
                 : "bg-gray-100 text-gray-600 active:bg-gray-200"
-            } transition-colors`}
+            }`}
           >
             {favoriteCards[currentCard] ? (
-              <BsStarFill className="text-2xl" />
+              <BsStarFill className="text-lg sm:text-2xl" />
             ) : (
-              <BsStar className="text-2xl" />
+              <BsStar className="text-lg sm:text-2xl" />
             )}
           </button>
 
-          {/* 재생 버튼 변경 - 자동 재생 시 일시정지 버튼으로 전환 */}
+          {/* 재생 버튼 */}
           <button
             onClick={isAutoPlaying ? togglePause : toggleAutoPlay}
             disabled={
               isPreparingAudio || autoPlayButtonCooldown || pauseButtonCooldown
             }
-            className={`p-3 rounded-full ${
+            className={`p-2 sm:p-4 rounded-full ${
               isPreparingAudio || autoPlayButtonCooldown || pauseButtonCooldown
                 ? "bg-gray-300 text-gray-500"
                 : isAutoPlaying
                 ? "bg-blue-500 text-white"
                 : "bg-gray-100 text-gray-600 active:bg-gray-200"
-            } transition-colors relative`}
+            }`}
           >
             {isPreparingAudio ? (
               <LoadingSpinner />
-            ) : pauseButtonCooldown ? (
-              <div className="w-5 h-5 flex items-center justify-center">
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <circle
-                    className="text-blue-300"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    strokeDasharray="62.83"
-                    strokeDashoffset="0"
-                    strokeLinecap="round"
-                  >
-                    <animate
-                      attributeName="stroke-dashoffset"
-                      from="0"
-                      to="62.83"
-                      dur="3s"
-                      fill="freeze"
-                    />
-                  </circle>
-                </svg>
-              </div>
             ) : isAutoPlaying ? (
               isPaused ? (
-                <BsPlayFill className="text-2xl" />
+                <BsPlayFill className="text-lg sm:text-2xl" />
               ) : (
-                <BsPauseFill className="text-2xl" />
+                <BsPauseFill className="text-lg sm:text-2xl" />
               )
             ) : (
-              <BsPlayFill className="text-2xl" />
+              <BsPlayFill className="text-lg sm:text-2xl" />
             )}
           </button>
 
@@ -933,52 +867,26 @@ const QuizletCardContent = ({
             <button
               onClick={stopAutoPlay}
               disabled={stopButtonCooldown}
-              className={`p-3 rounded-full ${
+              className={`p-2 sm:p-4 rounded-full ${
                 stopButtonCooldown
                   ? "bg-gray-400 text-white"
                   : "bg-gray-700 text-white"
-              } transition-colors`}
+              }`}
             >
-              {stopButtonCooldown ? (
-                <div className="w-5 h-5 flex items-center justify-center">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <circle
-                      className="text-gray-300"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                      strokeDasharray="62.83"
-                      strokeDashoffset="0"
-                      strokeLinecap="round"
-                    >
-                      <animate
-                        attributeName="stroke-dashoffset"
-                        from="0"
-                        to="62.83"
-                        dur="3s"
-                        fill="freeze"
-                      />
-                    </circle>
-                  </svg>
-                </div>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-                </svg>
-              )}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-lg sm:text-2xl"
+              >
+                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+              </svg>
             </button>
           )}
         </div>
@@ -986,133 +894,21 @@ const QuizletCardContent = ({
         <button
           onClick={handleNextCard}
           disabled={isAutoPlaying || isPreparingAudio}
-          className={`p-3 rounded-full ${
+          className={`p-2 sm:p-3 rounded-full ${
             isAutoPlaying || isPreparingAudio
               ? "bg-gray-100 text-gray-300"
               : "bg-blue-100 text-blue-600 active:bg-blue-200"
-          } transition-colors`}
+          }`}
         >
-          <IoIosArrowForward className="text-3xl" />
+          <IoIosArrowForward className="text-xl sm:text-3xl" />
         </button>
       </div>
 
-      {/* 모바일 탭 바 네비게이션 */}
-      {/* <div className="md:hidden bg-white border-t border-gray-200 py-3">
-        <div className="flex justify-around items-center h-16">
-          <button
-            onClick={downloadQuizlet}
-            disabled={isAutoPlaying || isPreparingAudio}
-            className="flex flex-col items-center justify-center w-1/4 py-2"
-          >
-            <Download
-              className={`w-6 h-6 mb-1 ${
-                isAutoPlaying || isPreparingAudio
-                  ? "text-gray-400"
-                  : "text-gray-600"
-              }`}
-            />
-            <span
-              className={`text-xs ${
-                isAutoPlaying || isPreparingAudio
-                  ? "text-gray-400"
-                  : "text-gray-600"
-              }`}
-            >
-              다운로드
-            </span>
-          </button>
-
-          <button
-            onClick={readCardText}
-            disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
-            className="flex flex-col items-center justify-center w-1/4 py-2"
-          >
-            <HiOutlineSpeakerWave
-              className={`w-6 h-6 mb-1 ${
-                isTTSLoading
-                  ? "text-blue-500"
-                  : isAutoPlaying || isPreparingAudio
-                  ? "text-gray-400"
-                  : "text-gray-600"
-              }`}
-            />
-            <span
-              className={`text-xs ${
-                isTTSLoading
-                  ? "text-blue-500"
-                  : isAutoPlaying || isPreparingAudio
-                  ? "text-gray-400"
-                  : "text-gray-600"
-              }`}
-            >
-              듣기
-            </span>
-          </button>
-
-          <button
-            onClick={playCheckedCards}
-            disabled={isAutoPlaying || isPreparingAudio}
-            className="flex flex-col items-center justify-center w-1/4 py-2"
-          >
-            {isBookmark ? (
-              <BsBookmarkStarFill
-                className={`w-6 h-6 mb-1 ${
-                  isAutoPlaying || isPreparingAudio
-                    ? "text-gray-400"
-                    : "text-yellow-500"
-                }`}
-              />
-            ) : (
-              <BsBookmarkStar
-                className={`w-6 h-6 mb-1 ${
-                  isAutoPlaying || isPreparingAudio
-                    ? "text-gray-400"
-                    : "text-gray-600"
-                }`}
-              />
-            )}
-            <span
-              className={`text-xs ${
-                isAutoPlaying || isPreparingAudio
-                  ? "text-gray-400"
-                  : isBookmark
-                  ? "text-yellow-500"
-                  : "text-gray-600"
-              }`}
-            >
-              즐겨찾기
-            </span>
-          </button>
-
-          <button
-            onClick={shuffled}
-            disabled={isAutoPlaying || isPreparingAudio}
-            className="flex flex-col items-center justify-center w-1/4 py-2"
-          >
-            <BsShuffle
-              className={`w-6 h-6 mb-1 ${
-                isAutoPlaying || isPreparingAudio
-                  ? "text-gray-400"
-                  : "text-gray-600"
-              }`}
-            />
-            <span
-              className={`text-xs ${
-                isAutoPlaying || isPreparingAudio
-                  ? "text-gray-400"
-                  : "text-gray-600"
-              }`}
-            >
-              섞기
-            </span>
-          </button>
-        </div>
-      </div> */}
-
-      {/* 날짜 선택 팝업 */}
+      {/* 모달 다이얼로그들 - z-index 및 포지셔닝 조정 */}
       {isDatePickerOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg w-[90%] max-w-md max-h-[80%] overflow-y-auto">
+            {/* 모달 내용 */}
             <div className="p-4 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">날짜 선택</h3>
@@ -1124,6 +920,7 @@ const QuizletCardContent = ({
                 </button>
               </div>
             </div>
+            {/* 날짜 목록 */}
             <div className="p-4">
               {allCards.length === 0 ? (
                 <p className="text-gray-500 text-center py-4">
@@ -1141,7 +938,7 @@ const QuizletCardContent = ({
                           : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                       } rounded-lg transition-colors flex justify-between items-center`}
                     >
-                      <span>
+                      <span className="truncate">
                         {isNaN(new Date(item.date).getTime())
                           ? item.date
                           : new Date(item.date).toLocaleDateString("ko-KR", {
@@ -1152,7 +949,7 @@ const QuizletCardContent = ({
                             })}
                       </span>
                       {idx === currentIndex && (
-                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2"></span>
                       )}
                     </button>
                   ))}
