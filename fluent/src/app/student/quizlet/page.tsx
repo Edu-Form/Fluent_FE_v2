@@ -40,7 +40,7 @@ const QuizletPageContent = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [currentIndex] = useState<number>(0);
   const [data, setData] = useState<QuizletCardProps[]>([]);
   const [currentCard, setCurrentCard] = useState<QuizletCardProps>({
     _id: "",
