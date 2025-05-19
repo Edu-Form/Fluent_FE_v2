@@ -52,7 +52,7 @@ const QuizletPageContent = () => {
     cards: [],
   });
   const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [, setLoading] = useState<boolean>(true);
 
   const fetchQuizletData = useCallback(async () => {
     if (!user || !type) return;
