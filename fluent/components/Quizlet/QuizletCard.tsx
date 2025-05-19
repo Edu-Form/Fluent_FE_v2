@@ -722,104 +722,110 @@ const QuizletCardContent = ({
         ></div>
       </div>
 
-      {/* 카드 컨텐츠 영역 - 반응형 높이 조정 */}
-      <div
-        className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0 relative"
-        {...(!isAutoPlaying && !isPreparingAudio ? swipeHandlers : {})}
-      >
-        <motion.div
-          className="w-full h-full flex items-center justify-center"
-          animate={{
-            x: swipeOffset,
-            opacity: swipeDirection ? 0.9 : 1,
-          }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 25,
-          }}
+      <div className="flex-grow flex flex-col  justify-center p-4">
+        {" "}
+        {/* 카드 컨텐츠 영역 - 반응형 높이 조정 */}
+        <div
+          className="flex-col flex items-center justify-center p-2 sm:p-4 min-h-0 relative"
+          {...(!isAutoPlaying && !isPreparingAudio ? swipeHandlers : {})}
         >
-          <div
-            onClick={() =>
-              !isAutoPlaying && !isPreparingAudio && setIsFlipped(!isFlipped)
-            }
-            className={`w-full flex-1 flex flex-col items-center justify-center py-3 px-2 sm:py-4 sm:px-4 ${
-              isAutoPlaying
-                ? "bg-purple-50"
-                : isPreparingAudio
-                ? "bg-gray-50"
-                : "bg-white active:bg-sky-50"
-            } rounded-xl shadow-md ${
-              isFlipped
-                ? "text-blue-600 border-2 border-sky-200"
-                : "border border-gray-200"
-            } ${isAutoPlaying && !isFlipped ? "border-purple-300" : ""}
+          <motion.div
+            className="w-full h-full flex items-center justify-center"
+            animate={{
+              x: swipeOffset,
+              opacity: swipeDirection ? 0.9 : 1,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 25,
+            }}
+          >
+            <div
+              onClick={() =>
+                !isAutoPlaying && !isPreparingAudio && setIsFlipped(!isFlipped)
+              }
+              className={`w-full flex-1 flex flex-col items-center justify-center py-3 px-2 sm:py-4 sm:px-4 ${
+                isAutoPlaying
+                  ? "bg-purple-50"
+                  : isPreparingAudio
+                  ? "bg-gray-50"
+                  : "bg-white active:bg-sky-50"
+              } rounded-xl shadow-md ${
+                isFlipped
+                  ? "text-blue-600 border-2 border-sky-200"
+                  : "border border-gray-200"
+              } ${isAutoPlaying && !isFlipped ? "border-purple-300" : ""}
             ${isAutoPlaying && isFlipped ? "border-pink-200 bg-pink-50" : ""}
             ${isCheckedView ? "bg-[#f0f8ff]" : ""}`}
-            style={{ minHeight: "40vh", maxHeight: "60vh" }}
-          >
-            {isPreparingAudio ? (
-              <div className="flex flex-col items-center justify-center space-y-4">
-                <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
-                  <LoadingSpinner />
-                </div>
-                <p className="text-base sm:text-xl font-medium text-gray-500">
-                  오디오 준비 중...
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="text-center px-2 sm:px-6 flex-grow flex flex-col items-center justify-center">
-                  {/* 메인 카드 텍스트 - 반응형 폰트 크기 */}
-                  <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-8 break-words text-center max-w-full">
-                    {isFlipped ? cards[currentCard][0] : cards[currentCard][1]}
-                  </h2>
-
-                  {/* 안내 텍스트 */}
-                  <p className="text-gray-400 text-xs sm:text-sm">
-                    {isAutoPlaying
-                      ? isPaused
-                        ? "일시정지됨"
-                        : `자동재생 중 ${isFlipped ? "영어" : "한글"}`
-                      : `화면을 탭하여 ${isFlipped ? "한국어" : "영어"}로 전환`}
+              style={{ minHeight: "40vh", maxHeight: "60vh" }}
+            >
+              {isPreparingAudio ? (
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
+                    <LoadingSpinner />
+                  </div>
+                  <p className="text-base sm:text-xl font-medium text-gray-500">
+                    오디오 준비 중...
                   </p>
                 </div>
-              </>
-            )}
+              ) : (
+                <>
+                  <div className="text-center px-2 sm:px-6 flex-grow flex flex-col items-center justify-center">
+                    {/* 메인 카드 텍스트 - 반응형 폰트 크기 */}
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 sm:mb-8 break-words text-center max-w-full">
+                      {isFlipped
+                        ? cards[currentCard][0]
+                        : cards[currentCard][1]}
+                    </h2>
 
-            {/* 카드 진행 상황 인디케이터 */}
-            <div className="mt-4 px-6 w-full">
-              <div className="flex justify-between mt-2 text-xs text-gray-500">
-                <span></span>
-                <span className="font-semibold text-xs border-2 border-blue-500 px-3 py-1.5 rounded-full bg-white text-blue-500">
-                  {currentCard + 1} / {cards.length}
-                </span>
-                <span></span>
+                    {/* 안내 텍스트 */}
+                    <p className="text-gray-400 text-xs sm:text-sm">
+                      {isAutoPlaying
+                        ? isPaused
+                          ? "일시정지됨"
+                          : `자동재생 중 ${isFlipped ? "영어" : "한글"}`
+                        : `화면을 탭하여 ${
+                            isFlipped ? "한국어" : "영어"
+                          }로 전환`}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* 카드 진행 상황 인디케이터 */}
+              <div className="mt-4 px-6 w-full">
+                <div className="flex justify-between mt-2 text-xs text-gray-500">
+                  <span></span>
+                  <span className="font-semibold text-xs border-2 border-blue-500 px-3 py-1.5 rounded-full bg-white text-blue-500">
+                    {currentCard + 1} / {cards.length}
+                  </span>
+                  <span></span>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* 탐색 컨트롤 - 모바일 네비게이션 스타일 */}
-        <div className="fixed bottom-28 left-0 w-full px-4 flex justify-center">
-          <div className="flex items-center justify-center space-x-3 py-2 px-4 bg-white rounded-full shadow-lg border border-gray-200">
+          {/* 탐색 컨트롤 - 모바일 네비게이션 스타일 */}
+
+          <div className="flex w-full mt-10 items-center justify-around space-x-3 py-4 bg-white rounded-xl shadow-lg border border-gray-200">
             <button
               onClick={handlePrevCard}
               disabled={isAutoPlaying || isPreparingAudio}
-              className={`p-2 rounded-full ${
+              className={`p-4 rounded-full ${
                 isAutoPlaying || isPreparingAudio
                   ? "bg-gray-100 text-gray-300"
                   : "bg-blue-100 text-blue-600 active:bg-blue-200"
               }`}
             >
-              <IoIosArrowBack className="text-lg" />
+              <IoIosArrowBack className="text-xl" />
             </button>
 
             {/* 즐겨찾기 버튼 */}
             <button
               onClick={checkCurrentCard}
               disabled={isAutoPlaying || isPreparingAudio}
-              className={`p-2 rounded-full ${
+              className={`p-4 rounded-full ${
                 isAutoPlaying || isPreparingAudio
                   ? "bg-gray-300 text-gray-500"
                   : favoriteCards[currentCard]
@@ -842,7 +848,7 @@ const QuizletCardContent = ({
                 autoPlayButtonCooldown ||
                 pauseButtonCooldown
               }
-              className={`p-2 rounded-full ${
+              className={`p-4 rounded-full ${
                 isPreparingAudio ||
                 autoPlayButtonCooldown ||
                 pauseButtonCooldown
@@ -896,13 +902,13 @@ const QuizletCardContent = ({
             <button
               onClick={handleNextCard}
               disabled={isAutoPlaying || isPreparingAudio}
-              className={`p-2 rounded-full ${
+              className={`p-4 rounded-full ${
                 isAutoPlaying || isPreparingAudio
                   ? "bg-gray-100 text-gray-300"
                   : "bg-blue-100 text-blue-600 active:bg-blue-200"
               }`}
             >
-              <IoIosArrowForward className="text-lg" />
+              <IoIosArrowForward className="text-xl" />
             </button>
           </div>
         </div>
