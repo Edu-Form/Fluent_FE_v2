@@ -11,17 +11,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No data provided" }, { status: 400 });
     }
 
-    const { original_text } = quizletData;
+    const { original_text, homework } = quizletData;
 
     // Process the original text to create eng_quizlet
-    let lines = original_text.split("\n").filter((line: string) => /^[0-9]/.test(line));
+    let lines = original_text.match(/<mark>(.*?)<\/mark>/g);
 
     if (lines.length === 0) {
       return NextResponse.json({ error: "No Translation" }, { status: 400 });
     }
 
     // Trim numbers at the start of each Line
-    const noNumlines = lines.map((item: string) => item.replace(/^\d+\.\s*/, ''));
+    const noNumlines = lines.map((item: string) => item.replace(/<\/?mark>/g, '').trim());
 
     lines = noNumlines
       .map((line: string) => line.trim())
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-          "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward, but also do not omit important words just to sound more natural.\n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n- Use a semi-formal tone, ending with expressions like ~했어 rather than ~했다.\n- Keep words that Koreans commonly use in English (e.g., 커뮤니티, 시스템, 데이터) in English but written phonetically in Korean.\n",
+          "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward.\n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n",
         },
         { role: "user", content: eng_quizlet_text },
       ],
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       completion.choices[0]?.message?.content?.trim() ?? "";
     const kor_quizlet = translated_text.split("\n");
 
-    const result = await saveQuizletData(quizletData, kor_quizlet, eng_quizlet);
+    const result = await saveQuizletData(quizletData, kor_quizlet, eng_quizlet, homework);
 
     return NextResponse.json(
       { message: "Data saved successfully", result },

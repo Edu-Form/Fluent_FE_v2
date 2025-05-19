@@ -380,7 +380,8 @@ export async function saveDiaryData(
 export async function saveQuizletData(
   quizlet: any,
   kor_quizlet: string[],
-  eng_quizlet: string[]
+  eng_quizlet: string[],
+  homework: string
 ) {
   try {
     const client = await clientPromise;
@@ -391,6 +392,7 @@ export async function saveQuizletData(
       class_date: quizlet.class_date,
       date: quizlet.date,
       original_text: quizlet.original_text,
+      homework: homework,
       eng_quizlet,
       kor_quizlet,
     };
