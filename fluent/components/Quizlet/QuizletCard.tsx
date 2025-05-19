@@ -876,7 +876,7 @@ const QuizletCardContent = ({
               <button
                 onClick={stopAutoPlay}
                 disabled={stopButtonCooldown}
-                className={`p-2 rounded-full ${
+                className={`p-4 rounded-full ${
                   stopButtonCooldown
                     ? "bg-gray-400 text-white"
                     : "bg-gray-700 text-white"

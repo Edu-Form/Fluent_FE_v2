@@ -5,7 +5,7 @@
 import dynamic from "next/dynamic";
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiCalendar, FiX } from "react-icons/fi";
+
 import { useSearchParams } from "next/navigation";
 import Navigation from "@/components/navigation";
 
@@ -51,7 +51,7 @@ const QuizletPageContent = () => {
     original_text: "",
     cards: [],
   });
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
+
   const [, setLoading] = useState<boolean>(true);
 
   const fetchQuizletData = useCallback(async () => {
@@ -83,15 +83,6 @@ const QuizletPageContent = () => {
     fetchQuizletData();
   }, [fetchQuizletData]);
 
-  const handleDateSelect = (date: string) => {
-    const selectedIndex = data.findIndex((item) => item.date === date);
-    if (selectedIndex !== -1) {
-      setCurrentIndex(selectedIndex);
-      setCurrentCard(data[selectedIndex]);
-    }
-    setIsDatePickerOpen(false);
-  };
-
   if (!data.length) {
     return (
       <div className="w-full h-[100vh] flex items-center justify-center bg-white">
@@ -103,71 +94,8 @@ const QuizletPageContent = () => {
     );
   }
 
-  // 서버에서 받은 날짜 문자열 형식으로 표시
-  const displayDate = currentCard.date || "날짜 정보 없음";
-
   return (
     <div className="w-full h-full flex flex-col bg-white">
-      {/* 상단 날짜 표시 */}
-      <div className="relative bg-blue-500 text-white p-2 sm:p-4">
-        <h1 className="text-lg sm:text-2xl font-bold text-center">
-          {displayDate}
-        </h1>
-        {/* 날짜 선택 버튼 */}
-        <div
-          onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-          className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-full cursor-pointer transition-all"
-        >
-          <FiCalendar className="w-4 h-4" />
-          <span className="text-sm font-medium hidden sm:inline">
-            날짜 선택
-          </span>
-        </div>
-
-        {/* 날짜 선택 팝업 */}
-        <AnimatePresence>
-          {isDatePickerOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 bg-black/50 flex items-end"
-            >
-              <div className="w-full bg-white rounded-t-2xl shadow-2xl max-h-[70vh] overflow-hidden">
-                {/* 헤더 */}
-                <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    날짜 선택
-                  </h2>
-
-                  <button
-                    onClick={() => setIsDatePickerOpen(false)}
-                    className="text-gray-600 hover:text-gray-900"
-                  >
-                    <FiX className="w-6 h-6" />
-                  </button>
-                </div>
-                {/* 날짜 목록 */}
-                <div className="overflow-y-auto max-h-[50vh]">
-                  {data.map((item) => (
-                    <button
-                      key={item._id}
-                      onClick={() => handleDateSelect(item.date)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
-                    >
-                      <span className="text-base text-gray-800">
-                        {item.date}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
       {/* 카드 컨테이너 - 네비게이션 바를 위한 하단 여백 추가 */}
       <div className="flex-1 relative overflow-hidden pb-16">
         <AnimatePresence mode="wait">
