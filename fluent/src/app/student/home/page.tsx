@@ -7,17 +7,16 @@ import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
 
-import { Check, BookOpen, PenLine } from "lucide-react";
+import { X } from "lucide-react";
 
 // 동적 컴포넌트 로딩 추가
-const Alert = dynamic(() => import("@/components/Alert"), { ssr: false });
+const Alert = dynamic(() => import("@/components/StudentAlert"), {
+  ssr: false,
+});
 // 이미지 캐러셀 컴포넌트 import (동적으로 로드)
 const ImageCarousel = dynamic(() => import("@/components/ImageCarousel"), {
   ssr: false,
 });
-// const TeacherNotice = dynamic(() => import("@/components/TeacherNotice"), {
-//   ssr: false,
-// });
 
 // 로딩 컴포넌트
 const SkeletonLoader = () => (
@@ -28,9 +27,9 @@ const CarouselLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-48"></div>
 );
 
-// const NoticeLoader = () => (
-//   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-32"></div>
-// );
+const ImageLoader = () => (
+  <div className="animate-pulse bg-gray-100 rounded-lg w-full h-40"></div>
+);
 
 interface ScheduleData {
   date: string;
@@ -68,42 +67,9 @@ const HomePage = () => {
   const quizlet_url_data = `user=${user}&type=${type}&id=${user_id}&func=quizlet`;
   const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
   const [, setUserCredits] = useState<string | number>("");
-  const [isDiaryCompleted, setIsDiaryCompleted] = useState(false);
-  const [isQuizletCompleted, setIsQuizletCompleted] = useState(false);
   const [, setNext_schedule_data] = useState<ScheduleData | null>(null);
 
   const router = useRouter();
-
-  // 현재 날짜/시간 표시용 상태
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    // 1초마다 시간 업데이트
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // 시간 형식 변환 함수
-  const formatTime = () => {
-    const hours = currentTime.getHours().toString().padStart(2, "0");
-    const minutes = currentTime.getMinutes().toString().padStart(2, "0");
-    return `${hours}:${minutes}`;
-  };
-
-  // 날짜 형식 변환 함수
-  const formatDate = () => {
-    return currentTime
-      .toLocaleDateString("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      })
-      .replace(/\. /g, ".")
-      .replace(/\.$/, "");
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -148,144 +114,217 @@ const HomePage = () => {
     router.push(`/student/schedule?${url_data}`);
   }
 
-  // 모바일 레이아웃 - Fluent 스타일
-  const MobileLayout = () => (
-    <div className="flex flex-col gap-2 pb-20">
-      {/* 상단 헤더 이미지 */}
-      <div className="w-full h-[200px] bg-gray-800 relative">
-        <div className="absolute top-4 left-4 text-white text-3xl font-bold">
-          Fluent
-        </div>
-      </div>
+  // 최신 소식 카드 컴포넌트
+  const FluentNewsCard = () => {
+    const [showLargeImage, setShowLargeImage] = useState(false);
 
-      {/* 두 개의 카드 (시간 및 인사말) */}
-      <div className="flex gap-2 mt-4 px-2">
-        {/* 시간 카드 */}
-        <div className="w-1/2 bg-blue-300 rounded-2xl p-6 flex flex-col items-center justify-center">
-          <div className="text-4xl font-bold text-white">{formatTime()}</div>
-          <div className="text-sm text-blue-800 mt-2">{formatDate()}</div>
-        </div>
+    return (
+      <>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="relative">
+            <Suspense fallback={<ImageLoader />}>
+              <img
+                src="/images/Fluent_Notice.jpeg"
+                alt="Fluent 공지사항"
+                className="w-full h-48 object-cover"
+              />
 
-        {/* 인사말 카드 */}
-        <div className="w-1/2 bg-blue-300 rounded-2xl p-6 flex flex-col items-start justify-center">
-          <div className="text-lg font-bold text-blue-900">안녕하세요,</div>
-          <div className="text-xl font-bold text-blue-900">
-            {user || "재민"}님
+              {/* 그라데이션 오버레이 */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/80"></div>
+
+              {/* 헤더 오버레이 (상단) */}
+              <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-1 h-5 bg-blue-500 rounded-full mr-2"></div>
+                  <h2 className="text-base font-bold text-white">
+                    Fluent 최신 소식
+                  </h2>
+                </div>
+              </div>
+
+              {/* 텍스트 오버레이 (하단) */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <div className="text-white text-xl font-bold mb-1">
+                  PIZZA AND BOARD GAMES
+                </div>
+                <div className="text-white/90 text-sm flex items-center justify-between">
+                  <span>Saturday, MAY 24, 2025</span>
+                  <button
+                    className="bg-white text-black rounded-full text-xs px-3 py-1 font-medium"
+                    onClick={() => setShowLargeImage(true)}
+                  >
+                    더보기
+                  </button>
+                </div>
+              </div>
+            </Suspense>
           </div>
         </div>
-      </div>
 
-      {/* 숙제 카드 */}
-      <div className="mx-2 mt-2">
-        <div className="bg-blue-300 rounded-2xl p-6">
-          <div className="text-xl font-bold text-blue-900 mb-3">HomeWork</div>
+        {/* 확대된 이미지 모달 */}
+        {showLargeImage && (
+          <div
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowLargeImage(false)}
+          >
+            <div className="relative max-w-lg w-full">
+              <img
+                src="/images/Fluent_Notice.jpeg"
+                alt="Fluent 공지사항"
+                className="w-full h-auto rounded-xl"
+              />
+              <div className="absolute top-0 right-0 -mt-4 -mr-4">
+                <button
+                  className="bg-white text-black rounded-full p-2 shadow-lg"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowLargeImage(false);
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
-          <div className="space-y-2">
-            <button
-              onClick={() => setIsDiaryCompleted(!isDiaryCompleted)}
-              className={`w-full rounded-xl p-3 text-left flex items-center justify-between transition-all ${
-                isDiaryCompleted
-                  ? "bg-blue-500 text-white"
-                  : "bg-blue-200 text-blue-900"
-              }`}
-            >
-              <div className="flex items-center">
-                <PenLine className="mr-2 w-5 h-5" />
-                <span className="font-medium">Diary 작성</span>
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-6 rounded-b-xl">
+                <p className="text-white/90 text-sm">
+                  Davids English에서 진행하는 영어 회화 모임에 여러분을
+                  초대합니다! 피자를 먹으며 다양한 보드게임을 통해 영어로
+                  대화하는 시간을 가져보세요. 영어 레벨 5 이상 참가 가능합니다.
+                </p>
               </div>
-              <div
-                className={`p-1 rounded-full ${
-                  isDiaryCompleted ? "bg-white" : "bg-blue-100"
-                }`}
-              >
-                <Check
-                  className={`w-4 h-4 ${
-                    isDiaryCompleted ? "text-blue-500" : "text-blue-900/30"
-                  }`}
-                />
-              </div>
-            </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
 
-            <button
-              onClick={() => setIsQuizletCompleted(!isQuizletCompleted)}
-              className={`w-full rounded-xl p-3 text-left flex items-center justify-between transition-all ${
-                isQuizletCompleted
-                  ? "bg-blue-500 text-white"
-                  : "bg-blue-200 text-blue-900"
-              }`}
-            >
-              <div className="flex items-center">
-                <BookOpen className="mr-2 w-5 h-5" />
-                <span className="font-medium">Quizlet 학습</span>
-              </div>
-              <div
-                className={`p-1 rounded-full ${
-                  isQuizletCompleted ? "bg-white" : "bg-blue-100"
-                }`}
-              >
-                <Check
-                  className={`w-4 h-4 ${
-                    isQuizletCompleted ? "text-blue-500" : "text-blue-900/30"
-                  }`}
-                />
-              </div>
-            </button>
+  const MobileLayout = () => {
+    // 더미 공지사항 데이터
+    const teacherNote = {
+      title: "오늘의 숙제",
+      content:
+        "안녕하세요! 오늘은 지난 시간에 배운 퀴즈렛 문장들을 복습하고, 새로운 문법 패턴에 대해 학습했어요. 다음 수업에서는 다이어리 문장을 고치는 연습을 할 예정입니다. 미리 다이어리를 작성하여 준비해 오시면 좋겠습니다. 화이팅!",
+      date: "2023년 10월 1일",
+    };
+
+    // 현재 시간 상태
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // 시간 업데이트 효과
+    useEffect(() => {
+      const timer = setInterval(() => {
+        setCurrentTime(new Date());
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }, []);
+
+    // 시간 포맷팅 함수
+    const formatTime = () => {
+      return currentTime.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    };
+
+    // 날짜 포맷팅 함수
+    const formatDate = () => {
+      const today = currentTime;
+      const days = ["일", "월", "화", "수", "목", "금", "토"];
+      const dayName = days[today.getDay()];
+      return `${today.getMonth() + 1}월 ${today.getDate()}일 ${dayName}요일`;
+    };
+
+    return (
+      <div className="flex flex-col gap-4 pb-20">
+        {/* 영어 학습 캐러셀 */}
+        <div className="relative">
+          <Suspense fallback={<CarouselLoader />}>
+            <ImageCarousel />
+          </Suspense>
+
+          <div className="absolute top-5 left-5 z-10">
+            <span className="text-3xl font-bold text-white">Fluent</span>
           </div>
         </div>
-      </div>
 
-      {/* 이벤트 카드 - 피자 & 보드게임 */}
-      <div className="mx-2 mt-2">
-        <div className="bg-blue-300 rounded-2xl overflow-hidden">
-          <div className="flex">
-            {/* 이벤트 포스터 이미지 */}
-            <div className="w-1/3 p-2"></div>
+        {/* 인사말 카드 - 토스 스타일 */}
+        <div className="bg-blue-50 rounded-3xl shadow-sm border border-gray-100 p-6">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 font-medium text-lg">
+                  {user ? user.charAt(0) : "F"}
+                </span>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">안녕하세요</div>
+                <div className="text-lg font-bold text-gray-900">
+                  {user || "Fluent"} 님
+                </div>
+              </div>
+            </div>
 
-            {/* 이벤트 정보 */}
-            <div className="w-2/3 p-4 flex flex-col justify-center">
-              <h3 className="text-2xl font-bold text-white">
-                PIZZA AND
-                <br />
-                BOARD GAMES
-              </h3>
-              <p className="text-blue-900 mt-2">Saturday, MAY 24, 2025</p>
+            <div className="mt-2 border-t border-gray-100 pt-4">
+              <div className="flex justify-between items-center">
+                <div className="text-xs text-gray-500">{formatDate()}</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {formatTime()}
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 기타 정보 */}
-      <div className="mt-2">
-        <Suspense fallback={<CarouselLoader />}>
-          <ImageCarousel />
-        </Suspense>
-      </div>
-    </div>
-  );
+        {/* 선생님의 노트 카드 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center">
+              <div className="w-1 h-5 bg-blue-500 rounded-full mr-2"></div>
+              <h2 className="text-lg font-bold text-gray-800">
+                {teacherNote.title}
+              </h2>
+            </div>
+            <span className="text-xs text-gray-400">{teacherNote.date}</span>
+          </div>
 
+          <div className="bg-blue-50 rounded-2xl p-4">
+            <p className="text-gray-700 text-sm leading-relaxed">
+              {teacherNote.content}
+            </p>
+          </div>
+        </div>
+
+        {/* 최신 소식 카드 - 이미지 오버레이 스타일 */}
+        <FluentNewsCard />
+      </div>
+    );
+  };
   return (
-    <div className="flex flex-col w-full min-h-screen bg-white">
+    <div className="flex flex-col w-full min-h-screen p-2 sm:p-4 gap-2 sm:gap-4 bg-gray-50">
       {/* 모바일 레이아웃 */}
       <div className="block md:hidden">
         <MobileLayout />
       </div>
-
       {/* 데스크톱 레이아웃 */}
-      <div className="hidden md:flex md:flex-col md:gap-6 p-4">
+      <div className="hidden md:flex md:flex-col md:gap-6">
+        {/* 시간 표시 - Alert 컴포넌트 */}
         <div className="rounded-lg bg-white shadow-lg">
           <Suspense fallback={<SkeletonLoader />}>
             <Alert />
           </Suspense>
         </div>
-
-        <div className="bg-white rounded-lg p-4 shadow-lg flex-1">
+        {/* 오늘의 학생 공지 */}
+        <div className="bg-white rounded-lg p-3 sm:p-4 shadow-lg flex-1 ">
           <Suspense fallback={<SkeletonLoader />}>
             <Announcement />
           </Suspense>
         </div>
-
+        {/* 학습 메뉴 버튼들 */}
         <div className="space-y-2 mt-6">
-          <div className="flex flex-row gap-10">
+          <div className="flex flex-row gap-2 sm:gap-10">
             <div
               onClick={Schedule}
               className="cursor-pointer flex-1 transition-transform hover:scale-105"
@@ -309,9 +348,6 @@ const HomePage = () => {
           </div>
         </div>
       </div>
-
-      {/* 하단 빨간색 영역 (모바일에서만 표시) */}
-      <div className="fixed bottom-0 left-0 w-full h-14 bg-red-500 md:hidden"></div>
     </div>
   );
 };
@@ -320,7 +356,7 @@ export default function Home() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-screen bg-white">
+        <div className="flex items-center justify-center h-screen bg-gray-50">
           <div className="animate-pulse text-gray-500">페이지 로딩 중...</div>
         </div>
       }
