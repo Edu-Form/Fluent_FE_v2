@@ -7,7 +7,7 @@ import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
 
-import { Check } from "lucide-react";
+import { Check, Calendar, BookOpen, PenLine } from "lucide-react";
 
 // 동적 컴포넌트 로딩 추가
 const Alert = dynamic(() => import("@/components/Alert"), { ssr: false });
@@ -58,12 +58,6 @@ function next_schedule(data: any) {
   return null;
 }
 
-// function convertTo12HourFormat(time24: number) {
-//   const suffix = time24 >= 12 ? "PM" : "AM";
-//   const hours12 = time24 % 12 || 12;
-//   return `${hours12} ${suffix}`;
-// }
-
 const HomePage = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
@@ -79,6 +73,34 @@ const HomePage = () => {
   const [, setNext_schedule_data] = useState<ScheduleData | null>(null);
 
   const router = useRouter();
+
+  // 현재 날짜/시간 표시용 상태
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    // 1초마다 시간 업데이트
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // 시간 형식 변환 함수
+  const formatTime = () => {
+    const hours = currentTime.getHours().toString().padStart(2, '0');
+    const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  // 날짜 형식 변환 함수
+  const formatDate = () => {
+    return currentTime.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).replace(/\. /g, '.').replace(/\.$/, '');
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -123,157 +145,158 @@ const HomePage = () => {
     router.push(`/student/schedule?${url_data}`);
   }
 
-  // 모바일 레이아웃 컴포넌트
+  // 모바일 레이아웃 - Fluent 스타일
   const MobileLayout = () => (
-    <div className="flex flex-col gap-3 pb-20">
-      <div className="rounded-lg bg-white shadow-lg">
-        <Suspense fallback={<SkeletonLoader />}>
-          <Alert />
-        </Suspense>
+    <div className="flex flex-col gap-2 pb-20">
+      {/* 상단 헤더 이미지 */}
+      <div className="w-full h-[200px] bg-gray-800 relative">
+      
+        <div className="absolute top-4 left-4 text-white text-3xl font-bold">
+          Fluent
+        </div>
       </div>
 
-      {/* 상단 박스 섹션 */}
-      <div className="flex gap-3">
-        {/* 인사말 박스 */}
-        <div className="w-1/2 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg shadow-md flex flex-col justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">안녕하세요,</h1>
-            <h1 className="text-xl font-bold text-gray-900">{user}님</h1>
+      {/* 두 개의 카드 (시간 및 인사말) */}
+      <div className="flex gap-2 mt-4 px-2">
+        {/* 시간 카드 */}
+        <div className="w-1/2 bg-blue-300 rounded-2xl p-6 flex flex-col items-center justify-center">
+          <div className="text-4xl font-bold text-white">{formatTime()}</div>
+          <div className="text-sm text-blue-800 mt-2">{formatDate()}</div>
+        </div>
+
+        {/* 인사말 카드 */}
+        <div className="w-1/2 bg-blue-300 rounded-2xl p-6 flex flex-col items-start justify-center">
+          <div className="text-lg font-bold text-blue-900">안녕하세요,</div>
+          <div className="text-xl font-bold text-blue-900">{user || '재민'}님</div>
+        </div>
+      </div>
+
+      {/* 숙제 카드 */}
+      <div className="mx-2 mt-2">
+        <div className="bg-blue-300 rounded-2xl p-6">
+          <div className="text-xl font-bold text-blue-900 mb-3">HomeWork</div>
+          
+          <div className="space-y-2">
+            <button
+              onClick={() => setIsDiaryCompleted(!isDiaryCompleted)}
+              className={`w-full rounded-xl p-3 text-left flex items-center justify-between transition-all ${
+                isDiaryCompleted
+                  ? "bg-blue-500 text-white"
+                  : "bg-blue-200 text-blue-900"
+              }`}
+            >
+              <div className="flex items-center">
+                <PenLine className="mr-2 w-5 h-5" />
+                <span className="font-medium">Diary 작성</span>
+              </div>
+              <div
+                className={`p-1 rounded-full ${
+                  isDiaryCompleted ? "bg-white" : "bg-blue-100"
+                }`}
+              >
+                <Check
+                  className={`w-4 h-4 ${
+                    isDiaryCompleted ? "text-blue-500" : "text-blue-900/30"
+                  }`}
+                />
+              </div>
+            </button>
+
+            <button
+              onClick={() => setIsQuizletCompleted(!isQuizletCompleted)}
+              className={`w-full rounded-xl p-3 text-left flex items-center justify-between transition-all ${
+                isQuizletCompleted
+                  ? "bg-blue-500 text-white"
+                  : "bg-blue-200 text-blue-900"
+              }`}
+            >
+              <div className="flex items-center">
+                <BookOpen className="mr-2 w-5 h-5" />
+                <span className="font-medium">Quizlet 학습</span>
+              </div>
+              <div
+                className={`p-1 rounded-full ${
+                  isQuizletCompleted ? "bg-white" : "bg-blue-100"
+                }`}
+              >
+                <Check
+                  className={`w-4 h-4 ${
+                    isQuizletCompleted ? "text-blue-500" : "text-blue-900/30"
+                  }`}
+                />
+              </div>
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* 체크리스트 박스 */}
-        <div className="w-1/2 bg-white rounded-lg shadow-md p-4 flex flex-col gap-3">
-          <button
-            onClick={() => setIsDiaryCompleted(!isDiaryCompleted)}
-            className={`rounded-xl p-3 text-left flex items-center justify-between transition-all transform hover:scale-[1.02] ${
-              isDiaryCompleted
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
-                : "bg-gradient-to-r from-orange-50 to-amber-50 text-orange-900 hover:bg-opacity-90 border border-gray-100"
-            }`}
-          >
-            <div className="flex flex-col">
-              <h3 className="font-bold text-sm">Diary 작성</h3>
-              <p
-                className={`text-xs ${
-                  isDiaryCompleted ? "text-white/80" : "opacity-70"
-                }`}
-              >
-                {isDiaryCompleted ? "완료됨" : "시작하기"}
-              </p>
+      {/* 이벤트 카드 - 피자 & 보드게임 */}
+      <div className="mx-2 mt-2">
+        <div className="bg-blue-300 rounded-2xl overflow-hidden">
+          <div className="flex">
+            {/* 이벤트 포스터 이미지 */}
+            <div className="w-1/3 p-2">
+            
             </div>
-            <div
-              className={`p-1 rounded-full ${
-                isDiaryCompleted ? "bg-white/30" : "bg-gray-100"
-              }`}
-            >
-              <Check
-                className={`w-4 h-4 ${
-                  isDiaryCompleted ? "text-white" : "text-gray-400"
-                }`}
-              />
+            
+            {/* 이벤트 정보 */}
+            <div className="w-2/3 p-4 flex flex-col justify-center">
+              <h3 className="text-2xl font-bold text-white">PIZZA AND<br />BOARD GAMES</h3>
+              <p className="text-blue-900 mt-2">Saturday, MAY 24, 2025</p>
             </div>
-          </button>
-
-          <button
-            onClick={() => setIsQuizletCompleted(!isQuizletCompleted)}
-            className={`rounded-xl p-3 text-left flex items-center justify-between transition-all transform hover:scale-[1.02] ${
-              isQuizletCompleted
-                ? "bg-gradient-to-r from-purple-500 to-violet-500 text-white shadow-md"
-                : "bg-gradient-to-r from-purple-50 to-violet-50 text-purple-900 hover:bg-opacity-90 border border-gray-100"
-            }`}
-          >
-            <div className="flex flex-col">
-              <h3 className="font-bold text-sm">Quizlet 학습</h3>
-              <p
-                className={`text-xs ${
-                  isQuizletCompleted ? "text-white/80" : "opacity-70"
-                }`}
-              >
-                {isQuizletCompleted ? "완료됨" : "시작하기"}
-              </p>
-            </div>
-            <div
-              className={`p-1 rounded-full ${
-                isQuizletCompleted ? "bg-white/30" : "bg-gray-100"
-              }`}
-            >
-              <Check
-                className={`w-4 h-4 ${
-                  isQuizletCompleted ? "text-white" : "text-gray-400"
-                }`}
-              />
-            </div>
-          </button>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-5 shadow-md">
-        <h2 className="text-md font-bold text-gray-900 flex items-center">
-          <span className="inline-block w-1.5 h-5 bg-blue-500 rounded mr-2"></span>
-          공지사항
-        </h2>
-
-        <div className="h-36">
-          <Suspense fallback={<NoticeLoader />}>
-            <TeacherNotice />
-          </Suspense>
-        </div>
+      {/* 기타 정보 */}
+      <div className="mt-2">
+        <Suspense fallback={<CarouselLoader />}>
+          <ImageCarousel />
+        </Suspense>
       </div>
-
-      {/*영어 학습 캐러셀 */}
-      <Suspense fallback={<CarouselLoader />}>
-        <ImageCarousel />
-      </Suspense>
     </div>
   );
 
   return (
-    <div className="flex flex-col w-full min-h-screen p-2 sm:p-4 gap-2 sm:gap-4 bg-gray-50">
+    <div className="flex flex-col w-full min-h-screen bg-white">
       {/* 모바일 레이아웃 */}
       <div className="block md:hidden">
         <MobileLayout />
       </div>
+
       {/* 데스크톱 레이아웃 */}
-      <div className="hidden md:flex md:flex-col md:gap-6">
-        {/* 시간 표시 - Alert 컴포넌트 */}
+      <div className="hidden md:flex md:flex-col md:gap-6 p-4">
         <div className="rounded-lg bg-white shadow-lg">
           <Suspense fallback={<SkeletonLoader />}>
             <Alert />
           </Suspense>
         </div>
-        {/* 오늘의 학생 공지 */}
-        <div className="bg-white rounded-lg p-3 sm:p-4 shadow-lg flex-1 ">
+        
+        <div className="bg-white rounded-lg p-4 shadow-lg flex-1">
           <Suspense fallback={<SkeletonLoader />}>
             <Announcement />
           </Suspense>
         </div>
-        {/* 학습 메뉴 버튼들 */}
+        
         <div className="space-y-2 mt-6">
-          <div className="flex flex-row gap-2 sm:gap-10">
-            <div
-              onClick={Schedule}
-              className="cursor-pointer flex-1 transition-transform hover:scale-105"
-            >
+          <div className="flex flex-row gap-10">
+            <div onClick={Schedule} className="cursor-pointer flex-1 transition-transform hover:scale-105">
               <EnterBtn id="schedule" image="/images/ScheduleCardMain.svg" />
             </div>
 
-            <div
-              onClick={Quizlet}
-              className="cursor-pointer flex-1 transition-transform hover:scale-105"
-            >
+            <div onClick={Quizlet} className="cursor-pointer flex-1 transition-transform hover:scale-105">
               <EnterBtn id="quizlet" image="/images/QuizletCardMain.svg" />
             </div>
 
-            <div
-              onClick={Diary}
-              className="cursor-pointer flex-1 transition-transform hover:scale-105"
-            >
+            <div onClick={Diary} className="cursor-pointer flex-1 transition-transform hover:scale-105">
               <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
             </div>
           </div>
         </div>
       </div>
+      
+      {/* 하단 빨간색 영역 (모바일에서만 표시) */}
+      <div className="fixed bottom-0 left-0 w-full h-14 bg-red-500 md:hidden"></div>
     </div>
   );
 };
@@ -282,7 +305,7 @@ export default function Home() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="flex items-center justify-center h-screen bg-white">
           <div className="animate-pulse text-gray-500">페이지 로딩 중...</div>
         </div>
       }
