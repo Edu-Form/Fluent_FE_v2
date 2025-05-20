@@ -608,7 +608,7 @@ const businessTemplate2 = `
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleHighlight().run()}
-                className={`px-3 py-1 border-2 border-yellow-100 rounded ${editor?.isActive('highlight') ? 'bg-yellow-300 text-black' : ''}`}
+                className={`px-3 py-1 border-2 border-yellow-300 rounded ${editor?.isActive('highlight') ? 'bg-yellow-300 text-black' : ''}`}
               >
                 Quizlet Highlighter
               </button>
@@ -617,7 +617,7 @@ const businessTemplate2 = `
             <div className="flex-grow flex gap-4 overflow-hidden">
               {/* Left: Editor - 2/3 width */}
               <div className="flex-[2] overflow-y-auto border rounded p-4 bg-white">
-                <EditorContent editor={editor} className="prose max-w-none min-h-[300px]" />
+                <EditorContent editor={editor} className="prose max-w-none min-h-[300px] custom-editor" />
               </div>
 
               {/* Right: Templates + Homework - 1/3 width */}

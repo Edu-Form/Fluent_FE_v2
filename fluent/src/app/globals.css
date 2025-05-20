@@ -109,3 +109,10 @@ body {
     opacity: 1;
   }
 }
+
+.custom-editor mark {
+  background-color: #f0fdf4; /* Tailwind's bg-green-50 */
+  color: #1f2937;            /* Tailwind's text-gray-800 */
+  padding: 0 2px;
+  border-radius: 2px;
+}
