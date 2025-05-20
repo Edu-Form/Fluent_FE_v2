@@ -199,7 +199,7 @@ export default function Page() {
         </div>
         {/* 네비게이션 바 - sticky로 적용 */}
         <div className="sticky bottom-0 left-0 right-0 z-20">
-          <Navigation mobileOnly={true} defaultActiveIndex={2} />
+          <Navigation mobileOnly={true} defaultActiveIndex={1} />
         </div>
       </Suspense>
     </div>

@@ -40,6 +40,17 @@ interface ScheduleData {
   time: number;
 }
 
+interface HomeworkData {
+  _id: string;
+  student_name: string;
+  class_date: string;
+  date: string;
+  original_text: string;
+  homework: string;
+  eng_quizlet: string[];
+  kor_quizlet: string[];
+}
+
 function next_schedule(data: any) {
   const today = new Date();
   const formattedToday = today.toLocaleDateString("ko-KR", {
@@ -68,6 +79,9 @@ const HomePage = () => {
   const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
   const [, setUserCredits] = useState<string | number>("");
   const [, setNext_schedule_data] = useState<ScheduleData | null>(null);
+  const [homeworkData, setHomeworkData] = useState<HomeworkData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -103,6 +117,40 @@ const HomePage = () => {
       fetchScheduleData();
     }
   }, [user_id, user, type]);
+
+  // 숙제 데이터 가져오기
+  useEffect(() => {
+    const fetchHomework = async () => {
+      if (!user) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/homework/${user}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("숙제 데이터를 가져오는데 실패했습니다.");
+        }
+
+        const data = await response.json();
+        setHomeworkData(data);
+      } catch (err) {
+        console.error("숙제 데이터 로딩 오류:", err);
+        setError("숙제 데이터를 불러올 수 없습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHomework();
+  }, [user]);
 
   function Quizlet() {
     router.push(`/student/quizlet?${quizlet_url_data}`);
@@ -200,14 +248,6 @@ const HomePage = () => {
   };
 
   const MobileLayout = () => {
-    // 더미 공지사항 데이터
-    const teacherNote = {
-      title: "오늘의 숙제",
-      content:
-        "안녕하세요! 오늘은 지난 시간에 배운 퀴즈렛 문장들을 복습하고, 새로운 문법 패턴에 대해 학습했어요. 다음 수업에서는 다이어리 문장을 고치는 연습을 할 예정입니다. 미리 다이어리를 작성하여 준비해 오시면 좋겠습니다. 화이팅!",
-      date: "2023년 10월 1일",
-    };
-
     // 현재 시간 상태
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -278,23 +318,47 @@ const HomePage = () => {
           </div>
         </div>
 
-        {/* 선생님의 노트 카드 */}
+        {/* 선생님의 노트 카드  */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center">
-              <div className="w-1 h-5 bg-blue-500 rounded-full mr-2"></div>
-              <h2 className="text-lg font-bold text-gray-800">
-                {teacherNote.title}
-              </h2>
+              <div className="w-1 h-5 bg-blue-500 rounded-base mr-2"></div>
+              <h2 className="text-lg font-bold text-gray-800">오늘의 숙제</h2>
             </div>
-            <span className="text-xs text-gray-400">{teacherNote.date}</span>
+            {homeworkData && (
+              <span className="text-xs text-gray-400">
+                {homeworkData.class_date}
+              </span>
+            )}
           </div>
 
-          <div className="bg-blue-50 rounded-2xl p-4">
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {teacherNote.content}
-            </p>
-          </div>
+          {isLoading ? (
+            <div className="bg-blue-50 rounded-2xl p-4 flex items-center justify-center h-24">
+              <div className="animate-pulse flex flex-col items-center">
+                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p className="text-sm text-gray-500">숙제 불러오는 중...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="bg-red-50 rounded-2xl p-4">
+              <p className="text-red-600 text-sm">{error}</p>
+              <p className="text-gray-700 text-sm mt-2">
+                데이터를 불러오지 못했습니다. 다시 시도해주세요.
+              </p>
+            </div>
+          ) : homeworkData ? (
+            <div className="bg-blue-50 rounded-2xl p-4">
+              <p className="text-gray-700 text-sm leading-relaxed">
+                {homeworkData.homework}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-blue-50 rounded-2xl p-4">
+              <p className="text-gray-700 text-sm leading-relaxed">
+                현재 등록된 숙제가 없습니다.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* 최신 소식 카드 - 이미지 오버레이 스타일 */}

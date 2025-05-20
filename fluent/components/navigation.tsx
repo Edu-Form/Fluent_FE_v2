@@ -73,7 +73,7 @@ function LogoutConfirmModal({ onConfirm, onCancel }: LogoutConfirmModalProps) {
 }
 
 // 메인 네비게이션 컴포넌트
-function NavigationComponent() {
+function NavigationComponent({ defaultActiveIndex = 0 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
@@ -84,34 +84,37 @@ function NavigationComponent() {
   const quizlet_url_data = `user=${user}&type=${type}&id=${user_id}&func=quizlet`;
   const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
   const router = useRouter();
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(defaultActiveIndex);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const isHomePage = pathname === "/onboard" || pathname === "/";
   const displayPage = pathname === "/onboard" || pathname === "/";
 
   useEffect(() => {
-    if (pathname.includes("/home") && !func) {
-      setActiveIndex(0);
+    // 명시적으로 defaultActiveIndex를 설정했다면 그 값을 사용
+    if (defaultActiveIndex !== undefined) {
+      setActiveIndex(defaultActiveIndex);
+      return;
+    }
+
+    // 경로에 따른 activeIndex 설정
+    // 순서 중요: 더 구체적인 경로를 먼저 체크해야 함 (diary/write를 diary보다 먼저)
+    if (pathname.includes("/diary_note") || pathname.includes("/diary/write")) {
+      setActiveIndex(3); // 쓰기 탭
+    } else if (
+      (pathname.includes("/diary") && !pathname.includes("/write")) ||
+      (pathname.includes("/student") && func === "diary")
+    ) {
+      setActiveIndex(2); // 다이어리 탭
     } else if (
       pathname.includes("/quizlet") ||
       (pathname.includes("/student") && func === "quizlet")
     ) {
-      setActiveIndex(1);
-    } else if (
-      (pathname.includes("/diary") && !pathname.includes("/write")) ||
-      (pathname.includes("/student") &&
-        func === "diary" &&
-        !pathname.includes("/write"))
-    ) {
-      setActiveIndex(2);
-    } else if (
-      pathname.includes("/diary/write") ||
-      (pathname.includes("/diary") && pathname.includes("/write"))
-    ) {
-      setActiveIndex(3);
+      setActiveIndex(1); // 퀴즐렛 탭
+    } else if (pathname.includes("/home") && !func) {
+      setActiveIndex(0); // 홈 탭
     }
-  }, [pathname, func]);
+  }, [pathname, func, defaultActiveIndex]);
 
   const handleHomeClick = () => {
     router.push(`/${type}/home?${url_data}`);
@@ -134,7 +137,7 @@ function NavigationComponent() {
   };
 
   const handleDiaryWriteClick = () => {
-    router.push(`/teacher/${type}/diary_note?${diary_url_data}`);
+    router.push(`/${type}/diary_note?${diary_url_data}`);
   };
 
   const handleLogout = () => {
@@ -145,6 +148,10 @@ function NavigationComponent() {
   if (isHomePage || displayPage) {
     return null;
   }
+
+  // activeIndex 확인용 콘솔 로그 (디버깅용)
+  console.log("Current activeIndex:", activeIndex);
+  console.log("Current pathname:", pathname);
 
   return (
     <>
@@ -193,12 +200,6 @@ function NavigationComponent() {
               handleDiaryWriteClick();
             }}
           />
-          {/* <NavIcon
-            Icon={LuLogOut}
-            isActive={false}
-            label="로그아웃"
-            onClick={() => setShowLogoutConfirm(true)}
-          /> */}
         </div>
         {/* 아이폰 하단 안전 영역 */}
         <div className="h-safe-bottom bg-white" />
@@ -239,7 +240,10 @@ interface NavigationProps {
 }
 
 // 외부에서 사용할 메인 네비게이션 컴포넌트
-export default function Navigation({ mobileOnly = false }: NavigationProps) {
+export default function Navigation({
+  defaultActiveIndex,
+  mobileOnly = false,
+}: NavigationProps) {
   const isMobile = useMobileDetection();
 
   // 모바일 전용 모드인데 모바일이 아닌 경우 null 반환
@@ -249,7 +253,7 @@ export default function Navigation({ mobileOnly = false }: NavigationProps) {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <NavigationComponent />
+      <NavigationComponent defaultActiveIndex={defaultActiveIndex} />
     </Suspense>
   );
 }

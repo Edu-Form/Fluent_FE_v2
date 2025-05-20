@@ -520,15 +520,15 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                     >
                       <FiChevronLeft size={20} />
                     </button>
-                    <h3 className="font-bold">수정사항</h3>
+                    <h3 className="font-bold">모든 수정사항</h3>
                   </div>
-                  <div className="p-3 border-b border-gray-200 md:hidden ">
+                  {/* <div className="p-3 border-b border-gray-200 md:hidden ">
                     <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 max-h-32 overflow-y-auto">
                       {renderHighlightedText()}
                     </div>
-                  </div>
-                  {/* Selected Error Panel */}
-                  {selectedError && (
+                  </div> */}
+                  {/*선택한 문장 대표 */}
+                  {/* {selectedError && (
                     <div className="p-3 sm:p-4 border-b border-gray-200 ">
                       <div className="mb-2 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -559,14 +559,9 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                         </p>
                       </div>
                     </div>
-                  )}
+                  )} */}
 
-                  {/* All Errors List */}
                   <div className="flex-grow overflow-y-auto p-3 sm:p-4 ">
-                    <h2 className="text-sm sm:text-base font-bold text-gray-900 mb-3 sm:mb-4">
-                      모든 수정 사항
-                    </h2>
-
                     <div className="space-y-2 sm:space-y-4">
                       {errors.map((error, idx) => {
                         const isActive =

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Navigation from "@/components/navigation";
 
 const DiaryCard = dynamic(() => import("@/components/Diary/DiaryCard"), {
   ssr: false,
@@ -75,6 +76,7 @@ const DiaryPageContent = () => {
           }
         />
       </div>
+      <Navigation mobileOnly={true} defaultActiveIndex={2} />
     </div>
   );
 };
