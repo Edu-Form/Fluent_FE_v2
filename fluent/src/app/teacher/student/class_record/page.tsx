@@ -608,7 +608,7 @@ const businessTemplate2 = `
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleHighlight().run()}
-                className={`px-3 py-1 border-2 border-yellow-300 rounded ${editor?.isActive('highlight') ? 'bg-yellow-300 text-black' : ''}`}
+                className={`px-3 py-1 border-2 border-green-300 rounded ${editor?.isActive('highlight') ? 'bg-green-50 text-black' : ''}`}
               >
                 Quizlet Highlighter
               </button>
