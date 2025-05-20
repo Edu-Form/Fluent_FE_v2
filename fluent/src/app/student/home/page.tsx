@@ -7,7 +7,7 @@ import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
 
-import { Check, Calendar, BookOpen, PenLine } from "lucide-react";
+import { Check, BookOpen, PenLine } from "lucide-react";
 
 // 동적 컴포넌트 로딩 추가
 const Alert = dynamic(() => import("@/components/Alert"), { ssr: false });
@@ -15,9 +15,9 @@ const Alert = dynamic(() => import("@/components/Alert"), { ssr: false });
 const ImageCarousel = dynamic(() => import("@/components/ImageCarousel"), {
   ssr: false,
 });
-const TeacherNotice = dynamic(() => import("@/components/TeacherNotice"), {
-  ssr: false,
-});
+// const TeacherNotice = dynamic(() => import("@/components/TeacherNotice"), {
+//   ssr: false,
+// });
 
 // 로딩 컴포넌트
 const SkeletonLoader = () => (
@@ -28,9 +28,9 @@ const CarouselLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-48"></div>
 );
 
-const NoticeLoader = () => (
-  <div className="animate-pulse bg-gray-100 rounded-lg w-full h-32"></div>
-);
+// const NoticeLoader = () => (
+//   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-32"></div>
+// );
 
 interface ScheduleData {
   date: string;
@@ -88,18 +88,21 @@ const HomePage = () => {
 
   // 시간 형식 변환 함수
   const formatTime = () => {
-    const hours = currentTime.getHours().toString().padStart(2, '0');
-    const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+    const hours = currentTime.getHours().toString().padStart(2, "0");
+    const minutes = currentTime.getMinutes().toString().padStart(2, "0");
     return `${hours}:${minutes}`;
   };
 
   // 날짜 형식 변환 함수
   const formatDate = () => {
-    return currentTime.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }).replace(/\. /g, '.').replace(/\.$/, '');
+    return currentTime
+      .toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+      .replace(/\. /g, ".")
+      .replace(/\.$/, "");
   };
 
   useEffect(() => {
@@ -150,7 +153,6 @@ const HomePage = () => {
     <div className="flex flex-col gap-2 pb-20">
       {/* 상단 헤더 이미지 */}
       <div className="w-full h-[200px] bg-gray-800 relative">
-      
         <div className="absolute top-4 left-4 text-white text-3xl font-bold">
           Fluent
         </div>
@@ -167,7 +169,9 @@ const HomePage = () => {
         {/* 인사말 카드 */}
         <div className="w-1/2 bg-blue-300 rounded-2xl p-6 flex flex-col items-start justify-center">
           <div className="text-lg font-bold text-blue-900">안녕하세요,</div>
-          <div className="text-xl font-bold text-blue-900">{user || '재민'}님</div>
+          <div className="text-xl font-bold text-blue-900">
+            {user || "재민"}님
+          </div>
         </div>
       </div>
 
@@ -175,7 +179,7 @@ const HomePage = () => {
       <div className="mx-2 mt-2">
         <div className="bg-blue-300 rounded-2xl p-6">
           <div className="text-xl font-bold text-blue-900 mb-3">HomeWork</div>
-          
+
           <div className="space-y-2">
             <button
               onClick={() => setIsDiaryCompleted(!isDiaryCompleted)}
@@ -235,13 +239,15 @@ const HomePage = () => {
         <div className="bg-blue-300 rounded-2xl overflow-hidden">
           <div className="flex">
             {/* 이벤트 포스터 이미지 */}
-            <div className="w-1/3 p-2">
-            
-            </div>
-            
+            <div className="w-1/3 p-2"></div>
+
             {/* 이벤트 정보 */}
             <div className="w-2/3 p-4 flex flex-col justify-center">
-              <h3 className="text-2xl font-bold text-white">PIZZA AND<br />BOARD GAMES</h3>
+              <h3 className="text-2xl font-bold text-white">
+                PIZZA AND
+                <br />
+                BOARD GAMES
+              </h3>
               <p className="text-blue-900 mt-2">Saturday, MAY 24, 2025</p>
             </div>
           </div>
@@ -271,30 +277,39 @@ const HomePage = () => {
             <Alert />
           </Suspense>
         </div>
-        
+
         <div className="bg-white rounded-lg p-4 shadow-lg flex-1">
           <Suspense fallback={<SkeletonLoader />}>
             <Announcement />
           </Suspense>
         </div>
-        
+
         <div className="space-y-2 mt-6">
           <div className="flex flex-row gap-10">
-            <div onClick={Schedule} className="cursor-pointer flex-1 transition-transform hover:scale-105">
+            <div
+              onClick={Schedule}
+              className="cursor-pointer flex-1 transition-transform hover:scale-105"
+            >
               <EnterBtn id="schedule" image="/images/ScheduleCardMain.svg" />
             </div>
 
-            <div onClick={Quizlet} className="cursor-pointer flex-1 transition-transform hover:scale-105">
+            <div
+              onClick={Quizlet}
+              className="cursor-pointer flex-1 transition-transform hover:scale-105"
+            >
               <EnterBtn id="quizlet" image="/images/QuizletCardMain.svg" />
             </div>
 
-            <div onClick={Diary} className="cursor-pointer flex-1 transition-transform hover:scale-105">
+            <div
+              onClick={Diary}
+              className="cursor-pointer flex-1 transition-transform hover:scale-105"
+            >
               <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* 하단 빨간색 영역 (모바일에서만 표시) */}
       <div className="fixed bottom-0 left-0 w-full h-14 bg-red-500 md:hidden"></div>
     </div>
