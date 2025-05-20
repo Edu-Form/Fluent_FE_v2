@@ -120,6 +120,10 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
     router.push(`/${type}/home?${url_data}`);
   };
 
+  const handleNoteClick = () => {
+      router.push(`/${type}/note?${url_data}`);
+    }
+
   const handleCardsClick = () => {
     if (type === "teacher") {
       router.push(`/${type}/student?${quizlet_url_data}`);
@@ -171,6 +175,15 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
             onClick={() => {
               setActiveIndex(0);
               handleHomeClick();
+            }}
+          />
+          <NavIcon
+            Icon={RiHome6Fill}
+            isActive={activeIndex === 4}
+            label="노트"
+            onClick={() => {
+              setActiveIndex(4);
+              handleNoteClick();
             }}
           />
           <NavIcon
