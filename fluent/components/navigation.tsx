@@ -121,8 +121,8 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
   };
 
   const handleNoteClick = () => {
-      router.push(`/${type}/note?${url_data}`);
-    }
+    router.push(`/${type}/note?${url_data}`);
+  };
 
   const handleCardsClick = () => {
     if (type === "teacher") {
@@ -177,15 +177,7 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
               handleHomeClick();
             }}
           />
-          <NavIcon
-            Icon={RiHome6Fill}
-            isActive={activeIndex === 4}
-            label="노트"
-            onClick={() => {
-              setActiveIndex(4);
-              handleNoteClick();
-            }}
-          />
+
           <NavIcon
             Icon={TbCardsFilled}
             isActive={activeIndex === 1}
@@ -211,6 +203,15 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
             onClick={() => {
               setActiveIndex(3);
               handleDiaryWriteClick();
+            }}
+          />
+          <NavIcon
+            Icon={RiHome6Fill}
+            isActive={activeIndex === 4}
+            label="노트"
+            onClick={() => {
+              setActiveIndex(4);
+              handleNoteClick();
             }}
           />
         </div>
