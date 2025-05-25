@@ -703,7 +703,7 @@ const ClassPageContent: React.FC = () => {
                       onClick={() => setActiveOption("option1")}
                       className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                         activeOption === "option1"
-                          ? "bg-[#d0f8dc] text-black"
+                          ? "bg-blue-600 text-white border-blue-600"
                           : "bg-white text-gray-700 hover:bg-gray-100"
                       }`}
                     >
@@ -714,7 +714,7 @@ const ClassPageContent: React.FC = () => {
                       onClick={() => setActiveOption("option2")}
                       className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                         activeOption === "option2"
-                          ? "bg-[#d0f8dc] text-black"
+                          ? "bg-blue-600 text-white border-blue-600"
                           : "bg-white text-gray-700 hover:bg-gray-100"
                       }`}
                     >
