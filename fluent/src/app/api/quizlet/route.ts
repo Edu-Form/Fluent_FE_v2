@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No data provided" }, { status: 400 });
     }
 
-    const { original_text, homework } = quizletData;
+    const { original_text, homework, nextClass } = quizletData;
 
     // Process the original text to create eng_quizlet
     let lines = original_text.match(/<mark>(.*?)<\/mark>/g);
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       completion.choices[0]?.message?.content?.trim() ?? "";
     const kor_quizlet = translated_text.split("\n");
 
-    const result = await saveQuizletData(quizletData, kor_quizlet, eng_quizlet, homework);
+    const result = await saveQuizletData(quizletData, kor_quizlet, eng_quizlet, homework, nextClass);
 
     return NextResponse.json(
       { message: "Data saved successfully", result },

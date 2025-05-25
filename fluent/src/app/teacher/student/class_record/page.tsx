@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
+import Underline from '@tiptap/extension-underline';
 import "react-day-picker/dist/style.css";
 
 // 날짜 포맷 함수들 유지
@@ -118,6 +119,7 @@ const ClassPageContent: React.FC = () => {
       alert("Homework field is required.");
       return;
     }
+    
     setLoading(true);
 
     try {
@@ -135,7 +137,8 @@ const ClassPageContent: React.FC = () => {
         class_date,
         date,
         original_text,
-        homework
+        homework,
+        nextClass: nextClass || "",
       };
 
       const response = await fetch(`/api/quizlet/`, {
@@ -181,9 +184,9 @@ const ClassPageContent: React.FC = () => {
   };
 
   const notesTemplate1 = `
-  <h2>📚 Notes Template</h2>
+  <h1>📚 Notes Template</h1>
 
-  <h3>✅ Tasks</h3>
+  <h2>✅ Tasks</h2>
   <ul>
     <li>Add Polishing Expressions (70%)</li>
     <li>Add New Expressions (30%)</li>
@@ -215,8 +218,6 @@ const ClassPageContent: React.FC = () => {
     </li>
   </ol>
 
-  <h3>🔜 Next Class</h3>
-  <p>Focus on:<br/>- 일반동사 + be 동사<br/>- Practice Questions & Answers</p>
 `;
 
 const notesTemplate2 = `
@@ -243,8 +244,6 @@ const notesTemplate3 = `
     <li><strong>Textbook</strong> (15 minutes)<br/>- Add wrong/slow expressions from test or verbal checks</li>
   </ol>
 
-  <h3>🔜 Next Class</h3>
-  <p>Continue Q&A and possibly introduce dates + harder diaries</p>
 `;
 
 const intermediateTemplate1 = `
@@ -264,8 +263,7 @@ const intermediateTemplate1 = `
     </li>
   </ol>
 
-  <h3>🔜 Next Class</h3>
-  <p>Diary review via conversation + Quizlet updates</p>
+
 `;
 
 const intermediateTemplate2 = `
@@ -287,8 +285,7 @@ const intermediateTemplate2 = `
     <li>Funny story about kids</li>
   </ul>
 
-  <h3>🔜 Next Class</h3>
-  <p>Storytell intermediate test questions</p>
+
 `;
 
 const intermediateTemplate3 = `
@@ -301,8 +298,7 @@ const intermediateTemplate3 = `
     <li><strong>Textbook</strong> (15 minutes)<br/>- Continue chapter, verbal checks</li>
   </ol>
 
-  <h3>🔜 Next Class</h3>
-  <p>Continue with current or next chapter</p>
+
 `;
 
 const businessTemplate1 = `
@@ -360,10 +356,14 @@ const businessTemplate2 = `
   };
 
   const [homework, setHomework] = useState("");
+  const [nextClass, setNextClass] = useState("");
+  const [activeOption, setActiveOption] = useState<"option1" | "option2">("option1");
+
+
 
 
   const editor = useEditor({
-    extensions: [StarterKit, Highlight],
+    extensions: [StarterKit, Highlight, Underline],
     content: original_text,
     onUpdate: ({ editor }) => {
       setOriginal_text(editor.getHTML());
@@ -586,17 +586,41 @@ const businessTemplate2 = `
               </button>
               <button
                 type="button"
-                onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('bulletList') ? 'bg-black text-white' : ''}`}
+                onClick={() => editor?.chain().focus().toggleUnderline().run()}
+                className={`px-3 py-1 border rounded ${editor?.isActive('underline') ? 'bg-black text-white' : ''}`}
               >
-                • List
+                Underline
               </button>
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+                className={`px-3 py-1 border rounded ${editor?.isActive('heading', { level: 1 }) ? 'bg-black text-white' : ''}`}
+              >
+                H1
+              </button>
+
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
                 className={`px-3 py-1 border rounded ${editor?.isActive('heading', { level: 2 }) ? 'bg-black text-white' : ''}`}
               >
                 H2
+              </button>
+
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+                className={`px-3 py-1 border rounded ${editor?.isActive('heading', { level: 3 }) ? 'bg-black text-white' : ''}`}
+              >
+                H3
+              </button>
+
+              <button
+                type="button"
+                onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                className={`px-3 py-1 border rounded ${editor?.isActive('bulletList') ? 'bg-black text-white' : ''}`}
+              >
+                • List
               </button>
               <button
                 type="button"
@@ -608,7 +632,7 @@ const businessTemplate2 = `
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleHighlight().run()}
-                className={`px-3 py-1 border-2 border-green-300 rounded ${editor?.isActive('highlight') ? 'bg-green-50 text-black' : ''}`}
+                className={`px-3 py-1 border-2 bg-[#d0f8dc] rounded ${editor?.isActive('highlight') ? 'bg-green-50 text-black' : ''}`}
               >
                 Quizlet Highlighter
               </button>
@@ -622,64 +646,119 @@ const businessTemplate2 = `
 
               {/* Right: Templates + Homework - 1/3 width */}
               <div className="flex-[1] flex flex-col gap-6">
-              {/* Template Tabs */}
-              <div>
-                <h3 className="text-md font-semibold text-gray-800 mb-2">💡 Select a Template</h3>
-                <div className="flex flex-wrap gap-2">
-                  {(Object.keys(templates) as TabKey[]).map((key) => (
+                <div className="flex justify-end">
+                  <div className="w-full flex border border-gray-300 rounded-md overflow-hidden">
                     <button
                       type="button"
-                      key={key}
-                      onClick={() => setActiveTab(key)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors duration-200 border 
-                        ${activeTab === key
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                      onClick={() => setActiveOption("option1")}
+                      className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                        activeOption === "option1"
+                          ? "bg-[#d0f8dc] text-black"
+                          : "bg-white text-gray-700 hover:bg-gray-100"
+                      }`}
                     >
-                      {key} Class
+                      Option 1
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Template Buttons */}
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Choose a Template</h4>
-                <div className="flex flex-wrap gap-3">
-                  {templates[activeTab as TabKey].map((text, idx) => (
                     <button
                       type="button"
-                      key={idx}
-                      onClick={() => setOriginal_text(text)}
-                      disabled={loading}
-                      className="px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm disabled:opacity-50"
+                      onClick={() => setActiveOption("option2")}
+                      className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                        activeOption === "option2"
+                          ? "bg-[#d0f8dc] text-black"
+                          : "bg-white text-gray-700 hover:bg-gray-100"
+                      }`}
                     >
-                      {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} {idx + 1}
+                      Search Previous Class Notes
                     </button>
-                  ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="mt-6 flex-[1] flex flex-col gap-2">
-                <label htmlFor="homework" className="text-lg font-bold text-gray-700">📌 Homework<span className="text-red-500">*</span></label>
-                <textarea
-                  id="homework"
-                  value={homework}
-                  onChange={(e) => setHomework(e.target.value)}
-                  className="border rounded px-3 py-2 text-md resize-none min-h-[250px] focus:outline-none focus:ring-2 focus:ring-[#3182F6]"
-                  required
-                />
-              </div>
 
+                {/* Conditional content inside the same right panel */}
+                {activeOption === "option1" && (
+                  <>
+                    {/* Template Tabs */}
+                    <div>
+                      <h3 className="text-md font-semibold text-gray-800 mb-2">💡 Select a Template</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {(Object.keys(templates) as TabKey[]).map((key) => (
+                          <button
+                            type="button"
+                            key={key}
+                            onClick={() => setActiveTab(key)}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors duration-200 border 
+                              ${activeTab === key
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                          >
+                            {key} Class
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Template Buttons */}
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Choose a Template</h4>
+                      <div className="flex flex-wrap gap-3">
+                        {templates[activeTab as TabKey].map((text, idx) => (
+                          <button
+                            type="button"
+                            key={idx}
+                            onClick={() => setOriginal_text(text)}
+                            disabled={loading}
+                            className="px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm disabled:opacity-50"
+                          >
+                            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} {idx + 1}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Homework Input */}
+                    <div className="mt-6 flex flex-col gap-2">
+                      <label htmlFor="homework" className="text-lg font-bold text-gray-700">
+                        📌 Homework<span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="homework"
+                        value={homework}
+                        onChange={(e) => setHomework(e.target.value)}
+                        className="border bg-white rounded px-3 py-2 text-md resize-none min-h-[190px] focus:outline-none focus:ring-2 focus:ring-[#3182F6]"
+                        required
+                      />
+                    </div>
+
+                    {/* Next Class Input */}
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="nextClass" className="text-lg font-bold text-gray-700">
+                        🔜 Next Class<span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="nextClass"
+                        value={nextClass}
+                        onChange={(e) => setNextClass(e.target.value)}
+                        className="border bg-white rounded px-3 py-2 text-md resize-none min-h-[150px] focus:outline-none focus:ring-2 focus:ring-[#3182F6]"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+
+                {activeOption === "option2" && (
+                  <div className="p-4 border border-dashed rounded bg-white text-gray-600 text-sm italic">
+                    Option 2 content goes here...
+                  </div>
+                )}
             </div>
-            </div>
-
           </div>
 
-          {/* 상단 원 버튼 */}
-          <div className="absolute top-3 right-3 z-10">
-            <div className="flex space-x-1">
-              <div className="w-4 h-4 rounded-full bg-[#FF5F57]"></div>
+        </div>
+
+        {/* 상단 원 버튼 */}
+        <div className="absolute top-3 right-3 z-10">
+          <div className="flex space-x-1">
+            <div className="w-4 h-4 rounded-full bg-[#FF5F57]"></div>
               <div className="w-4 h-4 rounded-full bg-[#FFBD2E]"></div>
               <div className="w-4 h-4 rounded-full bg-[#28C840]"></div>
             </div>
@@ -780,6 +859,8 @@ const businessTemplate2 = `
           outline: none;
           box-shadow: none;
         }
+
+        
       `}</style>
     </div>
   );
