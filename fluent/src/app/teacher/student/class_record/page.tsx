@@ -747,7 +747,7 @@ const businessTemplate2 = `
 
                 {activeOption === "option2" && (
                   <div className="p-4 border border-dashed rounded bg-white text-gray-600 text-sm italic">
-                    Option 2 content goes here...
+                    Searching Class Notes...
                   </div>
                 )}
             </div>
