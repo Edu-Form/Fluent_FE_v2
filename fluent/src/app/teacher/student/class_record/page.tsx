@@ -354,9 +354,7 @@ const ClassPageContent: React.FC = () => {
     homework?: string;
   }
   
-  const [previousNotes, setPreviousNotes] = useState<Note[]>([]);
   const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null);
-  const isPreviousNoteSelected = selectedNoteIndex !== null;
   const [searchName, setSearchName] = useState("");
   const [searchedNotes, setSearchedNotes] = useState<Note[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -403,7 +401,7 @@ const ClassPageContent: React.FC = () => {
       } else {
         setSearchedNotes(data);
       }
-    } catch (error) {
+    } catch {
       setSearchError("No student available.");
     } finally {
       setSearchLoading(false);
