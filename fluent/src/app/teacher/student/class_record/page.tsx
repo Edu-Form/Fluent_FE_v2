@@ -384,29 +384,35 @@ const ClassPageContent: React.FC = () => {
   const [nextClass, setNextClass] = useState("");
   const [activeOption, setActiveOption] = useState<"option1" | "option2">("option1");
 
-  const fetchNotesByStudent = async () => {
-    if (!searchName.trim()) return;
+  useEffect(() => {
+    const fetchStudentNotes = async () => {
+      const studentParam = searchParams?.get("student_name");
+      if (activeOption !== "option2" || !studentParam) return;
   
-    setSearchLoading(true);
-    setSearchError(null);
-    setSearchedNotes([]);
+      setSearchLoading(true);
+      setSearchError(null);
+      setSearchedNotes([]);
   
-    try {
-      const res = await fetch(`/api/quizlet/student/${encodeURIComponent(searchName.trim())}`);
-      if (!res.ok) throw new Error("No student found");
+      try {
+        const res = await fetch(`/api/quizlet/student/${encodeURIComponent(studentParam)}`);
+        if (!res.ok) throw new Error("No student found");
   
-      const data: Note[] = await res.json();
-      if (!data || data.length === 0) {
+        const data: Note[] = await res.json();
+        if (!data || data.length === 0) {
+          setSearchError("No student available.");
+        } else {
+          setSearchedNotes(data);
+        }
+      } catch (error) {
         setSearchError("No student available.");
-      } else {
-        setSearchedNotes(data);
+      } finally {
+        setSearchLoading(false);
       }
-    } catch {
-      setSearchError("No student available.");
-    } finally {
-      setSearchLoading(false);
-    }
-  };
+    };
+  
+    fetchStudentNotes();
+  }, [activeOption, searchParams]);
+  
   
 
 
@@ -795,28 +801,6 @@ const ClassPageContent: React.FC = () => {
 
                 {activeOption === "option2" && (
                   <div className="flex flex-col gap-4">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={searchName}
-                        onChange={(e) => setSearchName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault(); // ⛔ prevents form submit
-                          }
-                        }}
-                        placeholder="Enter student name"
-                        className="flex-1 border px-3 py-2 rounded text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={fetchNotesByStudent}
-                        className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                      >
-                        Search
-                      </button>
-                    </div>
-
                     {searchLoading && (
                       <div className="text-gray-500 text-sm">Loading notes...</div>
                     )}
@@ -826,29 +810,27 @@ const ClassPageContent: React.FC = () => {
                     )}
 
                     {searchedNotes.length > 0 && (
-                      <div className="grid gap-4">
-                        <div className="max-h-[600px] overflow-y-auto pr-1 space-y-4">
-                          {searchedNotes.map((note, idx) => (
+                      <div className="max-h-[650px] overflow-y-auto pr-1 space-y-4">
+                        {[...searchedNotes].reverse().map((note, idx) => (
+                          <div
+                            key={note._id}
+                            onClick={() => {
+                              setOriginal_text(note.original_text);
+                              setHomework(note.homework || "");
+                              setNextClass("");
+                              setSelectedNoteIndex(idx);
+                            }}
+                            className="cursor-pointer border border-gray-300 bg-white p-4 rounded shadow hover:shadow-md transition-shadow"
+                          >
+                            <p className="text-sm text-gray-500 mb-1">📅 {note.date}</p>
                             <div
-                              key={note._id}
-                              onClick={() => {
-                                setOriginal_text(note.original_text);
-                                setHomework(note.homework || "");
-                                setNextClass("");
-                                setSelectedNoteIndex(idx);
+                              className="prose max-w-none text-sm"
+                              dangerouslySetInnerHTML={{
+                                __html: note.original_text.slice(0, 300) + "...",
                               }}
-                              className="cursor-pointer border border-gray-300 bg-white p-4 rounded shadow hover:shadow-md transition-shadow"
-                            >
-                              <p className="text-sm text-gray-500 mb-1">📅 {note.date}</p>
-                              <div
-                                className="prose max-w-none text-sm"
-                                dangerouslySetInnerHTML={{
-                                  __html: note.original_text.slice(0, 300) + "...",
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
+                            />
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
