@@ -239,9 +239,6 @@ const ClassPageContent: React.FC = () => {
       <li><strong>Write Diary Together</strong> (15 minutes)<br/>- Refer to the diary examples in Chapter 1</li>
       <li><strong>Textbook</strong> (15 minutes)<br/>- Add slow/wrong expressions to Quizlet</li>
     </ol>
-
-    <h3>🔜 Next Class</h3>
-    <p>Continue practicing 일반동사 + be 동사 Q&A</p>
   `;
 
   const notesTemplate3 = `
