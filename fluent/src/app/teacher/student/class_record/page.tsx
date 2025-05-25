@@ -119,6 +119,16 @@ const ClassPageContent: React.FC = () => {
       alert("Homework field is required.");
       return;
     }
+
+    // If a previous note is selected, ask for confirmation
+    if (selectedNoteIndex !== null) {
+      const confirmProceed = window.confirm(
+        "You have selected a previous class note. Submitting this will create a new class note. Will you proceed?"
+      );
+      if (!confirmProceed) {
+        return; // cancel submit
+      }
+    }
     
     setLoading(true);
 
@@ -184,158 +194,175 @@ const ClassPageContent: React.FC = () => {
   };
 
   const notesTemplate1 = `
-  <h1>📚 Notes Template</h1>
+    <h1>📚 Notes Template</h1>
 
-  <h2>✅ Tasks</h2>
-  <ul>
-    <li>Add Polishing Expressions (70%)</li>
-    <li>Add New Expressions (30%)</li>
-    <li>Use Textbook Grammar & Expressions throughout</li>
-  </ul>
+    <h2>✅ Tasks</h2>
+    <ul>
+      <li>Add Polishing Expressions (70%)</li>
+      <li>Add New Expressions (30%)</li>
+      <li>Use Textbook Grammar & Expressions throughout</li>
+    </ul>
 
-  <h3>📖 The First Class</h3>
-  <ol>
-    <li><strong>Go Over Notion Goals</strong><br/>🕐 Duration: 5 minutes</li>
-    <li><strong>Self Introduction</strong><br/>🕐 Duration: 15 minutes<br/>📝 Task: Add to Flashcards<br/>
-      Include:
-      <ul>
-        <li>Name</li>
-        <li>Age</li>
-        <li>Job</li>
-        <li>Job Details</li>
-        <li>Hobbies</li>
-      </ul>
-      (4–7 sentences is enough)
-    </li>
-    <li><strong>Small Talk</strong><br/>🕐 Duration: 15 minutes<br/>📌 If the student is below level 3 → Do Textbook for 30 minutes instead</li>
-    <li><strong>Textbook Work</strong><br/>🕐 Duration: 15 minutes<br/>📘 Pace: Finish Chapter 1 in about 4–8 classes</li>
-    <li><strong>App Downloads & Setup</strong><br/>🕐 Duration: 10 minutes<br/>📲 Download:
-      <ul>
-        <li>Quizlet App</li>
-        <li>Google Docs App</li>
-      </ul>
-      📤 Share this file via email<br/>📎 Send Kakao Channel link
-    </li>
-  </ol>
+    <h3>📖 The First Class</h3>
+    <ol>
+      <li><strong>Go Over Notion Goals</strong><br/>🕐 Duration: 5 minutes</li>
+      <li><strong>Self Introduction</strong><br/>🕐 Duration: 15 minutes<br/>📝 Task: Add to Flashcards<br/>
+        Include:
+        <ul>
+          <li>Name</li>
+          <li>Age</li>
+          <li>Job</li>
+          <li>Job Details</li>
+          <li>Hobbies</li>
+        </ul>
+        (4–7 sentences is enough)
+      </li>
+      <li><strong>Small Talk</strong><br/>🕐 Duration: 15 minutes<br/>📌 If the student is below level 3 → Do Textbook for 30 minutes instead</li>
+      <li><strong>Textbook Work</strong><br/>🕐 Duration: 15 minutes<br/>📘 Pace: Finish Chapter 1 in about 4–8 classes</li>
+      <li><strong>App Downloads & Setup</strong><br/>🕐 Duration: 10 minutes<br/>📲 Download:
+        <ul>
+          <li>Quizlet App</li>
+          <li>Google Docs App</li>
+        </ul>
+        📤 Share this file via email<br/>📎 Send Kakao Channel link
+      </li>
+    </ol>
 
-`;
+  `;
 
-const notesTemplate2 = `
-  <h2>📚 The Second Class</h2>
+  const notesTemplate2 = `
+    <h2>📚 The Second Class</h2>
 
-  <ol>
-    <li><strong>Small Talk</strong> (5–15 minutes)<br/>- What did you do yesterday?<br/>- How are you?<br/>- When did you wake up? What did you do after that?</li>
-    <li><strong>Previous Flashcards Review</strong> (15 minutes)<br/>- Check if they memorized their self introduction</li>
-    <li><strong>Write Diary Together</strong> (15 minutes)<br/>- Refer to the diary examples in Chapter 1</li>
-    <li><strong>Textbook</strong> (15 minutes)<br/>- Add slow/wrong expressions to Quizlet</li>
-  </ol>
+    <ol>
+      <li><strong>Small Talk</strong> (5–15 minutes)<br/>- What did you do yesterday?<br/>- How are you?<br/>- When did you wake up? What did you do after that?</li>
+      <li><strong>Previous Flashcards Review</strong> (15 minutes)<br/>- Check if they memorized their self introduction</li>
+      <li><strong>Write Diary Together</strong> (15 minutes)<br/>- Refer to the diary examples in Chapter 1</li>
+      <li><strong>Textbook</strong> (15 minutes)<br/>- Add slow/wrong expressions to Quizlet</li>
+    </ol>
 
-  <h3>🔜 Next Class</h3>
-  <p>Continue practicing 일반동사 + be 동사 Q&A</p>
-`;
+    <h3>🔜 Next Class</h3>
+    <p>Continue practicing 일반동사 + be 동사 Q&A</p>
+  `;
 
-const notesTemplate3 = `
-  <h2>📚 The Third Class</h2>
+  const notesTemplate3 = `
+    <h2>📚 The Third Class</h2>
 
-  <ol>
-    <li><strong>Small Talk</strong> (5–15 minutes)</li>
-    <li><strong>Previous Flashcards Review</strong> (15 minutes)<br/>- Negotiate flashcard amount (30–60)</li>
-    <li><strong>Talk About Diary</strong> (15 minutes)<br/>- Refer to diary conversation examples in Chapter 1</li>
-    <li><strong>Textbook</strong> (15 minutes)<br/>- Add wrong/slow expressions from test or verbal checks</li>
-  </ol>
+    <ol>
+      <li><strong>Small Talk</strong> (5–15 minutes)</li>
+      <li><strong>Previous Flashcards Review</strong> (15 minutes)<br/>- Negotiate flashcard amount (30–60)</li>
+      <li><strong>Talk About Diary</strong> (15 minutes)<br/>- Refer to diary conversation examples in Chapter 1</li>
+      <li><strong>Textbook</strong> (15 minutes)<br/>- Add wrong/slow expressions from test or verbal checks</li>
+    </ol>
 
-`;
+  `;
 
-const intermediateTemplate1 = `
-  <h2>📚 The First Class (Intermediate)</h2>
+  const intermediateTemplate1 = `
+    <h2>📚 The First Class (Intermediate)</h2>
 
-  <ol>
-    <li><strong>Go Over Notion Goals</strong> (3–5 minutes)</li>
-    <li><strong>Small Talk</strong> (15 minutes)</li>
-    <li><strong>Self Introduction</strong> (15 minutes)<br/>- Add to flashcards</li>
-    <li><strong>Textbook</strong> (20 minutes)<br/>- Pace: Chapter 5 in 2–3 classes<br/>- Read storytelling examples</li>
-    <li><strong>App Setup</strong> (5 minutes)<br/>
-      <ul>
-        <li>Download Quizlet App</li>
-        <li>Download Google Docs App</li>
-        <li>Send Kakao Channel link</li>
-      </ul>
-    </li>
-  </ol>
-
-
-`;
-
-const intermediateTemplate2 = `
-  <h2>📚 The Second Class (Intermediate)</h2>
-
-  <ol>
-    <li><strong>Student Driven Small Talk</strong> (15 minutes)<br/>- Let them ask questions first</li>
-    <li><strong>Flashcards Review</strong> (15 minutes)<br/>- Check self introduction<br/>- Negotiate flashcard amount (30–100)</li>
-    <li><strong>Storytell the Diary</strong> (15 minutes)<br/>- Follow-ups + your own example<br/>- Add slow expressions to Quizlet</li>
-    <li><strong>Textbook</strong> (15 minutes)<br/>- Review test expressions</li>
-  </ol>
-
-  <h3>💬 Suggested Prompts</h3>
-  <ul>
-    <li>Unexpected event</li>
-    <li>Fight/argument</li>
-    <li>Office gossip</li>
-    <li>Frustrating situation</li>
-    <li>Funny story about kids</li>
-  </ul>
+    <ol>
+      <li><strong>Go Over Notion Goals</strong> (3–5 minutes)</li>
+      <li><strong>Small Talk</strong> (15 minutes)</li>
+      <li><strong>Self Introduction</strong> (15 minutes)<br/>- Add to flashcards</li>
+      <li><strong>Textbook</strong> (20 minutes)<br/>- Pace: Chapter 5 in 2–3 classes<br/>- Read storytelling examples</li>
+      <li><strong>App Setup</strong> (5 minutes)<br/>
+        <ul>
+          <li>Download Quizlet App</li>
+          <li>Download Google Docs App</li>
+          <li>Send Kakao Channel link</li>
+        </ul>
+      </li>
+    </ol>
 
 
-`;
+  `;
 
-const intermediateTemplate3 = `
-  <h2>📚 The Third Class (Intermediate)</h2>
+  const intermediateTemplate2 = `
+    <h2>📚 The Second Class (Intermediate)</h2>
 
-  <ol>
-    <li><strong>Student Driven Small Talk</strong> (15 minutes)</li>
-    <li><strong>Flashcards Review</strong> (15 minutes)<br/>- Re-add important wrong answers</li>
-    <li><strong>Storytell the Diary</strong> (15 minutes)<br/>- Add character, quotes, etc.</li>
-    <li><strong>Textbook</strong> (15 minutes)<br/>- Continue chapter, verbal checks</li>
-  </ol>
+    <ol>
+      <li><strong>Student Driven Small Talk</strong> (15 minutes)<br/>- Let them ask questions first</li>
+      <li><strong>Flashcards Review</strong> (15 minutes)<br/>- Check self introduction<br/>- Negotiate flashcard amount (30–100)</li>
+      <li><strong>Storytell the Diary</strong> (15 minutes)<br/>- Follow-ups + your own example<br/>- Add slow expressions to Quizlet</li>
+      <li><strong>Textbook</strong> (15 minutes)<br/>- Review test expressions</li>
+    </ol>
 
-
-`;
-
-const businessTemplate1 = `
-  <h2>📚 The First Business Class</h2>
-
-  <ol>
-    <li><strong>Notion Goals</strong> (5 minutes)</li>
-    <li><strong>Casual Self Intro Writing</strong> (15 minutes)</li>
-    <li><strong>Write Business Diary</strong> (15 minutes)<br/>Example:<br/>
-      - 지금 연구하고 있는 제품에 대한 셈플 생산을 위해서 12시간 근무를 했다 → Yesterday, I had a 12-hour shift making samples for our new vitamin B5 supplement.<br/>
-      - 다양한 설비를 조작하며 셈플이 나오게 실험들을 했다 → So I conducted various experiments to get a secure sample.
-    </li>
-    <li><strong>Small Talk</strong> (15 minutes)</li>
-    <li><strong>App Setup</strong> (10 minutes)
-      <ul>
-        <li>Download Quizlet App</li>
-        <li>Download Google Docs App</li>
-        <li>Send Kakao Channel link</li>
-      </ul>
-    </li>
-  </ol>
-
-`;
-
-const businessTemplate2 = `
-  <h2>📚 The Second Business Class</h2>
-
-  <ol>
-    <li><strong>Student Driven Small Talk</strong> (15 minutes)</li>
-    <li><strong>Previous Quizlet Review</strong> (15 minutes)</li>
-    <li><strong>Diary Review</strong> (15 minutes)</li>
-    <li><strong>Business Curriculum</strong> (15 minutes)<br/>- Business self intro<br/>- In-depth work conversations</li>
-  </ol>
-
-`;
+    <h3>💬 Suggested Prompts</h3>
+    <ul>
+      <li>Unexpected event</li>
+      <li>Fight/argument</li>
+      <li>Office gossip</li>
+      <li>Frustrating situation</li>
+      <li>Funny story about kids</li>
+    </ul>
 
 
+  `;
+
+  const intermediateTemplate3 = `
+    <h2>📚 The Third Class (Intermediate)</h2>
+
+    <ol>
+      <li><strong>Student Driven Small Talk</strong> (15 minutes)</li>
+      <li><strong>Flashcards Review</strong> (15 minutes)<br/>- Re-add important wrong answers</li>
+      <li><strong>Storytell the Diary</strong> (15 minutes)<br/>- Add character, quotes, etc.</li>
+      <li><strong>Textbook</strong> (15 minutes)<br/>- Continue chapter, verbal checks</li>
+    </ol>
+
+
+  `;
+
+  const businessTemplate1 = `
+    <h2>📚 The First Business Class</h2>
+
+    <ol>
+      <li><strong>Notion Goals</strong> (5 minutes)</li>
+      <li><strong>Casual Self Intro Writing</strong> (15 minutes)</li>
+      <li><strong>Write Business Diary</strong> (15 minutes)<br/>Example:<br/>
+        - 지금 연구하고 있는 제품에 대한 셈플 생산을 위해서 12시간 근무를 했다 → Yesterday, I had a 12-hour shift making samples for our new vitamin B5 supplement.<br/>
+        - 다양한 설비를 조작하며 셈플이 나오게 실험들을 했다 → So I conducted various experiments to get a secure sample.
+      </li>
+      <li><strong>Small Talk</strong> (15 minutes)</li>
+      <li><strong>App Setup</strong> (10 minutes)
+        <ul>
+          <li>Download Quizlet App</li>
+          <li>Download Google Docs App</li>
+          <li>Send Kakao Channel link</li>
+        </ul>
+      </li>
+    </ol>
+
+  `;
+
+  const businessTemplate2 = `
+    <h2>📚 The Second Business Class</h2>
+
+    <ol>
+      <li><strong>Student Driven Small Talk</strong> (15 minutes)</li>
+      <li><strong>Previous Quizlet Review</strong> (15 minutes)</li>
+      <li><strong>Diary Review</strong> (15 minutes)</li>
+      <li><strong>Business Curriculum</strong> (15 minutes)<br/>- Business self intro<br/>- In-depth work conversations</li>
+    </ol>
+
+  `;
+
+  interface Note {
+    _id: string;
+    student_name: string;
+    class_date: string;
+    date: string;
+    original_text: string;
+    homework?: string;
+  }
+  
+  const [previousNotes, setPreviousNotes] = useState<Note[]>([]);
+  const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null);
+  const isPreviousNoteSelected = selectedNoteIndex !== null;
+  const [searchName, setSearchName] = useState("");
+  const [searchedNotes, setSearchedNotes] = useState<Note[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  
 
   const [activeTab, setActiveTab] = useState("beginner");
 
@@ -359,7 +386,30 @@ const businessTemplate2 = `
   const [nextClass, setNextClass] = useState("");
   const [activeOption, setActiveOption] = useState<"option1" | "option2">("option1");
 
-
+  const fetchNotesByStudent = async () => {
+    if (!searchName.trim()) return;
+  
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchedNotes([]);
+  
+    try {
+      const res = await fetch(`/api/quizlet/student/${encodeURIComponent(searchName.trim())}`);
+      if (!res.ok) throw new Error("No student found");
+  
+      const data: Note[] = await res.json();
+      if (!data || data.length === 0) {
+        setSearchError("No student available.");
+      } else {
+        setSearchedNotes(data);
+      }
+    } catch (error) {
+      setSearchError("No student available.");
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+  
 
 
   const editor = useEditor({
@@ -746,8 +796,63 @@ const businessTemplate2 = `
                 )}
 
                 {activeOption === "option2" && (
-                  <div className="p-4 border border-dashed rounded bg-white text-gray-600 text-sm italic">
-                    Searching Class Notes...
+                  <div className="flex flex-col gap-4">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={searchName}
+                        onChange={(e) => setSearchName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault(); // ⛔ prevents form submit
+                          }
+                        }}
+                        placeholder="Enter student name"
+                        className="flex-1 border px-3 py-2 rounded text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={fetchNotesByStudent}
+                        className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                      >
+                        Search
+                      </button>
+                    </div>
+
+                    {searchLoading && (
+                      <div className="text-gray-500 text-sm">Loading notes...</div>
+                    )}
+
+                    {searchError && (
+                      <div className="text-red-600 text-sm">{searchError}</div>
+                    )}
+
+                    {searchedNotes.length > 0 && (
+                      <div className="grid gap-4">
+                        <div className="max-h-[600px] overflow-y-auto pr-1 space-y-4">
+                          {searchedNotes.map((note, idx) => (
+                            <div
+                              key={note._id}
+                              onClick={() => {
+                                setOriginal_text(note.original_text);
+                                setHomework(note.homework || "");
+                                setNextClass("");
+                                setSelectedNoteIndex(idx);
+                              }}
+                              className="cursor-pointer border border-gray-300 bg-white p-4 rounded shadow hover:shadow-md transition-shadow"
+                            >
+                              <p className="text-sm text-gray-500 mb-1">📅 {note.date}</p>
+                              <div
+                                className="prose max-w-none text-sm"
+                                dangerouslySetInnerHTML={{
+                                  __html: note.original_text.slice(0, 300) + "...",
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
             </div>
@@ -782,15 +887,16 @@ const businessTemplate2 = `
           </button>
           <button
             type="submit"
+            disabled={loading}
             className={`flex-1 py-3 rounded-xl text-white text-sm font-medium ${
               loading
                 ? "bg-[#DEE2E6] cursor-not-allowed"
                 : "bg-[#3182F6] hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors"
-            }`}
-            disabled={loading}
+            }`}            
           >
             저장하기
           </button>
+
         </div>
       </form>
 
