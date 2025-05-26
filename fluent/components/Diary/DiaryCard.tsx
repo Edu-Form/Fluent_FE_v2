@@ -75,7 +75,7 @@ const content = {
 export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const searchParams = useSearchParams();
   const type = searchParams.get("type");
-  const student_name = searchParams.get("student_name");
+  const student_name = searchParams.get("user");
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -457,6 +457,15 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
 
                   {/* Accordion 으로 교체함 -> detail 도 좋았음 나중에 참고 detail open*/}
                   <Accordion
+                    title="수정된 일기"
+                    isOpen={correctedOpen}
+                    toggleAccordion={() => setCorrectedOpen(!correctedOpen)}
+                  >
+                    <p className="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                      {diary.corrected_diary || ""}
+                    </p>
+                  </Accordion>
+                  <Accordion
                     title="요약"
                     isOpen={summaryOpen}
                     toggleAccordion={() => setSummaryOpen(!summaryOpen)}
@@ -489,16 +498,6 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                           </div>
                         ))}
                     </div>
-                  </Accordion>
-
-                  <Accordion
-                    title="수정된 일기"
-                    isOpen={correctedOpen}
-                    toggleAccordion={() => setCorrectedOpen(!correctedOpen)}
-                  >
-                    <p className="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                      {diary.corrected_diary || ""}
-                    </p>
                   </Accordion>
                 </div>
               </div>
@@ -661,13 +660,13 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
         {/* Floating action button for mobile */}
         <button
           onClick={toggleSidebar}
-          className="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center md:hidden hover:bg-blue-700 transition-colors"
+          className="fixed bottom-24 right-6 z-30 w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center md:hidden hover:bg-blue-700 transition-colors"
           aria-label="Show corrections"
         >
           <MdAutoFixHigh size={24} />
         </button>
 
-        {/* Backdrop overlay when drawer is open */}
+        {/* 사이드바 나오면 뒤에 음영처리 */}
         {sidebarOpen && (
           <div
             className="fixed inset-0 bg-black bg-opacity-30 z-30 md:hidden"
@@ -675,7 +674,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
           ></div>
         )}
 
-        {/* Pagination Indicator - Responsive size */}
+        {/* 인디케이터 */}
         <div className="absolute bottom-3 sm:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 sm:gap-3">
           {sortedData.map((_, idx) => (
             <button
@@ -689,69 +688,6 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
           ))}
         </div>
       </div>
-
-      {/* Custom Scrollbar Styles */}
-      <style jsx global>{`
-        .overflow-y-auto {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-thumb {
-          background-color: rgba(156, 163, 175, 0.3);
-          border-radius: 20px;
-        }
-
-        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(156, 163, 175, 0.5);
-        }
-
-        details > summary {
-          list-style: none;
-        }
-
-        details > summary::-webkit-details-marker {
-          display: none;
-        }
-
-        @keyframes fade-animation {
-          0% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.5;
-          }
-          100% {
-            opacity: 1;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .text-lg {
-            font-size: 1rem;
-          }
-
-          .p-7 {
-            padding: 1rem;
-          }
-
-          details > summary {
-            padding: 0.75rem;
-          }
-
-          details > div {
-            padding: 0.75rem;
-          }
-        }
-      `}</style>
     </>
   );
 }

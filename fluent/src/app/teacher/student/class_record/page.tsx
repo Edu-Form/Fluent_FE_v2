@@ -2,10 +2,10 @@
 
 import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Highlight from '@tiptap/extension-highlight';
-import Underline from '@tiptap/extension-underline';
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Highlight from "@tiptap/extension-highlight";
+import Underline from "@tiptap/extension-underline";
 import "react-day-picker/dist/style.css";
 
 // 날짜 포맷 함수들 유지
@@ -63,7 +63,6 @@ const formatToSave = (date: string | undefined): string => {
     return "";
   }
 };
-
 
 // 퀴즐렛 페이지 내용 컴포넌트
 const ClassPageContent: React.FC = () => {
@@ -129,7 +128,7 @@ const ClassPageContent: React.FC = () => {
         return; // cancel submit
       }
     }
-    
+
     setLoading(true);
 
     try {
@@ -351,49 +350,47 @@ const ClassPageContent: React.FC = () => {
     homework?: string;
     nextClass?: string; // Added nextClass property
   }
-  
-  const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null);
+
+  const [selectedNoteIndex] = useState<number | null>(null);
   const [searchedNotes, setSearchedNotes] = useState<Note[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
-
-  
 
   const [activeTab, setActiveTab] = useState("beginner");
 
   type TabKey = "beginner" | "intermediate" | "business";
 
   const templates: Record<TabKey, string[]> = {
-    beginner: [
-      notesTemplate1,
-      notesTemplate2,
-      notesTemplate3,
-    ],
+    beginner: [notesTemplate1, notesTemplate2, notesTemplate3],
     intermediate: [
-      intermediateTemplate1, intermediateTemplate2, intermediateTemplate3
+      intermediateTemplate1,
+      intermediateTemplate2,
+      intermediateTemplate3,
     ],
-    business: [
-      businessTemplate1, businessTemplate2 
-    ],
+    business: [businessTemplate1, businessTemplate2],
   };
 
   const [homework, setHomework] = useState("");
   const [nextClass, setNextClass] = useState("");
-  const [activeOption, setActiveOption] = useState<"option1" | "option2">("option1");
+  const [activeOption, setActiveOption] = useState<"option1" | "option2">(
+    "option1"
+  );
 
   useEffect(() => {
     const fetchStudentNotes = async () => {
       const studentParam = searchParams?.get("student_name");
       if (activeOption !== "option2" || !studentParam) return;
-  
+
       setSearchLoading(true);
       setSearchError(null);
       setSearchedNotes([]);
-  
+
       try {
-        const res = await fetch(`/api/quizlet/student/${encodeURIComponent(studentParam)}`);
+        const res = await fetch(
+          `/api/quizlet/student/${encodeURIComponent(studentParam)}`
+        );
         if (!res.ok) throw new Error("No student found");
-  
+
         const data: Note[] = await res.json();
         if (!data || data.length === 0) {
           setSearchError("No student available.");
@@ -406,12 +403,9 @@ const ClassPageContent: React.FC = () => {
         setSearchLoading(false);
       }
     };
-  
+
     fetchStudentNotes();
   }, [activeOption, searchParams]);
-  
-  
-
 
   const editor = useEditor({
     extensions: [StarterKit, Highlight, Underline],
@@ -426,7 +420,6 @@ const ClassPageContent: React.FC = () => {
       editor.commands.setContent(original_text);
     }
   }, [original_text]);
-
 
   // 클라이언트 측 렌더링이 아직 완료되지 않았을 경우 간단한 로딩 표시
   if (!isMounted) {
@@ -494,7 +487,6 @@ const ClassPageContent: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-3">
-
             {/* 날짜 선택기 */}
             <div className="relative">
               <input
@@ -618,50 +610,73 @@ const ClassPageContent: React.FC = () => {
         {/* 메인 텍스트 영역 - 화면에 꽉 채움 & 내부 스크롤 */}
         <div className="flex-grow flex flex-col relative overflow-hidden">
           <div className="p-6 flex flex-col h-full">
-
             {/* Toolbar */}
             <div className="flex gap-2 mb-4 flex-wrap shrink-0">
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleBold().run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('bold') ? 'bg-black text-white' : ''}`}
+                className={`px-3 py-1 border rounded ${
+                  editor?.isActive("bold") ? "bg-black text-white" : ""
+                }`}
               >
                 Bold
               </button>
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleItalic().run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('italic') ? 'bg-black text-white' : ''}`}
+                className={`px-3 py-1 border rounded ${
+                  editor?.isActive("italic") ? "bg-black text-white" : ""
+                }`}
               >
                 Italic
               </button>
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleUnderline().run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('underline') ? 'bg-black text-white' : ''}`}
+                className={`px-3 py-1 border rounded ${
+                  editor?.isActive("underline") ? "bg-black text-white" : ""
+                }`}
               >
                 Underline
               </button>
               <button
                 type="button"
-                onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('heading', { level: 1 }) ? 'bg-black text-white' : ''}`}
+                onClick={() =>
+                  editor?.chain().focus().toggleHeading({ level: 1 }).run()
+                }
+                className={`px-3 py-1 border rounded ${
+                  editor?.isActive("heading", { level: 1 })
+                    ? "bg-black text-white"
+                    : ""
+                }`}
               >
                 H1
               </button>
 
               <button
                 type="button"
-                onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('heading', { level: 2 }) ? 'bg-black text-white' : ''}`}
+                onClick={() =>
+                  editor?.chain().focus().toggleHeading({ level: 2 }).run()
+                }
+                className={`px-3 py-1 border rounded ${
+                  editor?.isActive("heading", { level: 2 })
+                    ? "bg-black text-white"
+                    : ""
+                }`}
               >
                 H2
               </button>
 
               <button
                 type="button"
-                onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('heading', { level: 3 }) ? 'bg-black text-white' : ''}`}
+                onClick={() =>
+                  editor?.chain().focus().toggleHeading({ level: 3 }).run()
+                }
+                className={`px-3 py-1 border rounded ${
+                  editor?.isActive("heading", { level: 3 })
+                    ? "bg-black text-white"
+                    : ""
+                }`}
               >
                 H3
               </button>
@@ -669,21 +684,27 @@ const ClassPageContent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('bulletList') ? 'bg-black text-white' : ''}`}
+                className={`px-3 py-1 border rounded ${
+                  editor?.isActive("bulletList") ? "bg-black text-white" : ""
+                }`}
               >
                 • List
               </button>
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().setParagraph().run()}
-                className={`px-3 py-1 border rounded ${editor?.isActive('paragraph') ? 'bg-black text-white' : ''}`}
+                className={`px-3 py-1 border rounded ${
+                  editor?.isActive("paragraph") ? "bg-black text-white" : ""
+                }`}
               >
                 Paragraph
               </button>
               <button
                 type="button"
                 onClick={() => editor?.chain().focus().toggleHighlight().run()}
-                className={`px-3 py-1 border-2 bg-[#d0f8dc] rounded ${editor?.isActive('highlight') ? 'bg-green-50 text-black' : ''}`}
+                className={`px-3 py-1 border-2 bg-[#d0f8dc] rounded ${
+                  editor?.isActive("highlight") ? "bg-green-50 text-black" : ""
+                }`}
               >
                 Quizlet Highlighter
               </button>
@@ -692,7 +713,10 @@ const ClassPageContent: React.FC = () => {
             <div className="flex-grow flex gap-4 overflow-hidden">
               {/* Left: Editor - 2/3 width */}
               <div className="flex-[2] overflow-y-auto border rounded p-4 bg-white">
-                <EditorContent editor={editor} className="prose max-w-none min-h-[300px] custom-editor" />
+                <EditorContent
+                  editor={editor}
+                  className="prose max-w-none min-h-[300px] custom-editor"
+                />
               </div>
 
               {/* Right: Templates + Homework - 1/3 width */}
@@ -724,13 +748,14 @@ const ClassPageContent: React.FC = () => {
                   </div>
                 </div>
 
-
                 {/* Conditional content inside the same right panel */}
                 {activeOption === "option1" && (
                   <>
                     {/* Template Tabs */}
                     <div>
-                      <h3 className="text-md font-semibold text-gray-800 mb-2">💡 Select a Template</h3>
+                      <h3 className="text-md font-semibold text-gray-800 mb-2">
+                        💡 Select a Template
+                      </h3>
                       <div className="flex flex-wrap gap-2">
                         {(Object.keys(templates) as TabKey[]).map((key) => (
                           <button
@@ -738,9 +763,11 @@ const ClassPageContent: React.FC = () => {
                             key={key}
                             onClick={() => setActiveTab(key)}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize transition-colors duration-200 border 
-                              ${activeTab === key
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"}`}
+                              ${
+                                activeTab === key
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                              }`}
                           >
                             {key} Class
                           </button>
@@ -750,7 +777,9 @@ const ClassPageContent: React.FC = () => {
 
                     {/* Template Buttons */}
                     <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">📋 Choose a Template</h4>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        📋 Choose a Template
+                      </h4>
                       <div className="flex flex-wrap gap-3">
                         {templates[activeTab as TabKey].map((text, idx) => (
                           <button
@@ -760,7 +789,9 @@ const ClassPageContent: React.FC = () => {
                             disabled={loading}
                             className="px-4 py-2 bg-[#3182F6] text-white rounded-lg text-sm font-medium hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors shadow-sm disabled:opacity-50"
                           >
-                            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} {idx + 1}
+                            {activeTab.charAt(0).toUpperCase() +
+                              activeTab.slice(1)}{" "}
+                            {idx + 1}
                           </button>
                         ))}
                       </div>
@@ -768,7 +799,10 @@ const ClassPageContent: React.FC = () => {
 
                     {/* Homework Input */}
                     <div className="mt-6 flex flex-col gap-2">
-                      <label htmlFor="homework" className="text-lg font-bold text-gray-700">
+                      <label
+                        htmlFor="homework"
+                        className="text-lg font-bold text-gray-700"
+                      >
                         📌 Homework<span className="text-red-500">*</span>
                       </label>
                       <textarea
@@ -782,7 +816,10 @@ const ClassPageContent: React.FC = () => {
 
                     {/* Next Class Input */}
                     <div className="flex flex-col gap-2">
-                      <label htmlFor="nextClass" className="text-lg font-bold text-gray-700">
+                      <label
+                        htmlFor="nextClass"
+                        className="text-lg font-bold text-gray-700"
+                      >
                         🔜 Next Class<span className="text-red-500">*</span>
                       </label>
                       <textarea
@@ -799,7 +836,9 @@ const ClassPageContent: React.FC = () => {
                 {activeOption === "option2" && (
                   <div className="flex flex-col gap-4">
                     {searchLoading && (
-                      <div className="text-gray-500 text-sm">Loading notes...</div>
+                      <div className="text-gray-500 text-sm">
+                        Loading notes...
+                      </div>
                     )}
 
                     {searchError && (
@@ -808,7 +847,8 @@ const ClassPageContent: React.FC = () => {
 
                     {searchedNotes.length > 0 && (
                       <div className="max-h-[650px] overflow-y-auto pr-1 space-y-4">
-                        {[...searchedNotes].reverse().map((note, idx) => (
+                        {/* map((note,idx) 빌드에러로 수정 */}
+                        {[...searchedNotes].reverse().map((note) => (
                           <div
                             key={note._id}
                             onClick={() => {
@@ -888,14 +928,16 @@ const ClassPageContent: React.FC = () => {
                                 newWindow.document.close();
                               }
                             }}
-                            
                             className="cursor-pointer border border-gray-300 bg-white p-4 rounded shadow hover:shadow-md transition-shadow"
                           >
-                            <p className="text-sm text-gray-500 mb-1">📅 {note.date}</p>
+                            <p className="text-sm text-gray-500 mb-1">
+                              📅 {note.date}
+                            </p>
                             <div
                               className="prose max-w-none text-sm"
                               dangerouslySetInnerHTML={{
-                                __html: note.original_text.slice(0, 300) + "...",
+                                __html:
+                                  note.original_text.slice(0, 300) + "...",
                               }}
                             />
                           </div>
@@ -904,15 +946,14 @@ const ClassPageContent: React.FC = () => {
                     )}
                   </div>
                 )}
+              </div>
             </div>
           </div>
 
-        </div>
-
-        {/* 상단 원 버튼 */}
-        <div className="absolute top-3 right-3 z-10">
-          <div className="flex space-x-1">
-            <div className="w-4 h-4 rounded-full bg-[#FF5F57]"></div>
+          {/* 상단 원 버튼 */}
+          <div className="absolute top-3 right-3 z-10">
+            <div className="flex space-x-1">
+              <div className="w-4 h-4 rounded-full bg-[#FF5F57]"></div>
               <div className="w-4 h-4 rounded-full bg-[#FFBD2E]"></div>
               <div className="w-4 h-4 rounded-full bg-[#28C840]"></div>
             </div>
@@ -926,7 +967,9 @@ const ClassPageContent: React.FC = () => {
             onClick={() => {
               const redirectUrl = `/teacher/home?user=${encodeURIComponent(
                 user
-              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(user_id)}`;
+              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                user_id
+              )}`;
               router.push(redirectUrl);
             }}
             className="flex-1 py-3 rounded-xl text-[#4E5968] text-sm font-medium border border-[#E5E8EB] hover:bg-[#F9FAFB] transition-colors"
@@ -941,14 +984,12 @@ const ClassPageContent: React.FC = () => {
               loading
                 ? "bg-[#DEE2E6] cursor-not-allowed"
                 : "bg-[#3182F6] hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors"
-            }`}            
+            }`}
           >
             저장하기
           </button>
-
         </div>
       </form>
-
 
       <style jsx>{`
         @keyframes fade-in {
@@ -1014,8 +1055,6 @@ const ClassPageContent: React.FC = () => {
           outline: none;
           box-shadow: none;
         }
-
-        
       `}</style>
     </div>
   );

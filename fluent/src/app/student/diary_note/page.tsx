@@ -100,9 +100,10 @@ const DiaryPageContent: React.FC = () => {
 
   const next_class_date = getParam("next_class_date");
   const user = getParam("user");
-  const student_name = getParam("student_name");
+  const student_name = getParam("user");
   const type = getParam("type");
   const user_id = getParam("id");
+  const func = getParam("func");
 
   const [class_date, setClassDate] = useState<string>("");
   const [date, setDate] = useState<string>("");
@@ -178,16 +179,17 @@ const DiaryPageContent: React.FC = () => {
         setTimeout(() => {
           try {
             // 안전한 리다이렉션 처리
-            const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+            const redirectUrl = `/student/home?user=${encodeURIComponent(
               user
             )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
               user_id
-            )}`;
+            )}&func=${encodeURIComponent(func)}`;
+            console.log("리다이렉션 URL:", redirectUrl);
             router.push(redirectUrl);
           } catch (error) {
             console.error("리다이렉션 오류:", error);
             // 오류 발생 시 기본 경로로 이동
-            router.push("/teacher/home");
+            router.push("/student/home");
           }
         }, 1500);
       } else {
@@ -477,34 +479,110 @@ const DiaryPageContent: React.FC = () => {
 
           {/* 모바일 닫기 버튼 */}
           {isMobile && (
-            <button className="p-2 rounded-lg" aria-label="닫기"></button>
+            <button
+              onClick={() => {
+                const redirectUrl = `/student/home?user=${encodeURIComponent(
+                  user
+                )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                  user_id
+                )}`;
+                router.push(redirectUrl);
+              }}
+              className="p-2 rounded-lg"
+              aria-label="닫기"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-[#8B95A1]"
+              >
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           )}
         </div>
       </header>
 
-      <div className="bg-white border-b border-[#E5E8EB] animate-fade-in p-3 z-20">
-        <div className="flex flex-col space-y-3">
-          {/* 레벨 입력 */}
-          <div className="flex items-center justify-between">
-            <label
-              htmlFor="mobile-level"
-              className="text-sm font-medium text-[#333D4B]"
-            >
-              레벨 설정:
-            </label>
-            <input
-              id="mobile-level"
-              type="number"
-              min={1}
-              max={6}
-              value={level ?? ""}
-              onChange={handleChange}
-              className="border bg-white rounded px-2 py-1 w-16 text-sm"
-            />
+      {isMobile && (
+        <div className="bg-white border-b border-[#E5E8EB] animate-fade-in p-3 z-20">
+          <div className="flex flex-col space-y-3">
+            {/* 레벨 입력 */}
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="mobile-level"
+                className="text-sm font-medium text-[#333D4B]"
+              >
+                레벨 설정:
+              </label>
+              <input
+                id="mobile-level"
+                type="number"
+                min={1}
+                max={6}
+                value={level ?? ""}
+                onChange={handleChange}
+                className="border bg-white rounded px-2 py-1 w-16 text-sm"
+              />
+            </div>
+            {/* 날짜 선택기 */}
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="mobile-class-date"
+                className="text-sm font-medium text-[#333D4B]"
+              >
+                수업 날짜:
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  name="mobile-class-date"
+                  id="mobile-class-date"
+                  defaultValue={formatToISO(next_class_date)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setClassDate(formatToSave(e.target.value))
+                  }
+                  className="px-2 py-1 bg-white text-sm border border-[#E5E8EB] rounded-lg text-[#333D4B] w-36"
+                  required
+                  disabled={loading}
+                />
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#8B95A1"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect
+                      x="3"
+                      y="4"
+                      width="18"
+                      height="18"
+                      rx="2"
+                      ry="2"
+                    ></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
+      )}
       <form
         onSubmit={postQuizlet}
         className="flex-grow flex flex-col overflow-hidden"
@@ -524,30 +602,9 @@ const DiaryPageContent: React.FC = () => {
             }
             disabled={loading}
           ></textarea>
-
-          {/* 텍스트 영역 꾸미기 - 상단 원 */}
-          <div className="absolute top-3 right-3">
-            <div className="flex space-x-1">
-              <div
-                className={`${
-                  isMobile ? "w-3 h-3" : "w-4 h-4"
-                } rounded-full bg-[#FF5F57]`}
-              ></div>
-              <div
-                className={`${
-                  isMobile ? "w-3 h-3" : "w-4 h-4"
-                } rounded-full bg-[#FFBD2E]`}
-              ></div>
-              <div
-                className={`${
-                  isMobile ? "w-3 h-3" : "w-4 h-4"
-                } rounded-full bg-[#28C840]`}
-              ></div>
-            </div>
-          </div>
         </div>
 
-        {/* 하단 버튼 영역 - 모바일 대응 */}
+        {/*  버튼 영역 - 모바일 대응 */}
         <div className="w-full bg-white border-t border-[#E5E8EB] py-3 md:py-4 px-3 md:px-5 sticky bottom-0 z-10 flex gap-3">
           <button
             type="button"
@@ -578,7 +635,7 @@ const DiaryPageContent: React.FC = () => {
           </button>
         </div>
       </form>
-      <div className="flex md:hidden">
+      <div className="flex md:hidden mt-8">
         <Navigation mobileOnly={true} defaultActiveIndex={3} />
       </div>
 
