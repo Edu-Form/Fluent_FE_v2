@@ -16,6 +16,7 @@ import {
 import { Download } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { useSwipeable } from "react-swipeable";
+import { usePathname } from "next/navigation";
 
 // 로딩 스피너 컴포넌트
 const LoadingSpinner = () => (
@@ -79,6 +80,9 @@ const QuizletCardContent = ({
   onSelectCard?: (index: number) => void;
   onCreateQuizlet?: () => void;
 }) => {
+  const pathname = usePathname(); // 현재 URL 경로 가져오기
+  const isStudentPage = pathname?.includes("/teacher"); // /student 포함 여부 체크
+
   const engWords = content.eng_quizlet || [];
   const korWords = content.kor_quizlet || [];
 
@@ -561,18 +565,20 @@ const QuizletCardContent = ({
         {/* 상단 헤더 - 모바일 최적화 */}
         <div className="py-4 px-4 bg-white shadow-sm z-10">
           <div className="flex flex-col">
-            <span
-              className="text-gray-500 text-sm mb-1 flex items-center"
-              onClick={() => setIsDatePickerOpen(true)}
-            >
-              <FiCalendar className="mr-1" />
-              {new Date().toLocaleDateString("ko-KR", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                weekday: "long",
-              })}
-            </span>
+            {isStudentPage && (
+              <span
+                className="text-gray-500 text-sm mb-1 flex items-center"
+                onClick={() => setIsDatePickerOpen(true)}
+              >
+                <FiCalendar className="mr-1" />
+                {new Date().toLocaleDateString("ko-KR", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                  weekday: "long",
+                })}
+              </span>
+            )}
             <h1 className="text-2xl font-bold">등록된 퀴즐렛이 없습니다</h1>
           </div>
         </div>
@@ -627,21 +633,22 @@ const QuizletCardContent = ({
       <div className="py-3 px-3 sm:py-4 sm:px-4 bg-white shadow-sm z-10">
         {/* 날짜 선택 및 학생 이름 */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-0">
-          <span
-            className="text-gray-500 text-sm flex items-center border border-gray-200 rounded-full py-1 px-3 mb-2 sm:mb-0 cursor-pointer hover:bg-blue-500 hover:text-white max-w-fit"
-            onClick={() => setIsDatePickerOpen(true)}
-          >
-            <FiCalendar className="mr-1" />
-            <span className="truncate">
-              {isNaN(currentDate.getTime()) ? content.date : formattedDate}
+          {isStudentPage && (
+            <span
+              className="text-gray-500 text-sm flex items-center border border-gray-200 rounded-full py-1 px-3 mb-2 sm:mb-0 cursor-pointer hover:bg-blue-500 hover:text-white max-w-fit"
+              onClick={() => setIsDatePickerOpen(true)}
+            >
+              <FiCalendar className="mr-1" />
+              <span className="truncate">
+                {isNaN(currentDate.getTime()) ? content.date : formattedDate}
+              </span>
             </span>
-          </span>
-
-          <h1 className="text-xl font-bold">{content.student_name}</h1>
+          )}
         </div>
 
         {/* 기능 버튼들 - 모바일에서는 공간 절약을 위해 크기 축소 */}
         <div className="flex justify-between items-center mt-2">
+          <h1 className="text-xl font-bold">{content.student_name}</h1>
           <div className="flex space-x-2">
             <button
               onClick={downloadQuizlet}

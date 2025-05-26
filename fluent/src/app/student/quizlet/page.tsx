@@ -5,7 +5,7 @@
 import dynamic from "next/dynamic";
 import { useState, useEffect, Suspense, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiCalendar, FiX } from "react-icons/fi";
+import { FiCalendar } from "react-icons/fi";
 import { useSearchParams } from "next/navigation";
 import Navigation from "@/components/navigation";
 
@@ -203,42 +203,77 @@ const QuizletPageContent = () => {
             </span>
           </div>
 
-          {/* 날짜 선택 팝업 */}
+          {/* 날짜 선택 팝업 - 중앙 모달로 변경 */}
           <AnimatePresence>
             {isDatePickerOpen && (
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-50 bg-black/50 flex items-end"
+                className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
               >
-                <div className="w-full bg-white rounded-t-2xl shadow-2xl max-h-[70vh] overflow-hidden">
-                  <div className="flex justify-between items-center p-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-800">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                  transition={{
+                    duration: 0.3,
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 25,
+                  }}
+                  className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[70vh]"
+                >
+                  {/* 헤더 */}
+                  <div className="flex justify-between items-center p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                    <h2 className="text-xl font-bold text-gray-800">
                       날짜 선택
                     </h2>
                     <button
                       onClick={() => setIsDatePickerOpen(false)}
-                      className="text-gray-600 hover:text-gray-900"
+                      className="w-8 h-8 rounded-full bg-white/80 hover:bg-white text-gray-500 hover:text-gray-700 flex items-center justify-center transition-all duration-200 shadow-sm"
                     >
-                      <FiX className="w-6 h-6" />
+                      ✕
                     </button>
                   </div>
-                  <div className="overflow-y-auto max-h-[50vh]">
-                    {data.map((item) => (
-                      <button
-                        key={item._id}
-                        onClick={() => handleDateSelect(item.date)}
-                        className="w-full text-left px-4 py-3 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
-                      >
-                        <span className="text-base text-gray-800">
-                          {item.date}
-                        </span>
-                      </button>
-                    ))}
+
+                  {/* 날짜 목록 */}
+                  <div className="overflow-y-auto max-h-[50vh] p-2">
+                    {data.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                          📋
+                        </div>
+                        <p className="text-sm">이용 가능한 날짜가 없습니다</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {data.map((item, idx) => (
+                          <button
+                            key={item._id}
+                            onClick={() => handleDateSelect(item.date)}
+                            className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
+                              idx === currentIndex
+                                ? "bg-blue-500 text-white shadow-md transform scale-[1.02]"
+                                : "bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-sm"
+                            } border border-transparent hover:border-blue-200`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{item.date}</span>
+                              {idx === currentIndex && (
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
+
+                  {/* 하단 여백 */}
+                  <div className="h-4 bg-gradient-to-t from-gray-50 to-transparent"></div>
+                </motion.div>
               </motion.div>
             )}
           </AnimatePresence>
