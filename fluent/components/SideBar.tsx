@@ -6,16 +6,31 @@ import { useSearchParams } from "next/navigation";
 import { FaSearch, FaUser } from "react-icons/fa";
 import dynamic from "next/dynamic";
 
+// Dynamically import Lottie component to reduce initial load time
 const Lottie = dynamic(() => import("lottie-react"), {
   ssr: false,
   loading: () => <div>Loading...</div>,
 });
 import timerAnimationData from "@/src/app/lotties/mainLoading.json";
 
+/**
+ * Props for the SidebarLayout and SidebarContent components
+ * @interface SidebarLayoutProps
+ * @property {function} onStudentSelect - Callback function triggered when a student is selected
+ */
 interface SidebarLayoutProps {
   onStudentSelect: (student: string) => void;
 }
 
+/**
+ * SidebarLayout Component
+ * 
+ * A wrapper component that provides Suspense fallback for the SidebarContent
+ * to improve user experience during loading.
+ * 
+ * @param {SidebarLayoutProps} props - Component props
+ * @returns {React.ReactElement} Rendered SidebarLayout component
+ */
 export function SidebarLayout({ onStudentSelect }: SidebarLayoutProps) {
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -24,15 +39,30 @@ export function SidebarLayout({ onStudentSelect }: SidebarLayoutProps) {
   );
 }
 
+/**
+ * SidebarContent Component
+ * 
+ * Displays a searchable list of students with selection functionality.
+ * Fetches student data from API and provides real-time filtering.
+ * 
+ * @param {SidebarLayoutProps} props - Component props
+ * @returns {React.ReactElement} Rendered SidebarContent component
+ */
 const SidebarContent = ({ onStudentSelect }: SidebarLayoutProps) => {
+  // Get URL query parameters
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
   const currentStudent = searchParams.get("student_name");
+  
+  // Component state
   const [searchTerm, setSearchTerm] = useState("");
   const [data, setData] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Fetch student data from API when component mounts or when user/type changes
+   */
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -51,10 +81,19 @@ const SidebarContent = ({ onStudentSelect }: SidebarLayoutProps) => {
     fetchData();
   }, [user, type]);
 
+  // Filter data based on search term
   const filteredData = data.filter((item: string) =>
     item.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  /**
+   * Handle student selection:
+   * 1. Update URL query parameter
+   * 2. Update browser history
+   * 3. Call the provided callback function
+   * 
+   * @param {string} student - Selected student name
+   */
   const handleStudentClick = (student: string) => {
     const searchParams = new URLSearchParams(window.location.search);
     searchParams.set("student_name", student);
@@ -62,6 +101,7 @@ const SidebarContent = ({ onStudentSelect }: SidebarLayoutProps) => {
     onStudentSelect(student);
   };
 
+  // Show loading animation while fetching data
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full w-[300px] border-r">
