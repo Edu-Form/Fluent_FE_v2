@@ -18,8 +18,7 @@ import { jsPDF } from "jspdf";
 import { useSwipeable } from "react-swipeable";
 
 // 로딩 스피너 컴포넌트
-const LoadingSpinner = ({ message }: { message?: string }) => (
-  <div className="flex flex-col items-center justify-center gap-2">
+const LoadingSpinner = () => (
   <svg
     className="animate-spin h-5 w-5 text-white"
     xmlns="http://www.w3.org/2000/svg"
@@ -40,8 +39,6 @@ const LoadingSpinner = ({ message }: { message?: string }) => (
       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
     ></path>
   </svg>
-    {message && <span className="text-xs text-white">{message}</span>}
-  </div>
 );
 
 // QuizletCardProps 인터페이스 정의
@@ -131,159 +128,87 @@ const QuizletCardContent = ({
   const [playbackRate] = useState<number>(0.8);
 
   // 모든 카드의 TTS 데이터를 미리 준비하는 함수
+  // async function prepareAllAudioData(): Promise<AudioBuffers> {
+  //   setIsPreparingAudio(true);
+  //   const buffers: AudioBuffers = {};
+
+  //   try {
+  //     // 각 카드의 한국어와 영어 텍스트에 대해 TTS 데이터 준비
+  //     for (let i = 0; i < cards.length; i++) {
+  //       // 한국어 오디오 준비
+  //       const korResponse = await fetch("/api/quizlet/tts", {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ text: cards[i][1] }),
+  //       });
+
+  //       // 영어 오디오 준비
+  //       const engResponse = await fetch("/api/quizlet/tts", {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ text: cards[i][0] }),
+  //       });
+
+  //       if (korResponse.ok && engResponse.ok) {
+  //         const korBlob = await korResponse.blob();
+  //         const engBlob = await engResponse.blob();
+
+  //         buffers[`${i}_kor`] = URL.createObjectURL(korBlob);
+  //         buffers[`${i}_eng`] = URL.createObjectURL(engBlob);
+  //       }
+  //     }
+
+  //     setAudioBuffers(buffers);
+  //   } catch (error) {
+  //     console.error("Error preparing audio data:", error);
+  //   }
+
+  //   setIsPreparingAudio(false);
+  //   return buffers;
+  // }
+
+  // ✅ Replace your existing function with this optimized version
   async function prepareAllAudioData(): Promise<AudioBuffers> {
     setIsPreparingAudio(true);
-    const buffers: AudioBuffers = { ...audioBuffers };
+    const buffers: AudioBuffers = {};
 
     try {
-      // 점진적 로딩: 처음 3개 카드만 우선 로드
-      const initialLoadCount = Math.min(3, cards.length);
-      
-      // 초기 카드 로드
-      await loadCardsRange(0, initialLoadCount, buffers);
-      
-      // 초기 로드 완료 후 오디오 버퍼 설정
-      setAudioBuffers(buffers);
-      setIsPreparingAudio(false);
-      
-      // 나머지 카드는 백그라운드에서 계속 로드
-      if (cards.length > initialLoadCount) {
-        loadCardsRange(initialLoadCount, cards.length, buffers)
-          .then(updatedBuffers => {
-            setAudioBuffers(updatedBuffers);
-          });
-      }
-    } catch (error) {
-      console.error("Error preparing audio data:", error);
-      setIsPreparingAudio(false);
-    }
-
-    return buffers;
-  }
-
-  // 카드 범위를 병렬로 로드하는 함수
-  const [loadingProgress, setLoadingProgress] = useState<string>("");
-  const [loadingPercentage, setLoadingPercentage] = useState<number>(0);
-
-  // 오디오 캐싱 함수 추가
-  function getCachedAudio(key: string, text: string): string | null {
-    try {
-      // 로컬 스토리지에서 캐시된 오디오 확인
-      const cachedData = localStorage.getItem(`tts_cache_${text}`);
-      if (cachedData) {
-        return cachedData;
-      }
-      return null;
-    } catch (e) {
-      console.error("Error accessing localStorage:", e);
-      return null;
-    }
-  }
-
-  function setCachedAudio(text: string, audioUrl: string): void {
-    try {
-      // 로컬 스토리지에 오디오 URL 저장
-      localStorage.setItem(`tts_cache_${text}`, audioUrl);
-    } catch (e) {
-      console.error("Error writing to localStorage:", e);
-    }
-  }
-
-  async function loadCardsRange(start: number, end: number, buffers: AudioBuffers): Promise<AudioBuffers> {
-    const requests = [];
-    const totalAudioToLoad = (end - start) * 2; // 각 카드당 2개 오디오 (한국어, 영어)
-    let loadedCount = 0;
-    
-    // 진행 상태 표시 업데이트
-    setLoadingProgress(`${start + 1}/${cards.length} 로드 중`);
-    
-    // 로딩 진행 상태 업데이트 함수
-    const updateLoadingProgress = () => {
-      loadedCount++;
-      const percentage = Math.round((loadedCount / totalAudioToLoad) * 100);
-      setLoadingPercentage(percentage);
-      setLoadingProgress(`오디오 로드 중 ${percentage}%`);
-    };
-    
-    // 병렬 요청 준비
-    for (let i = start; i < end; i++) {
-      // 한국어 오디오가 없는 경우에만 요청
-      if (!buffers[`${i}_kor`]) {
-        const korText = cards[i][1];
-        const cachedKorAudio = getCachedAudio(`${i}_kor`, korText);
-        
-        if (cachedKorAudio) {
-          // 캐시에서 오디오를 사용
-          buffers[`${i}_kor`] = cachedKorAudio;
-          updateLoadingProgress();
-        } else {
-          // 새로운 TTS 요청
-          requests.push(
-            fetch("/api/quizlet/tts", {
+      const promises = cards.map((card, i) => {
+        const engFetch = fetch("/api/quizlet/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text: korText }),
-            }).then(async (res) => {
-              if (res.ok) {
-                const blob = await res.blob();
-                const audioUrl = URL.createObjectURL(blob);
-                buffers[`${i}_kor`] = audioUrl;
-                
-                // 캐시에 저장
-                setCachedAudio(korText, audioUrl);
-              }
-              updateLoadingProgress();
-            }).catch(err => {
-              console.error(`Error loading Korean audio for card ${i}:`, err);
-              updateLoadingProgress();
-            })
-          );
-        }
-      } else {
-        updateLoadingProgress();
-      }
-      
-      // 영어 오디오가 없는 경우에만 요청
-      if (!buffers[`${i}_eng`]) {
-        const engText = cards[i][0];
-        const cachedEngAudio = getCachedAudio(`${i}_eng`, engText);
-        
-        if (cachedEngAudio) {
-          // 캐시에서 오디오를 사용
-          buffers[`${i}_eng`] = cachedEngAudio;
-          updateLoadingProgress();
-        } else {
-          // 새로운 TTS 요청
-          requests.push(
-            fetch("/api/quizlet/tts", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text: engText }),
-            }).then(async (res) => {
-              if (res.ok) {
-                const blob = await res.blob();
-                const audioUrl = URL.createObjectURL(blob);
-                buffers[`${i}_eng`] = audioUrl;
-                
-                // 캐시에 저장
-                setCachedAudio(engText, audioUrl);
-              }
-              updateLoadingProgress();
-            }).catch(err => {
-              console.error(`Error loading English audio for card ${i}:`, err);
-              updateLoadingProgress();
-            })
-          );
-        }
-      } else {
-        updateLoadingProgress();
-      }
+          body: JSON.stringify({ text: card[0] }), // English
+        }).then((res) =>
+          res.blob().then((blob) => {
+            buffers[`${i}_eng`] = URL.createObjectURL(blob);
+          })
+        );
+
+        const korFetch = fetch("/api/quizlet/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: card[1] }), // Korean
+        }).then((res) =>
+          res.blob().then((blob) => {
+            buffers[`${i}_kor`] = URL.createObjectURL(blob);
+          })
+        );
+
+        return Promise.all([engFetch, korFetch]);
+      });
+
+      await Promise.all(promises.flat());
+
+      setAudioBuffers(buffers);
+    } catch (error) {
+      console.error("Error preparing audio data:", error);
     }
-    
-    // 병렬로 모든 요청 처리
-    await Promise.all(requests);
+
+    setIsPreparingAudio(false);
     return buffers;
   }
+
+
 
   // 자동 재생 토글 시 오디오 데이터 준비
   const toggleAutoPlay = useCallback(async (): Promise<void> => {
@@ -295,28 +220,28 @@ const QuizletCardContent = ({
     if (!isAutoPlaying) {
       // 자동 재생 시작
       setIsPreparingAudio(true);
-      setLoadingProgress("오디오 준비 중...");
 
-      // 자동 재생 시작 전에 초기 오디오 데이터 준비
-      await prepareAllAudioData();
-      
-      // 적어도 현재 카드의 오디오가 준비되었는지 확인
-      if (audioBuffers[`${currentCard}_kor`]) {
+      // 자동 재생 시작 전에 오디오 데이터 준비
+      if (Object.keys(audioBuffers).length < cards.length * 2) {
+        const buffers = await prepareAllAudioData();
+        if (Object.keys(buffers).length < cards.length * 2) {
+          // 준비 실패 시 자동 재생 시작하지 않음
+          setIsPreparingAudio(false);
+          return;
+        }
+      }
+
+      setIsPreparingAudio(false);
       setIsAutoPlaying(true);
       setIsPaused(false);
       setAutoPlayPhase(0);
       setIsFlipped(false);
       setCurrentCard(0);
-      } else {
-        // 오디오 로드 실패 시 사용자에게 알림
-        alert("오디오 준비 중 문제가 발생했습니다. 다시 시도해 주세요.");
-        setIsPreparingAudio(false);
-      }
     } else {
       // 자동 재생 중지
       stopAutoPlay();
     }
-  }, [isAutoPlaying, currentCard, audioBuffers]);
+  }, [isAutoPlaying, cards.length, audioBuffers]);
 
   // 자동 재생 일시 정지 토글
   const togglePause = useCallback((): void => {
@@ -787,7 +712,7 @@ const QuizletCardContent = ({
               title="단어 읽기"
             >
               {isTTSLoading ? (
-                <LoadingSpinner message="TTS 로딩 중..." />
+                <LoadingSpinner />
               ) : (
                 <HiOutlineSpeakerWave className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
@@ -881,19 +806,11 @@ const QuizletCardContent = ({
               {isPreparingAudio ? (
                 <div className="flex flex-col items-center justify-center space-y-4">
                   <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
-                    <LoadingSpinner message={loadingProgress} />
+                    <LoadingSpinner />
                   </div>
                   <p className="text-base sm:text-xl font-medium text-gray-500">
-                    {loadingProgress}
+                    오디오 준비 중...
                   </p>
-                  
-                  {/* 진행 바 추가 */}
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div 
-                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out"
-                      style={{ width: `${loadingPercentage}%` }}
-                    ></div>
-                  </div>
                 </div>
               ) : (
                 <>
@@ -988,7 +905,7 @@ const QuizletCardContent = ({
                 } transition-colors`}
               >
                 {isPreparingAudio ? (
-                  <LoadingSpinner message={loadingProgress} />
+                  <LoadingSpinner />
                 ) : isAutoPlaying ? (
                   isPaused ? (
                     <BsPlayFill className="text-xl" />
