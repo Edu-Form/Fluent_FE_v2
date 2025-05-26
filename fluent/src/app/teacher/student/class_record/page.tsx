@@ -349,6 +349,7 @@ const ClassPageContent: React.FC = () => {
     date: string;
     original_text: string;
     homework?: string;
+    nextClass?: string; // Added nextClass property
   }
   
   const [selectedNoteIndex, setSelectedNoteIndex] = useState<number | null>(null);
@@ -811,11 +812,83 @@ const ClassPageContent: React.FC = () => {
                           <div
                             key={note._id}
                             onClick={() => {
-                              setOriginal_text(note.original_text);
-                              setHomework(note.homework || "");
-                              setNextClass("");
-                              setSelectedNoteIndex(idx);
+                              const newWindow = window.open("", "_blank");
+                              if (newWindow) {
+                                newWindow.document.write(`
+                                  <html>
+                                    <head>
+                                      <title>Class Note - ${note.date}</title>
+                                      <style>
+                                        body {
+                                          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+                                            Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                                          background-color: #f9fafb;
+                                          padding: 2rem;
+                                        }
+                            
+                                        .container {
+                                          max-width: 800px;
+                                          margin: 0 auto;
+                                          background-color: white;
+                                          border: 1px solid #e5e7eb;
+                                          border-radius: 12px;
+                                          padding: 2rem;
+                                          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+                                        }
+                            
+                                        h2 {
+                                          font-size: 1.5rem;
+                                          margin-bottom: 1rem;
+                                          color: #111827;
+                                        }
+                            
+                                        h3 {
+                                          font-size: 1.25rem;
+                                          margin-top: 2rem;
+                                          margin-bottom: 0.75rem;
+                                          color: #1f2937;
+                                        }
+                            
+                                        p, li {
+                                          font-size: 1rem;
+                                          line-height: 1.6;
+                                          color: #374151;
+                                        }
+                            
+                                        ul, ol {
+                                          padding-left: 1.5rem;
+                                          margin-bottom: 1rem;
+                                        }
+                            
+                                        hr {
+                                          margin: 2rem 0;
+                                          border-color: #e5e7eb;
+                                        }
+                                      </style>
+                                    </head>
+                                    <body>
+                                      <div class="container">
+                                        <h2>📝 Class Note (${note.date})</h2>
+                                        ${note.original_text}
+                                        ${
+                                          note.homework
+                                            ? `<hr/><h3>📌 Homework</h3><p>${note.homework}</p>`
+                                            : ""
+                                        }
+                                        ${
+                                          note.nextClass
+                                            ? `<hr/><h3>🔜 Next Class</h3><p>${note.nextClass}</p>`
+                                            : ""
+                                        }
+                                        
+                                      </div>
+                                    </body>
+                                  </html>
+                                `);
+                                newWindow.document.close();
+                              }
                             }}
+                            
                             className="cursor-pointer border border-gray-300 bg-white p-4 rounded shadow hover:shadow-md transition-shadow"
                           >
                             <p className="text-sm text-gray-500 mb-1">📅 {note.date}</p>
