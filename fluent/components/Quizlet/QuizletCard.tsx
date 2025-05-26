@@ -132,35 +132,75 @@ const QuizletCardContent = ({
   const [playbackRate] = useState<number>(0.8);
 
   // 모든 카드의 TTS 데이터를 미리 준비하는 함수
+  // async function prepareAllAudioData(): Promise<AudioBuffers> {
+  //   setIsPreparingAudio(true);
+  //   const buffers: AudioBuffers = {};
+
+  //   try {
+  //     // 각 카드의 한국어와 영어 텍스트에 대해 TTS 데이터 준비
+  //     for (let i = 0; i < cards.length; i++) {
+  //       // 한국어 오디오 준비
+  //       const korResponse = await fetch("/api/quizlet/tts", {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ text: cards[i][1] }),
+  //       });
+
+  //       // 영어 오디오 준비
+  //       const engResponse = await fetch("/api/quizlet/tts", {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ text: cards[i][0] }),
+  //       });
+
+  //       if (korResponse.ok && engResponse.ok) {
+  //         const korBlob = await korResponse.blob();
+  //         const engBlob = await engResponse.blob();
+
+  //         buffers[`${i}_kor`] = URL.createObjectURL(korBlob);
+  //         buffers[`${i}_eng`] = URL.createObjectURL(engBlob);
+  //       }
+  //     }
+
+  //     setAudioBuffers(buffers);
+  //   } catch (error) {
+  //     console.error("Error preparing audio data:", error);
+  //   }
+
+  //   setIsPreparingAudio(false);
+  //   return buffers;
+  // }
+
   async function prepareAllAudioData(): Promise<AudioBuffers> {
     setIsPreparingAudio(true);
     const buffers: AudioBuffers = {};
 
     try {
-      // 각 카드의 한국어와 영어 텍스트에 대해 TTS 데이터 준비
-      for (let i = 0; i < cards.length; i++) {
-        // 한국어 오디오 준비
-        const korResponse = await fetch("/api/quizlet/tts", {
+      const promises = cards.map((card, i) => {
+        const engFetch = fetch("/api/quizlet/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: cards[i][1] }),
-        });
+          body: JSON.stringify({ text: card[0] }), // English
+        }).then((res) =>
+          res.blob().then((blob) => {
+            buffers[`${i}_eng`] = URL.createObjectURL(blob);
+          })
+        );
 
-        // 영어 오디오 준비
-        const engResponse = await fetch("/api/quizlet/tts", {
+        const korFetch = fetch("/api/quizlet/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: cards[i][0] }),
-        });
+          body: JSON.stringify({ text: card[1] }), // Korean
+        }).then((res) =>
+          res.blob().then((blob) => {
+            buffers[`${i}_kor`] = URL.createObjectURL(blob);
+          })
+        );
 
-        if (korResponse.ok && engResponse.ok) {
-          const korBlob = await korResponse.blob();
-          const engBlob = await engResponse.blob();
+        return Promise.all([engFetch, korFetch]);
+      });
 
-          buffers[`${i}_kor`] = URL.createObjectURL(korBlob);
-          buffers[`${i}_eng`] = URL.createObjectURL(engBlob);
-        }
-      }
+      await Promise.all(promises.flat());
 
       setAudioBuffers(buffers);
     } catch (error) {
