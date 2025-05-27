@@ -9,6 +9,50 @@ import { FiCalendar } from "react-icons/fi";
 import { useSearchParams } from "next/navigation";
 import Navigation from "@/components/navigation";
 
+// 사파리 호환 날짜 변환 함수
+const parseToSafariDate = (dateString: string): Date | null => {
+  try {
+    if (!dateString) return null;
+
+    let isoString = "";
+
+    // "2024. 12. 25." 형식 처리
+    if (dateString.includes(". ")) {
+      const parts = dateString.trim().replace(/\.$/, "").split(". ");
+      if (parts.length === 3) {
+        const [year, month, day] = parts;
+        isoString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      }
+    }
+    // "2024-12-25" 형식이 이미 있는 경우
+    else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      isoString = dateString;
+    }
+    // "2024/12/25" 형식 처리
+    else if (dateString.includes("/")) {
+      const parts = dateString.split("/");
+      if (parts.length === 3) {
+        const [year, month, day] = parts;
+        isoString = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      }
+    }
+    // 기타 형식 시도
+    else {
+      console.warn("지원하지 않는 날짜 형식:", dateString);
+      return null;
+    }
+    if (!isoString) return null;
+
+    // 사파리 호환 Date 생성 (시간대 문제 방지)
+    const dateObj = new Date(isoString + "T00:00:00");
+
+    return !isNaN(dateObj.getTime()) ? dateObj : null;
+  } catch (error) {
+    console.error("날짜 파싱 오류:", dateString, error);
+    return null;
+  }
+};
+
 // QuizletCardProps 인터페이스 정의
 interface QuizletCardProps {
   _id: string;
@@ -182,7 +226,22 @@ const QuizletPageContent = () => {
     );
   }
 
-  const displayDate = currentCard.date || "날짜 정보 없음";
+  // 헤더에 표시할 날짜 포맷팅
+  const rawDisplayDate = currentCard.date || "";
+  let formattedHeaderDate = rawDisplayDate || "날짜 정보 없음";
+
+  // 사파리 호환 날짜 포맷팅
+  if (rawDisplayDate) {
+    const parsedDate = parseToSafariDate(rawDisplayDate);
+    if (parsedDate) {
+      formattedHeaderDate = parsedDate.toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "short",
+      });
+    }
+  }
 
   return (
     <>
@@ -190,7 +249,7 @@ const QuizletPageContent = () => {
         {/* 상단 날짜 표시 */}
         <div className="relative bg-blue-500 text-white p-2 sm:p-4 flex-shrink-0">
           <h1 className="text-lg sm:text-2xl font-bold text-center">
-            {displayDate}
+            {formattedHeaderDate}
           </h1>
           {/* 날짜 선택 버튼 */}
           <div
@@ -249,28 +308,54 @@ const QuizletPageContent = () => {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {data.map((item, idx) => (
-                          <button
-                            key={item._id}
-                            onClick={() => handleDateSelect(item.date)}
-                            className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
-                              idx === currentIndex
-                                ? "bg-blue-500 text-white shadow-md transform scale-[1.02]"
-                                : "bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-sm"
-                            } border border-transparent hover:border-blue-200`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium">{item.date}</span>
-                              {idx === currentIndex && (
-                                <div className="w-2 h-2 bg-white rounded-full"></div>
-                              )}
-                            </div>
-                          </button>
-                        ))}
+                        {data.map((item, idx) => {
+                          // 사파리 호환 날짜 표시
+                          const displayDateForItem = item.date;
+                          let formattedDate = displayDateForItem;
+
+                          // 디버깅 로그 추가
+                          console.log("원본 날짜:", displayDateForItem);
+                          const parsedDate =
+                            parseToSafariDate(displayDateForItem);
+                          console.log("파싱된 날짜:", parsedDate);
+
+                          if (parsedDate) {
+                            formattedDate = parsedDate.toLocaleDateString(
+                              "ko-KR",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                weekday: "short",
+                              }
+                            );
+                            console.log("포맷된 날짜:", formattedDate);
+                          }
+
+                          return (
+                            <button
+                              key={item._id}
+                              onClick={() => handleDateSelect(item.date)}
+                              className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
+                                idx === currentIndex
+                                  ? "bg-blue-500 text-white shadow-md transform scale-[1.02]"
+                                  : "bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-600 hover:shadow-sm"
+                              } border border-transparent hover:border-blue-200`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">
+                                  {formattedDate}
+                                </span>
+                                {idx === currentIndex && (
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-
                   {/* 하단 여백 */}
                   <div className="h-4 bg-gradient-to-t from-gray-50 to-transparent"></div>
                 </motion.div>
@@ -305,30 +390,31 @@ const QuizletPageContent = () => {
 
       <style jsx global>{`
         /* 전역 CSS 리셋 및 설정 */
-        * {
+        /* * {
           box-sizing: border-box;
-        }
+        } */
 
-        html,
+        /* html,
         body {
           margin: 0;
           padding: 0;
           width: 100%;
           overflow-x: hidden;
-        }
+        } */
 
-        html {
-          /* iOS Safari 및 모든 브라우저 대응 */
+        /* iOS Safari 및 모든 브라우저 대응 */
+        /* html {
+         
           height: 100%;
           height: -webkit-fill-available;
-        }
+        } */
 
-        body {
+        /* body {
           min-height: 100vh;
           min-height: -webkit-fill-available;
-          min-height: 100dvh; /* 최신 브라우저 */
+          min-height: 100dvh; 
           position: relative;
-        }
+        } */
 
         /* 메인 컨테이너 */
         .mobile-container {

@@ -12,6 +12,7 @@ import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import DiaryModal from "@/components/Diary/DiaryModal";
 import { useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 // 에러 객체 타입 정의
 interface ErrorItem {
@@ -85,6 +86,9 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   const [selectedError, setSelectedError] = useState<ErrorItem | null>(null);
   const [, setHighlightedText] = useState<string>("");
   const [sidebarOpen, setSidebarOpen] = useState(false); // For mobile view
+
+  const pathname = usePathname(); // 현재 URL 경로 가져오기
+  const isStudentPage = pathname?.includes("/teacher"); // /student 포함 여부 체크
 
   // Accordion 상태 관리
   const [summaryOpen, setSummaryOpen] = useState(true);
@@ -349,7 +353,7 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
   return (
     <>
       <div className="relative p-1 flex w-full h-full bg-gray-50 items-center justify-center">
-        {/* Navigation Buttons - Hidden on small screens */}
+        {/* 네비게이션 버튼 */}
         <button
           onClick={handlePrev}
           className="absolute left-2 sm:left-6 z-10 p-2 sm:p-4 rounded-full bg-white shadow-md hover:bg-gray-50 transition-colors"
@@ -389,17 +393,19 @@ export default function DiaryCard({ diarydata }: { diarydata: any }) {
                 )}
               </div>
 
-              {/* DatePicker Button */}
+              {/* 날짜 */}
               <div className="relative">
-                <div
-                  onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-                  className="flex items-center gap-2 sm:gap-3 bg-gray-50 px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100"
-                >
-                  <FiCalendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
-                  <span className="text-xs sm:text-sm font-medium text-gray-700">
-                    {year}년 {month}월 {day}일
-                  </span>
-                </div>
+                {isStudentPage && (
+                  <div
+                    onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+                    className="flex items-center gap-2 sm:gap-3 bg-gray-50 px-2 sm:px-4 py-1.5 sm:py-2.5 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100"
+                  >
+                    <FiCalendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">
+                      {year}년 {month}월 {day}일
+                    </span>
+                  </div>
+                )}
 
                 {/* DatePicker Popup */}
                 {isDatePickerOpen && (

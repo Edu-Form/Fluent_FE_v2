@@ -281,16 +281,15 @@ const HomePage = () => {
       <div className="flex flex-col gap-4 pb-20">
         {/* 영어 학습 캐러셀 */}
         <div className="relative">
+          <div className="text-3xl font-bold text-indigo-800 p-2 mb-1">
+            Fluent
+          </div>
           <Suspense fallback={<CarouselLoader />}>
             <ImageCarousel />
           </Suspense>
-
-          <div className="absolute top-5 left-5 z-10">
-            <span className="text-3xl font-bold text-white">Fluent</span>
-          </div>
         </div>
 
-        {/* 인사말 카드 - 토스 스타일 */}
+        {/* 인사말 카드  */}
         <div className="bg-blue-50 rounded-3xl shadow-sm border border-gray-100 p-6">
           <div className="flex flex-col">
             <div className="flex items-center gap-3 mb-3">
