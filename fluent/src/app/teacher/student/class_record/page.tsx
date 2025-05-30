@@ -414,7 +414,7 @@ const ClassPageContent: React.FC = () => {
   useEffect(() => {
     const fetchStudentNotes = async () => {
       const studentParam = searchParams?.get("student_name");
-      if (activeOption !== "option2" || !studentParam) return;
+      if (!studentParam) return;
 
       setSearchLoading(true);
       setSearchError(null);
@@ -440,7 +440,8 @@ const ClassPageContent: React.FC = () => {
     };
 
     fetchStudentNotes();
-  }, [activeOption, searchParams]);
+  }, [searchParams]);
+
 
   const [studentList, setStudentList] = useState<string[]>([]);
   const [selectedGroupStudents, setSelectedGroupStudents] = useState<string[]>([]);
