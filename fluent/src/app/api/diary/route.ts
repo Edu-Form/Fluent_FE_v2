@@ -15,134 +15,863 @@ export async function POST(request: Request) {
 
     const levelInstructions = {
       level1: `
-        Limit the editing vocabulary & grammar to a preschooler ~ 1st grader.
-        Use only simple sentence structures.
-        No noun clauses.
-        No relative pronouns.
-        No gerunds.
-        No to-infinitives.
-        Feel free to vary sentence structure a little bit to make it sound more natural.
-        If there is any Korean that the student used because they didnt know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+        Criteria:
+        - Edit the diary with the vocabulary of a toddler.
+        - Use very simple and easy grammar. 
       `,
       level2: `
-        Limit the editing vocabulary & grammar to a 1st grader ~ 3rd grader.
-        Use only simple sentence structures but the sentences can get slightly longer.
-        No noun clauses.
-        No relative pronouns.
-        Encouraged to use simple gerunds.
-        Encouraged to use simple to-infinitives.
-        Feel free to vary sentence structure a little bit to make it sound more natural.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+        Criteria:
+        - Edit the diary with the vocabulary of a toddler.
+        - Use very simple and easy grammar. 
       `,
       level3: `
-        Limit the editing vocabulary & grammar to a 3rd grader ~ 6th grader.
-        You can creatively make the sentences slightly longer with simple grammar.
-        No noun clauses.
-        No relative pronouns.
-        Encouraged to use simple gerunds.
-        Encouraged to use simple to-infinitives.
-        Encouraged to use while / during / for.
-        Encouraged to use simple phrases and idioms to make the diary more natural (e.g., in the morning / on the weekend / went to bed).
-        Feel free to vary sentence structure a little bit to make it sound more natural.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+
+        Criteria:
+        Edit the diary with the vocabulary of a toddler.
+        Use very simple and easy grammar. (refer to the expressions below)
+        You may add 1 ~ 5 sentences depending on the length of the diary (refer to the expressions below) 
+
+        Expressions that the student learned (try to include similar expressions if it naturally fits into the diary): 
+        I went to seoul to meet my friends
+        I came here for class
+        I want to go to japan to work for my career 
+        for 2 years / for a week / for 10 years 
+        while I ate breakfast / while eating breakfast 
+        during vacation / during work / during the holidays
+        I got off work late because I had a lot of work 
+        my wife had to work late
+        I wanted to eat dinner with my friend
+        I don’t want to go there.
+        after getting off work 
+        before going to work
+        I got ready for work / I got ready to go out 
+        on the weekend / in the morning / on the next day
+        at around 1pm
+        I went to a cafe called starbucks
+        after looking around
+        it’s my favorite brand
+        while drinking beer and watching netflix
+        my girlfriend went home at around 10pm 
+        it was a very busy and fun day
+        today, I didn’t do anything
+        I stayed home and rolled around on my bed all day
+        I didn’t have anything to do
+        I watched a show called squid game
+        it’s very popular nowadays
+        I am good at this game
+        it was a tiring day / it was a busy day
+        I will go to hongdae to have class with david now! 
+        other than work, there was nothing special. 
+        I was very excited / it was very exciting
+        I was very interested / It was very interesting
+        I am going to go home and change into my pajamas
+        I think I’m gonna eat dinner with my family
+        I’m not sure, but my wife is probably gonna cook for me
+        I need to work on saturday. 
+        I wanted to do something else. 
+        I was dreaming 
+        I started crying 
+        I was talking to my friend yesterday
+        exercising is good for your health
+        learning english is good for traveling
+        drinking is bad for you 
+        I was tired but I kept working 
+        I’m thinking about transferring jobs
+        she is thinking about quitting 
+        I was drunk but I kept drinking
+        I was sleepy but I kept studying quizlet
+        I will keep exercising every day
+        he is really trying hard
+        he has to earn a lot of money
+        I want to go traveling
+        working is tiring 
+        he is going to work again this weekend
+        working is boring but shopping is exciting
       `,
       level4:`
-        Limit the editing vocabulary & grammar to a 3rd grader ~ 6th grader.
-        You can creatively make the sentences slightly longer with simple grammar.
-        No noun clauses.
-        No relative pronouns.
-        Encouraged to use simple gerunds.
-        Encouraged to use to-infinitives.
-        Encouraged to use while / during / for.
-        Encouraged to use simple phrases and idioms to make the diary more natural (e.g., in the morning / on the weekend / went to bed).
-        Creatively write more within the same level and context to make the diary more interesting.
-        Feel free to vary sentence structure a little bit to make it sound more natural.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+
+        Criteria:
+        Edit the diary with the vocabulary of a 2nd grader
+        Use simple and easy grammar. (refer to the expressions below)
+        You may add 1 ~ 5 sentences depending on the length of the diary (refer to the expressions below) 
+
+        Expressions that the student learned (try to include similar expressions if it naturally fits into the diary): 
+
+        I went to seoul to meet my friends
+        I came here for class
+        I want to go to japan to work for my career 
+        for 2 years / for a week / for 10 years 
+        while I ate breakfast / while eating breakfast 
+        during vacation / during work / during the holidays
+        I got off work late because I had a lot of work 
+        my wife had to work late
+        I wanted to eat dinner with my friend
+        I don’t want to go there.
+        after getting off work 
+        before going to work
+        I got ready for work / I got ready to go out 
+        on the weekend / in the morning / on the next day
+        at around 1pm
+        I went to a cafe called starbucks
+        after looking around
+        it’s my favorite brand
+        while drinking beer and watching netflix
+        my girlfriend went home at around 10pm 
+        it was a very busy and fun day
+        today, I didn’t do anything
+        I stayed home and rolled around on my bed all day
+        I didn’t have anything to do
+        I watched a show called squid game
+        it’s very popular nowadays
+        I am good at this game
+        it was a tiring day / it was a busy day
+        I will go to hongdae to have class with david now! 
+        other than work, there was nothing special. 
+        I was very excited / it was very exciting
+        I was very interested / It was very interesting
+        I am going to go home and change into my pajamas
+        I think I’m gonna eat dinner with my family
+        I’m not sure, but my wife is probably gonna cook for me
+        I need to work on saturday. 
+        I wanted to do something else. 
+        I was dreaming 
+        I started crying 
+        I was talking to my friend yesterday
+        exercising is good for your health
+        learning english is good for traveling
+        drinking is bad for you 
+        I was tired but I kept working 
+        I’m thinking about transferring jobs
+        she is thinking about quitting 
+        I was drunk but I kept drinking
+        I was sleepy but I kept studying quizlet
+        I will keep exercising every day
+        he is really trying hard
+        he has to earn a lot of money
+        I want to go traveling
+        working is tiring 
+        he is going to work again this weekend
+        working is boring but shopping is exciting
+
+        New expressions (prioritize these): 
+
+        David is a better student than sarah but daniel is the best student
+        Kyochon tastes better than BBQ, but Puradak tastes the best.  
+        I feel better than yesterday.  
+        Harry Potter was more interesting than Avatar, but Dune was the most interesting.  
+        Jogging is more tiring than hiking, but playing sports is the most exhausting.  
+        Can you recommend the most popular restaurant in Hongdae?  
+        My room is very small. It's almost [as small as a 고시원].  
+        You’re almost [as tall as me] now.  
+        Sarah got better at english. She’s now [almost as good as David].  
+        Sarah has [as much experience as David].  
+        I don’t have [as much money as you].
+        David was sick but he got better
+        You got much better at english! 
+        I got better at playing golf 
+        She got married / she got divorced 
+        my kids keep getting taller 
+        I don’t know what to do
+        I don’t know where to buy that shirt.
+        I’m currently studying for my exams.
+        I tried sushi for the first time.
+        If you want, we can watch a movie.
+        It’s raining outside.
+        I want to visit Paris.
+        I just finished my lunch.
+        We took a walk.
+        Can you show me how to use this app?
+        Anyway, let’s move on to the next topic.
+        I need to finish my homework.
+        I’m feeling a little tired today.
+        I got hurt. / I’m sick
+        It’s super hot.
+        You must follow the rules.
+        I look forward to seeing you next week.
+        Have you ever tried Indian food?
+        I want to earn a lot of money.
+        I’m on the way to work.
+        I found a great restaurant!
+        You should eat healthy.
+        I ran into an old friend.
+        It’s late already, let’s go home.
+        I’m working on a new assignment.
+        I need to set up my new computer.
+        I looked up “how to say hi in Spanish.”
+        She’s really good at painting.
+        Put on your jacket. It’s cold outside.
+        We ran out of milk.
+        I need to pick up my medicine.
+        Can you give me a hand?
+        I’m interested in learning Spanish.
+        The plane will take off in an hour.
+        I’m looking for my keys.
+        Make sure you lock the door before you leave.
+        I’m satisfied with my new car.
+        I just came back home
+        Korea is famous for Kimchi 
+        it’s not worth it
+        three days in a row 
+        As I said / As I told you / As I mentioned
+        I drove for 8 hours there and back (two ways) (back and forth) 
+        Do you recommend it? 
+        I don’t know who to ask
+        I’m not confident 
+        Busan was holding a beach festival
+        I’ll show you a picture! 
+        Did you get paid yet? 
+        The fee was very cost efficient 
+        The fine was 500,000 won
+        I met my middle school friends for the first time in a while
+        You can do whatever you want
+        Specifically 
+        she wanted me to go to church
+        I bought her a bag
+        She hung up the phone / I picked up the phone
+        I’m looking forward to the community event
+        I have to take care of my kids 
+        I was busy taking care of my cats
+        I think you should write a blog
+        I hope you really enjoy the community event
+        I’m gonna be in korea this winter
+        They bought me a lot of food
+        I’m really into wine these days
+        I don't like making mistakes 
+        Why don’t you come after getting off work? 
+        Unfortunately 
+        Thankfully 
+        To tell you about myself,
+        I was deciding [whether to drive or ride a bike but I chose to drive].
+        Whether to do A or B 
+        I don’t think this should be a habit 
+        it’s not related with / it doesn’t have anything to do with whitening 
+        you dont have to be sorry. it’s okay
+        By the way, where is the venue again?
+        she owes me 30,000won 
+        This bag costs 77,000won
+        the conversation got weird 
+        In conclusion, the project was a success.  
+        In summary, we achieved our goals this year.
+        it wasn’t worth it
+        All in all, it was a great experience.  
+        In the end, everything worked out fine.  
+        it was a waste of money
+        Normally, 
+        Originally, 
+        for the whole day
+        I had a very hard time / I had a very good time 
+        since then 
+        I spent like 8 hours making a song. 
+        to be honest, I couldn’t study that hard. It’s not perfect. But let’s try it. 
+        genuinely 
+        I can tell [that you studied] 
+        I can tell [that you really like music] 
       `,
       level5: `
-        Limit the editing vocabulary & grammar to a 5th ~ 6th grader.
-        You can creatively make the sentences slightly longer with simple grammar.
-        No noun clauses.
-        No relative pronouns.
-        Encouraged to use simple gerunds.
-        Encouraged to use simple to-infinitives.
-        Encouraged to use while / during / for.
-        Creatively write more within the same level and context to make the diary more interesting.
-        From a level 5 diary, edit the diary to focus on one major event instead of listing out simply what they did.
-        Emphasize characters and dialogue.
-        Start using quotes with expressions like "I was like", "she said", "he asked".
-        Feel free to vary sentence structure a little bit to make it sound more natural.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+
+        Criteria:
+        Edit the diary with the vocabulary of a 4th grader
+        Do not use overly difficult grammar(refer to the expressions below)
+        The diary should include characters
+        The diary should include quotes (or summarized quotes using that / if / to)
+        The diary should have an entertaining story flow
+        Try to use a lot of [I said ~ / she told me that ~ / I was like ~] to help storytell the story
+        You may add 1 ~ 5 sentences depending on the length of the diary (refer to the expressions below) 
+
+        Expressions that the student learned (try to include similar expressions if it naturally fits into the diary): 
+
+        I don’t know what to do
+        I don’t know where to buy that shirt.
+        I’m currently studying for my exams.
+        I tried sushi for the first time.
+        If you want, we can watch a movie.
+        It’s raining outside.
+        I want to visit Paris.
+        I just finished my lunch.
+        We took a walk.
+        Can you show me how to use this app?
+        Anyway, let’s move on to the next topic.
+        I need to finish my homework.
+        I’m feeling a little tired today.
+        I got hurt. / I’m sick
+        It’s super hot.
+        You must follow the rules.
+        I look forward to seeing you next week.
+        Have you ever tried Indian food?
+        I want to earn a lot of money.
+        I’m on the way to work.
+        I found a great restaurant!
+        You should eat healthy.
+        I ran into an old friend.
+        It’s late already, let’s go home.
+        I’m working on a new assignment.
+        I need to set up my new computer.
+        I looked up “how to say hi in Spanish.”
+        She’s really good at painting.
+        Put on your jacket. It’s cold outside.
+        We ran out of milk.
+        I need to pick up my medicine.
+        Can you give me a hand?
+        I’m interested in learning Spanish.
+        The plane will take off in an hour.
+        I’m looking for my keys.
+        Make sure you lock the door before you leave.
+        I’m satisfied with my new car.
+        I just came back home
+        Korea is famous for Kimchi 
+        it’s not worth it
+        three days in a row 
+        As I said / As I told you / As I mentioned
+        I drove for 8 hours there and back (two ways) (back and forth) 
+        Do you recommend it? 
+        I don’t know who to ask
+        I’m not confident 
+        Busan was holding a beach festival
+        I’ll show you a picture! 
+        Did you get paid yet? 
+        The fee was very cost efficient 
+        The fine was 500,000 won
+        I met my middle school friends for the first time in a while
+        You can do whatever you want
+        Specifically 
+        she wanted me to go to church
+        I bought her a bag
+        She hung up the phone / I picked up the phone
+        I’m looking forward to the community event
+        I have to take care of my kids 
+        I was busy taking care of my cats
+        I think you should write a blog
+        I hope you really enjoy the community event
+        I’m gonna be in korea this winter
+        They bought me a lot of food
+        I’m really into wine these days
+        I don't like making mistakes 
+        Why don’t you come after getting off work? 
+        Unfortunately 
+        Thankfully 
+        To tell you about myself,
+        I was deciding [whether to drive or ride a bike but I chose to drive].
+        Whether to do A or B 
+        I don’t think this should be a habit 
+        it’s not related with / it doesn’t have anything to do with whitening 
+        you dont have to be sorry. it’s okay
+        By the way, where is the venue again?
+        she owes me 30,000won 
+        This bag costs 77,000won
+        the conversation got weird 
+        In conclusion, the project was a success.  
+        In summary, we achieved our goals this year.
+        it wasn’t worth it
+        All in all, it was a great experience.  
+        In the end, everything worked out fine.  
+        it was a waste of money
+        Normally, 
+        Originally, 
+        for the whole day
+        I had a very hard time / I had a very good time 
+        since then 
+        I spent like 8 hours making a song. 
+        to be honest, I couldn’t study that hard. It’s not perfect. But let’s try it. 
+        genuinely 
+        I can tell [that you studied] 
+        I can tell [that you really like music] 
+
+        New expressions (prioritize these):
+
+        I told my friend [that I was drunk].  
+        She told me [that it was her first time coming to Korea].  
+        I heard [that he was good at soccer].  
+        My boss told me [that I have to finish this].  
+        She told me [that she can’t drink].  
+        I asked David [to give me fewer Quizlets].  
+        My student asked me [if we could cancel today’s class].  
+        I heard [that she quit her job].  
+        David told his student [to study].  
+        She told me [that she wanted to go home].  
+        My boss asked me [to come early].  
+        She asked me [if I ate dinner].  
+        I told her [that I want to get married one day].  
+        My boss asked me [if I wanted to come to the team dinner].  
+        I heard [that that restaurant was bad].  
+        I was like, “Let’s eat Korean barbecue.”  
+        She was like, “That sounds good!”  
+        My girlfriend said [that she wanted to go somewhere fun] today.  
+        I asked him [to call the restaurant for me].  
+        I told David [that I can’t come to class on Friday].
+        David asked Jeff if he can help him move. 
+        David asked Chris to come to the community event. 
+        I’m glad [that some classes were canceled] 
+        I’m glad [that I have time to spend with my brother] before he goes to the military
+        he said [that he has 40 days left]
+        I told my boss [that I plan to get married next month]
+        he told me to [let him know beforehand] 
+        I’m already worried [that I’m gonna be late]
+        I heard that movie was really sad so I decided not to watch it
+        I thought I was dreaming
+        I told my boyfriend [that I was going to buy some clothes] 
+        I thought [that it was it was close to my house]
+        I was gonna ask [if you had any plans for the weekend]
+        I didn’t even know [that I could take a break] 
+        I’m worried [that I’m going to be late]
+        he asked me [if I was okay]
       `,
       level6:`
-        Limit the editing vocabulary & grammar to a 7th grader.
-        You can creatively make the sentences slightly longer with simple grammar.
-        No noun clauses.
-        No relative pronouns.
-        Encouraged to use simple gerunds.
-        Encouraged to use simple to-infinitives.
-        Encouraged to use while / during / for.
-        Encouraged to use casual native phrases and idioms to make the diary more natural.
-        Creatively write more within the same level and context to make the diary more interesting.
-        From a level 5 diary onwards, edit the diary to focus on one major event instead of listing out simply what they did.
-        Emphasize characters and dialogue.
-        Start using harder quotes and summarization expressions like "she said that ~", "I told her to", "he asked me if", "I thought that", "I heard that".
-        Feel free to vary sentence structure a little bit to make it sound more natural.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+
+        Criteria:
+        Edit the diary with the vocabulary of a 6th grader
+        Try to use a lot of 관계대명사 & 명사절
+        Do not use overly difficult grammar(refer to the expressions below)
+        The diary should include characters
+        The diary should include quotes (or summarized quotes using that / if / to)
+        The diary should have an entertaining story flow
+        Try to use a lot of [I said ~ / she told me that ~ / I was like ~] to help storytell the story
+        You may add 1 ~ 5 sentences depending on the length of the diary (refer to the expressions below) 
+
+
+        Expressions that the student learned (try to include similar expressions if it naturally fits into the diary): 
+
+        I don’t know what to do
+        I don’t know where to buy that shirt.
+        I’m currently studying for my exams.
+        I tried sushi for the first time.
+        If you want, we can watch a movie.
+        It’s raining outside.
+        I want to visit Paris.
+        I just finished my lunch.
+        We took a walk.
+        Can you show me how to use this app?
+        Anyway, let’s move on to the next topic.
+        I need to finish my homework.
+        I’m feeling a little tired today.
+        I got hurt. / I’m sick
+        It’s super hot.
+        You must follow the rules.
+        I look forward to seeing you next week.
+        Have you ever tried Indian food?
+        I want to earn a lot of money.
+        I’m on the way to work.
+        I found a great restaurant!
+        You should eat healthy.
+        I ran into an old friend.
+        It’s late already, let’s go home.
+        I’m working on a new assignment.
+        I need to set up my new computer.
+        I looked up “how to say hi in Spanish.”
+        She’s really good at painting.
+        Put on your jacket. It’s cold outside.
+        We ran out of milk.
+        I need to pick up my medicine.
+        Can you give me a hand?
+        I’m interested in learning Spanish.
+        The plane will take off in an hour.
+        I’m looking for my keys.
+        Make sure you lock the door before you leave.
+        I’m satisfied with my new car.
+        I just came back home
+        Korea is famous for Kimchi 
+        it’s not worth it
+        three days in a row 
+        As I said / As I told you / As I mentioned
+        I drove for 8 hours there and back (two ways) (back and forth) 
+        Do you recommend it? 
+        I don’t know who to ask
+        I’m not confident 
+        Busan was holding a beach festival
+        I’ll show you a picture! 
+        Did you get paid yet? 
+        The fee was very cost efficient 
+        The fine was 500,000 won
+        I met my middle school friends for the first time in a while
+        You can do whatever you want
+        Specifically 
+        she wanted me to go to church
+        I bought her a bag
+        She hung up the phone / I picked up the phone
+        I’m looking forward to the community event
+        I have to take care of my kids 
+        I was busy taking care of my cats
+        I think you should write a blog
+        I hope you really enjoy the community event
+        I’m gonna be in korea this winter
+        They bought me a lot of food
+        I’m really into wine these days
+        I don't like making mistakes 
+        Why don’t you come after getting off work? 
+        Unfortunately 
+        Thankfully 
+        To tell you about myself,
+        I was deciding [whether to drive or ride a bike but I chose to drive].
+        Whether to do A or B 
+        I don’t think this should be a habit 
+        it’s not related with / it doesn’t have anything to do with whitening 
+        you dont have to be sorry. it’s okay
+        By the way, where is the venue again?
+        she owes me 30,000won 
+        This bag costs 77,000won
+        the conversation got weird 
+        In conclusion, the project was a success.  
+        In summary, we achieved our goals this year.
+        it wasn’t worth it
+        All in all, it was a great experience.  
+        In the end, everything worked out fine.  
+        it was a waste of money
+        Normally, 
+        Originally, 
+        for the whole day
+        I had a very hard time / I had a very good time 
+        since then 
+        I spent like 8 hours making a song. 
+        to be honest, I couldn’t study that hard. It’s not perfect. But let’s try it. 
+        genuinely 
+        I can tell [that you studied] 
+        I can tell [that you really like music] 
+        I told my friend [that I was drunk].  
+        She told me [that it was her first time coming to Korea].  
+        I heard [that he was good at soccer].  
+        My boss told me [that I have to finish this].  
+        She told me [that she can’t drink].  
+        I asked David [to give me fewer Quizlets].  
+        My student asked me [if we could cancel today’s class].  
+        I heard [that she quit her job].  
+        David told his student [to study].  
+        She told me [that she wanted to go home].  
+        My boss asked me [to come early].  
+        She asked me [if I ate dinner].  
+        I told her [that I want to get married one day].  
+        My boss asked me [if I wanted to come to the team dinner].  
+        I heard [that that restaurant was bad].  
+        I was like, “Let’s eat Korean barbecue.”  
+        She was like, “That sounds good!”  
+        My girlfriend said [that she wanted to go somewhere fun] today.  
+        I asked him [to call the restaurant for me].  
+        I told David [that I can’t come to class on Friday].
+        David asked Jeff if he can help him move. 
+        David asked Chris to come to the community event. 
+        I’m glad [that some classes were canceled] 
+        I’m glad [that I have time to spend with my brother] before he goes to the military
+        he said [that he has 40 days left]
+        I told my boss [that I plan to get married next month]
+        he told me to [let him know beforehand] 
+        I’m already worried [that I’m gonna be late]
+        I heard that movie was really sad so I decided not to watch it
+        I thought I was dreaming
+        I told my boyfriend [that I was going to buy some clothes] 
+        I thought [that it was it was close to my house]
+        I was gonna ask [if you had any plans for the weekend]
+        I didn’t even know [that I could take a break] 
+        I’m worried [that I’m going to be late]
+        he asked me [if I was okay]
+
+        New expressions (prioritize these):
+
+        She’s [the girl that I met yesterday].  
+        [The girl that I liked] moved.  
+        [The guy that I met] was a comedian.  
+        I saw [who you met].  
+        I don’t remember [what I did yesterday].  
+        She said [that it was pretty].  
+        [When I was young], I was sick.  
+        I don’t know [why she was mad].  
+        I know [where you are].  
+        That’s [why I can’t drink milk].  
+        I know [that you lied].  
+        I thought [that it wasn’t pretty].  
+        I bought [water that costs 1000 won].  
+        [The food that I like] is pizza.  
+        [The company that I work for] is in Busan.  
+        I met [a girl that I like].  
+        That’s [the reason that I like you].  
+        I watched [Forrest Gump, which is the name of a movie].  
+        I really like [BTS, which is a famous K-pop boy group].
+        That's [the one that I bought] yesterday.
+        She's [the girl who(that) I met] at the party.
+        I went to [the coffee shop that I go to] every morning.
+        He's [the guy that I talked to].
+        That's [the show that I'm watching] right now.
+        She's [the friend who(that) I text] every day.
+        That's [where I buy my groceries].
+        That's [what I was looking for].
+        She's [who I have lunch with].
+        This is [the game that I'm obsessed with] lately.
+        That's [the bar where we hung out] last Friday.
+        She's [the person who I was telling you about].
+        That's [the restaurant where I want to eat].
+        This is [the movie that everyone's talking about].
+        That's [the dish that I always order].
+        This is [where I drink] every weekend.
+        He's [the dude who helped me move].
+        That's [when I realized that I needed to change].
+        This is [why I'm always late].
+        That’s [the reason why I have to leave korea]
+        I wonder [if he remembers my name]
+        I hope (that) you enjoyed your trip
+        She explained [why she was late]
+        I’m not sure [if I can finish this on time] 
+        I forgot [that today is her birthday].
+        I made plans because I know [that tomorrow is your day off]. 
+        [The report that he wrote] is the key material for this project. 
+        [The project that he mentioned] has finally started. 
+        [The gym that I go to] operates 24 hours a day. 
+        The food [that she cooked is today's main dish.] 
+        [The subway station that I use every day] is under construction this week.
+        I don’t know (if)whether we can go hiking tomorrow.
+        I ate 전 which is like a korean traditional pancake 
+        I drank 막걸리 which is a type of traditional korean alcohol.
+        I couldn’t go to [the place that he recommended]
+        it was [a cafe that sold ice cream]
+        I was shocked at [how much he drank]
+        I know [that there are a lot of cherry blossoms] in 여의도.
+        I’m teaching [another student that watched that movie]
+        that was [the last time that I drank]
+        that was [not what I expected]
       `,
       level7: `
-        Limit the editing vocabulary & grammar to an 8th grader.
-        You can creatively make the sentences longer with slightly more complex grammar.
-        Allowed to use noun clauses and relative pronouns sparingly.
-        Encouraged to use simple gerunds and to-infinitives.
-        Encouraged to use while / during / for.
-        Encouraged to use casual native phrases, idioms, and expressions to make the diary more natural.
-        Creatively write more within the same level and context to make the diary more interesting.
-        Focus on one major event or theme instead of listing out everything.
-        Emphasize characters and dialogue.
-        Actively use quotes and summarization expressions like "he mentioned that", "I realized that", "she told me to", "I wondered if".
-        Feel free to vary sentence structure to make the diary sound natural and engaging.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+
+        Criteria:
+        Edit the diary with the grammar & vocabulary of a 7th grader
+        Try to use a lot of 관계대명사 & 명사절
+        The diary should include characters
+        The diary should include quotes (or summarized quotes using that / if / to)
+        The diary should have an entertaining story flow
+        Try to use a lot of [I said ~ / she told me that ~ / I was like ~] to help storytell the story
+        You may add 1 ~ 5 sentences depending on the length of the diary (refer to the expressions below) 
+
+        Expressions that the student learned (try to include similar expressions if it naturally fits into the diary): 
+
+        I don’t know what to do
+        I don’t know where to buy that shirt.
+        I’m currently studying for my exams.
+        I tried sushi for the first time.
+        If you want, we can watch a movie.
+        It’s raining outside.
+        I want to visit Paris.
+        I just finished my lunch.
+        We took a walk.
+        Can you show me how to use this app?
+        Anyway, let’s move on to the next topic.
+        I need to finish my homework.
+        I’m feeling a little tired today.
+        I got hurt. / I’m sick
+        It’s super hot.
+        You must follow the rules.
+        I look forward to seeing you next week.
+        Have you ever tried Indian food?
+        I want to earn a lot of money.
+        I’m on the way to work.
+        I found a great restaurant!
+        You should eat healthy.
+        I ran into an old friend.
+        It’s late already, let’s go home.
+        I’m working on a new assignment.
+        I need to set up my new computer.
+        I looked up “how to say hi in Spanish.”
+        She’s really good at painting.
+        Put on your jacket. It’s cold outside.
+        We ran out of milk.
+        I need to pick up my medicine.
+        Can you give me a hand?
+        I’m interested in learning Spanish.
+        The plane will take off in an hour.
+        I’m looking for my keys.
+        Make sure you lock the door before you leave.
+        I’m satisfied with my new car.
+        I just came back home
+        Korea is famous for Kimchi 
+        it’s not worth it
+        three days in a row 
+        As I said / As I told you / As I mentioned
+        I drove for 8 hours there and back (two ways) (back and forth) 
+        Do you recommend it? 
+        I don’t know who to ask
+        I’m not confident 
+        Busan was holding a beach festival
+        I’ll show you a picture! 
+        Did you get paid yet? 
+        The fee was very cost efficient 
+        The fine was 500,000 won
+        I met my middle school friends for the first time in a while
+        You can do whatever you want
+        Specifically 
+        she wanted me to go to church
+        I bought her a bag
+        She hung up the phone / I picked up the phone
+        I’m looking forward to the community event
+        I have to take care of my kids 
+        I was busy taking care of my cats
+        I think you should write a blog
+        I hope you really enjoy the community event
+        I’m gonna be in korea this winter
+        They bought me a lot of food
+        I’m really into wine these days
+        I don't like making mistakes 
+        Why don’t you come after getting off work? 
+        Unfortunately 
+        Thankfully 
+        To tell you about myself,
+        I was deciding [whether to drive or ride a bike but I chose to drive].
+        Whether to do A or B 
+        I don’t think this should be a habit 
+        it’s not related with / it doesn’t have anything to do with whitening 
+        you dont have to be sorry. it’s okay
+        By the way, where is the venue again?
+        she owes me 30,000won 
+        This bag costs 77,000won
+        the conversation got weird 
+        In conclusion, the project was a success.  
+        In summary, we achieved our goals this year.
+        it wasn’t worth it
+        All in all, it was a great experience.  
+        In the end, everything worked out fine.  
+        it was a waste of money
+        Normally, 
+        Originally, 
+        for the whole day
+        I had a very hard time / I had a very good time 
+        since then 
+        I spent like 8 hours making a song. 
+        to be honest, I couldn’t study that hard. It’s not perfect. But let’s try it. 
+        genuinely 
+        I can tell [that you studied] 
+        I can tell [that you really like music] 
+        I told my friend [that I was drunk].  
+        She told me [that it was her first time coming to Korea].  
+        I heard [that he was good at soccer].  
+        My boss told me [that I have to finish this].  
+        She told me [that she can’t drink].  
+        I asked David [to give me fewer Quizlets].  
+        My student asked me [if we could cancel today’s class].  
+        I heard [that she quit her job].  
+        David told his student [to study].  
+        She told me [that she wanted to go home].  
+        My boss asked me [to come early].  
+        She asked me [if I ate dinner].  
+        I told her [that I want to get married one day].  
+        My boss asked me [if I wanted to come to the team dinner].  
+        I heard [that that restaurant was bad].  
+        I was like, “Let’s eat Korean barbecue.”  
+        She was like, “That sounds good!”  
+        My girlfriend said [that she wanted to go somewhere fun] today.  
+        I asked him [to call the restaurant for me].  
+        I told David [that I can’t come to class on Friday].
+        David asked Jeff if he can help him move. 
+        David asked Chris to come to the community event. 
+        I’m glad [that some classes were canceled] 
+        I’m glad [that I have time to spend with my brother] before he goes to the military
+        he said [that he has 40 days left]
+        I told my boss [that I plan to get married next month]
+        he told me to [let him know beforehand] 
+        I’m already worried [that I’m gonna be late]
+        I heard that movie was really sad so I decided not to watch it
+        I thought I was dreaming
+        I told my boyfriend [that I was going to buy some clothes] 
+        I thought [that it was it was close to my house]
+        I was gonna ask [if you had any plans for the weekend]
+        I didn’t even know [that I could take a break] 
+        I’m worried [that I’m going to be late]
+        he asked me [if I was okay]
+
+        New expressions (prioritize these):
+
+        She’s [the girl that I met yesterday].  
+        [The girl that I liked] moved.  
+        [The guy that I met] was a comedian.  
+        I saw [who you met].  
+        I don’t remember [what I did yesterday].  
+        She said [that it was pretty].  
+        [When I was young], I was sick.  
+        I don’t know [why she was mad].  
+        I know [where you are].  
+        That’s [why I can’t drink milk].  
+        I know [that you lied].  
+        I thought [that it wasn’t pretty].  
+        I bought [water that costs 1000 won].  
+        [The food that I like] is pizza.  
+        [The company that I work for] is in Busan.  
+        I met [a girl that I like].  
+        That’s [the reason that I like you].  
+        I watched [Forrest Gump, which is the name of a movie].  
+        I really like [BTS, which is a famous K-pop boy group].
+        That's [the one that I bought] yesterday.
+        She's [the girl who(that) I met] at the party.
+        I went to [the coffee shop that I go to] every morning.
+        He's [the guy that I talked to].
+        That's [the show that I'm watching] right now.
+        She's [the friend who(that) I text] every day.
+        That's [where I buy my groceries].
+        That's [what I was looking for].
+        She's [who I have lunch with].
+        This is [the game that I'm obsessed with] lately.
+        That's [the bar where we hung out] last Friday.
+        She's [the person who I was telling you about].
+        That's [the restaurant where I want to eat].
+        This is [the movie that everyone's talking about].
+        That's [the dish that I always order].
+        This is [where I drink] every weekend.
+        He's [the dude who helped me move].
+        That's [when I realized that I needed to change].
+        This is [why I'm always late].
+        That’s [the reason why I have to leave korea]
+        I wonder [if he remembers my name]
+        I hope (that) you enjoyed your trip
+        She explained [why she was late]
+        I’m not sure [if I can finish this on time] 
+        I forgot [that today is her birthday].
+        I made plans because I know [that tomorrow is your day off]. 
+        [The report that he wrote] is the key material for this project. 
+        [The project that he mentioned] has finally started. 
+        [The gym that I go to] operates 24 hours a day. 
+        The food [that she cooked is today's main dish.] 
+        [The subway station that I use every day] is under construction this week.
+        I don’t know (if)whether we can go hiking tomorrow.
+        I ate 전 which is like a korean traditional pancake 
+        I drank 막걸리 which is a type of traditional korean alcohol.
+        I couldn’t go to [the place that he recommended]
+        it was [a cafe that sold ice cream]
+        I was shocked at [how much he drank]
+        I know [that there are a lot of cherry blossoms] in 여의도.
+        I’m teaching [another student that watched that movie]
+        that was [the last time that I drank]
+        that was [not what I expected]
       `,
 
       level8: `
-        Limit the editing vocabulary & grammar to a 9th grader.
-        You can creatively use longer and more varied sentence structures.
-        Allowed to use noun clauses and relative pronouns.
-        Encouraged to use gerunds, to-infinitives, participle phrases, and transitional words.
-        Encouraged to use casual but vivid phrases, idioms, and expressions to make the diary come alive.
-        Creatively write more within the same level and context to enhance the diary’s narrative.
-        Focus on one major event or emotion instead of just listing actions.
-        Deepen characters and dialogue with more feelings and thoughts.
-        Actively use quotes and summarization expressions like "she reminded me that", "I asked him if", "I figured out that", "he explained that".
-        Feel free to vary sentence structure to create a more dynamic and natural diary entry.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+
+        Criteria:
+        Edit the diary with the grammar & vocabulary of a 8th grader
+        The diary should include characters
+        The diary should include quotes (or summarized quotes using that / if / to)
+        The diary should have an entertaining story flow
+        You may add 1 ~ 5 sentences to make the diary better 
       `,
 
       level9: `
-        Limit the editing vocabulary & grammar to a 10th grader.
-        You can creatively use complex and compound sentences.
-        Fully allowed to use noun clauses, relative pronouns, participle phrases, and a wider range of conjunctions.
-        Strongly encouraged to use vivid and natural expressions, idioms, and nuanced emotional vocabulary.
-        Creatively expand within the same level and context to develop a rich, engaging story.
-        Focus on one major event, emotion, or reflection to give the diary a clear center.
-        Deepen character interactions and dialogue to show personality and emotional growth.
-        Actively use quotes, indirect speech, and summarization expressions like "he wondered if", "I felt that", "she insisted that".
-        Vary sentence structures and rhythm to create a more natural, flowing diary style.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+
+        Criteria:
+        Edit the diary with the grammar & vocabulary of a casual adult
+        The diary should include characters
+        The diary should include quotes (or summarized quotes using that / if / to)
+        The diary should have an entertaining story flow
+        You may add 1 ~ 5 sentences to make the diary better 
       `,
 
       level10: `
-        Limit the editing vocabulary & grammar to an 11th grader.
-        You can fully use complex sentences, figurative language, and sophisticated expressions.
-        Fully allowed and encouraged to use noun clauses, relative pronouns, participle phrases, advanced conjunctions, and transitions.
-        Use vivid and emotionally rich language to create an engaging and authentic voice.
-        Creatively expand within the same level and context to craft a cohesive and compelling narrative.
-        Focus on one major theme, event, or deep reflection rather than a list of activities.
-        Develop characters, dialogue, and inner thoughts with nuance and depth.
-        Actively use quotes, indirect speech, and summarization expressions like "I realized that", "he confessed that", "she questioned whether", "I knew that".
-        Vary sentence structures intentionally to create flow, voice, and emotional impact.
-        If there is any Korean that the student used because they didn’t know how to write it in English, please translate those as well to naturally fit into the diary.
+        Help me correct an English diary that my student wrote. They are adults trying to learn English as a second language.
+
+        Criteria:
+        Edit the diary with the grammar & vocabulary of a casual adult
+        The diary should include characters
+        The diary should include quotes (or summarized quotes using that / if / to)
+        The diary should have an entertaining story flow
+        You may add 1 ~ 5 sentences to make the diary better 
       `,    // Check if the level is valid
 
     };
