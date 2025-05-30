@@ -131,87 +131,17 @@ const QuizletCardContent = ({
   // 재생 속도 상태
   const [playbackRate] = useState<number>(0.8);
 
-  // 모든 카드의 TTS 데이터를 미리 준비하는 함수
-  // async function prepareAllAudioData(): Promise<AudioBuffers> {
-  //   setIsPreparingAudio(true);
-  //   const buffers: AudioBuffers = {};
+  // Add component unmounted flag - CRITICAL ADDITION
+  const componentUnmountedRef = useRef(false);
 
-  //   try {
-  //     // 각 카드의 한국어와 영어 텍스트에 대해 TTS 데이터 준비
-  //     for (let i = 0; i < cards.length; i++) {
-  //       // 한국어 오디오 준비
-  //       const korResponse = await fetch("/api/quizlet/tts", {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({ text: cards[i][1] }),
-  //       });
-
-  //       // 영어 오디오 준비
-  //       const engResponse = await fetch("/api/quizlet/tts", {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({ text: cards[i][0] }),
-  //       });
-
-  //       if (korResponse.ok && engResponse.ok) {
-  //         const korBlob = await korResponse.blob();
-  //         const engBlob = await engResponse.blob();
-
-  //         buffers[`${i}_kor`] = URL.createObjectURL(korBlob);
-  //         buffers[`${i}_eng`] = URL.createObjectURL(engBlob);
-  //       }
-  //     }
-
-  //     setAudioBuffers(buffers);
-  //   } catch (error) {
-  //     console.error("Error preparing audio data:", error);
-  //   }
-
-  //   setIsPreparingAudio(false);
-  //   return buffers;
-  // }
-
+  // Replace the prepareAllAudioData function with this simpler version that doesn't pre-load
   async function prepareAllAudioData(): Promise<AudioBuffers> {
-    setIsPreparingAudio(true);
-    const buffers: AudioBuffers = {};
-
-    try {
-      const promises = cards.map((card, i) => {
-        const engFetch = fetch("/api/quizlet/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: card[0] }), // English
-        }).then((res) =>
-          res.blob().then((blob) => {
-            buffers[`${i}_eng`] = URL.createObjectURL(blob);
-          })
-        );
-
-        const korFetch = fetch("/api/quizlet/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: card[1] }), // Korean
-        }).then((res) =>
-          res.blob().then((blob) => {
-            buffers[`${i}_kor`] = URL.createObjectURL(blob);
-          })
-        );
-
-        return Promise.all([engFetch, korFetch]);
-      });
-
-      await Promise.all(promises.flat());
-
-      setAudioBuffers(buffers);
-    } catch (error) {
-      console.error("Error preparing audio data:", error);
-    }
-
-    setIsPreparingAudio(false);
-    return buffers;
+    // Don't actually prepare audio buffers, just return empty object
+    // Audio will be fetched on-demand during playback
+    return {};
   }
 
-  // 자동 재생 토글 시 오디오 데이터 준비
+  // Replace the toggleAutoPlay function
   const toggleAutoPlay = useCallback(async (): Promise<void> => {
     if (autoPlayButtonCooldown) return;
 
@@ -219,30 +149,20 @@ const QuizletCardContent = ({
     setTimeout(() => setAutoPlayButtonCooldown(false), cooldownTime);
 
     if (!isAutoPlaying) {
-      // 자동 재생 시작
-      setIsPreparingAudio(true);
-
-      // 자동 재생 시작 전에 오디오 데이터 준비
-      if (Object.keys(audioBuffers).length < cards.length * 2) {
-        const buffers = await prepareAllAudioData();
-        if (Object.keys(buffers).length < cards.length * 2) {
-          // 준비 실패 시 자동 재생 시작하지 않음
-          setIsPreparingAudio(false);
-          return;
-        }
-      }
-
-      setIsPreparingAudio(false);
+      // Start autoplay immediately without pre-loading audio
       setIsAutoPlaying(true);
       setIsPaused(false);
       setAutoPlayPhase(0);
       setIsFlipped(false);
       setCurrentCard(0);
     } else {
-      // 자동 재생 중지
+      // Stop autoplay
       stopAutoPlay();
     }
-  }, [isAutoPlaying, cards.length, audioBuffers]);
+  }, [isAutoPlaying, cooldownTime]);
+
+  // Add audio control ref to prevent multiple simultaneous audio
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // 자동 재생 일시 정지 토글
   const togglePause = useCallback((): void => {
@@ -254,26 +174,36 @@ const QuizletCardContent = ({
     setIsPaused((prev) => !prev);
   }, [pauseButtonCooldown]);
 
-  // 자동 재생 완전 중지
+  // Update the stopAutoPlay function to also stop current audio
   const stopAutoPlay = useCallback((): void => {
     if (stopButtonCooldown) return;
 
     setStopButtonCooldown(true);
     setTimeout(() => setStopButtonCooldown(false), cooldownTime);
 
-    // 현재 타이머 정리
+    // Clear any existing timer
     if (autoPlayTimerRef.current) {
       clearTimeout(autoPlayTimerRef.current);
       autoPlayTimerRef.current = null;
     }
 
-    // 자동 재생 상태 초기화
+    // Stop any currently playing audio
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+
+    // Reset all auto-play related states
     setIsAutoPlaying(false);
     setIsPaused(false);
     setAutoPlayPhase(0);
-  }, []);
+    
+    setTimeout(() => {
+      setIsFlipped(false);
+    }, 100);
+  }, [stopButtonCooldown, cooldownTime]);
 
-  // 자동 재생 기능 구현
+  // CRITICAL FIX: Replace the entire auto-play useEffect with proper cleanup checks
   useEffect(() => {
     const clearAutoPlayTimer = (): void => {
       if (autoPlayTimerRef.current) {
@@ -282,55 +212,171 @@ const QuizletCardContent = ({
       }
     };
 
-    if (isAutoPlaying && !isPaused) {
-      const playCurrentAudio = async (): Promise<void> => {
-        const audioKey = isFlipped
-          ? `${currentCard}_eng`
-          : `${currentCard}_kor`;
+    // Stop any currently playing audio when autoplay stops
+    if (!isAutoPlaying && currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
 
-        if (audioBuffers[audioKey]) {
-          const audio = new Audio(audioBuffers[audioKey]);
-
-          // 재생 속도 설정
-          audio.playbackRate = playbackRate;
-
-          // 오디오 재생이 끝나면 다음 단계로 진행
-          return new Promise<void>((resolve) => {
-            audio.onended = (): void => resolve();
-            audio.onerror = (): void => resolve(); // 에러 발생해도 계속 진행
-            audio.play().catch(() => resolve()); // 재생 실패해도 계속 진행
-          });
-        }
-
-        return Promise.resolve(); // 오디오가 없으면 즉시 다음 단계로 진행
-      };
-
+    if (isAutoPlaying && !isPaused && !componentUnmountedRef.current) {
       const handleAutoPlayStep = async (): Promise<void> => {
-        // 현재 오디오 재생
-        await playCurrentAudio();
+        // CRITICAL: Check if component is still mounted and autoplay is still active
+        if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+          return;
+        }
+        
+        const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
+        
+        try {
+          // Stop any previously playing audio
+          if (currentAudioRef.current) {
+            currentAudioRef.current.pause();
+            currentAudioRef.current = null;
+          }
 
-        // 일시정지 상태 확인
-        if (isPaused) return;
+          // CRITICAL: Check again before making API call
+          if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+            return;
+          }
 
-        // 다음 단계 결정
+          const response = await fetch("/api/quizlet/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+
+          // CRITICAL: Check again after API call
+          if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+            return;
+          }
+
+          if (response.ok) {
+            const audioBlob = await response.blob();
+            
+            // CRITICAL: Check again after blob creation
+            if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+              return;
+            }
+            
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            
+            // Store reference to current audio
+            currentAudioRef.current = audio;
+            
+            audio.preload = 'auto';
+            audio.playbackRate = playbackRate;
+            audio.volume = 1.0;
+            
+            await new Promise<void>((resolve) => {
+              let hasResolved = false;
+              
+              const cleanup = () => {
+                if (!hasResolved) {
+                  hasResolved = true;
+                  audio.removeEventListener('canplay', onCanPlay);
+                  audio.removeEventListener('ended', onEnded);
+                  audio.removeEventListener('error', onError);
+                  audio.removeEventListener('loadstart', onLoadStart);
+                  audio.removeEventListener('loadeddata', onLoadedData);
+                  URL.revokeObjectURL(audioUrl);
+                  if (currentAudioRef.current === audio) {
+                    currentAudioRef.current = null;
+                  }
+                  resolve();
+                }
+              };
+              
+              const onLoadStart = () => {
+                console.log('Audio loading started');
+              };
+              
+              const onLoadedData = () => {
+                console.log('Audio data loaded, duration:', audio.duration);
+              };
+              
+              const onCanPlay = () => {
+                // CRITICAL: Triple-check we're still in autoplay mode before playing
+                if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+                  cleanup();
+                  return;
+                }
+                
+                console.log('Audio can play, starting playback');
+                audio.play().catch((e) => {
+                  console.warn('Audio play failed:', e);
+                  cleanup();
+                });
+              };
+              
+              const onEnded = () => {
+                console.log('Audio playback ended normally');
+                cleanup();
+              };
+              
+              const onError = (e: any) => {
+                console.warn('Audio error:', e);
+                cleanup();
+              };
+              
+              audio.addEventListener('loadstart', onLoadStart);
+              audio.addEventListener('loadeddata', onLoadedData);
+              audio.addEventListener('canplay', onCanPlay);
+              audio.addEventListener('ended', onEnded);
+              audio.addEventListener('error', onError);
+              
+              // Extended timeout - but should rely on 'ended' event primarily
+              setTimeout(() => {
+                if (!hasResolved) {
+                  console.warn('Audio timeout after 20 seconds - this should be rare');
+                  cleanup();
+                }
+              }, 20000); // Increased to 20 seconds for very long audio
+              
+              if (audio.readyState >= 2) {
+                onCanPlay();
+              } else {
+                audio.load();
+              }
+            });
+          } else {
+            console.warn('TTS request failed, skipping audio');
+            // Continue without audio after a short delay
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+        } catch (error) {
+          console.warn('Audio error, continuing without sound:', error);
+          // Continue autoplay without audio after a short delay
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+        
+        // CRITICAL: Check again if still in autoplay mode before proceeding
+        if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+          return;
+        }
+        
+        // Move to next step
         if (isFlipped) {
-          // 영어 카드를 보여주고 있었다면, 다음 카드로 이동
+          // Was showing English, move to next card
           setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
-          setIsFlipped(false); // 한글 카드로 전환
+          setIsFlipped(false);
         } else {
-          // 한글 카드를 보여주고 있었다면, 영어 카드로 뒤집기
+          // Was showing Korean, flip to English
           setIsFlipped(true);
         }
-
-        // 다음 단계 예약 (일시정지 상태가 아닐 때만)
-        if (!isPaused) {
+        
+        // Schedule next step with a small delay to allow UI update
+        if (!componentUnmountedRef.current && isAutoPlaying && !isPaused) {
           autoPlayTimerRef.current = setTimeout(() => {
-            handleAutoPlayStep();
-          }, autoPlay);
+            // CRITICAL: Final check before recursive call
+            if (!componentUnmountedRef.current) {
+              handleAutoPlayStep();
+            }
+          }, 500); // Short delay before next audio
         }
       };
 
-      // 첫 단계 시작
+      // Start the auto-play sequence
       handleAutoPlayStep();
     }
 
@@ -341,8 +387,8 @@ const QuizletCardContent = ({
     isFlipped,
     currentCard,
     cards.length,
-    audioBuffers,
     autoPlay,
+    playbackRate,
   ]);
 
   function checkCurrentCard() {
@@ -456,8 +502,10 @@ const QuizletCardContent = ({
   };
 
   // TTS 함수
-  async function TTSAudio(text: string) {
-    setIsTTSLoading(true); // 로딩 시작
+  async function TTSAudio(text: string, skipOnError: boolean = false) {
+    if (isTTSLoading) return;
+    
+    setIsTTSLoading(true);
 
     try {
       const response = await fetch("/api/quizlet/tts", {
@@ -469,44 +517,91 @@ const QuizletCardContent = ({
       });
 
       if (!response.ok) {
-        console.error("Error:", await response.text());
-        setIsTTSLoading(false); // 에러 발생 시 로딩 종료
-        return;
+        console.warn("TTS Error:", response.status, response.statusText);
+        if (skipOnError) {
+          setIsTTSLoading(false);
+          return;
+        }
+        throw new Error(`TTS request failed: ${response.status}`);
       }
 
-      // 오디오 응답을 blob으로 가져오기
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
-
-      // 오디오 재생
       const audio = new Audio(audioUrl);
 
-      // 재생 속도 설정
+      // Enhanced audio settings
+      audio.preload = 'auto';
       audio.playbackRate = playbackRate;
+      audio.volume = 1.0;
 
-      // 오디오 재생이 끝나면 로딩 상태 해제
-      audio.onended = () => {
-        setIsTTSLoading(false);
-      };
+      // Wait for audio to fully play
+      await new Promise<void>((resolve) => {
+        let hasEnded = false;
+        
+        const cleanup = () => {
+          if (!hasEnded) {
+            hasEnded = true;
+            audio.removeEventListener('canplay', onCanPlay);
+            audio.removeEventListener('ended', onEnded);
+            audio.removeEventListener('error', onError);
+            URL.revokeObjectURL(audioUrl);
+            setIsTTSLoading(false);
+            resolve();
+          }
+        };
+        
+        const onCanPlay = () => {
+          console.log('Manual TTS audio ready, duration:', audio.duration);
+          audio.play().catch((e) => {
+            console.warn('Manual audio play failed:', e);
+            cleanup();
+          });
+        };
+        
+        const onEnded = () => {
+          console.log('Manual TTS audio ended');
+          cleanup();
+        };
+        
+        const onError = (e: any) => {
+          console.warn('Manual TTS audio error:', e);
+          cleanup();
+        };
+        
+        audio.addEventListener('canplay', onCanPlay);
+        audio.addEventListener('ended', onEnded);
+        audio.addEventListener('error', onError);
+        
+        // Longer timeout for manual playback (user initiated)
+        setTimeout(() => {
+          if (!hasEnded) {
+            console.warn('Manual audio timeout after 15 seconds');
+            cleanup();
+          }
+        }, 15000);
+        
+        if (audio.readyState >= 2) {
+          onCanPlay();
+        } else {
+          audio.load();
+        }
+      });
 
-      // 오디오 재생 실패 시 로딩 상태 해제
-      audio.onerror = () => {
-        console.error("Audio playback failed");
-        setIsTTSLoading(false);
-      };
-
-      await audio.play();
     } catch (error) {
       console.error("TTS error:", error);
-      setIsTTSLoading(false); // 에러 발생 시 로딩 종료
+      setIsTTSLoading(false);
+      if (!skipOnError) {
+        throw error;
+      }
     }
   }
 
+  // Update the readCardText function to use the improved TTS
   const readCardText = useCallback(() => {
-    if (isTTSLoading) return; // 이미 로딩 중이면 중복 실행 방지
+    if (isTTSLoading) return;
 
     const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
-    TTSAudio(text); // 선택된 텍스트로 TTS 함수 호출
+    TTSAudio(text, false); // Don't skip on error for manual playback
   }, [isFlipped, cards, currentCard, isTTSLoading]);
 
   const handleNextCard = useCallback(() => {
@@ -549,33 +644,40 @@ const QuizletCardContent = ({
     trackTouch: true,
   });
 
+  // CRITICAL CLEANUP EFFECT - This must be the LAST useEffect
   useEffect(() => {
-    // 컴포넌트가 마운트되거나 content가 변경될 때 카드 초기화
-    if (content && content.eng_quizlet && content.kor_quizlet) {
-      const newCards = content.eng_quizlet.map((eng, index) => [
-        eng,
-        content.kor_quizlet[index] || "",
-        "0", // 모든 카드를 즐겨찾기 해제 상태로 초기화
-      ]);
-
-      setCards(newCards);
-      setOriginalCards(newCards);
-      setCurrentCard(0);
-      setIsFlipped(false);
-      setIsCheckedView(false);
-      setIsBookmark(false);
-
-      // 즐겨찾기 상태 초기화
-      const initialFavorites: { [key: number]: boolean } = {};
-      newCards.forEach((_, index) => {
-        initialFavorites[index] = false;
+    // Set mounted flag
+    componentUnmountedRef.current = false;
+    
+    return () => {
+      // CRITICAL: Set unmounted flag FIRST
+      componentUnmountedRef.current = true;
+      
+      // Cleanup function to run when component unmounts
+      if (autoPlayTimerRef.current) {
+        clearTimeout(autoPlayTimerRef.current);
+        autoPlayTimerRef.current = null;
+      }
+      
+      // Stop any currently playing audio
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+        currentAudioRef.current = null;
+      }
+      
+      // Clean up any remaining audio blob URLs
+      Object.values(audioBuffers).forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
       });
-      setFavoriteCards(initialFavorites);
-
-      // 오디오 버퍼 초기화
-      setAudioBuffers({});
-    }
-  }, [content]);
+      
+      // Force stop all autoplay states
+      setIsAutoPlaying(false);
+      setIsPaused(false);
+    };
+  }, []);
 
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {
@@ -584,6 +686,9 @@ const QuizletCardContent = ({
       setCurrentCard(0);
       setIsCheckedView(false);
       setIsBookmark(false);
+
+      // CRITICAL: Stop autoplay when switching cards
+      stopAutoPlay();
 
       // 선택한 날짜의 카드 데이터 로드 요청
       onSelectCard(index);
