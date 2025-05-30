@@ -406,6 +406,7 @@ const ClassPageContent: React.FC = () => {
 
   const [homework, setHomework] = useState("");
   const [nextClass, setNextClass] = useState("");
+  const latestHomework = searchedNotes[searchedNotes.length - 1]?.homework || "";
   const [activeOption, setActiveOption] = useState<"option1" | "option2">(
     "option1"
   );
@@ -444,6 +445,11 @@ const ClassPageContent: React.FC = () => {
   const [studentList, setStudentList] = useState<string[]>([]);
   const [selectedGroupStudents, setSelectedGroupStudents] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const group_student_names: string[] = selectedGroupStudents.length > 0
+    ? [student_name, ...selectedGroupStudents]
+    : [student_name];
+
+
 
   // Fetch student list
   useEffect(() => {
@@ -558,25 +564,25 @@ const ClassPageContent: React.FC = () => {
             <h1 className="p-4 text-3xl font-bold text-[#191F28]">
               Class Note
             </h1>
-            {student_name && (
+            {(group_student_names?.length > 0 || student_name) && (
               <div className="px-5 py-1.5 bg-[#F2F4F8] rounded-full">
                 <span className="text-xl font-bold text-[#1f5eff]">
-                  {student_name}
+                  {group_student_names?.length > 0
+                    ? group_student_names.join(", ")
+                    : student_name}
                 </span>
               </div>
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-          >
-            + Group Class
-          </button>
-
-
           <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+            >
+              + Group Class
+            </button>
             {/* 날짜 선택기 */}
             <div className="relative">
               <input
@@ -905,20 +911,31 @@ const ClassPageContent: React.FC = () => {
                     </div>
 
                     {/* Homework Input */}
-                    <div className="mt-6 flex flex-col gap-2">
-                      <label
-                        htmlFor="homework"
-                        className="text-lg font-bold text-gray-700"
-                      >
-                        📌 Homework<span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        id="homework"
-                        value={homework}
-                        onChange={(e) => setHomework(e.target.value)}
-                        className="border bg-white rounded px-3 py-2 text-md resize-none min-h-[190px] focus:outline-none focus:ring-2 focus:ring-[#3182F6]"
-                        required
-                      />
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                      {/* Left: Homework Input */}
+                      <div className="flex flex-col gap-2">
+                        <label
+                          htmlFor="homework"
+                          className="text-lg font-bold text-gray-700"
+                        >
+                          📌 Homework<span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          id="homework"
+                          value={homework}
+                          onChange={(e) => setHomework(e.target.value)}
+                          className="border bg-white rounded px-3 py-2 text-md resize-none min-h-[190px] focus:outline-none focus:ring-2 focus:ring-[#3182F6]"
+                          required
+                        />
+                      </div>
+
+                      {/* Right: Previous Homework */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-lg font-bold text-gray-700">📖 Last Homework</label>
+                        <div className="bg-gray-50 text-sm text-gray-800 border border-gray-200 rounded p-3 min-h-[190px] whitespace-pre-wrap">
+                          {latestHomework ? latestHomework : "No previous homework found."}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Next Class Input */}
