@@ -203,6 +203,17 @@ const QuizletCardContent = ({
     }, 100);
   }, [stopButtonCooldown, cooldownTime]);
 
+  useEffect(() => {
+    const engWords = content.eng_quizlet || [];
+    const korWords = content.kor_quizlet || [];
+    const newCards = engWords.map((eng, index) => [eng, korWords[index] || "", "0"]);
+    setCards(newCards);
+    setOriginalCards(newCards);
+    setCurrentCard(0);
+    setIsFlipped(false);
+  }, [content]);
+
+
   // CRITICAL FIX: Replace the entire auto-play useEffect with proper cleanup checks
   useEffect(() => {
     const clearAutoPlayTimer = (): void => {

@@ -116,25 +116,22 @@ const ClassPageContent: React.FC = () => {
 
   const postCurriculum = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
+
     if (!homework.trim()) {
       alert("Homework field is required.");
       return;
     }
 
-    // If a previous note is selected, ask for confirmation
     if (selectedNoteIndex !== null) {
       const confirmProceed = window.confirm(
         "You have selected a previous class note. Submitting this will create a new class note. Will you proceed?"
       );
-      if (!confirmProceed) {
-        return; // cancel submit
-      }
+      if (!confirmProceed) return;
     }
 
     setLoading(true);
 
     try {
-      // 데이터 유효성 검사
       if (!class_date) {
         throw new Error("수업 날짜를 입력해주세요.");
       }
@@ -143,49 +140,46 @@ const ClassPageContent: React.FC = () => {
         throw new Error("수업 내용을 입력해주세요.");
       }
 
-      const payload = {
-        student_name: student_name || "",
-        class_date,
-        date,
-        original_text,
-        homework,
-        nextClass: nextClass || "",
-      };
+      const allStudents = [student_name, ...selectedGroupStudents];
 
-      const response = await fetch(`/api/quizlet/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-        body: JSON.stringify(payload),
-      });
+      for (const name of allStudents) {
+        const payload = {
+          student_name: name,
+          class_date,
+          date,
+          original_text,
+          homework,
+          nextClass: nextClass || "",
+        };
 
-      console.log("Response:", response);
+        const response = await fetch(`/api/quizlet/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+          body: JSON.stringify(payload),
+        });
 
-      if (response.ok) {
-        setSaveSuccess(true);
-        setTimeout(() => {
-          try {
-            // 안전한 리다이렉션 처리
-            const redirectUrl = `/teacher/home?user=${encodeURIComponent(
-              user
-            )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-              user_id
-            )}`;
-            router.push(redirectUrl);
-          } catch (error) {
-            console.error("리다이렉션 오류:", error);
-            // 오류 발생 시 기본 경로로 이동
-            router.push("/teacher/home");
-          }
-        }, 1500);
-      } else {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "저장에 실패했습니다." }));
-        throw new Error(errorData.message || "저장에 실패했습니다.");
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: "저장에 실패했습니다." }));
+          throw new Error(`${name} 저장 실패: ` + (errorData.message || "저장에 실패했습니다."));
+        }
       }
+
+      // ✅ All requests succeeded
+      setSaveSuccess(true);
+      setTimeout(() => {
+        try {
+          const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+            user
+          )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(user_id)}`;
+          router.push(redirectUrl);
+        } catch (error) {
+          console.error("리다이렉션 오류:", error);
+          router.push("/teacher/home");
+        }
+      }, 1500);
     } catch (error) {
       console.error("커리큘럼 저장 오류:", error);
       alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
@@ -193,6 +187,7 @@ const ClassPageContent: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   const notesTemplate1 = `
     <h1>📚 Notes Template</h1>
@@ -358,6 +353,7 @@ const ClassPageContent: React.FC = () => {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
+
   const PersistentHeading = Extension.create({
     name: 'persistentHeading',
 
@@ -444,6 +440,30 @@ const ClassPageContent: React.FC = () => {
 
     fetchStudentNotes();
   }, [activeOption, searchParams]);
+
+  const [studentList, setStudentList] = useState<string[]>([]);
+  const [selectedGroupStudents, setSelectedGroupStudents] = useState<string[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Fetch student list
+  useEffect(() => {
+    const fetchStudentList = async () => {
+      try {
+        const URL = `/api/diary/${type}/${user}`;
+        const response = await fetch(URL, { cache: "no-store" });
+        if (!response.ok) throw new Error("Failed to fetch student list");
+
+        const data: string[] = await response.json();
+        setStudentList(data.filter((name) => name !== student_name)); // exclude current student
+      } catch (error) {
+        console.error("Error fetching student list:", error);
+      }
+    };
+
+    fetchStudentList();
+  }, [type, user, student_name]);
+
+
 
   const editor = useEditor({
     extensions: [StarterKit, CustomHighlight, Underline, PersistentHeading],
@@ -546,6 +566,15 @@ const ClassPageContent: React.FC = () => {
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+          >
+            + Group Class
+          </button>
+
 
           <div className="flex items-center space-x-3">
             {/* 날짜 선택기 */}
@@ -1068,6 +1097,47 @@ const ClassPageContent: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl w-[90%] max-w-md p-6 shadow-xl space-y-4">
+            <h2 className="text-lg font-bold text-gray-800">Select Group Students</h2>
+            <div className="max-h-64 overflow-y-auto space-y-2">
+              {studentList.map((name) => (
+                <label key={name} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedGroupStudents.includes(name)}
+                    onChange={() =>
+                      setSelectedGroupStudents((prev) =>
+                        prev.includes(name)
+                          ? prev.filter((n) => n !== name)
+                          : [...prev, name]
+                      )
+                    }
+                  />
+                  {name}
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       <style jsx>{`
         @keyframes fade-in {
