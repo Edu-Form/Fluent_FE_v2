@@ -128,22 +128,25 @@ const QuizletPageContent = () => {
 
   return (
     <div className="absolute inset-0 bg-white overflow-hidden">
-      {!data || data.length === 0 ? (
-        <QuizletCard
-          content={createEmptyCard()}
-          onCreateQuizlet={openIsModal}
-        />
-      ) : (
-        <QuizletCard
-          content={currentCard || data[0]}
-          allCards={data}
-          currentIndex={currentIndex}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          onSelectCard={handleSelectCard}
-          onCreateQuizlet={openIsModal}
-        />
-      )}
+      <div className="flex flex-col items-center justify-center h-full">
+        {" "}
+        {!data || data.length === 0 ? (
+          <QuizletCard
+            content={createEmptyCard()}
+            onCreateQuizlet={openIsModal}
+          />
+        ) : (
+          <QuizletCard
+            content={currentCard || data[0]}
+            allCards={data}
+            currentIndex={currentIndex}
+            onNext={handleNext}
+            onPrev={handlePrev}
+            onSelectCard={handleSelectCard}
+            onCreateQuizlet={openIsModal}
+          />
+        )}
+      </div>
 
       <style jsx global>{`
         html,

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 import { FiCalendar } from "react-icons/fi";
 import { HiOutlineSpeakerWave } from "react-icons/hi2";
+import { RiHome6Fill } from "react-icons/ri";
 import {
   BsShuffle,
   BsStar,
@@ -13,10 +14,10 @@ import {
   BsPlayFill,
   BsPauseFill,
 } from "react-icons/bs";
-import { Download } from "lucide-react";
+import { Download, Copy, Check } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { useSwipeable } from "react-swipeable";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
 // 로딩 스피너 컴포넌트
 const LoadingSpinner = () => (
@@ -80,11 +81,29 @@ const QuizletCardContent = ({
   onSelectCard?: (index: number) => void;
   onCreateQuizlet?: () => void;
 }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const pathname = usePathname(); // 현재 URL 경로 가져오기
   const isStudentPage = pathname?.includes("/teacher"); // /student 포함 여부 체크
 
+  // URL 파라미터 안전하게 가져오기
+  const getParam = (name: string): string => {
+    try {
+      return searchParams?.get(name) || "";
+    } catch (error) {
+      console.error(`파라미터 가져오기 오류 (${name}):`, error);
+      return "";
+    }
+  };
+  const user = getParam("user");
+  const type = getParam("type");
+  const user_id = getParam("id");
+
   const engWords = content.eng_quizlet || [];
   const korWords = content.kor_quizlet || [];
+
+  // 복사 기능 관련 상태
+  const [isCopied, setIsCopied] = useState(false);
 
   // 버튼 쿨다운 관련 상태
   const [autoPlayButtonCooldown, setAutoPlayButtonCooldown] = useState(false);
@@ -119,8 +138,8 @@ const QuizletCardContent = ({
   const [isTTSLoading, setIsTTSLoading] = useState(false);
 
   // 오디오 버퍼 상태
-  const [audioBuffers, setAudioBuffers] = useState<AudioBuffers>({});
-  const [isPreparingAudio, setIsPreparingAudio] = useState<boolean>(false);
+  const [audioBuffers] = useState<AudioBuffers>({});
+  const [isPreparingAudio] = useState<boolean>(false);
 
   // 자동 재생 일시 정지 상태
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -131,15 +150,40 @@ const QuizletCardContent = ({
   // 재생 속도 상태
   const [playbackRate] = useState<number>(0.8);
 
+  // Replace the prepareAllAudioData function with this simpler version that doesn't pre-load
+  // 현재 카드 텍스트 복사 함수
+  const copyCurrentText = async () => {
+    try {
+      const currentText = isFlipped
+        ? cards[currentCard][0]
+        : cards[currentCard][1];
+      await navigator.clipboard.writeText(currentText);
+      setIsCopied(true);
+
+      // 2초 후 복사 상태 초기화
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error("복사 실패:", error);
+      // 복사 실패 시 fallback으로 선택 영역 생성
+      const textArea = document.createElement("textarea");
+      textArea.value = isFlipped
+        ? cards[currentCard][0]
+        : cards[currentCard][1];
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+
+      setIsCopied(true);
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    }
+  };
   // Add component unmounted flag - CRITICAL ADDITION
   const componentUnmountedRef = useRef(false);
-
-  // Replace the prepareAllAudioData function with this simpler version that doesn't pre-load
-  async function prepareAllAudioData(): Promise<AudioBuffers> {
-    // Don't actually prepare audio buffers, just return empty object
-    // Audio will be fetched on-demand during playback
-    return {};
-  }
 
   // Replace the toggleAutoPlay function
   const toggleAutoPlay = useCallback(async (): Promise<void> => {
@@ -197,7 +241,7 @@ const QuizletCardContent = ({
     setIsAutoPlaying(false);
     setIsPaused(false);
     setAutoPlayPhase(0);
-    
+
     setTimeout(() => {
       setIsFlipped(false);
     }, 100);
@@ -206,13 +250,16 @@ const QuizletCardContent = ({
   useEffect(() => {
     const engWords = content.eng_quizlet || [];
     const korWords = content.kor_quizlet || [];
-    const newCards = engWords.map((eng, index) => [eng, korWords[index] || "", "0"]);
+    const newCards = engWords.map((eng, index) => [
+      eng,
+      korWords[index] || "",
+      "0",
+    ]);
     setCards(newCards);
     setOriginalCards(newCards);
     setCurrentCard(0);
     setIsFlipped(false);
   }, [content]);
-
 
   // CRITICAL FIX: Replace the entire auto-play useEffect with proper cleanup checks
   useEffect(() => {
@@ -235,9 +282,9 @@ const QuizletCardContent = ({
         if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
           return;
         }
-        
+
         const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
-        
+
         try {
           // Stop any previously playing audio
           if (currentAudioRef.current) {
@@ -263,33 +310,33 @@ const QuizletCardContent = ({
 
           if (response.ok) {
             const audioBlob = await response.blob();
-            
+
             // CRITICAL: Check again after blob creation
             if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
               return;
             }
-            
+
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
-            
+
             // Store reference to current audio
             currentAudioRef.current = audio;
-            
-            audio.preload = 'auto';
+
+            audio.preload = "auto";
             audio.playbackRate = playbackRate;
             audio.volume = 1.0;
-            
+
             await new Promise<void>((resolve) => {
               let hasResolved = false;
-              
+
               const cleanup = () => {
                 if (!hasResolved) {
                   hasResolved = true;
-                  audio.removeEventListener('canplay', onCanPlay);
-                  audio.removeEventListener('ended', onEnded);
-                  audio.removeEventListener('error', onError);
-                  audio.removeEventListener('loadstart', onLoadStart);
-                  audio.removeEventListener('loadeddata', onLoadedData);
+                  audio.removeEventListener("canplay", onCanPlay);
+                  audio.removeEventListener("ended", onEnded);
+                  audio.removeEventListener("error", onError);
+                  audio.removeEventListener("loadstart", onLoadStart);
+                  audio.removeEventListener("loadeddata", onLoadedData);
                   URL.revokeObjectURL(audioUrl);
                   if (currentAudioRef.current === audio) {
                     currentAudioRef.current = null;
@@ -297,53 +344,59 @@ const QuizletCardContent = ({
                   resolve();
                 }
               };
-              
+
               const onLoadStart = () => {
-                console.log('Audio loading started');
+                console.log("Audio loading started");
               };
-              
+
               const onLoadedData = () => {
-                console.log('Audio data loaded, duration:', audio.duration);
+                console.log("Audio data loaded, duration:", audio.duration);
               };
-              
+
               const onCanPlay = () => {
                 // CRITICAL: Triple-check we're still in autoplay mode before playing
-                if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+                if (
+                  componentUnmountedRef.current ||
+                  !isAutoPlaying ||
+                  isPaused
+                ) {
                   cleanup();
                   return;
                 }
-                
-                console.log('Audio can play, starting playback');
+
+                console.log("Audio can play, starting playback");
                 audio.play().catch((e) => {
-                  console.warn('Audio play failed:', e);
+                  console.warn("Audio play failed:", e);
                   cleanup();
                 });
               };
-              
+
               const onEnded = () => {
-                console.log('Audio playback ended normally');
+                console.log("Audio playback ended normally");
                 cleanup();
               };
-              
+
               const onError = (e: any) => {
-                console.warn('Audio error:', e);
+                console.warn("Audio error:", e);
                 cleanup();
               };
-              
-              audio.addEventListener('loadstart', onLoadStart);
-              audio.addEventListener('loadeddata', onLoadedData);
-              audio.addEventListener('canplay', onCanPlay);
-              audio.addEventListener('ended', onEnded);
-              audio.addEventListener('error', onError);
-              
+
+              audio.addEventListener("loadstart", onLoadStart);
+              audio.addEventListener("loadeddata", onLoadedData);
+              audio.addEventListener("canplay", onCanPlay);
+              audio.addEventListener("ended", onEnded);
+              audio.addEventListener("error", onError);
+
               // Extended timeout - but should rely on 'ended' event primarily
               setTimeout(() => {
                 if (!hasResolved) {
-                  console.warn('Audio timeout after 20 seconds - this should be rare');
+                  console.warn(
+                    "Audio timeout after 20 seconds - this should be rare"
+                  );
                   cleanup();
                 }
               }, 20000); // Increased to 20 seconds for very long audio
-              
+
               if (audio.readyState >= 2) {
                 onCanPlay();
               } else {
@@ -351,21 +404,21 @@ const QuizletCardContent = ({
               }
             });
           } else {
-            console.warn('TTS request failed, skipping audio');
+            console.warn("TTS request failed, skipping audio");
             // Continue without audio after a short delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await new Promise((resolve) => setTimeout(resolve, 1500));
           }
         } catch (error) {
-          console.warn('Audio error, continuing without sound:', error);
+          console.warn("Audio error, continuing without sound:", error);
           // Continue autoplay without audio after a short delay
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          await new Promise((resolve) => setTimeout(resolve, 1500));
         }
-        
+
         // CRITICAL: Check again if still in autoplay mode before proceeding
         if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
           return;
         }
-        
+
         // Move to next step
         if (isFlipped) {
           // Was showing English, move to next card
@@ -375,7 +428,7 @@ const QuizletCardContent = ({
           // Was showing Korean, flip to English
           setIsFlipped(true);
         }
-        
+
         // Schedule next step with a small delay to allow UI update
         if (!componentUnmountedRef.current && isAutoPlaying && !isPaused) {
           autoPlayTimerRef.current = setTimeout(() => {
@@ -515,7 +568,7 @@ const QuizletCardContent = ({
   // TTS 함수
   async function TTSAudio(text: string, skipOnError: boolean = false) {
     if (isTTSLoading) return;
-    
+
     setIsTTSLoading(true);
 
     try {
@@ -541,63 +594,62 @@ const QuizletCardContent = ({
       const audio = new Audio(audioUrl);
 
       // Enhanced audio settings
-      audio.preload = 'auto';
+      audio.preload = "auto";
       audio.playbackRate = playbackRate;
       audio.volume = 1.0;
 
       // Wait for audio to fully play
       await new Promise<void>((resolve) => {
         let hasEnded = false;
-        
+
         const cleanup = () => {
           if (!hasEnded) {
             hasEnded = true;
-            audio.removeEventListener('canplay', onCanPlay);
-            audio.removeEventListener('ended', onEnded);
-            audio.removeEventListener('error', onError);
+            audio.removeEventListener("canplay", onCanPlay);
+            audio.removeEventListener("ended", onEnded);
+            audio.removeEventListener("error", onError);
             URL.revokeObjectURL(audioUrl);
             setIsTTSLoading(false);
             resolve();
           }
         };
-        
+
         const onCanPlay = () => {
-          console.log('Manual TTS audio ready, duration:', audio.duration);
+          console.log("Manual TTS audio ready, duration:", audio.duration);
           audio.play().catch((e) => {
-            console.warn('Manual audio play failed:', e);
+            console.warn("Manual audio play failed:", e);
             cleanup();
           });
         };
-        
+
         const onEnded = () => {
-          console.log('Manual TTS audio ended');
+          console.log("Manual TTS audio ended");
           cleanup();
         };
-        
+
         const onError = (e: any) => {
-          console.warn('Manual TTS audio error:', e);
+          console.warn("Manual TTS audio error:", e);
           cleanup();
         };
-        
-        audio.addEventListener('canplay', onCanPlay);
-        audio.addEventListener('ended', onEnded);
-        audio.addEventListener('error', onError);
-        
+
+        audio.addEventListener("canplay", onCanPlay);
+        audio.addEventListener("ended", onEnded);
+        audio.addEventListener("error", onError);
+
         // Longer timeout for manual playback (user initiated)
         setTimeout(() => {
           if (!hasEnded) {
-            console.warn('Manual audio timeout after 15 seconds');
+            console.warn("Manual audio timeout after 15 seconds");
             cleanup();
           }
         }, 15000);
-        
+
         if (audio.readyState >= 2) {
           onCanPlay();
         } else {
           audio.load();
         }
       });
-
     } catch (error) {
       console.error("TTS error:", error);
       setIsTTSLoading(false);
@@ -659,31 +711,31 @@ const QuizletCardContent = ({
   useEffect(() => {
     // Set mounted flag
     componentUnmountedRef.current = false;
-    
+
     return () => {
       // CRITICAL: Set unmounted flag FIRST
       componentUnmountedRef.current = true;
-      
+
       // Cleanup function to run when component unmounts
       if (autoPlayTimerRef.current) {
         clearTimeout(autoPlayTimerRef.current);
         autoPlayTimerRef.current = null;
       }
-      
+
       // Stop any currently playing audio
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
         currentAudioRef.current.currentTime = 0;
         currentAudioRef.current = null;
       }
-      
+
       // Clean up any remaining audio blob URLs
-      Object.values(audioBuffers).forEach(url => {
-        if (url.startsWith('blob:')) {
+      Object.values(audioBuffers).forEach((url) => {
+        if (url.startsWith("blob:")) {
           URL.revokeObjectURL(url);
         }
       });
-      
+
       // Force stop all autoplay states
       setIsAutoPlaying(false);
       setIsPaused(false);
@@ -783,15 +835,18 @@ const QuizletCardContent = ({
       </div>
     );
   }
+  {
+    /* 카드가 있을 경우 */
+  }
   return (
     <div className="w-full h-full flex flex-col bg-gray-50">
       {/* 헤더 영역 - 반응형으로 개선 */}
       <div className="py-3 px-3 sm:py-4 sm:px-4 bg-white shadow-sm z-10">
         {/* 날짜 선택 및 학생 이름 */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-0">
+        <div className="flex  sm:flex-row items-center justify-between mb-2 sm:mb-0">
           {isStudentPage && (
             <span
-              className="text-gray-500 text-sm flex items-center border border-gray-200 rounded-full py-1 px-3 mb-2 sm:mb-0 cursor-pointer hover:bg-blue-500 hover:text-white max-w-fit"
+              className="text-gray-500 text-sm flex items-center border border-gray-200 rounded-full py-1 px-3   cursor-pointer hover:bg-blue-500 hover:text-white max-w-fit"
               onClick={() => setIsDatePickerOpen(true)}
             >
               <FiCalendar className="mr-1" />
@@ -799,10 +854,25 @@ const QuizletCardContent = ({
                 {isNaN(currentDate.getTime()) ? content.date : formattedDate}
               </span>
             </span>
-          )}
+          )}{" "}
+          {/* 닫기 버튼 */}
+          <button
+            onClick={() => {
+              const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+                user
+              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                user_id
+              )}`;
+              router.push(redirectUrl);
+            }}
+            className="p-2 rounded-lg hover:bg-[#F2F4F8] transition-colors"
+            aria-label="닫기"
+          >
+            <RiHome6Fill className="w-6 h-6 text-gray-400" />
+          </button>
         </div>
 
-        {/* 기능 버튼들 - 모바일에서는 공간 절약을 위해 크기 축소 */}
+        {/* 기능 버튼들  */}
         <div className="flex justify-between items-center mt-2">
           <h1 className="text-xl font-bold">{content.student_name}</h1>
           <div className="flex space-x-2">
@@ -817,25 +887,6 @@ const QuizletCardContent = ({
               title="단어장 다운로드"
             >
               <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-
-            <button
-              onClick={readCardText}
-              disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
-              className={`p-1.5 sm:p-2 rounded-full ${
-                isTTSLoading
-                  ? "bg-blue-500 text-white"
-                  : isAutoPlaying || isPreparingAudio
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
-              } shadow-sm`}
-              title="단어 읽기"
-            >
-              {isTTSLoading ? (
-                <LoadingSpinner />
-              ) : (
-                <HiOutlineSpeakerWave className="w-4 h-4 sm:w-5 sm:h-5" />
-              )}
             </button>
 
             <button
@@ -886,7 +937,65 @@ const QuizletCardContent = ({
       </div>
 
       <div className="flex-grow flex flex-col  justify-center p-4">
-        {" "}
+        <div className="PlayStopBtn flex justify-center items-center mb-4 gap-4">
+          {" "}
+          {/* 재생/일시정지 버튼 */}
+          <button
+            onClick={isAutoPlaying ? togglePause : toggleAutoPlay}
+            disabled={
+              isPreparingAudio || autoPlayButtonCooldown || pauseButtonCooldown
+            }
+            className={`w-32 h-12 gap-4 rounded-full flex items-center justify-center ${
+              isPreparingAudio || autoPlayButtonCooldown || pauseButtonCooldown
+                ? "bg-gray-200 text-gray-400"
+                : isAutoPlaying
+                ? "bg-blue-500 text-white hover:bg-blue-600"
+                : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+            } transition-colors`}
+          >
+            {isPreparingAudio ? (
+              <LoadingSpinner />
+            ) : isAutoPlaying ? (
+              isPaused ? (
+                <BsPlayFill className="text-xl" />
+              ) : (
+                <BsPauseFill className="text-xl" />
+              )
+            ) : (
+              <BsPlayFill className="text-xl" />
+            )}{" "}
+            <span className="text-sm">
+              {isAutoPlaying ? (isPaused ? "재생" : "일시정지") : "자동 재생"}
+            </span>
+          </button>
+          {/* 정지 버튼 - 자동 재생 중에만 표시 */}
+          {isAutoPlaying && (
+            <button
+              onClick={stopAutoPlay}
+              disabled={stopButtonCooldown}
+              className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                stopButtonCooldown
+                  ? "bg-gray-300 text-gray-500"
+                  : "bg-gray-600 text-white hover:bg-gray-700"
+              } transition-colors`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+              </svg>
+            </button>
+          )}
+        </div>
+
         {/* 카드 컨텐츠 영역 - 반응형 높이 조정 */}
         <div
           className="flex-col flex items-center justify-center p-2 sm:p-4 min-h-0 relative"
@@ -1006,63 +1115,44 @@ const QuizletCardContent = ({
                 )}
               </button>
 
-              {/* 재생/일시정지 버튼 */}
+              {/* 복사 버튼 */}
               <button
-                onClick={isAutoPlaying ? togglePause : toggleAutoPlay}
-                disabled={
-                  isPreparingAudio ||
-                  autoPlayButtonCooldown ||
-                  pauseButtonCooldown
-                }
+                onClick={copyCurrentText}
+                disabled={isAutoPlaying || isPreparingAudio}
                 className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  isPreparingAudio ||
-                  autoPlayButtonCooldown ||
-                  pauseButtonCooldown
+                  isAutoPlaying || isPreparingAudio
                     ? "bg-gray-200 text-gray-400"
-                    : isAutoPlaying
-                    ? "bg-blue-500 text-white hover:bg-blue-600"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    : isCopied
+                    ? "bg-green-100 text-green-600"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 } transition-colors`}
+                title="현재 텍스트 복사"
               >
-                {isPreparingAudio ? (
-                  <LoadingSpinner />
-                ) : isAutoPlaying ? (
-                  isPaused ? (
-                    <BsPlayFill className="text-xl" />
-                  ) : (
-                    <BsPauseFill className="text-xl" />
-                  )
+                {isCopied ? (
+                  <Check className="text-xl" />
                 ) : (
-                  <BsPlayFill className="text-xl" />
+                  <Copy className="text-xl" />
                 )}
               </button>
 
-              {/* 정지 버튼 - 자동 재생 중에만 표시 */}
-              {isAutoPlaying && (
-                <button
-                  onClick={stopAutoPlay}
-                  disabled={stopButtonCooldown}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    stopButtonCooldown
-                      ? "bg-gray-300 text-gray-500"
-                      : "bg-gray-600 text-white hover:bg-gray-700"
-                  } transition-colors`}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-                  </svg>
-                </button>
-              )}
+              <button
+                onClick={readCardText}
+                disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
+                className={`w-12 h-12 flex items-center justify-center p-1.5 sm:p-2 rounded-full ${
+                  isTTSLoading
+                    ? "bg-blue-500 text-white"
+                    : isAutoPlaying || isPreparingAudio
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-gray-100 text-gray-500 hover:bg-gray-200 active:bg-gray-200"
+                } shadow-sm`}
+                title="단어 읽기"
+              >
+                {isTTSLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <HiOutlineSpeakerWave className="text-xl" />
+                )}
+              </button>
             </div>
 
             {/* 다음 버튼 */}

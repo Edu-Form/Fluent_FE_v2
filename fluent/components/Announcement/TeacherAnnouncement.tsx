@@ -144,13 +144,13 @@ const AnnouncementPage = () => {
                 {/* 액션 버튼 그룹 */}
                 <div className="flex flex-wrap gap-2 justify-start md:justify-end w-full md:w-auto">
                   <Link
-                    href={`/teacher/student/class_note?user=${user}&type=${type}&id=${user_id}&student_name=${schedule.student_name}`}
+                    href={`/teacher/student/class_record?user=${user}&type=${type}&id=${user_id}&student_name=${schedule.student_name}`}
                     className="flex items-center space-x-1 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <LuCircleFadingPlus className="text-blue-500" />
-                    <span className="text-xs text-blue-700">Class Note</span>
+                    <span className="text-xs text-blue-700">Class Record</span>
                   </Link>
 
                   <Link
