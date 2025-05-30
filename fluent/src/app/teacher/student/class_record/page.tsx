@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense, ReactNode } from "react";
+import { useState, useEffect, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from '@tiptap/react';
-import { usePathname } from "next/navigation";
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
