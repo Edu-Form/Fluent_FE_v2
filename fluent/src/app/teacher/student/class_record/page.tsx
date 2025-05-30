@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect, Suspense, ReactNode } from "react";
+import { useState, useEffect, useRef, Suspense, ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Highlight from "@tiptap/extension-highlight";
-import Underline from "@tiptap/extension-underline";
+import { useEditor, EditorContent } from '@tiptap/react';
+import { usePathname } from "next/navigation";
+import StarterKit from '@tiptap/starter-kit';
+import Highlight from '@tiptap/extension-highlight';
+import Underline from '@tiptap/extension-underline';
+import { Extension } from '@tiptap/core';
+import { splitBlock } from 'prosemirror-commands';
 import "react-day-picker/dist/style.css";
 
 // 날짜 포맷 함수들 유지
@@ -356,6 +359,42 @@ const ClassPageContent: React.FC = () => {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
 
+  const PersistentHeading = Extension.create({
+    name: 'persistentHeading',
+
+    addKeyboardShortcuts() {
+      return {
+        Enter: ({ editor }) => {
+          const { state, dispatch } = editor.view;
+          const { $from } = state.selection;
+          const node = $from.node();
+
+          // If current node is heading, keep the same type
+          if (node.type.name.startsWith('heading')) {
+            const level = node.attrs.level;
+
+            splitBlock(state, dispatch);
+            // Set same heading type for new node
+            editor.commands.setNode('heading', { level });
+            return true;
+          }
+
+          return false; // fallback to default behavior
+        },
+      };
+    },
+  });
+
+  const CustomHighlight = Highlight.extend({
+    addKeyboardShortcuts() {
+      return {
+        'Mod-Shift-h': () => this.editor.commands.toggleHighlight(),
+      };
+    },
+  });
+
+  
+
   const [activeTab, setActiveTab] = useState("beginner");
 
   type TabKey = "beginner" | "intermediate" | "business";
@@ -408,7 +447,7 @@ const ClassPageContent: React.FC = () => {
   }, [activeOption, searchParams]);
 
   const editor = useEditor({
-    extensions: [StarterKit, Highlight, Underline],
+    extensions: [StarterKit, CustomHighlight, Underline, PersistentHeading],
     content: original_text,
     onUpdate: ({ editor }) => {
       setOriginal_text(editor.getHTML());
@@ -420,6 +459,29 @@ const ClassPageContent: React.FC = () => {
       editor.commands.setContent(original_text);
     }
   }, [original_text]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!original_text || original_text.trim() === "") return;
+
+      e.preventDefault();
+      e.returnValue = "지금 페이지를 나가면, 입력한 정보가 모두 삭제됩니다.";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [original_text]);
+
+
+
+
+
+
+
+
 
   // 클라이언트 측 렌더링이 아직 완료되지 않았을 경우 간단한 로딩 표시
   if (!isMounted) {
@@ -689,6 +751,23 @@ const ClassPageContent: React.FC = () => {
                 }`}
               >
                 • List
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const selection = editor?.state.selection;
+                  if (!selection || !editor) return;
+
+                  const { from, to } = selection;
+                  const selectedText = editor.state.doc.textBetween(from, to, "\n");
+                  const lines = selectedText.split("\n");
+                  const numberedLines = lines.map((line, idx) => `${idx + 1}. ${line}`).join("\n");
+
+                  editor.chain().focus().insertContentAt({ from, to }, numberedLines).run();
+                }}
+                className="px-3 py-1 border rounded"
+              >
+                Numbering
               </button>
               <button
                 type="button"
