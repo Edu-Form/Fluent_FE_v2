@@ -842,7 +842,7 @@ const QuizletCardContent = ({
     <div className="w-full h-full flex flex-col bg-gray-50">
       {/* 헤더 영역 - 반응형으로 개선 */}
       <div className="py-3 px-3 sm:py-4 sm:px-4 bg-white shadow-sm z-10">
-        {/* 날짜 선택 및 학생 이름 */}
+        {/* 날짜 선택 및 학생 이름 - 학생은 x */}
         <div className="flex  sm:flex-row items-center justify-between mb-2 sm:mb-0">
           {isStudentPage && (
             <span
@@ -854,22 +854,24 @@ const QuizletCardContent = ({
                 {isNaN(currentDate.getTime()) ? content.date : formattedDate}
               </span>
             </span>
-          )}{" "}
-          {/* 닫기 버튼 */}
-          <button
-            onClick={() => {
-              const redirectUrl = `/teacher/home?user=${encodeURIComponent(
-                user
-              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-                user_id
-              )}`;
-              router.push(redirectUrl);
-            }}
-            className="p-2 rounded-lg hover:bg-[#F2F4F8] transition-colors"
-            aria-label="닫기"
-          >
-            <RiHome6Fill className="w-6 h-6 text-gray-400" />
-          </button>
+          )}
+          {/*홈 닫기 버튼 - 학생은 x*/}
+          {isStudentPage && (
+            <button
+              onClick={() => {
+                const redirectUrl = `/teacher/home?user=${encodeURIComponent(
+                  user
+                )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                  user_id
+                )}`;
+                router.push(redirectUrl);
+              }}
+              className="p-2 rounded-lg hover:bg-[#F2F4F8] transition-colors"
+              aria-label="닫기"
+            >
+              <RiHome6Fill className="w-6 h-6 text-gray-400" />
+            </button>
+          )}
         </div>
 
         {/* 기능 버튼들  */}
@@ -936,66 +938,7 @@ const QuizletCardContent = ({
         ></div>
       </div>
 
-      <div className="flex-grow flex flex-col  justify-center p-4">
-        <div className="PlayStopBtn flex justify-center items-center mb-4 gap-4">
-          {" "}
-          {/* 재생/일시정지 버튼 */}
-          <button
-            onClick={isAutoPlaying ? togglePause : toggleAutoPlay}
-            disabled={
-              isPreparingAudio || autoPlayButtonCooldown || pauseButtonCooldown
-            }
-            className={`w-32 h-12 gap-4 rounded-full flex items-center justify-center ${
-              isPreparingAudio || autoPlayButtonCooldown || pauseButtonCooldown
-                ? "bg-gray-200 text-gray-400"
-                : isAutoPlaying
-                ? "bg-blue-500 text-white hover:bg-blue-600"
-                : "bg-blue-100 text-blue-600 hover:bg-blue-200"
-            } transition-colors`}
-          >
-            {isPreparingAudio ? (
-              <LoadingSpinner />
-            ) : isAutoPlaying ? (
-              isPaused ? (
-                <BsPlayFill className="text-xl" />
-              ) : (
-                <BsPauseFill className="text-xl" />
-              )
-            ) : (
-              <BsPlayFill className="text-xl" />
-            )}{" "}
-            <span className="text-sm">
-              {isAutoPlaying ? (isPaused ? "재생" : "일시정지") : "자동 재생"}
-            </span>
-          </button>
-          {/* 정지 버튼 - 자동 재생 중에만 표시 */}
-          {isAutoPlaying && (
-            <button
-              onClick={stopAutoPlay}
-              disabled={stopButtonCooldown}
-              className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                stopButtonCooldown
-                  ? "bg-gray-300 text-gray-500"
-                  : "bg-gray-600 text-white hover:bg-gray-700"
-              } transition-colors`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="6" y="6" width="12" height="12" rx="2"></rect>
-              </svg>
-            </button>
-          )}
-        </div>
-
+      <div className="flex-grow flex flex-col justify-center p-4">
         {/* 카드 컨텐츠 영역 - 반응형 높이 조정 */}
         <div
           className="flex-col flex items-center justify-center p-2 sm:p-4 min-h-0 relative"
@@ -1017,7 +960,7 @@ const QuizletCardContent = ({
               onClick={() =>
                 !isAutoPlaying && !isPreparingAudio && setIsFlipped(!isFlipped)
               }
-              className={`w-full flex-1 flex flex-col items-center justify-center py-3 px-2 sm:py-4 sm:px-4 ${
+              className={`w-full flex-1 flex flex-col items-center justify-center py-3 px-2 sm:py-4 sm:px-4 relative ${
                 isAutoPlaying
                   ? "bg-purple-50"
                   : isPreparingAudio
@@ -1032,6 +975,55 @@ const QuizletCardContent = ({
             ${isCheckedView ? "bg-[#f0f8ff]" : ""}`}
               style={{ minHeight: "40vh", maxHeight: "60vh" }}
             >
+              {/* 카드 내부 우상단 버튼들 */}
+              <div className="absolute top-3 right-3 flex space-x-2 z-10">
+                {/* 즐겨찾기 버튼 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // 카드 클릭 이벤트 방지
+                    checkCurrentCard();
+                  }}
+                  disabled={isAutoPlaying || isPreparingAudio}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm ${
+                    isAutoPlaying || isPreparingAudio
+                      ? "bg-gray-200/70 text-gray-400"
+                      : favoriteCards[currentCard]
+                      ? "bg-yellow-100/90 text-yellow-500 hover:bg-yellow-200/90"
+                      : "bg-white/70 text-gray-500 hover:bg-white/90"
+                  } transition-colors shadow-sm`}
+                  title="즐겨찾기"
+                >
+                  {favoriteCards[currentCard] ? (
+                    <BsStarFill className="text-lg" />
+                  ) : (
+                    <BsStar className="text-lg" />
+                  )}
+                </button>
+
+                {/* 복사 버튼 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // 카드 클릭 이벤트 방지
+                    copyCurrentText();
+                  }}
+                  disabled={isAutoPlaying || isPreparingAudio}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm ${
+                    isAutoPlaying || isPreparingAudio
+                      ? "bg-gray-200/70 text-gray-400"
+                      : isCopied
+                      ? "bg-green-100/90 text-green-600"
+                      : "bg-white/70 text-gray-500 hover:bg-white/90"
+                  } transition-colors shadow-sm`}
+                  title="현재 텍스트 복사"
+                >
+                  {isCopied ? (
+                    <Check className="text-lg" />
+                  ) : (
+                    <Copy className="text-lg" />
+                  )}
+                </button>
+              </div>
+
               {isPreparingAudio ? (
                 <div className="flex flex-col items-center justify-center space-y-4">
                   <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
@@ -1066,8 +1058,8 @@ const QuizletCardContent = ({
               )}
 
               {/* 카드 진행 상황 인디케이터 */}
-              <div className="mt-4 px-6 w-full">
-                <div className="flex justify-between mt-2 text-xs text-gray-500">
+              <div className=" px-6 w-full">
+                <div className="flex justify-between mb-6 text-xs text-gray-500">
                   <span></span>
                   <span className="font-semibold text-xs border-2 border-blue-500 px-3 py-1.5 rounded-full bg-white text-blue-500">
                     {currentCard + 1} / {cards.length}
@@ -1078,8 +1070,7 @@ const QuizletCardContent = ({
             </div>
           </motion.div>
 
-          {/* 탐색 컨트롤 - 모바일 네비게이션 스타일 */}
-
+          {/* 하단 컨트롤 영역 */}
           <div className="flex w-full mt-6 items-center justify-center">
             {/* 이전 버튼 */}
             <button
@@ -1096,63 +1087,87 @@ const QuizletCardContent = ({
 
             {/* 중앙 컨트롤 그룹 */}
             <div className="flex items-center mx-8 space-x-4">
-              {/* 즐겨찾기 버튼 */}
-              <button
-                onClick={checkCurrentCard}
-                disabled={isAutoPlaying || isPreparingAudio}
-                className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  isAutoPlaying || isPreparingAudio
-                    ? "bg-gray-200 text-gray-400"
-                    : favoriteCards[currentCard]
-                    ? "bg-yellow-100 text-yellow-500 hover:bg-yellow-200"
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                } transition-colors`}
-              >
-                {favoriteCards[currentCard] ? (
-                  <BsStarFill className="text-xl" />
-                ) : (
-                  <BsStar className="text-xl" />
-                )}
-              </button>
-
-              {/* 복사 버튼 */}
-              <button
-                onClick={copyCurrentText}
-                disabled={isAutoPlaying || isPreparingAudio}
-                className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                  isAutoPlaying || isPreparingAudio
-                    ? "bg-gray-200 text-gray-400"
-                    : isCopied
-                    ? "bg-green-100 text-green-600"
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                } transition-colors`}
-                title="현재 텍스트 복사"
-              >
-                {isCopied ? (
-                  <Check className="text-xl" />
-                ) : (
-                  <Copy className="text-xl" />
-                )}
-              </button>
-
+              {/* 읽기 버튼 */}
               <button
                 onClick={readCardText}
                 disabled={isTTSLoading || isAutoPlaying || isPreparingAudio}
-                className={`w-12 h-12 flex items-center justify-center p-1.5 sm:p-2 rounded-full ${
+                className={`w-14 h-14 flex items-center justify-center rounded-full ${
                   isTTSLoading
                     ? "bg-blue-500 text-white"
                     : isAutoPlaying || isPreparingAudio
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                     : "bg-gray-100 text-gray-500 hover:bg-gray-200 active:bg-gray-200"
-                } shadow-sm`}
+                } shadow-sm transition-colors`}
                 title="단어 읽기"
               >
                 {isTTSLoading ? (
                   <LoadingSpinner />
                 ) : (
-                  <HiOutlineSpeakerWave className="text-xl" />
+                  <HiOutlineSpeakerWave className="text-2xl" />
                 )}
               </button>
+
+              {/* 자동재생 버튼 */}
+              <button
+                onClick={isAutoPlaying ? togglePause : toggleAutoPlay}
+                disabled={
+                  isPreparingAudio ||
+                  autoPlayButtonCooldown ||
+                  pauseButtonCooldown
+                }
+                className={`w-20 h-14 rounded-full flex items-center justify-center ${
+                  isPreparingAudio ||
+                  autoPlayButtonCooldown ||
+                  pauseButtonCooldown
+                    ? "bg-gray-200 text-gray-400"
+                    : isAutoPlaying
+                    ? "bg-blue-500 text-white hover:bg-blue-600"
+                    : "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                } transition-colors shadow-sm`}
+                title={
+                  isAutoPlaying ? (isPaused ? "재생" : "일시정지") : "자동 재생"
+                }
+              >
+                {isPreparingAudio ? (
+                  <LoadingSpinner />
+                ) : isAutoPlaying ? (
+                  isPaused ? (
+                    <BsPlayFill className="text-2xl" />
+                  ) : (
+                    <BsPauseFill className="text-2xl" />
+                  )
+                ) : (
+                  <BsPlayFill className="text-2xl" />
+                )}
+              </button>
+
+              {/* 정지 버튼 - 자동 재생 중에만 표시 */}
+              {isAutoPlaying && (
+                <button
+                  onClick={stopAutoPlay}
+                  disabled={stopButtonCooldown}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    stopButtonCooldown
+                      ? "bg-gray-300 text-gray-500"
+                      : "bg-gray-600 text-white hover:bg-gray-700"
+                  } transition-colors shadow-sm`}
+                  title="정지"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                  </svg>
+                </button>
+              )}
             </div>
 
             {/* 다음 버튼 */}
