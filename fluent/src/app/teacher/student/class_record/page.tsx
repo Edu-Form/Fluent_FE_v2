@@ -407,6 +407,7 @@ const ClassPageContent: React.FC = () => {
   const [homework, setHomework] = useState("");
   const [nextClass, setNextClass] = useState("");
   const latestHomework = searchedNotes[searchedNotes.length - 1]?.homework || "";
+  const latestNextClass = searchedNotes[searchedNotes.length - 1]?.nextClass || "";
   const [activeOption, setActiveOption] = useState<"option1" | "option2">(
     "option1"
   );
@@ -940,21 +941,33 @@ const ClassPageContent: React.FC = () => {
                     </div>
 
                     {/* Next Class Input */}
-                    <div className="flex flex-col gap-2">
-                      <label
-                        htmlFor="nextClass"
-                        className="text-lg font-bold text-gray-700"
-                      >
-                        🔜 Next Class<span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        id="nextClass"
-                        value={nextClass}
-                        onChange={(e) => setNextClass(e.target.value)}
-                        className="border bg-white rounded px-3 py-2 text-md resize-none min-h-[150px] focus:outline-none focus:ring-2 focus:ring-[#3182F6]"
-                        required
-                      />
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                      {/* Left: Next Class Input */}
+                      <div className="flex flex-col gap-2">
+                        <label
+                          htmlFor="nextClass"
+                          className="text-lg font-bold text-gray-700"
+                        >
+                          🔜 Next Class<span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          id="nextClass"
+                          value={nextClass}
+                          onChange={(e) => setNextClass(e.target.value)}
+                          className="border bg-white rounded px-3 py-2 text-md resize-none min-h-[150px] focus:outline-none focus:ring-2 focus:ring-[#3182F6]"
+                          required
+                        />
+                      </div>
+
+                      {/* Right: Last Next Class */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-lg font-bold text-gray-700">📖 For Today's Class</label>
+                        <div className="bg-gray-50 text-sm text-gray-800 border border-gray-200 rounded p-3 min-h-[150px] whitespace-pre-wrap">
+                          {latestNextClass ? latestNextClass : "No previous next class found."}
+                        </div>
+                      </div>
                     </div>
+
                   </>
                 )}
 

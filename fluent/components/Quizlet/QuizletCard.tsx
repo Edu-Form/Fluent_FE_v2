@@ -52,6 +52,7 @@ interface QuizletCardProps {
   kor_quizlet: string[];
   original_text: string;
   cards: any[];
+  favorite_flags?: string[]; // 🆕 optional for backward compatibility
 }
 
 // 오디오 버퍼를 위한 인터페이스 정의
@@ -250,15 +251,30 @@ const QuizletCardContent = ({
   useEffect(() => {
     const engWords = content.eng_quizlet || [];
     const korWords = content.kor_quizlet || [];
+
+    // 🆕 Fallback if favorite_flags is missing or mismatched
+    const favoriteFlags =
+      content.favorite_flags && content.favorite_flags.length === engWords.length
+        ? content.favorite_flags
+        : engWords.map(() => "0");
+
     const newCards = engWords.map((eng, index) => [
       eng,
       korWords[index] || "",
-      "0",
+      favoriteFlags[index],
     ]);
+
     setCards(newCards);
     setOriginalCards(newCards);
     setCurrentCard(0);
     setIsFlipped(false);
+
+    // 🆕 Sync favoriteCards for star color
+    const favoriteMap: { [key: number]: boolean } = {};
+    favoriteFlags.forEach((flag, index) => {
+      favoriteMap[index] = flag === "1";
+    });
+    setFavoriteCards(favoriteMap);
   }, [content]);
 
   // CRITICAL FIX: Replace the entire auto-play useEffect with proper cleanup checks
@@ -456,44 +472,79 @@ const QuizletCardContent = ({
   ]);
 
   function checkCurrentCard() {
-    // 현재 카드의 즐겨찾기 상태 토글
-    const newFavoriteCards = { ...favoriteCards };
-    newFavoriteCards[currentCard] = !favoriteCards[currentCard];
-    setFavoriteCards(newFavoriteCards);
+    const updatedCards = [...cards];
+    const current = updatedCards[currentCard];
 
-    // 카드 데이터에도 상태 업데이트
-    cards[currentCard][2] = cards[currentCard][2] === "0" ? "1" : "0";
-    setCards([...cards]); // 상태 업데이트로 리렌더링 트리거
+    const newFavorite = current[2] === "1" ? "0" : "1";
+    current[2] = newFavorite;
+
+    // Update cards (either full set or filtered list)
+    setCards(updatedCards);
+
+    // Update visual state
+    setFavoriteCards((prev) => ({
+      ...prev,
+      [currentCard]: newFavorite === "1",
+    }));
+
+    // Prepare to sync flags
+    const allFlags = (isCheckedView ? originalCards : updatedCards).map(
+      ([, , flag]) => flag
+    );
+
+    // Send update to DB
+    fetch(`/api/quizlet/${content._id}/favorite`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ favorite_flags: allFlags }),
+    }).catch((err) => console.error("Failed to save favorites:", err));
+
+    // 🟡 If in favorite view and card was unfavorited, remove it from the list
+    if (isCheckedView && newFavorite === "0") {
+      const remainingCards = updatedCards.filter((card) => card[2] === "1");
+      if (remainingCards.length === 0) {
+        // Exit favorite mode if nothing is left
+        setCards(originalCards);
+        setIsCheckedView(false);
+        setIsBookmark(false);
+        setCurrentCard(0);
+      } else {
+        // Adjust current index if needed
+        const newIndex =
+          currentCard >= remainingCards.length ? remainingCards.length - 1 : currentCard;
+        setCards(remainingCards);
+        setCurrentCard(newIndex);
+      }
+    }
   }
 
+
   function playCheckedCards() {
-    // 즐겨찾기 보기 상태 토글
     setIsFlipped(false);
     setCurrentCard(0);
 
     if (isCheckedView) {
-      // 즐겨찾기 보기에서 전체 보기로 전환
+      // ✅ Switch back to all cards
       setCards(originalCards);
       setIsCheckedView(false);
       setIsBookmark(false);
     } else {
-      // 전체 보기에서 즐겨찾기 보기로 전환
-      const checkedCards = cards.filter((card) => card[2] === "1"); // 즐겨찾기된 카드만 필터링
+      // ✅ Filter only favorited cards
+      const checkedCards = cards.filter((card) => card[2] === "1");
 
       if (checkedCards.length === 0) {
-        // 즐겨찾기된 카드가 없을 경우 알림 표시
+        // No favorites? Show alert.
         setShowAlert(true);
-        // 3초 후 알림 자동 닫기
         setTimeout(() => setShowAlert(false), 1000);
       } else {
-        // 즐겨찾기된 카드가 있을 경우 즐겨찾기 모드로 전환
-        setOriginalCards(cards);
+        setOriginalCards(cards); // Save full list before filtering
         setCards(checkedCards);
         setIsCheckedView(true);
         setIsBookmark(true);
       }
     }
   }
+
 
   function shuffled() {
     shuffleCards(cards);

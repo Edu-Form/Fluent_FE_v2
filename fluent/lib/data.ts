@@ -486,6 +486,28 @@ export const getQuizletNoteData = async (_id: string) => {
   }
 };
 
+export async function updateFavoriteFlags(quizlet_id: string, favorite_flags: string[]) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db"); // your DB name
+    const objectId = new ObjectId(quizlet_id);
+
+    const result = await db.collection("quizlet").updateOne(
+      { _id: objectId },
+      { $set: { favorite_flags } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return null;
+    }
+
+    return { quizlet_id, favorite_flags };
+  } catch (error) {
+    console.error("DB error in updateFavoriteFlags:", error);
+    throw new Error("Failed to update favorite flags");
+  }
+}
+
 export async function updateQuizletNoteData(quizlet_id: string, original_text: string) {
   try {
     const client = await clientPromise; // Ensure the MongoDB client is connected
