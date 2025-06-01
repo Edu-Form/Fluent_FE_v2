@@ -94,6 +94,11 @@ const ClassPageContent: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
+  const [translationModalOpen, setTranslationModalOpen] = useState(false);
+  const [quizletLines, setQuizletLines] = useState<{ eng: string; kor: string }[]>([]);
+  const [translating, setTranslating] = useState(false);
+
+
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
     setIsMounted(true);
@@ -114,7 +119,7 @@ const ClassPageContent: React.FC = () => {
     }
   }, [next_class_date]);
 
-  const postCurriculum = async (e: React.FormEvent): Promise<void> => {
+  const handleSaveClick = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!homework.trim()) {
@@ -122,71 +127,46 @@ const ClassPageContent: React.FC = () => {
       return;
     }
 
-    if (selectedNoteIndex !== null) {
-      const confirmProceed = window.confirm(
-        "You have selected a previous class note. Submitting this will create a new class note. Will you proceed?"
-      );
-      if (!confirmProceed) return;
+    if (!original_text || original_text.trim().length === 0) {
+      alert("Please write class notes.");
+      return;
     }
 
-    setLoading(true);
+    if (!original_text.includes("<mark>")) {
+      alert("Please highlight at least one Quizlet expression.");
+      return;
+    }
+
+    setTranslating(true);
 
     try {
-      if (!class_date) {
-        throw new Error("수업 날짜를 입력해주세요.");
+      const response = await fetch("/api/quizlet/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ original_text }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Translation failed");
       }
 
-      if (!original_text || original_text.trim().length === 0) {
-        throw new Error("수업 내용을 입력해주세요.");
-      }
+      const { eng_quizlet, kor_quizlet } = await response.json();
 
-      const allStudents = [student_name, ...selectedGroupStudents];
+      const merged = eng_quizlet.map((eng: string, i: number) => ({
+        eng,
+        kor: kor_quizlet[i] || "",
+      }));
 
-      for (const name of allStudents) {
-        const payload = {
-          student_name: name,
-          class_date,
-          date,
-          original_text,
-          homework,
-          nextClass: nextClass || "",
-        };
-
-        const response = await fetch(`/api/quizlet/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          cache: "no-store",
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: "저장에 실패했습니다." }));
-          throw new Error(`${name} 저장 실패: ` + (errorData.message || "저장에 실패했습니다."));
-        }
-      }
-
-      // ✅ All requests succeeded
-      setSaveSuccess(true);
-      setTimeout(() => {
-        try {
-          const redirectUrl = `/teacher/home?user=${encodeURIComponent(
-            user
-          )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(user_id)}`;
-          router.push(redirectUrl);
-        } catch (error) {
-          console.error("리다이렉션 오류:", error);
-          router.push("/teacher/home");
-        }
-      }, 1500);
-    } catch (error) {
-      console.error("커리큘럼 저장 오류:", error);
-      alert(error instanceof Error ? error.message : "오류가 발생했습니다.");
+      setQuizletLines(merged);
+      setTranslationModalOpen(true);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unknown error during translation.");
     } finally {
-      setLoading(false);
+      setTranslating(false);
     }
   };
+
 
 
   const notesTemplate1 = `
@@ -702,7 +682,7 @@ const ClassPageContent: React.FC = () => {
       </header>
 
       <form
-        onSubmit={postCurriculum}
+        onSubmit={handleSaveClick}
         className="flex-grow flex flex-col overflow-hidden"
       >
         {/* 메인 텍스트 영역 - 화면에 꽉 채움 & 내부 스크롤 */}
@@ -1235,6 +1215,102 @@ const ClassPageContent: React.FC = () => {
           box-shadow: none;
         }
       `}</style>
+
+      {translationModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl w-[90%] max-w-3xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold">🧠 Review Translations</h2>
+            <p className="text-sm text-gray-600 mb-4">Please revise any awkward translations before saving.</p>
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="text-left bg-gray-100">
+                  <th className="p-2 border">English</th>
+                  <th className="p-2 border">Korean</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quizletLines.map((line, idx) => (
+                  <tr key={idx}>
+                    <td className="p-2 border">
+                      <textarea
+                        value={line.eng}
+                        onChange={(e) => {
+                          const updated = [...quizletLines];
+                          updated[idx].eng = e.target.value;
+                          setQuizletLines(updated);
+                        }}
+                        className="w-full p-1 border rounded text-sm resize-none"
+                      />
+                    </td>
+                    <td className="p-2 border">
+                      <textarea
+                        value={line.kor}
+                        onChange={(e) => {
+                          const updated = [...quizletLines];
+                          updated[idx].kor = e.target.value;
+                          setQuizletLines(updated);
+                        }}
+                        className="w-full p-1 border rounded text-sm resize-none"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={() => setTranslationModalOpen(false)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const payload = {
+                      quizletData: {
+                        student_name,
+                        class_date,
+                        date,
+                        original_text,
+                      },
+                      eng_quizlet: quizletLines.map((l) => l.eng),
+                      kor_quizlet: quizletLines.map((l) => l.kor),
+                      homework,
+                      nextClass,
+                    };
+
+                    const res = await fetch("/api/quizlet/save", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(payload),
+                    });
+
+                    if (!res.ok) {
+                      const errorData = await res.json();
+                      throw new Error(errorData?.error || "Save failed.");
+                    }
+
+                    setTranslationModalOpen(false);
+                    setSaveSuccess(true);
+
+                    setTimeout(() => {
+                      router.push(`/teacher/home?user=${user}&type=${type}&id=${user_id}`);
+                    }, 1500);
+                  } catch (err) {
+                    alert(err instanceof Error ? err.message : "Unknown error saving data.");
+                  }
+                }}
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                ✅ Confirm & Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
