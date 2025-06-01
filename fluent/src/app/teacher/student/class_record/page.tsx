@@ -91,7 +91,7 @@ const ClassPageContent: React.FC = () => {
   const [class_date, setClassDate] = useState<string>("");
   const [date, setDate] = useState<string>("");
   const [original_text, setOriginal_text] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
   const [translationModalOpen, setTranslationModalOpen] = useState(false);
@@ -334,7 +334,6 @@ const ClassPageContent: React.FC = () => {
     nextClass?: string; // Added nextClass property
   }
 
-  const [selectedNoteIndex] = useState<number | null>(null);
   const [searchedNotes, setSearchedNotes] = useState<Note[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -947,7 +946,7 @@ const ClassPageContent: React.FC = () => {
 
                       {/* Right: Last Next Class */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-lg font-bold text-gray-700">📖 For Today's Class</label>
+                        <label className="text-lg font-bold text-gray-700">📖 For Today Class</label>
                         <div className="bg-gray-50 text-sm text-gray-800 border border-gray-200 rounded p-3 min-h-[150px] whitespace-pre-wrap">
                           {latestNextClass ? latestNextClass : "No previous next class found."}
                         </div>

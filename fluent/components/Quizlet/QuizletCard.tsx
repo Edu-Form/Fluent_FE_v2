@@ -186,25 +186,7 @@ const QuizletCardContent = ({
   // Add component unmounted flag - CRITICAL ADDITION
   const componentUnmountedRef = useRef(false);
 
-  // Replace the toggleAutoPlay function
-  const toggleAutoPlay = useCallback(async (): Promise<void> => {
-    if (autoPlayButtonCooldown) return;
 
-    setAutoPlayButtonCooldown(true);
-    setTimeout(() => setAutoPlayButtonCooldown(false), cooldownTime);
-
-    if (!isAutoPlaying) {
-      // Start autoplay immediately without pre-loading audio
-      setIsAutoPlaying(true);
-      setIsPaused(false);
-      setAutoPlayPhase(0);
-      setIsFlipped(false);
-      setCurrentCard(0);
-    } else {
-      // Stop autoplay
-      stopAutoPlay();
-    }
-  }, [isAutoPlaying, cooldownTime]);
 
   // Add audio control ref to prevent multiple simultaneous audio
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -247,6 +229,26 @@ const QuizletCardContent = ({
       setIsFlipped(false);
     }, 100);
   }, [stopButtonCooldown, cooldownTime]);
+
+    // Replace the toggleAutoPlay function
+  const toggleAutoPlay = useCallback(async (): Promise<void> => {
+    if (autoPlayButtonCooldown) return;
+
+    setAutoPlayButtonCooldown(true);
+    setTimeout(() => setAutoPlayButtonCooldown(false), cooldownTime);
+
+    if (!isAutoPlaying) {
+      // Start autoplay immediately without pre-loading audio
+      setIsAutoPlaying(true);
+      setIsPaused(false);
+      setAutoPlayPhase(0);
+      setIsFlipped(false);
+      setCurrentCard(0);
+    } else {
+      // Stop autoplay
+      stopAutoPlay();
+    }
+  }, [autoPlayButtonCooldown, stopAutoPlay, isAutoPlaying, cooldownTime]);
 
   useEffect(() => {
     const engWords = content.eng_quizlet || [];
@@ -462,6 +464,7 @@ const QuizletCardContent = ({
 
     return clearAutoPlayTimer;
   }, [
+    cards,
     isAutoPlaying,
     isPaused,
     isFlipped,
@@ -716,7 +719,7 @@ const QuizletCardContent = ({
 
     const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
     TTSAudio(text, false); // Don't skip on error for manual playback
-  }, [isFlipped, cards, currentCard, isTTSLoading]);
+  }, [isFlipped, cards, currentCard, isTTSLoading, TTSAudio]);
 
   const handleNextCard = useCallback(() => {
     setIsFlipped(false);
@@ -791,7 +794,7 @@ const QuizletCardContent = ({
       setIsAutoPlaying(false);
       setIsPaused(false);
     };
-  }, []);
+  }, [audioBuffers]);
 
   const handleDateSelect = (index: number) => {
     if (onSelectCard) {

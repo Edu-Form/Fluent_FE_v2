@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { original_text } = body;
 
-    let lines = original_text.match(/<mark>(.*?)<\/mark>/g);
+    const lines = original_text.match(/<mark>(.*?)<\/mark>/g);
     if (!lines || lines.length === 0) {
       return NextResponse.json({ error: "No quizlet highlights found." }, { status: 400 });
     }
