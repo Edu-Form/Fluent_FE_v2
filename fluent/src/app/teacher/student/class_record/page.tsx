@@ -132,6 +132,12 @@ const ClassPageContent: React.FC = () => {
       return;
     }
 
+    if (!class_date || class_date.trim() === "") {
+      alert("Please select a class date.");
+      return;
+    }
+
+
     if (!original_text.includes("<mark>")) {
       alert("Please highlight at least one Quizlet expression.");
       return;
@@ -1215,6 +1221,17 @@ const ClassPageContent: React.FC = () => {
           box-shadow: none;
         }
       `}</style>
+
+      {translating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="w-80 bg-white rounded-2xl shadow-xl p-6 flex flex-col items-center">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-md font-medium text-gray-800">Translating Quizlets...</p>
+            <p className="text-sm text-gray-500 mt-1">Please wait a moment</p>
+          </div>
+        </div>
+      )}
+
 
       {translationModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
