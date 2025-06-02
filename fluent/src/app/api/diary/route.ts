@@ -901,7 +901,7 @@ export async function POST(request: Request) {
             - errorExplain MUST be in Korean. 
             - Ignore punctuation mistakes like commas, periods, and spaces.
             - Respond ONLY with a valid JSON object: { "errors": [...] }.
-            - Level-based instructions: ${selectedLevelInstruction}
+            - ${selectedLevelInstruction}
             `,
           },
           {
@@ -938,13 +938,7 @@ export async function POST(request: Request) {
           {
             role: "system",
             content:
-              "Your task is to correct any grammar and spelling mistakes in a student's diary entry.\n" +
-              "Guidelines:\n" +
-              "- Keep the original meaning and tone of the diary entry.\n" +
-              "- Do not change the style unless necessary for proper grammar.\n" +
-              "- Keep the language natural and suitable for a student.\n" +
-              "- Return only the corrected diary without additional commentary." +
-              `- Level-based instructions: ${selectedLevelInstruction}`
+              `${selectedLevelInstruction}`
           },
           {
             role: "user",
