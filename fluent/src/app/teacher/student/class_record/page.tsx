@@ -1255,7 +1255,7 @@ const ClassPageContent: React.FC = () => {
                           updated[idx].eng = e.target.value;
                           setQuizletLines(updated);
                         }}
-                        className="w-full p-1 border rounded text-sm resize-none"
+                        className="w-full p-1 border rounded bg-white text-black text-sm resize-none"
                       />
                     </td>
                     <td className="p-2 border">
@@ -1266,7 +1266,7 @@ const ClassPageContent: React.FC = () => {
                           updated[idx].kor = e.target.value;
                           setQuizletLines(updated);
                         }}
-                        className="w-full p-1 border rounded text-sm resize-none"
+                        className="w-full p-1 border rounded bg-white text-black text-sm resize-none"
                       />
                     </td>
                   </tr>
