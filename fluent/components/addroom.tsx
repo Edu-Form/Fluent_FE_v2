@@ -28,6 +28,7 @@ interface ClassSchedule {
   room: string;
   status: "pending" | "success" | "conflict";
   registered?: boolean;
+  studentName: string; // 각 스케줄에 학생 정보 추가
 }
 
 // 기존 수업 데이터 인터페이스
@@ -51,8 +52,9 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
   const roomList = ["HF1", "HF2", "HF3", "HF4", "HF5", "2-3"];
   const [duration] = useState("1");
 
-  // 학생 관련 상태
-  const [studentName, setStudentName] = useState("");
+  // 학생 관련 상태 - 배열로 변경
+  const [studentInput, setStudentInput] = useState("");
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [studentList, setStudentList] = useState<string[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -152,8 +154,18 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
 
   // 학생 선택 처리
   const handleStudentSelect = (name: string) => {
-    setStudentName(name);
+    if (!selectedStudents.includes(name)) {
+      setSelectedStudents([...selectedStudents, name]);
+    }
+    setStudentInput("");
     setIsDropdownOpen(false);
+  };
+
+  // 선택된 학생 제거
+  const removeStudent = (studentToRemove: string) => {
+    setSelectedStudents(
+      selectedStudents.filter((student) => student !== studentToRemove)
+    );
   };
 
   // 날짜 선택 처리
@@ -308,6 +320,38 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
     );
   };
 
+  // 선택된 학생 표시 컴포넌트
+  const SelectedStudents = () => {
+    if (selectedStudents.length === 0) {
+      return (
+        <div className="text-center py-2 text-gray-500 text-sm">
+          학생을 선택해주세요
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {selectedStudents.map((student, index) => (
+          <div
+            key={index}
+            className="flex items-center bg-green-50 rounded-lg border border-green-100 pl-3 pr-1 py-1"
+          >
+            <span className="text-sm font-medium text-gray-800 mr-1">
+              {student}
+            </span>
+            <button
+              onClick={() => removeStudent(student)}
+              className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-green-100"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // 시간 선택 컴포넌트
   const TimeSelector = () => {
     const timeOptions = Array.from({ length: 24 }, (_, i) => i);
@@ -355,29 +399,34 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
       selectedDates.length === 0 ||
       !commonTime ||
       !commonRoom ||
-      !studentName
+      selectedStudents.length === 0
     ) {
       alert("날짜, 시간, 강의실, 학생을 모두 선택해주세요");
       return;
     }
 
-    // 수업 일정 생성
-    const newSchedules: ClassSchedule[] = selectedDates.map((date) => {
-      const formattedDate = formatDate(date);
-      const hasConflict = checkRealConflict(
-        formattedDate,
-        commonTime,
-        commonRoom
-      );
+    // 각 학생별로, 각 날짜별로 수업 일정 생성
+    const newSchedules: ClassSchedule[] = [];
 
-      return {
-        id: Math.random().toString(36).substring(2, 9),
-        date: date,
-        formattedDate: formattedDate,
-        time: commonTime,
-        room: commonRoom,
-        status: hasConflict ? "conflict" : "success",
-      };
+    selectedStudents.forEach((student) => {
+      selectedDates.forEach((date) => {
+        const formattedDate = formatDate(date);
+        const hasConflict = checkRealConflict(
+          formattedDate,
+          commonTime,
+          commonRoom
+        );
+
+        newSchedules.push({
+          id: Math.random().toString(36).substring(2, 9),
+          date: date,
+          formattedDate: formattedDate,
+          time: commonTime,
+          room: commonRoom,
+          status: hasConflict ? "conflict" : "success",
+          studentName: student,
+        });
+      });
     });
 
     setSchedules(newSchedules);
@@ -463,7 +512,7 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
             time: schedule.time,
             duration: duration,
             teacher_name: teacherName,
-            student_name: studentName,
+            student_name: schedule.studentName, // 각 스케줄의 학생 이름 사용
           }),
         });
 
@@ -547,7 +596,7 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
           {currentSession === 1 && (
             <div className="flex flex-1 overflow-hidden">
               {/* 왼쪽 패널: 날짜 선택 */}
-              <div className="w-1/2 p-4 overflow  -y-auto">
+              <div className="w-1/2 p-4 overflow-y-auto">
                 <CustomCalendar />
 
                 <div className="mt-4">
@@ -566,15 +615,15 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                 {/* 학생 선택 */}
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    학생 선택
+                    학생 선택 (다중 선택 가능)
                   </label>
                   <div className="relative">
                     <div className="relative">
                       <Input
                         placeholder="학생 이름 입력 또는 선택"
-                        value={studentName}
+                        value={studentInput}
                         onChange={(e) => {
-                          setStudentName(e.target.value);
+                          setStudentInput(e.target.value);
                           setIsDropdownOpen(true);
                         }}
                         onFocus={() => setIsDropdownOpen(true)}
@@ -591,10 +640,12 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                     {isDropdownOpen && studentList.length > 0 && (
                       <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                         {studentList
-                          .filter((name) =>
-                            name
-                              .toLowerCase()
-                              .includes(studentName.toLowerCase())
+                          .filter(
+                            (name) =>
+                              name
+                                .toLowerCase()
+                                .includes(studentInput.toLowerCase()) &&
+                              !selectedStudents.includes(name)
                           )
                           .map((name) => (
                             <div
@@ -608,6 +659,9 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                       </div>
                     )}
                   </div>
+
+                  {/* 선택된 학생들 표시 */}
+                  <SelectedStudents />
                 </div>
 
                 {/* 강의실 선택 */}
@@ -633,39 +687,45 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                 </div>
 
                 {/* 선택 요약 */}
-                {
-                  <div className="mt-8 bg-gray-50 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">
-                      수업 등록 정보
-                    </h3>
-                    <div className="flex flex-col space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">날짜</span>
-                        <span className="font-medium">
-                          {selectedDates.length}개 선택됨
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">시간</span>
-                        <span className="font-medium">
-                          {commonTime ? `${commonTime}:00` : "선택 필요"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">학생</span>
-                        <span className="font-medium">
-                          {studentName || "선택 필요"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">강의실</span>
-                        <span className="font-medium">
-                          {commonRoom ? `${commonRoom}호` : "선택 필요"}
-                        </span>
-                      </div>
+                <div className="mt-8 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    수업 등록 정보
+                  </h3>
+                  <div className="flex flex-col space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">날짜</span>
+                      <span className="font-medium">
+                        {selectedDates.length}개 선택됨
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">시간</span>
+                      <span className="font-medium">
+                        {commonTime ? `${commonTime}:00` : "선택 필요"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">학생</span>
+                      <span className="font-medium">
+                        {selectedStudents.length > 0
+                          ? `${selectedStudents.length}명 선택`
+                          : "선택 필요"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">강의실</span>
+                      <span className="font-medium">
+                        {commonRoom ? `${commonRoom}호` : "선택 필요"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2 mt-2">
+                      <span className="text-gray-700 font-medium">총 수업</span>
+                      <span className="font-bold text-blue-600">
+                        {selectedDates.length * selectedStudents.length}개
+                      </span>
                     </div>
                   </div>
-                }
+                </div>
 
                 {/* 다음 단계 버튼 */}
                 <button
@@ -674,13 +734,13 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                     selectedDates.length === 0 ||
                     !commonTime ||
                     !commonRoom ||
-                    !studentName
+                    selectedStudents.length === 0
                   }
                   className={`w-full mt-6 h-12 rounded-lg text-white font-medium transition-colors ${
                     selectedDates.length > 0 &&
                     commonTime &&
                     commonRoom &&
-                    studentName
+                    selectedStudents.length > 0
                       ? "bg-blue-500 hover:bg-blue-600"
                       : "bg-gray-300 cursor-not-allowed"
                   }`}
@@ -705,10 +765,12 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                 </button>
                 <div>
                   <h2 className="text-lg font-semibold">
-                    {schedules.length}개 수업 등록 확인 - {studentName} 학생
+                    {schedules.length}개 수업 등록 확인 -{" "}
+                    {selectedStudents.length}명 학생
                   </h2>
                   <p className="text-sm text-gray-500">
-                    수업 시간: {commonTime}:00
+                    수업 시간: {commonTime}:00 | 학생:{" "}
+                    {selectedStudents.join(", ")}
                   </p>
                 </div>
               </div>
@@ -739,7 +801,7 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
 
               {/* 수업 목록 및 충돌 상태 */}
               <div className="flex flex-col h-1/2 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {schedules.map((schedule) => (
                     <div
                       key={schedule.id}
@@ -776,6 +838,9 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                             </div>
                             <div className="text-sm text-gray-500">
                               {schedule.time}:00 | 강의실: {schedule.room}호
+                            </div>
+                            <div className="text-sm font-medium text-blue-600">
+                              학생: {schedule.studentName}
                             </div>
                           </div>
                         </div>
@@ -895,8 +960,10 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                   </h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500">학생</p>
-                      <p className="font-medium text-gray-800">{studentName}</p>
+                      <p className="text-xs text-gray-500">학생 수</p>
+                      <p className="font-medium text-gray-800">
+                        {selectedStudents.length}명
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">강사</p>
@@ -909,12 +976,25 @@ export default function MultiAddRoom({ closeAddSchedule }: ScheduleModalProps) {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">강의실</p>
+                      <p className="text-xs text-gray-500">날짜 수</p>
                       <p className="font-medium text-gray-800">
-                        {schedules.every((s) => s.room === schedules[0]?.room)
-                          ? schedules[0]?.room + "호"
-                          : "다양한 강의실"}
+                        {selectedDates.length}개
                       </p>
+                    </div>
+                  </div>
+
+                  {/* 등록된 학생 목록 표시 */}
+                  <div className="mt-4 pt-3 border-t">
+                    <p className="text-xs text-gray-500 mb-2">등록된 학생</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedStudents.map((student, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-md"
+                        >
+                          {student}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>

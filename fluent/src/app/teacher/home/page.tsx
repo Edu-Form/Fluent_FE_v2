@@ -12,9 +12,9 @@ const Announcement = dynamic(
   { ssr: false }
 );
 
-const TeacherNotice = dynamic(() => import("@/components/TeacherNotice"), {
-  ssr: false,
-});
+// const TeacherNotice = dynamic(() => import("@/components/TeacherNotice"), {
+//   ssr: false,
+// });
 
 const Alert = dynamic(() => import("@/components/Alert"), { ssr: false });
 
@@ -179,13 +179,13 @@ const HomePageContent = () => {
           </div>
 
           {/* 공지사항 */}
-          <div className="bg-white rounded-lg p-4 shadow-sm md:h-[20%]">
+          {/* <div className="bg-white rounded-lg p-4 shadow-sm md:h-[20%]">
             <div className="h-full">
               <Suspense fallback={<SkeletonLoader />}>
                 <TeacherNotice />
               </Suspense>
             </div>
-          </div>
+          </div> */}
 
           {/* 오늘의 학생 리스트 */}
           <div className="bg-white rounded-lg p-4 shadow-sm flex-1">
