@@ -309,7 +309,9 @@ const HomePageContent = () => {
                             </div>
                             <Link
                               href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                              className="text-gray-700"
+                              className="text-gray-700 hover:text-blue-600 transition-colors"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               Class Note
                             </Link>
@@ -331,7 +333,9 @@ const HomePageContent = () => {
                             </div>
                             <Link
                               href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
-                              className="text-gray-700"
+                              className="text-gray-700 hover:text-blue-600 transition-colors"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               Quizlet
                             </Link>
@@ -353,7 +357,9 @@ const HomePageContent = () => {
                             </div>
                             <Link
                               href={`/teacher/student/diary_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                              className="text-gray-700"
+                              className="text-gray-700 hover:text-blue-600 transition-colors"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               Diary 작성
                             </Link>
@@ -375,7 +381,9 @@ const HomePageContent = () => {
                             </div>
                             <Link
                               href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
-                              className="text-gray-700"
+                              className="text-gray-700 hover:text-blue-600 transition-colors"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               Diary 첨삭
                             </Link>
@@ -385,14 +393,18 @@ const HomePageContent = () => {
                         <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between">
                           <Link
                             href={`/teacher/schedule?user=${user}&type=teacher&id=${id}`}
-                            className="text-xs text-indigo-600 font-medium"
+                            className="text-xs text-indigo-600 font-medium hover:text-indigo-800 transition-colors"
+                            target="_blank"
+                            rel="noopener noreferrer"
                           >
                             스케줄 보기
                           </Link>
 
                           <Link
                             href={`/teacher/student/curriculum?user=${user}&type=teacher&id=${id}&student_name=${student.name}`}
-                            className="text-xs text-yellow-500 font-medium"
+                            className="text-xs text-yellow-500 font-medium hover:text-yellow-700 transition-colors"
+                            target="_blank"
+                            rel="noopener noreferrer"
                           >
                             커리큘럼
                           </Link>
@@ -514,7 +526,9 @@ const HomePageContent = () => {
                           <td className="px-3 py-3 text-center">
                             <Link
                               href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center"
+                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               <div
                                 className={`${
@@ -540,7 +554,9 @@ const HomePageContent = () => {
                           <td className="px-3 py-3 text-center">
                             <Link
                               href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center"
+                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               <div
                                 className={`${
@@ -566,7 +582,9 @@ const HomePageContent = () => {
                           <td className="px-3 py-3 text-center">
                             <Link
                               href={`/teacher/student/diary_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center"
+                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               <div
                                 className={`${
@@ -592,7 +610,9 @@ const HomePageContent = () => {
                           <td className="px-3 py-3 text-center">
                             <Link
                               href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center"
+                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               <div
                                 className={`${
@@ -618,7 +638,9 @@ const HomePageContent = () => {
                           <td className="px-3 py-3 text-center">
                             <Link
                               href={`/teacher/schedule?user=${user}&type=teacher&id=${id}`}
-                              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors hover:bg-indigo-50 px-3 py-2 rounded-lg inline-block"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               스케줄 보기
                             </Link>
@@ -627,7 +649,9 @@ const HomePageContent = () => {
                           <td className="px-3 py-3 text-center">
                             <Link
                               href={`/teacher/student/curriculum?user=${user}&type=teacher&id=${id}&student_name=${student.name}`}
-                              className="text-xs text-yellow-400 hover:text-indigo-800 font-medium transition-colors"
+                              className="text-xs text-yellow-500 hover:text-yellow-700 font-medium transition-colors hover:bg-yellow-50 px-3 py-2 rounded-lg inline-block"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               커리큘럼
                             </Link>
