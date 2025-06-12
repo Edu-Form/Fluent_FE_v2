@@ -475,51 +475,58 @@ const QuizletCardContent = ({
   ]);
 
   function checkCurrentCard() {
-    const updatedCards = [...cards];
-    const current = updatedCards[currentCard];
+    const current = cards[currentCard];
 
-    const newFavorite = current[2] === "1" ? "0" : "1";
-    current[2] = newFavorite;
-
-    // Update cards (either full set or filtered list)
-    setCards(updatedCards);
-
-    // Update visual state
-    setFavoriteCards((prev) => ({
-      ...prev,
-      [currentCard]: newFavorite === "1",
-    }));
-
-    // Prepare to sync flags
-    const allFlags = (isCheckedView ? originalCards : updatedCards).map(
-      ([, , flag]) => flag
+    // Find the corresponding index in originalCards
+    const originalIndex = originalCards.findIndex(
+      (c) => c[0] === current[0] && c[1] === current[1]
     );
 
-    // Send update to DB
+    if (originalIndex === -1) {
+      console.warn("Could not find original card match for favoriting.");
+      return;
+    }
+
+    // Toggle the favorite flag
+    const updatedOriginals = [...originalCards];
+    const newFavorite = updatedOriginals[originalIndex][2] === "1" ? "0" : "1";
+    updatedOriginals[originalIndex][2] = newFavorite;
+    setOriginalCards(updatedOriginals);
+
+    // Update favoriteCards map using the original index
+    setFavoriteCards((prev) => ({
+      ...prev,
+      [originalIndex]: newFavorite === "1",
+    }));
+
+    // Rebuild flags from originalCards and send to server
+    const allFlags = updatedOriginals.map(([ , , flag]) => flag);
     fetch(`/api/quizlet/${content._id}/favorite`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ favorite_flags: allFlags }),
     }).catch((err) => console.error("Failed to save favorites:", err));
 
-    // 🟡 If in favorite view and card was unfavorited, remove it from the list
+    // 🔄 If you're in favorite mode, remove card from filtered list
     if (isCheckedView && newFavorite === "0") {
-      const remainingCards = updatedCards.filter((card) => card[2] === "1");
-      if (remainingCards.length === 0) {
-        // Exit favorite mode if nothing is left
-        setCards(originalCards);
+      const updatedFavorites = cards.filter(
+        (card, i) => !(i === currentCard && card[0] === current[0] && card[1] === current[1])
+      );
+
+      if (updatedFavorites.length === 0) {
+        setCards(updatedOriginals); // reset to full
         setIsCheckedView(false);
         setIsBookmark(false);
         setCurrentCard(0);
       } else {
-        // Adjust current index if needed
-        const newIndex =
-          currentCard >= remainingCards.length ? remainingCards.length - 1 : currentCard;
-        setCards(remainingCards);
+        setCards(updatedFavorites);
+        const newIndex = currentCard >= updatedFavorites.length ? updatedFavorites.length - 1 : currentCard;
         setCurrentCard(newIndex);
       }
     }
   }
+
+
 
 
   function playCheckedCards() {
@@ -527,23 +534,21 @@ const QuizletCardContent = ({
     setCurrentCard(0);
 
     if (isCheckedView) {
-      // ✅ Switch back to all cards
+      // Exit favorite mode
       setCards(originalCards);
       setIsCheckedView(false);
-      setIsBookmark(false);
+      setIsBookmark(false); // ✅ turn off button highlight
     } else {
-      // ✅ Filter only favorited cards
       const checkedCards = cards.filter((card) => card[2] === "1");
 
       if (checkedCards.length === 0) {
-        // No favorites? Show alert.
         setShowAlert(true);
         setTimeout(() => setShowAlert(false), 1000);
       } else {
-        setOriginalCards(cards); // Save full list before filtering
+        setOriginalCards(cards); // Save before filtering
         setCards(checkedCards);
         setIsCheckedView(true);
-        setIsBookmark(true);
+        setIsBookmark(true); // ✅ turn on yellow button
       }
     }
   }
@@ -1264,25 +1269,38 @@ const QuizletCardContent = ({
               {/* 즐겨찾기 버튼 */}
               <button
                 onClick={(e) => {
-                  e.stopPropagation(); // 카드 클릭 이벤트 방지
+                  e.stopPropagation();
                   checkCurrentCard();
                 }}
                 disabled={isAutoPlaying || isPreparingAudio}
                 className={`w-14 h-14 rounded-full flex items-center justify-center ${
                   isAutoPlaying || isPreparingAudio
                     ? "bg-gray-200/70 text-gray-400"
-                    : favoriteCards[currentCard]
-                    ? "bg-yellow-100/90 text-yellow-500 hover:bg-yellow-200/90"
-                    : "bg-gray-100 text-gray-500  hover:bg-yellow-300 hover:text-white active:bg-yellow-300 active:text-white"
+                    : (() => {
+                        const current = cards[currentCard];
+                        const matchIndex = originalCards.findIndex(
+                          (c) => c[0] === current[0] && c[1] === current[1]
+                        );
+                        return favoriteCards[matchIndex]
+                          ? "bg-yellow-400 text-white hover:bg-yellow-500"
+                          : "bg-gray-100 text-gray-500 hover:bg-yellow-300 hover:text-white active:bg-yellow-400";
+                      })()
                 } transition-colors shadow-sm`}
                 title="즐겨찾기"
               >
-                {favoriteCards[currentCard] ? (
-                  <BsStarFill className="text-lg" />
-                ) : (
-                  <BsStar className="text-xl" />
-                )}
+                {(() => {
+                  const current = cards[currentCard];
+                  const matchIndex = originalCards.findIndex(
+                    (c) => c[0] === current[0] && c[1] === current[1]
+                  );
+                  return favoriteCards[matchIndex] ? (
+                    <BsStarFill className="text-xl" />
+                  ) : (
+                    <BsStar className="text-xl" />
+                  );
+                })()}
               </button>
+
             </div>
 
             {/* 다음 버튼 */}
@@ -1325,31 +1343,53 @@ const QuizletCardContent = ({
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {allCards.map((item, idx) => (
+                {allCards.map((item, idx) => (
+                  <div
+                    key={item._id}
+                    className={`flex justify-between items-center px-4 py-3 rounded-lg transition-colors ${
+                      idx === currentIndex
+                        ? "bg-blue-50 text-blue-600 border border-blue-200"
+                        : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
                     <button
-                      key={item._id}
                       onClick={() => handleDateSelect(idx)}
-                      className={`w-full text-left px-4 py-3 ${
-                        idx === currentIndex
-                          ? "bg-blue-50 text-blue-600 border border-blue-200"
-                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                      } rounded-lg transition-colors flex justify-between items-center`}
+                      className="text-left flex-1 truncate"
                     >
-                      <span className="truncate">
-                        {isNaN(new Date(item.date).getTime())
-                          ? item.date
-                          : new Date(item.date).toLocaleDateString("ko-KR", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              weekday: "long",
-                            })}
-                      </span>
-                      {idx === currentIndex && (
-                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2"></span>
-                      )}
+                      {isNaN(new Date(item.date).getTime())
+                        ? item.date
+                        : new Date(item.date).toLocaleDateString("ko-KR", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            weekday: "long",
+                          })}
                     </button>
-                  ))}
+
+                    <button
+                      onClick={async () => {
+                        const confirmed = confirm("정말로 이 퀴즐렛을 삭제하시겠습니까?");
+                        if (!confirmed) return;
+
+                        const res = await fetch(`/api/quizlet/${item._id}/delete`, {
+                          method: "PUT",
+                        });
+
+                        if (res.ok) {
+                          alert("삭제되었습니다.");
+                          setIsDatePickerOpen(false);
+                          window.location.reload();
+                          if (onSelectCard) onSelectCard(0); // Reset to first card
+                        } else {
+                          alert("삭제에 실패했습니다.");
+                        }
+                      }}
+                      className="ml-3 text-sm text-red-500 hover:text-red-700"
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
                 </div>
               )}
             </div>

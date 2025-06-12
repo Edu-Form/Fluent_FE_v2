@@ -17,7 +17,7 @@ export async function getStudentQuizletData(student_name: string) {
     // Find the quizlets related to the student name, sorted by date
     const filteredQuizlets = await db
       .collection("quizlet")
-      .find({ student_name })
+      .find({ student_name, deleted: { $ne: true } })
       .sort({ date: -1 })
       .toArray(); // Convert cursor to an array
 
@@ -505,6 +505,28 @@ export async function updateFavoriteFlags(quizlet_id: string, favorite_flags: st
   } catch (error) {
     console.error("DB error in updateFavoriteFlags:", error);
     throw new Error("Failed to update favorite flags");
+  }
+}
+
+export async function markQuizletAsDeleted(quizlet_id: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const objectId = new ObjectId(quizlet_id);
+
+    const result = await db.collection("quizlet").updateOne(
+      { _id: objectId },
+      { $set: { deleted: true } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return null;
+    }
+
+    return { quizlet_id, deleted: true };
+  } catch (error) {
+    console.error("DB error in markQuizletAsDeleted:", error);
+    throw new Error("Failed to mark quizlet as deleted");
   }
 }
 
