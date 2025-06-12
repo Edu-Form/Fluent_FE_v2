@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense, ReactNode } from "react";
+import { useState, useEffect, useCallback, Suspense, ReactNode } from "react";
+import debounce from "lodash.debounce";
 import { useRouter, useSearchParams } from "next/navigation";
 import "react-day-picker/dist/style.css";
 
@@ -79,6 +80,7 @@ const useIsMobile = () => {
   return isMobile;
 };
 
+
 // 퀴즐렛 페이지 내용 컴포넌트
 const DiaryPageContent: React.FC = () => {
   const router = useRouter();
@@ -110,10 +112,51 @@ const DiaryPageContent: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [level, setLevel] = useState<string>("");
 
+  const saveTempDiary = useCallback(
+  debounce(async (text: string) => {
+    try {
+      await fetch("/api/diary/temp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_name,
+          original_text: text,
+        }),
+      });
+    } catch (error) {
+      console.error("임시 저장 실패:", error);
+    }
+  }, 1000),
+  [student_name]
+);
+
+const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const value = e.target.value;
+  setOriginal_text(value);
+  saveTempDiary(value); // ✅ Auto-save
+};
+
+
 
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
     setIsMounted(true);
+
+    const fetchTempDiary = async () => {
+      try {
+        const res = await fetch(`/api/diary/temp?student_name=${encodeURIComponent(student_name || "")}`);
+        if (!res.ok) throw new Error("Failed to load temp diary");
+
+        const data = await res.json();
+        if (data?.original_text) {
+          setOriginal_text(data.original_text);
+        }
+      } catch (error) {
+        console.error("임시 다이어리 불러오기 실패:", error);
+      }
+    };
+
+    fetchTempDiary();
 
     // 초기 날짜값 설정
     try {
@@ -129,7 +172,8 @@ const DiaryPageContent: React.FC = () => {
       setClassDate(formatToSave(todayISO));
       setDate(formatToSave(todayISO));
     }
-  }, [next_class_date]);
+  }, [next_class_date, student_name]);
+
 
   const postQuizlet = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -664,19 +708,19 @@ const DiaryPageContent: React.FC = () => {
       >
         {/* 메인 텍스트 영역 - 모바일 대응 */}
         <div className="flex-grow flex flex-col relative">
-          <textarea
-            id="original_text"
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              setOriginal_text(e.target.value)
-            }
-            className={`flex-grow w-full ${
-              isMobile ? "p-4 text-2xl" : "p-10 text-5xl"
-            } font-bold focus:outline-none bg-white text-[#333D4B] resize-none`}
-            placeholder={
-              isMobile ? "일기를 작성해주세요" : "일기를 작성해주세요"
-            }
-            disabled={loading}
-          ></textarea>
+        <textarea
+          id="original_text"
+          onChange={handleTextChange}
+          value={original_text}
+          className={`flex-grow w-full ${
+            isMobile ? "p-4 text-2xl" : "p-10 text-5xl"
+          } font-bold focus:outline-none bg-white text-[#333D4B] resize-none`}
+          placeholder={
+            isMobile ? "일기를 작성해주세요" : "일기를 작성해주세요"
+          }
+          disabled={loading}
+        />
+
 
           {/* 텍스트 영역 꾸미기 - 상단 원 */}
           <div className="absolute top-3 right-3">

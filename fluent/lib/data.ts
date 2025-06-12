@@ -592,3 +592,35 @@ export const getDiaryNoteData = async (_id: string) => {
     throw new Error("Database error");
   }
 };
+
+// Save or update temp diary
+export async function saveTempDiary(student_name: string, original_text: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+
+    await db.collection("diary_temp").updateOne(
+      { student_name },
+      { $set: { original_text, updated_at: new Date() } },
+      { upsert: true }
+    );
+
+    return { message: "Temp diary saved" };
+  } catch (error) {
+    console.error("DB error in saveTempDiary:", error);
+    throw new Error("Failed to save temp diary");
+  }
+}
+
+// Fetch temp diary by student
+export async function getTempDiary(student_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+
+    return await db.collection("diary_temp").findOne({ student_name });
+  } catch (error) {
+    console.error("DB error in getTempDiary:", error);
+    throw new Error("Failed to fetch temp diary");
+  }
+}
