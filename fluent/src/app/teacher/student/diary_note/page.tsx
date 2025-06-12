@@ -189,6 +189,11 @@ const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         throw new Error("퀴즐렛 내용을 입력해주세요.");
       }
 
+      if (!level || level.trim() === "") {
+        throw new Error("레벨을 선택해주세요."); // Show user-friendly message
+      }
+
+
       const payload = {
         student_name: student_name || "",
         level,
