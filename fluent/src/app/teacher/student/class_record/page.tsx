@@ -1694,21 +1694,26 @@ const ClassPageContent: React.FC = () => {
           const { $from } = state.selection;
           const node = $from.node();
 
-          // If current node is heading, keep the same type
           if (node.type.name.startsWith("heading")) {
             const level = node.attrs.level;
+            const shouldKeepHighlight = editor.isActive("highlight");
 
             splitBlock(state, dispatch);
-            // Set same heading type for new node
             editor.commands.setNode("heading", { level });
+
+            if (shouldKeepHighlight) {
+              editor.commands.setMark("highlight");
+            }
+
             return true;
           }
 
-          return false; // fallback to default behavior
+          return false;
         },
       };
     },
   });
+
 
   const CustomHighlight = Highlight.extend({
     addKeyboardShortcuts() {
