@@ -874,9 +874,191 @@ export async function POST(request: Request) {
         You may add 1 ~ 5 sentences to make the diary better 
       `,    // Check if the level is valid
 
+      "Business: Diary": `
+      Help me correct a Business English diary that my student wrote. They are adults working in Korea trying to learn English as a second language for work. They are preparing for work meetings and conference calls.
+
+      Criteria
+      Edit the diary with the grammar & vocabulary of a semi-formal proficient employee at an English-speaking business. 
+      Try to use a lot of 관계대명사 & 명사절 effectively.
+      This diary should talk about the details in the student’s work life and work projects in depth.
+      You may add 1 ~ 5 sentences depending on the length of the diary.
+      `,
+
+      "Business: In Depth": `
+      Help me correct some written material that my student wrote in regards to his work. They are adults working in Korea trying to learn English as a second language for work. They are preparing for work interviews, meetings, and conference calls.
+
+      Criteria
+      Edit the material with the grammar & vocabulary of a semi-formal proficient employee at an English-speaking business. 
+      Try to use a lot of 관계대명사 & 명사절 effectively.
+      You may add 1 ~ 5 sentences depending on the length of the material.
+      `,
     };
 
-    const selectedLevelInstruction = levelInstructions[`level${level as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`] || "";
+    const summaryPrompts: Record<string, string> = {
+      "1": `
+    Please summarize this diary in less than 3 sentences.
+
+    Criteria
+    Start the summary with “I wrote about ~” 
+    Use the vocabulary of a toddler
+    Connect the sentences naturally (after that, next, and then, other than that, after eating dinner)
+    Don’t use gerunds and noun clauses in the summary. It’s too hard grammatically at this level.
+      `,
+      "2": `
+    Please summarize this diary in less than 3 sentences.
+
+    Criteria
+    Start the summary with “I wrote about ~” 
+    Use the vocabulary of a toddler
+    Connect the sentences naturally (after that, next, and then, other than that, after eating dinner)
+    Don’t use gerunds and noun clauses in the summary. It’s too hard grammatically at this level.
+      `,
+      "3": `
+    Please summarize this diary in less than 5 sentences.
+
+    Criteria
+    Start the summary with “I wrote about Verb+ing” 
+    Use the vocabulary and grammar of a toddler 
+    Connect the sentences naturally (after that, next, and then, after eating dinner, afterwards, other than that)
+
+    Refer to the example diary summary expressions below:
+    I wrote about going to watch a movie with my friends  
+    I wrote about an appointment with a friend  
+    I wrote about visiting a gallery in hongdae this weekend  
+    afterwards we drank some wine at a bar near the museum  
+    I wrote about buying a new phone  
+    I wrote about changing my phone from an iphone to a galaxy z flip  
+    other than that, my sister came home during summer break  
+    I wrote about going out to eat at a restaurant called ~  
+    After having dinner we watched a movie called ~  
+    I wrote about meeting my high school friends for the first time in a long time
+      `,
+      "4": `
+    Please summarize this diary in less than 5 sentences.
+
+    Criteria
+    Start the summary with “I wrote about Verb+ing” 
+    Use the vocabulary and grammar of a 2nd grader
+    Connect the sentences naturally (after that, next, and then, after eating dinner, afterwards, other than that)
+
+    Refer to the example diary summary expressions below:
+    (same examples as level 3)
+      `,
+      "5": `
+    Please summarize this diary in less than 5 sentences.
+
+    Criteria
+    Start the summary with “I wrote about Verb+ing” 
+    Use the vocabulary and grammar of a 4th grader
+      `,
+      "6": `
+    Please summarize this diary in less than 5 sentences.
+
+    Criteria
+    Start the summary with “I wrote about how ~” 
+    Use the vocabulary and grammar of a 6th grader
+    Try to use a lot of 관계대명사 & 명사절
+      `,
+      "7": `
+    Please summarize this diary in less than 5 sentences.
+
+    Criteria
+    Start the summary with “I wrote about” or “my diary was about” 
+    Use the vocabulary and grammar of a 7th grader
+    Try to use a lot of 관계대명사 & 명사절
+      `,
+      "8": `
+    Please summarize this diary in less than 6 sentences.
+
+    Criteria
+    Start the summary with “I wrote about” or “my diary was about” 
+    Use the vocabulary and grammar of an 8th grader
+      `,
+      "9": `
+    Please summarize this diary in less than 6 sentences.
+
+    Criteria
+    Start the summary with “I wrote about” or “my diary was about” 
+    Use the vocabulary and grammar of a casual adult
+      `,
+      "10": `
+    Please summarize this diary in less than 6 sentences.
+
+    Criteria
+    Start the summary with “I wrote about” or “my diary was about” 
+    Use the vocabulary and grammar of a casual adult
+      `,
+      "Business: Diary": `
+    Please summarize this business diary in less than 6 sentences. Learning how to summarize work day events is important.
+
+    Criteria
+    Start the summary with “I wrote about” or “my diary was about” 
+    Use the grammar & vocabulary of a semi-formal proficient employee at an English speaking business.
+      `,
+      "Business: In Depth": `
+    Please summarize this business related written material in less than 6 sentences. Learning how to summarize work related content is important for my students.
+
+    Criteria
+    Use the grammar & vocabulary of a semi-formal proficient employee at an English speaking business.
+      `
+    };
+
+    const expressionPrompts: Record<string, string> = {
+      "1": `
+    Please recommend 10 sentences that this student can use at their level to make this diary better.
+
+    Criteria:
+    - Use the vocabulary of a toddler.
+    - Don’t use gerunds and noun clauses.
+    - Make the recommended sentences related to the diary.
+    - Diversify the subject of the sentences (he, she, we, they, my boyfriend).
+    - Mix past, present, and future tense (future = only use “will”).
+
+    Examples:
+    After that, I met my friends and we hung out together.
+    I also ordered some chicken.
+    It was a great day.
+    That’s about it.
+    I wrote about my appointment with my friends.
+    I got home at 3am.
+    A lot of things happened.
+    I am busy nowadays.
+    Recently, I started tennis.
+    It was a very exciting day.
+    There was nothing special today.
+      `,
+      "2": "same as 1",
+      "3": "I am trying to recommend 10 new sentences that the student can use to make this diary better.\\n\\nFor new sentences refer to the list below\\n\\nExpressions that the student learned: [ ... ]", // <–– insert full list here
+      "4": "same as 3", // with expanded expressions
+      "5": "same as 4, plus 'New expressions' section",
+      "6": "same as 5 but emphasize 관계대명사 & 명사절",
+      "7": "same as 6",
+      "8": `
+    Please recommend 10 new sentences that the student can use to make this diary better.  
+    Students love to learn new expressions!  
+    Make sure the expressions are related to the story or the student.
+      `,
+      "9": `
+    Please recommend 10 new sentences that the student can use to make this diary better.  
+    Recommend interesting but realistic expressions that natives would use.
+      `,
+      "10": "same as 9",
+      "Business: Diary": `
+    Please recommend 10 new sentences that the student can use to make this written material better.  
+    Recommend expressions that would be helpful to learn when working in an English work environment.  
+    Recommend expressions relevant to the content.  
+    Recommend expressions that the student would actually say at work.
+      `,
+      "Business: In Depth": `
+    Please recommend 10 new sentences that the student can use to make this written material better.  
+    Recommend expressions that would be helpful to learn when working in an English work environment.  
+    Recommend expressions relevant to the content.  
+    Recommend expressions that the student would actually say at work.
+      `
+    };
+
+    const selectedLevelInstruction = levelInstructions[level as keyof typeof levelInstructions] || "";
+
     
     
     const ai_diary_correction = async (original_text: string) => {
@@ -952,38 +1134,19 @@ export async function POST(request: Request) {
     
     const corrected_diary = await ai_corrected_diary(original_text);
 
-    /// Diary Expressions
-    const ai_diary_expressions = async (original_text: string) => {
+    const ai_diary_expressions = async (original_text: string, level: string) => {
+      const systemPrompt = expressionPrompts[level] || "Please recommend 10 useful English expressions for this diary.";
+
       const completion = await openaiClient.chat.completions.create({
         model: "gpt-4",
         messages: [
           {
             role: "system",
-            content:
-              "Recommend 5~10 new expressions for the student that can be used to improve the diary entry.\n" +
-              "Guidelines:\n" +
-              "- Stay within the vocabulary and grammar level of the diary text.\n" +
-              "- Feel free to be slightly creative in line with the contents of the diary when recommending new expressions.\n" +
-              "- Recommend new sentence structures.\n" +
-              "- Recommend casual versions of the same sentence.\n" +
-              "- Always include the number at the beginning of each expression.\n" +
-              "- On the input, each sentence from the diary corrected text is separated by a newline character '\\n'.\n" +
-              "- Sentences must be no longer than 50 characters.\n\n" +
-              "Expected response example:\n" +
-              "I headed to my friend's house\n" +
-              "I didn't get up until noon\n" +
-              "I woke up late\n" +
-              "I was excited this morning because I used my new perfume\n" +
-              'We watched a movie called "Dune 2"\n' +
-              "My friend runs a pizza store in Seoul.\n" +
-              "I was stressed because I woke up 20 minutes late\n" +
-              "I didn't hear the alarm\n" +
-              "I couldn't find my wallet\n" +
-              "I didn't eat breakfast because I didn't have enough time",
+            content: systemPrompt,
           },
           {
             role: "user",
-            content: `Here is the diary to summarize: ${original_text}`,
+            content: `Here is the diary to improve: ${original_text}`,
           },
         ],
       });
@@ -991,24 +1154,19 @@ export async function POST(request: Request) {
       return completion.choices[0]?.message?.content?.trim() ?? "";
     };
 
-    const diary_expressions = await ai_diary_expressions(original_text);
+    const diary_expressions = await ai_diary_expressions(original_text, level);
+
     console.log(diary_expressions);
 
-    /// Diary Summary
-    const ai_diary_summary = async (original_text: string) => {
+    const ai_diary_summary = async (original_text: string, level: string) => {
+      const systemPrompt = summaryPrompts[level] || "Please summarize this diary in less than 5 sentences.";
+
       const completion = await openaiClient.chat.completions.create({
         model: "gpt-4",
         messages: [
           {
             role: "system",
-            content:
-              "Your task is to summarize a student's diary entry in 3-5 sentences.\n" +
-              "Guidelines:\n" +
-              "- Write the summary in casual adult English tone.\n" +
-              "- Write in first person.\n" +
-              "- Use simple 4th-grade level vocabulary.\n" +
-              "- Ensure that the first sentence starts with 'I wrote about'.\n" +
-              "- Each sentence should have at most 40 words.",
+            content: systemPrompt,
           },
           {
             role: "user",
@@ -1020,7 +1178,8 @@ export async function POST(request: Request) {
       return completion.choices[0]?.message?.content?.trim() ?? "";
     };
 
-    const diary_summary = await ai_diary_summary(original_text);
+    const diary_summary = await ai_diary_summary(original_text, level);
+
     console.log(diary_summary);
 
     const result = await saveDiaryData(

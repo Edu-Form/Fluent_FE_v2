@@ -108,16 +108,8 @@ const DiaryPageContent: React.FC = () => {
   const [original_text, setOriginal_text] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
-  const [level, setLevel] = useState<number | null>(null);
+  const [level, setLevel] = useState<string>("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
-    if (!isNaN(value)) {
-      setLevel(value);
-    } else {
-      setLevel(null); // Reset if input is invalid
-    }
-  };
 
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
@@ -322,15 +314,22 @@ const DiaryPageContent: React.FC = () => {
                 <label htmlFor="level" className="text-sm font-medium">
                   Level:
                 </label>
-                <input
+                <select
                   id="level"
-                  type="number"
-                  min={1}
-                  max={6}
                   value={level ?? ""}
-                  onChange={handleChange}
-                  className="border rounded px-2 py-1 w-16 bg-white"
-                />
+                  onChange={(e) => setLevel(e.target.value)}
+                  className="border rounded px-2 py-1 w-44 bg-white text-sm"
+                >
+                  <option value="">선택</option>
+                  {[...Array(10)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      Level {i + 1}
+                    </option>
+                  ))}
+                  <option value="Business: Diary">Business: Diary</option>
+                  <option value="Business: In Depth">Business: In Depth</option>
+                </select>
+
               </div>
             )}
           </div>
@@ -536,15 +535,21 @@ const DiaryPageContent: React.FC = () => {
               >
                 레벨 설정:
               </label>
-              <input
+              <select
                 id="mobile-level"
-                type="number"
-                min={1}
-                max={6}
-                value={level ?? ""}
-                onChange={handleChange}
-                className="border rounded px-2 py-1 w-16 text-sm"
-              />
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="border rounded px-2 py-1 w-36 text-sm"
+              >
+                <option value="">선택</option>
+                {[...Array(10)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    Level {i + 1}
+                  </option>
+                ))}
+                <option value="Business: Diary">Business: Diary</option>
+                <option value="Business: In Depth">Business: In Depth</option>
+              </select>
             </div>
 
             {/* 날짜 선택기 */}
