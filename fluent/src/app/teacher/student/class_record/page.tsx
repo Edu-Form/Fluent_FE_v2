@@ -1714,7 +1714,6 @@ const ClassPageContent: React.FC = () => {
     },
   });
 
-
   const CustomHighlight = Highlight.extend({
     addKeyboardShortcuts() {
       return {

@@ -12,7 +12,7 @@ const EnterBtn: React.FC<BtnProps> = ({ id, image }) => {
       case "quizlet":
         return {
           main: "QUIZLET",
-          sub: "학생들의 Quizlet을 작성하고 관리하세요!",
+          sub: "Quizlet을 작성해요!",
           shadow: "shadow-indigo-500/30",
           bgColor: "bg-indigo-50",
           hoverColor: "hover:bg-indigo-100",
@@ -21,7 +21,7 @@ const EnterBtn: React.FC<BtnProps> = ({ id, image }) => {
       case "diary":
         return {
           main: "DIARY",
-          sub: "학생들의 일기를 열람하고 관리하세요!",
+          sub: "여러분의 일기를 펼처보아요!",
           shadow: "shadow-orange-500/30",
           bgColor: "bg-orange-50",
           hoverColor: "hover:bg-orange-100",
@@ -30,16 +30,16 @@ const EnterBtn: React.FC<BtnProps> = ({ id, image }) => {
       case "schedule":
         return {
           main: "SCHEDULE",
-          sub: "학생들의 수업일정을 짜보세요!",
+          sub: "수업일정을 살펴보아요!",
           shadow: "shadow-cyan-500/30",
           bgColor: "bg-cyan-50",
           hoverColor: "hover:bg-cyan-100",
           textColor: "text-cyan-600",
         };
-      case "ai":
+      case "write":
         return {
-          main: "AI",
-          sub: "AI의 한줄소개",
+          main: "Write",
+          sub: "일기를 작성해보아요!",
           shadow: "shadow-blue-500/30",
           bgColor: "bg-blue-50",
           hoverColor: "hover:bg-blue-100",

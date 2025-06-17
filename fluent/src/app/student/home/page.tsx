@@ -77,6 +77,7 @@ const HomePage = () => {
 
   const quizlet_url_data = `user=${user}&type=${type}&id=${user_id}&func=quizlet`;
   const diary_url_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
+  const diary_note_data = `user=${user}&type=${type}&id=${user_id}&func=diary`;
   const [, setUserCredits] = useState<string | number>("");
   const [, setNext_schedule_data] = useState<ScheduleData | null>(null);
   const [homeworkData, setHomeworkData] = useState<HomeworkData | null>(null);
@@ -160,6 +161,9 @@ const HomePage = () => {
   }
   function Schedule() {
     router.push(`/student/schedule?${url_data}`);
+  }
+  function Write() {
+    router.push(`/student/diary_note?${diary_note_data}`);
   }
 
   // 최신 소식 카드 컴포넌트
@@ -385,9 +389,9 @@ const HomePage = () => {
             <Announcement />
           </Suspense>
         </div>
-        {/* 학습 메뉴 버튼들 */}
+        {/* 학습 메뉴 버튼들 + 글쓰기 버튼 */}
         <div className="space-y-2 mt-6">
-          <div className="flex flex-row gap-2 sm:gap-10">
+          <div className="flex flex-row gap-2 sm:gap-6">
             <div
               onClick={Schedule}
               className="cursor-pointer flex-1 transition-transform hover:scale-105"
@@ -407,6 +411,13 @@ const HomePage = () => {
               className="cursor-pointer flex-1 transition-transform hover:scale-105"
             >
               <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
+            </div>
+
+            <div
+              onClick={Write}
+              className="cursor-pointer flex-1 transition-transform hover:scale-105"
+            >
+              <EnterBtn id="write" image="/images/card.svg" />
             </div>
           </div>
         </div>

@@ -264,7 +264,7 @@ const DiaryPageContent: React.FC = () => {
 
       {/* 헤더 - 모바일 대응 */}
       <header className="bg-white border-b border-[#F2F4F6] py-2 md:py-4 sticky top-0 z-10">
-        <div className="max-w-screen-xl mx-auto px-3 md:px-5 flex items-center justify-between">
+        <div className="max-w-full-xl mx-auto px-3 md:px-5 flex items-center justify-between">
           {/* 모바일 햄버거 메뉴 버튼 */}
           {isMobile && (
             <button
