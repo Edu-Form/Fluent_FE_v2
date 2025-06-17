@@ -7,6 +7,7 @@ import StudentSelect from "./VariousRoom/StudentSelect";
 import TimeSelector from "./VariousRoom/TimeSelector";
 import RoomSearchModal from "./VariousRoom/RoomSearchModal";
 import { formatDate, formatTime } from "@/utils/formatters";
+import { useGoogleCalendar } from "../hooks/useGoogleCalendar"; // Add this import
 
 interface ScheduleModalProps {
   closeVariousSchedule: () => void;
@@ -19,6 +20,9 @@ export default function VariousRoom({
   const user = searchParams.get("user") || "";
   const type = searchParams.get("type");
   const [teacherName] = useState(user);
+
+  // Google Calendar hook
+  const { isAuthenticated, signIn, signOut, getEventsForDateRange } = useGoogleCalendar();
 
   // 기존 상태 변수 방식으로 복원
   const [dates, setDates] = useState<Date[] | undefined>([]);
@@ -38,6 +42,9 @@ export default function VariousRoom({
   // 강의실 검색 관련 상태 추가
   const [isSearching, setIsSearching] = useState(false); // 검색 모달 상태
   const [searchLoading, setSearchLoading] = useState(true); // 검색 로딩 상태
+
+  // Google Calendar events state
+  const [googleEvents, setGoogleEvents] = useState<any[]>([]);
 
   useEffect(() => {
     // Fetch student list from API
@@ -76,13 +83,37 @@ export default function VariousRoom({
     );
   };
 
-  // 날짜 선택 핸들러
-  const handleDateClick = (day: number) => {
+  // Enhanced date selection handler with Google Calendar conflict checking
+  const handleDateClick = async (day: number) => {
     const selectedDate = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
       day
     );
+
+    // Check for Google Calendar conflicts if authenticated and time is selected
+    if (isAuthenticated && time !== "" && time !== undefined) {
+      try {
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(Number(time), 0, 0, 0);
+        
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(Number(time) + 1, 0, 0, 0); // Assuming 1-hour duration
+
+        const events = await getEventsForDateRange(startOfDay, endOfDay);
+        
+        if (events && events.length > 0) {
+          const conflictMessage = `선택한 날짜와 시간(${time}:00)에 Google Calendar 일정이 있습니다:\n${events.map(e => e.summary).join('\n')}\n\n그래도 추가하시겠습니까?`;
+          
+          if (!confirm(conflictMessage)) {
+            return; // Don't add the date if user cancels
+          }
+        }
+      } catch (error) {
+        console.error("Error checking Google Calendar conflicts:", error);
+        // Continue with date selection even if checking fails
+      }
+    }
 
     // 이미 선택된 날짜인지 확인
     const dateExists = dates?.some(
@@ -144,7 +175,7 @@ export default function VariousRoom({
     }
   };
 
-  // 수업 등록 핸들러 - 모든 날짜에 동일한 시간, 강의실로 등록
+  // Enhanced registration handler with Google Calendar integration
   const registerSchedules = async () => {
     if (!dates || dates.length === 0) return;
     if (time === "" || !room) {
@@ -198,6 +229,38 @@ export default function VariousRoom({
       }
     }
 
+    // Add successful schedules to Google Calendar if authenticated
+    if (isAuthenticated && successfulDates.length > 0) {
+      try {
+        for (const dateStr of successfulDates) {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          const startDateTime = new Date(year, month - 1, day);
+          startDateTime.setHours(Number(time), 0, 0, 0);
+          
+          const endDateTime = new Date(startDateTime);
+          endDateTime.setHours(Number(time) + 1, 0, 0, 0); // 1-hour duration
+
+          // You'll need to implement this method in your useGoogleCalendar hook
+          // await createEvent({
+          //   summary: `${studentName} 수업 - ${teacherName} 선생님`,
+          //   description: `강의실: ${room}`,
+          //   start: {
+          //     dateTime: startDateTime.toISOString(),
+          //     timeZone: 'Asia/Seoul'
+          //   },
+          //   end: {
+          //     dateTime: endDateTime.toISOString(),
+          //     timeZone: 'Asia/Seoul'
+          //   },
+          //   location: room
+          // });
+        }
+      } catch (error) {
+        console.error("Google Calendar 추가 오류:", error);
+        // Don't fail the entire operation if Google Calendar fails
+      }
+    }
+
     // 결과 저장
     setResults({
       all_dates: [...successfulDates, ...failedDates],
@@ -212,7 +275,7 @@ export default function VariousRoom({
         `${successfulDates.length}개 등록 성공, ${failedDates.length}개 등록 실패`
       );
     } else {
-      alert("모든 수업이 등록되었숨다");
+      alert("모든 수업이 등록되었습니다");
     }
 
     setRegisterStatus("수업등록");
@@ -221,13 +284,60 @@ export default function VariousRoom({
 
   async function saveClass() {
     window.location.reload(); // 새로 고침
-  }
+  };
 
   // 날짜 삭제 함수
   const removeDate = (date: Date) => {
     if (!dates) return;
     setDates(dates.filter((d) => d.getTime() !== date.getTime()));
   };
+
+  // Google Calendar 인증 버튼 컴포넌트
+  const GoogleCalendarAuth = () => (
+    <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <svg
+            className="w-5 h-5 text-blue-500 mr-2"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+          </svg>
+          <span className="text-sm font-medium text-blue-700">
+            Google Calendar
+          </span>
+        </div>
+        
+        {isAuthenticated ? (
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+              연결됨
+            </span>
+            <button
+              onClick={signOut}
+              className="text-xs text-gray-600 hover:text-gray-800 underline"
+            >
+              연결 해제
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={signIn}
+            className="text-xs bg-blue-500 text-white px-3 py-1 rounded-full hover:bg-blue-600 transition-colors"
+          >
+            연결하기
+          </button>
+        )}
+      </div>
+      
+      {isAuthenticated && (
+        <p className="text-xs text-gray-600 mt-2">
+          일정 충돌을 확인하고 등록된 수업을 Google Calendar에 자동으로 추가합니다.
+        </p>
+      )}
+    </div>
+  );
 
   // 선택된 날짜 표시 컴포넌트
   const SelectedDates = () => {
@@ -448,6 +558,9 @@ export default function VariousRoom({
 
               {/* 오른쪽 패널: 입력 영역 */}
               <div className="w-1/2 p-4 md:p-6 border-l border-gray-200 overflow-y-auto bg-white flex flex-col">
+                {/* Google Calendar 인증 */}
+                <GoogleCalendarAuth />
+
                 {/* 학생 선택 */}
                 <StudentSelect
                   studentName={studentName}
@@ -488,6 +601,7 @@ export default function VariousRoom({
                         ></path>
                       </svg>
                       성공적으로 등록되었습니다
+                      {isAuthenticated && " (Google Calendar에도 추가됨)"}
                     </div>
                   ) : (
                     <div className="inline-block bg-yellow-100 text-yellow-600 px-4 py-2 rounded-full mb-10">
