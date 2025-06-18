@@ -1,10 +1,12 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { IoCheckmarkCircle, IoCloseCircle, IoMenu } from "react-icons/io5";
 import Link from "next/link";
+import { v4 as uuidv4 } from 'uuid';
+import Calendar from "@/components/VariousRoom/Calendar";
 
 // 동적 컴포넌트 로딩
 const Announcement = dynamic(
@@ -28,6 +30,16 @@ const SkeletonLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-full"></div>
 );
 
+// Add this new interface
+interface LocalEvent {
+  id: string; // Unique ID for your local event
+  title: string;
+  description?: string;
+  start: Date;
+  end: Date;
+  googleEventId?: string; // To store the Google Calendar event ID
+}
+
 const HomePageContent = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
@@ -40,8 +52,56 @@ const HomePageContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Add these new state variables for calendar
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [localEvents, setLocalEvents] = useState<LocalEvent[]>([]);
+
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;
+
+  // Add calendar navigation callbacks
+  const goToPreviousMonth = useCallback(() => {
+    setCurrentMonth(prevMonth => {
+      const newMonth = new Date(prevMonth);
+      newMonth.setMonth(prevMonth.getMonth() - 1);
+      return newMonth;
+    });
+  }, []);
+
+  const goToNextMonth = useCallback(() => {
+    setCurrentMonth(prevMonth => {
+      const newMonth = new Date(prevMonth);
+      newMonth.setMonth(prevMonth.getMonth() + 1);
+      return newMonth;
+    });
+  }, []);
+
+  const handleDateClick = useCallback((day: number) => {
+    // This function can now be used to e.g., open a modal to add an event for that day
+    console.log(`Clicked on day: ${day}`);
+  }, []);
+
+  // Local event management functions
+  const addLocalEvent = useCallback(async (event: Omit<LocalEvent, 'id' | 'googleEventId'>): Promise<LocalEvent> => {
+    const newEvent: LocalEvent = {
+      ...event,
+      id: uuidv4(), // Generate a unique ID for the local event
+    };
+    setLocalEvents(prevEvents => [...prevEvents, newEvent]);
+    return newEvent;
+  }, []);
+
+  const updateLocalEvent = useCallback(async (eventId: string, updatedEvent: Partial<LocalEvent>) => {
+    setLocalEvents(prevEvents =>
+      prevEvents.map(event =>
+        event.id === eventId ? { ...event, ...updatedEvent } : event
+      )
+    );
+  }, []);
+
+  const deleteLocalEvent = useCallback(async (eventId: string) => {
+    setLocalEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
+  }, []);
 
   // 화면 크기 감지
   useEffect(() => {
@@ -89,8 +149,9 @@ const HomePageContent = () => {
     ].reduce((a, b) => a + b, 0);
   };
 
+  // useEffect for fetching schedule and student data
   useEffect(() => {
-    if (!user || classes.length > 0) return;
+    if (!user) return; // Fetch only if user is defined
 
     // 수업 스케줄 데이터 불러오기
     fetch(URL)
@@ -109,7 +170,46 @@ const HomePageContent = () => {
         setAllStudents(data);
       })
       .catch((error) => console.log("Error fetching students:", error));
-  }, [user, URL, ALL_STUDENTS_URL, classes.length]);
+  }, [user, URL, ALL_STUDENTS_URL]); // Remove classes.length from dependencies to avoid infinite loop
+
+  // useEffect to convert fetched classes data to localEvents format
+  useEffect(() => {
+    if (classes.length > 0 && localEvents.length === 0) { // Only process if classes exist and localEvents is empty (initial load)
+        const formattedLocalEvents: LocalEvent[] = classes.map((cls: any) => {
+            // Ensure cls.date is a string before splitting
+            if (!cls.date || typeof cls.date !== 'string') {
+                console.warn("Skipping class with invalid date format:", cls);
+                return null;
+            }
+            const [year, month, day] = cls.date.split(". ").map(Number);
+
+            // Basic validation for parsed date components
+            if (isNaN(year) || isNaN(month) || isNaN(day) || !cls.time || !cls.duration) {
+                console.warn("Skipping class with invalid date/time components:", cls);
+                return null;
+            }
+            
+            const start = new Date(year, month - 1, day, cls.time, 0, 0);
+            const end = new Date(start.getTime() + cls.duration * 60 * 60 * 1000);
+
+            // Validate the created date objects
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                console.warn("Skipping class with invalid generated date objects:", cls);
+                return null;
+            }
+
+            return {
+                id: uuidv4(), // Generate a new local ID
+                title: `${cls.room_name}호 ${cls.student_name}님`,
+                description: `Teacher: ${cls.teacher_name}`,
+                start: start,
+                end: end,
+                // No googleEventId for these initially fetched local classes
+            };
+        }).filter(event => event !== null);
+        setLocalEvents(formattedLocalEvents);
+    }
+  }, [classes, localEvents.length]); // Dependency on classes data and localEvents.length for initial load
 
   return (
     <div className="flex flex-col md:flex-row w-full h-screen bg-gray-50">
@@ -209,7 +309,15 @@ const HomePageContent = () => {
               캘린더
             </h2>
             <Suspense fallback={<SkeletonLoader />}>
-              <Teacher_toastUI data={classes} />
+              <Calendar
+                currentMonth={currentMonth}
+                goToPreviousMonth={goToPreviousMonth}
+                goToNextMonth={goToNextMonth}
+                localEvents={localEvents}
+                addLocalEvent={addLocalEvent}
+                updateLocalEvent={updateLocalEvent}
+                deleteLocalEvent={deleteLocalEvent}
+              />
             </Suspense>
           </div>
         </div>

@@ -81,14 +81,33 @@ const Calendar: React.FC<CalendarProps> = ({
 
         // Optional: Sync Google events to local state if they don't exist locally
         // This is a simplified approach and might need refinement for robust sync
-        // events.forEach(gEvent => {
-        //   const isLocallyManaged = localEvents.some(lEvent => lEvent.googleEventId === gEvent.id);
-        //   if (!isLocallyManaged) {
-        //     // Add to local state (consider a proper mapping/deduplication)
-        //     // You might want to ask the user if they want to import, or simply add them
-        //     console.log("Google event not found locally, consider adding:", gEvent.summary);
-        //   }
-        // });
+        events.forEach((gEvent: GoogleCalendarEvent) => {
+          // Check if a local event with this Google Calendar ID already exists
+          const isLocallyManaged = localEvents.some(lEvent => lEvent.googleEventId === gEvent.id);
+          
+          if (!isLocallyManaged && gEvent.id && gEvent.summary && gEvent.start && gEvent.end) {
+            // Convert Google event to LocalEvent format
+            const eventDateStart = new Date(gEvent.start?.dateTime ?? gEvent.start?.date ?? "");
+            const eventDateEnd = new Date(gEvent.end?.dateTime ?? gEvent.end?.date ?? "");
+
+            // Basic validation to ensure valid dates
+            if (isNaN(eventDateStart.getTime()) || isNaN(eventDateEnd.getTime())) {
+              console.warn("Skipping invalid Google event date:", gEvent);
+              return;
+            }
+
+            const newLocalEvent: Omit<LocalEvent, 'id'> = {
+              title: gEvent.summary,
+              description: gEvent.description,
+              start: eventDateStart,
+              end: eventDateEnd,
+              googleEventId: gEvent.id, // Store the Google Event ID
+            };
+            // Add to local state. Note: We don't need the returned Promise value here
+            // since this is for displaying external events.
+            addLocalEvent(newLocalEvent); 
+          }
+        });
 
       } catch (error) {
         console.error('Error loading Google Calendar events:', error);
@@ -97,7 +116,7 @@ const Calendar: React.FC<CalendarProps> = ({
     };
 
     loadGoogleEvents();
-  }, [isAuthenticated, year, month, getEventsForDateRange]);
+  }, [isAuthenticated, year, month, getEventsForDateRange, localEvents, addLocalEvent]); // Add localEvents and addLocalEvent to deps
 
   // Combine local and Google events for display
   const allEventsForMonth = useMemo(() => {
