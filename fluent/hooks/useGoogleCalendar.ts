@@ -1,13 +1,9 @@
 // hooks/useGoogleCalendar.ts
 import { useState, useEffect, useCallback } from 'react';
 import { useGoogleLogin, googleLogout } from '@react-oauth/google';
-import { GApiAuh2Client, GapiClient, GapiGoogleAuth } from '../types/global'; // Define these types
-import { OAuth2Client } from 'google-auth-library'; // For backend verification (optional but recommended)
 
-// Define your Google API types (create a file like types/global.d.ts)
 declare global {
   interface Window {
-    gapi: any;
     google: any;
   }
 }
@@ -32,50 +28,22 @@ export const useGoogleCalendar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  // Initialize Google API client (gapi)
-  const initGapiClient = useCallback(async (token: string) => {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        window.gapi.load('client', async () => {
-          try {
-            await window.gapi.client.init({
-              apiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY, // Not strictly needed for authenticated calls but good practice
-              clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-              discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"],
-              scope: 'https://www.googleapis.com/auth/calendar.events',
-            });
-            resolve();
-          } catch (error) {
-            console.error("Error initializing gapi client:", error);
-            reject(error);
-          }
-        });
-      });
-
-      window.gapi.client.setToken({ access_token: token });
-      setIsAuthenticated(true);
-    } catch (error) {
-      console.error("Failed to initialize gapi client:", error);
-      setIsAuthenticated(false);
-      setAccessToken(null);
-    }
-  }, []);
-
-  // Google Login Hook
+  // Google Login Hook with updated configuration
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       console.log('Login Success:', tokenResponse);
       const accessToken = tokenResponse.access_token;
       setAccessToken(accessToken);
+      setIsAuthenticated(true);
       localStorage.setItem('google_access_token', accessToken);
-      await initGapiClient(accessToken);
     },
     onError: (errorResponse) => {
       console.error('Login Failed:', errorResponse);
       setIsAuthenticated(false);
       setAccessToken(null);
     },
-    scope: 'https://www.googleapis.com/auth/calendar.events', // Request read/write access
+    scope: 'https://www.googleapis.com/auth/calendar.events',
+    flow: 'implicit'
   });
 
   // Logout function
@@ -84,10 +52,6 @@ export const useGoogleCalendar = () => {
     setIsAuthenticated(false);
     setAccessToken(null);
     localStorage.removeItem('google_access_token');
-    // Clear gapi token if it was set
-    if (window.gapi && window.gapi.client) {
-      window.gapi.client.setToken('');
-    }
     console.log('Logged out from Google Calendar.');
   };
 
@@ -95,95 +59,139 @@ export const useGoogleCalendar = () => {
   useEffect(() => {
     const storedToken = localStorage.getItem('google_access_token');
     if (storedToken) {
-      // Potentially verify the token here to ensure it's still valid
-      // For simplicity, we'll just try to initialize gapi with it
-      initGapiClient(storedToken);
+      setAccessToken(storedToken);
+      setIsAuthenticated(true);
     }
-  }, [initGapiClient]);
+  }, []);
 
   // Function to get events for a date range
   const getEventsForDateRange = useCallback(async (startDate: Date, endDate: Date) => {
-    if (!isAuthenticated || !window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
-      console.warn("Google API client not authenticated or initialized.");
+    if (!isAuthenticated || !accessToken) {
+      console.warn("Not authenticated");
       return [];
     }
 
     try {
-      const response = await window.gapi.client.calendar.events.list({
-        calendarId: 'primary', // Use 'primary' for the user's primary calendar
-        timeMin: startDate.toISOString(),
-        timeMax: endDate.toISOString(),
-        showDeleted: false,
-        singleEvents: true,
-        orderBy: 'startTime',
-      });
-      return response.result.items;
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+        `timeMin=${startDate.toISOString()}&` +
+        `timeMax=${endDate.toISOString()}&` +
+        `showDeleted=false&` +
+        `singleEvents=true&` +
+        `orderBy=startTime&` +
+        `maxResults=100`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.items || [];
     } catch (error) {
       console.error("Error fetching Google Calendar events:", error);
       return [];
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, accessToken]);
 
   // Function to create an event
   const createGoogleCalendarEvent = useCallback(async (event: GoogleCalendarEvent) => {
-    if (!isAuthenticated || !window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
-      console.warn("Google API client not authenticated or initialized.");
-      throw new Error("Google Calendar not connected.");
+    if (!isAuthenticated || !accessToken) {
+      throw new Error("Not authenticated");
     }
 
     try {
-      const response = await window.gapi.client.calendar.events.insert({
-        calendarId: 'primary',
-        resource: event,
-      });
-      console.log('Event created:', response.result);
-      return response.result; // Return the created event, which will have an `id`
+      const response = await fetch(
+        'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(event),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Event created:', data);
+      return data;
     } catch (error) {
       console.error("Error creating Google Calendar event:", error);
       throw error;
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, accessToken]);
 
   // Function to update an event
   const updateGoogleCalendarEvent = useCallback(async (eventId: string, updatedEvent: GoogleCalendarEvent) => {
-    if (!isAuthenticated || !window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
-      console.warn("Google API client not authenticated or initialized.");
-      throw new Error("Google Calendar not connected.");
+    if (!isAuthenticated || !accessToken) {
+      throw new Error("Not authenticated");
     }
 
     try {
-      const response = await window.gapi.client.calendar.events.update({
-        calendarId: 'primary',
-        eventId: eventId,
-        resource: updatedEvent,
-      });
-      console.log('Event updated:', response.result);
-      return response.result;
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedEvent),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Event updated:', data);
+      return data;
     } catch (error) {
       console.error("Error updating Google Calendar event:", error);
       throw error;
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, accessToken]);
 
   // Function to delete an event
   const deleteGoogleCalendarEvent = useCallback(async (eventId: string) => {
-    if (!isAuthenticated || !window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
-      console.warn("Google API client not authenticated or initialized.");
-      throw new Error("Google Calendar not connected.");
+    if (!isAuthenticated || !accessToken) {
+      throw new Error("Not authenticated");
     }
 
     try {
-      await window.gapi.client.calendar.events.delete({
-        calendarId: 'primary',
-        eventId: eventId,
-      });
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       console.log('Event deleted successfully:', eventId);
       return true;
     } catch (error) {
       console.error("Error deleting Google Calendar event:", error);
       throw error;
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, accessToken]);
 
   return {
     isAuthenticated,

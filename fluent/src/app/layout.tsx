@@ -5,6 +5,7 @@
 import "./globals.css";
 import { usePathname } from "next/navigation";
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import Script from 'next/script';
 
 export default function RootLayout({
   children,
@@ -33,6 +34,16 @@ export default function RootLayout({
             </div>
           )}
         </GoogleOAuthProvider>
+        <Script
+          src="https://apis.google.com/js/api.js"
+          strategy="beforeInteractive"
+          onLoad={() => {
+            console.log('Google gapi script loaded.');
+            // You might want to call window.gapi.load('client:auth2') here
+            // or handle it in the useGoogleCalendar hook once gapi is available.
+          }}
+          onError={(e) => console.error('Error loading Google gapi script:', e)}
+        />
       </body>
     </html>
   );
