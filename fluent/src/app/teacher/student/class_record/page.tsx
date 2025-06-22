@@ -2171,40 +2171,50 @@ const ClassPageContent: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    editor?.chain().focus().toggleBulletList().run()
-                  }
-                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    editor?.isActive("bulletList")
-                      ? "bg-[#3182F6] text-white shadow-sm"
-                      : "bg-[#F8F9FA] text-[#4E5968] hover:bg-[#F2F4F6] hover:text-[#3182F6]"
-                  }`}
-                >
-                  List
-                </button>
-                <button
-                  type="button"
                   onClick={() => {
-                    const selection = editor?.state.selection;
-                    if (!selection || !editor) return;
+                    if (!editor) return;
 
-                    const { from, to } = selection;
-                    const selectedText = editor.state.doc.textBetween(
-                      from,
-                      to,
-                      "\n"
-                    );
-                    const lines = selectedText.split("\n");
-                    const numberedLines = lines
-                      .map((line, idx) => `${idx + 1}. ${line}`)
-                      .join("\n");
+                    const { state } = editor;
+                    const { from, to } = state.selection;
+                    const paragraphs: { start: number; end: number; text: string }[] = [];
 
-                    editor
-                      .chain()
-                      .focus()
-                      .insertContentAt({ from, to }, numberedLines)
-                      .run();
+                    // Step 1: Collect paragraph ranges
+                    state.doc.nodesBetween(from, to, (node, pos, parent, index) => {
+                      if (node.type.name === "paragraph") {
+                        const text = node.textContent.trim();
+                        if (text.length > 0) {
+                          paragraphs.push({
+                            start: pos,
+                            end: pos + node.nodeSize,
+                            text,
+                          });
+                        }
+                      }
+                    });
+
+                    // Step 2: Apply numbering from bottom to top to avoid offset shift
+                    paragraphs
+                      .slice()
+                      .reverse()
+                      .forEach(({ start, end, text }, idx, arr) => {
+                        const number = arr.length - idx; // Top-down numbering
+                        editor.commands.insertContentAt(
+                          { from: start, to: end },
+                          {
+                            type: "paragraph",
+                            content: [
+                              {
+                                type: "text",
+                                text: `${number}. ${text}`,
+                              },
+                            ],
+                          }
+                        );
+                      });
+
+                    editor.chain().focus().run();
                   }}
+
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-[#F8F9FA] text-[#4E5968] hover:bg-[#F2F4F6] hover:text-[#3182F6]"
                 >
                   Numbering
