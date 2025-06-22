@@ -212,6 +212,24 @@ export async function saveScheduleData(schedule: any) {
   }
 }
 
+export const getAllSchedules = async () => {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    
+    const allSchedules = await db
+      .collection("schedules")
+      .find({})
+      .sort({ date: 1, time: 1, room_name: 1 })
+      .toArray();
+
+    return allSchedules.map(serialize_document);
+  } catch (error) {
+    console.error("Error fetching all schedules:", error);
+    throw new Error("Database error");
+  }
+};
+
 export async function deleteScheduleData(
   schedule_id: string
 ): Promise<{ status: number; message: string }> {
