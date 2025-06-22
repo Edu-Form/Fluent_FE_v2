@@ -212,20 +212,19 @@ export async function saveScheduleData(schedule: any) {
   }
 }
 
-export const getAllSchedules = async () => {
+export const getSchedulesByDate = async (dateStr: string) => {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
-    
-    const allSchedules = await db
+    const schedules = await db
       .collection("schedules")
-      .find({})
-      .sort({ date: 1, time: 1, room_name: 1 })
+      .find({ date: dateStr })  // Assuming the 'date' field is a string like "2025. 06. 16."
+      .sort({ time: 1, room_name: 1 })
       .toArray();
 
-    return allSchedules.map(serialize_document);
+    return schedules.map(serialize_document);
   } catch (error) {
-    console.error("Error fetching all schedules:", error);
+    console.error("Error fetching schedules by date:", error);
     throw new Error("Database error");
   }
 };
