@@ -1753,10 +1753,9 @@ const ClassPageContent: React.FC = () => {
 
   const [homework, setHomework] = useState("");
   const [nextClass, setNextClass] = useState("");
-  const latestHomework =
-    searchedNotes[searchedNotes.length - 1]?.homework || "";
-  const latestNextClass =
-    searchedNotes[searchedNotes.length - 1]?.nextClass || "";
+  const latestNote = searchedNotes[0]; // already reversed = newest first
+  const latestHomework = latestNote?.homework || "";
+  const latestNextClass = latestNote?.nextClass || "";
   const [activeOption, setActiveOption] = useState<"option1" | "option2">(
     "option1"
   );
@@ -2417,7 +2416,7 @@ const ClassPageContent: React.FC = () => {
 
                       {searchedNotes.length > 0 && (
                         <div className="space-y-2">
-                          {[...searchedNotes].reverse().map((note) => (
+                          {[...searchedNotes].map((note) => (
                             <div
                               key={note._id}
                               onClick={() => {

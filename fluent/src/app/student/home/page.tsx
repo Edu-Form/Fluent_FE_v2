@@ -407,17 +407,17 @@ const HomePage = () => {
             </div>
 
             <div
-              onClick={Diary}
-              className="cursor-pointer flex-1 transition-transform hover:scale-105"
-            >
-              <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
-            </div>
-
-            <div
               onClick={Write}
               className="cursor-pointer flex-1 transition-transform hover:scale-105"
             >
               <EnterBtn id="write" image="/images/card.svg" />
+            </div>
+
+            <div
+              onClick={Diary}
+              className="cursor-pointer flex-1 transition-transform hover:scale-105"
+            >
+              <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
             </div>
           </div>
         </div>
