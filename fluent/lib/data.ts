@@ -66,7 +66,7 @@ export async function getStudentDiaryData(student_name: string) {
     const filteredDiaries = await db
       .collection("diary")
       .find({ student_name })
-      .sort({ date: 1 })
+      .sort({ date: -1 })
       .toArray(); // Convert cursor to an array
     console.log(filteredDiaries);
     if (!filteredDiaries || filteredDiaries.length === 0) {
