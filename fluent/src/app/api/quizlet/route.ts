@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-          "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward.\n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n",
+          "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward.\n Leave punctuation marks like >, < as it is. \n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n",
         },
         { role: "user", content: eng_quizlet_text },
       ],

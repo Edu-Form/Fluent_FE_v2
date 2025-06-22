@@ -111,15 +111,15 @@ body {
 }
 
 .custom-editor mark {
-  background-color: #d0f8dc; /* Tailwind's bg-green-50 */
-  color: #1f2937;            /* Tailwind's text-gray-800 */
+  background-color: #d0f8dc;
+  color: #1f2937;
   padding: 0 2px;
   border-radius: 2px;
 }
 
 .prose.custom-editor {
-  font-size: 1.125rem; /* text-lg */
-  line-height: 1.75rem;
+  font-size: 1.5rem;     /* was 1.25rem → now text-2xl */
+  line-height: 2.25rem;
   color: #000;
 }
 
@@ -127,32 +127,32 @@ body {
 .prose.custom-editor li,
 .prose.custom-editor span,
 .prose.custom-editor div {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
+  font-size: 1.5rem;     /* was 1.25rem */
+  line-height: 2.25rem;
   color: #000;
 }
 
 .prose.custom-editor h1 {
-  font-size: 2rem;       /* text-3xl */
-  line-height: 2.5rem;
+  font-size: 3rem;       /* was 2.5rem → now text-5xl */
+  line-height: 3.25rem;
   font-weight: bold;
-  margin: 1.5rem 0 1rem;
+  margin: 2rem 0 1.5rem;
   color: #000;
 }
 
 .prose.custom-editor h2 {
-  font-size: 1.5rem;     /* text-2xl */
-  line-height: 2rem;
+  font-size: 2.5rem;     /* was 2rem → now text-4xl */
+  line-height: 3rem;
   font-weight: bold;
-  margin: 1.25rem 0 0.75rem;
+  margin: 1.75rem 0 1.25rem;
   color: #000;
 }
 
 .prose.custom-editor h3 {
-  font-size: 1.25rem;    /* text-xl */
-  line-height: 1.75rem;
+  font-size: 2rem;       /* was 1.5rem → now text-3xl */
+  line-height: 2.5rem;
   font-weight: bold;
-  margin: 1rem 0 0.5rem;
+  margin: 1.5rem 0 1rem;
   color: #000;
 }
 
@@ -167,4 +167,5 @@ body {
   margin-bottom: 0.25rem;
   color: #000;
 }
+
 
