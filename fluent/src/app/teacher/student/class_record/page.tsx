@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, ReactNode } from "react";
+import { useState, useEffect, Suspense, ReactNode, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -8,6 +8,7 @@ import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
 import { Extension } from "@tiptap/core";
 import { splitBlock } from "prosemirror-commands";
+import debounce from "lodash.debounce";
 import "react-day-picker/dist/style.css";
 
 // 날짜 포맷 함수들 유지
@@ -99,6 +100,22 @@ const ClassPageContent: React.FC = () => {
     { eng: string; kor: string }[]
   >([]);
   const [translating, setTranslating] = useState(false);
+  const saveTempClassNote = useCallback(
+    debounce(async (html: string) => {
+      console.log("💾 Attempting to autosave:", { student_name, html }); // ← Add this
+      try {
+        await fetch("/api/quizlet/temp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ student_name, original_text: html }),
+        });
+      } catch (error) {
+        console.error("❌ Autosave failed:", error);
+      }
+    }, 1000),
+    [student_name]
+  );
+
 
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
@@ -1823,9 +1840,33 @@ const ClassPageContent: React.FC = () => {
     extensions: [StarterKit, CustomHighlight, Underline, PersistentHeading],
     content: original_text,
     onUpdate: ({ editor }) => {
-      setOriginal_text(editor.getHTML());
+      const html = editor.getHTML();
+      setOriginal_text(html);
+      saveTempClassNote(html); 
     },
   });
+
+  useEffect(() => {
+    const loadTempNote = async () => {
+      if (!student_name || !editor) return;
+
+      try {
+        const res = await fetch(`/api/quizlet/temp?student_name=${encodeURIComponent(student_name)}`);
+        if (!res.ok) throw new Error("Failed to fetch class note draft");
+
+        const data = await res.json();
+        if (data?.original_text) {
+          setOriginal_text(data.original_text);
+          editor.commands.setContent(data.original_text); // 👈 Load into editor
+        }
+      } catch (err) {
+        console.error("Failed to load saved class note:", err);
+      }
+    };
+
+    loadTempNote();
+  }, [student_name, editor]);
+
 
   useEffect(() => {
     if (editor && original_text !== editor.getHTML()) {
