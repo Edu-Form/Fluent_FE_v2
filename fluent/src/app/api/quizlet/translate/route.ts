@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const eng_quizlet_text = eng_quizlet.join("\n");
 
     const completion = await openaiClient.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

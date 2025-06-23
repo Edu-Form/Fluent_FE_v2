@@ -1899,7 +1899,7 @@ Make each recommendation simple and one line each instead of a long explanation.
     
     const ai_diary_correction = async (original_text: string) => {
       const completion = await openaiClient.chat.completions.create({
-        model: "gpt-4-turbo",
+        model: "gpt-4o",
         response_format: { type: "json_object" }, // Ensures structured output
         messages: [
           {
@@ -1951,7 +1951,7 @@ Make each recommendation simple and one line each instead of a long explanation.
     /// Diary Summary
     const ai_corrected_diary = async (original_text: string) => {
       const completion = await openaiClient.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -1974,7 +1974,7 @@ Make each recommendation simple and one line each instead of a long explanation.
       const systemPrompt = expressionPrompts[level] || "Please recommend 10 useful English expressions for this diary.";
 
       const completion = await openaiClient.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -1998,7 +1998,7 @@ Make each recommendation simple and one line each instead of a long explanation.
       const systemPrompt = summaryPrompts[level] || "Please summarize this diary in less than 5 sentences.";
 
       const completion = await openaiClient.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",

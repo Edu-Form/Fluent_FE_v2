@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
     // Use OpenAI API to translate eng_quizlet to Korean
     const completion = await openaiClient.chat.completions.create({
-      model: "gpt-4", // Use the correct GPT-4 model
+      model: "gpt-4o", // Use the correct GPT-4 model
       messages: [
         {
           role: "system",
