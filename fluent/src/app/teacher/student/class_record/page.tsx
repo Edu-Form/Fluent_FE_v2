@@ -116,7 +116,6 @@ const ClassPageContent: React.FC = () => {
     [student_name]
   );
 
-
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
     setIsMounted(true);
@@ -1842,7 +1841,7 @@ const ClassPageContent: React.FC = () => {
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       setOriginal_text(html);
-      saveTempClassNote(html); 
+      saveTempClassNote(html);
     },
   });
 
@@ -1851,7 +1850,9 @@ const ClassPageContent: React.FC = () => {
       if (!student_name || !editor) return;
 
       try {
-        const res = await fetch(`/api/quizlet/temp?student_name=${encodeURIComponent(student_name)}`);
+        const res = await fetch(
+          `/api/quizlet/temp?student_name=${encodeURIComponent(student_name)}`
+        );
         if (!res.ok) throw new Error("Failed to fetch class note draft");
 
         const data = await res.json();
@@ -1866,7 +1867,6 @@ const ClassPageContent: React.FC = () => {
 
     loadTempNote();
   }, [student_name, editor]);
-
 
   useEffect(() => {
     if (editor && original_text !== editor.getHTML()) {
@@ -2176,10 +2176,14 @@ const ClassPageContent: React.FC = () => {
 
                     const { state } = editor;
                     const { from, to } = state.selection;
-                    const paragraphs: { start: number; end: number; text: string }[] = [];
+                    const paragraphs: {
+                      start: number;
+                      end: number;
+                      text: string;
+                    }[] = [];
 
                     // Step 1: Collect paragraph ranges
-                    state.doc.nodesBetween(from, to, (node, pos, parent, index) => {
+                    state.doc.nodesBetween(from, to, (node, pos) => {
                       if (node.type.name === "paragraph") {
                         const text = node.textContent.trim();
                         if (text.length > 0) {
@@ -2214,7 +2218,6 @@ const ClassPageContent: React.FC = () => {
 
                     editor.chain().focus().run();
                   }}
-
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-[#F8F9FA] text-[#4E5968] hover:bg-[#F2F4F6] hover:text-[#3182F6]"
                 >
                   Numbering

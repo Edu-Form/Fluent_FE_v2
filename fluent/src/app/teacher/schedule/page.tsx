@@ -19,6 +19,7 @@ const SchedulePage = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
+  const id = searchParams.get("id");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVariousRoomOpen, setIsVariousRoomOpen] = useState(false);
@@ -112,7 +113,7 @@ const SchedulePage = () => {
       .schedule-container {
         display: flex;
         width: 100%;
-        height: 80vh;
+        height: 100vh;
         background-color: #f9f9f9;
         padding: 16px;
         gap: 16px;
@@ -357,7 +358,23 @@ const SchedulePage = () => {
   return (
     <div className="schedule-container">
       {/* 왼쪽: 사이드바 (날짜 선택 및 학생 리스트) */}
+
       <div className="sidebar">
+        {type === "teacher" &&
+          ((user === "David" && id === "01027137397") ||
+            (user === "Phil" && id === "01082413315")) && (
+            <button
+              onClick={() =>
+                window.open(
+                  `/teacher/admin_schedule?user=${user}&type=${type}&id=${id}`,
+                  "_blank"
+                )
+              }
+              className="action-button primary-button"
+            >
+              관리자 페이지로 들어가기
+            </button>
+          )}
         {/* 날짜 선택 섹션 */}
         <div className="date-section">
           <div className="selected-date">{formatDate(selectedDate)}</div>
