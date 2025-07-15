@@ -1,4 +1,3 @@
-// Schedule Page Component with Class Note Viewer
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -13,6 +12,8 @@ import {
 import "react-day-picker/dist/style.css";
 import AddRoom from "@/components/addroom";
 import VariousRoom from "@/components/VariousRoom";
+import { DraggableScheduleCard } from "@/components/Drag/DraggableScheduleCard";
+import { DroppableCalendarCell } from "@/components/Drag/DroppableCalendarCell";
 
 interface ClassNote {
   _id: string;
@@ -49,8 +50,7 @@ const ClassNoteViewer: React.FC<ClassNoteViewerProps> = ({ note, onClose }) => {
         {/* 헤더 */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Class Note</h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-2xl font-semibold text-gray-600 mt-1">
               {note.student_name} - {note.class_date}
             </p>
           </div>
@@ -67,8 +67,7 @@ const ClassNoteViewer: React.FC<ClassNoteViewerProps> = ({ note, onClose }) => {
           <div className="space-y-8">
             {/* 클래스 노트 내용 */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <h3 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-2 border-b border-gray-200 pb-4">
                 Class Notes
               </h3>
               <div
@@ -80,8 +79,7 @@ const ClassNoteViewer: React.FC<ClassNoteViewerProps> = ({ note, onClose }) => {
             {/* 숙제 */}
             {note.homework && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <h3 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-2 border-b border-gray-200 pb-4">
                   Homework
                 </h3>
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">
@@ -95,8 +93,7 @@ const ClassNoteViewer: React.FC<ClassNoteViewerProps> = ({ note, onClose }) => {
             {/* 다음 수업 계획 */}
             {note.nextClass && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <h3 className="text-2xl font-semibold text-gray-800 mb-6 flex items-center gap-2 border-b border-gray-200 pb-4">
                   Next Class Plan
                 </h3>
                 <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
@@ -126,12 +123,13 @@ const ClassNoteViewer: React.FC<ClassNoteViewerProps> = ({ note, onClose }) => {
   );
 };
 
-// 커스텀 월간 캘린더 컴포넌트
+// 커스텀 월간 캘린더 컴포넌트 with Enhanced Drag & Drop
 interface CustomCalendarProps {
   data: Schedule[];
   classNotes: ClassNote[];
   onDateSelect?: (date: Date) => void;
   onViewNote?: (note: ClassNote) => void;
+  onScheduleMove?: (schedule: Schedule, newDate: Date) => void;
 }
 
 const CustomCalendar: React.FC<CustomCalendarProps> = ({
@@ -139,8 +137,11 @@ const CustomCalendar: React.FC<CustomCalendarProps> = ({
   classNotes,
   onDateSelect,
   onViewNote,
+  onScheduleMove,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [draggedSchedule, setDraggedSchedule] = useState<Schedule | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<Date | null>(null);
 
   // 월의 첫째 날과 마지막 날 구하기
   const getMonthData = (date: Date) => {
@@ -148,17 +149,13 @@ const CustomCalendar: React.FC<CustomCalendarProps> = ({
     const month = date.getMonth();
 
     const firstDay = new Date(year, month, 1);
-
-    // 달력 시작 날짜 (이전 달의 일부 포함)
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
 
-    // 달력의 모든 날짜 생성 (6주)
     const calendarDays = [];
     const currentCalendarDate = new Date(startDate);
 
     for (let i = 0; i < 42; i++) {
-      // 6주 × 7일
       calendarDays.push(new Date(currentCalendarDate));
       currentCalendarDate.setDate(currentCalendarDate.getDate() + 1);
     }
@@ -174,13 +171,8 @@ const CustomCalendar: React.FC<CustomCalendarProps> = ({
       date.getMonth() + 1
     ).padStart(2, "0")}. ${String(date.getDate()).padStart(2, "0")}.`;
 
-    // 스케줄 필터링
     const daySchedules = data.filter((schedule) => schedule.date === dateStr);
-
-    // 클래스 노트 필터링 (class_date 기준)
     const dayNotes = classNotes.filter((note) => note.class_date === dateStr);
-
-    // 스케줄이 없는 노트만 필터링
     const notesWithoutSchedule = dayNotes.filter(
       (note) =>
         !daySchedules.some(
@@ -195,19 +187,86 @@ const CustomCalendar: React.FC<CustomCalendarProps> = ({
     };
   };
 
-  // 강의실별 색상 매핑
-  const getRoomColor = (roomName: string): string => {
-    const roomColorMap: { [key: string]: string } = {
-      HF1: "bg-blue-500",
-      HF2: "bg-green-500",
-      HF3: "bg-purple-500",
-      HF4: "bg-orange-500",
-      HF5: "bg-pink-500",
-      "2-3": "bg-yellow-500",
-    };
+  // 드래그 이벤트 핸들러 - 캘린더 스케줄용
+  const handleScheduleDragStart = (e: React.DragEvent, schedule: Schedule) => {
+    setDraggedSchedule(schedule);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/html", e.currentTarget.outerHTML);
 
-    const roomKey = roomName?.replace(/호$/, "");
-    return roomColorMap[roomKey] || "bg-gray-500";
+    // 드래그 이미지 커스터마이징 - 너비 제한
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.transform = "rotate(5deg)";
+    dragImage.style.opacity = "0.8";
+    dragImage.style.width = "120px";
+    dragImage.style.maxWidth = "120px";
+    dragImage.style.fontSize = "11px";
+    dragImage.style.padding = "4px 6px";
+    dragImage.style.whiteSpace = "nowrap";
+    dragImage.style.overflow = "hidden";
+    dragImage.style.textOverflow = "ellipsis";
+    dragImage.style.position = "absolute";
+    dragImage.style.top = "-1000px";
+    dragImage.style.left = "-1000px";
+    dragImage.style.zIndex = "9999";
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 60, 15);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragEnter = (e: React.DragEvent, date: Date) => {
+    e.preventDefault();
+    setDragOverDate(date);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    // 셀을 완전히 벗어났을 때만 dragOverDate를 null로 설정
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverDate(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetDate: Date) => {
+    e.preventDefault();
+
+    if (draggedSchedule && onScheduleMove) {
+      // 시간 충돌 검사
+      const targetDateStr = `${targetDate.getFullYear()}. ${String(
+        targetDate.getMonth() + 1
+      ).padStart(2, "0")}. ${String(targetDate.getDate()).padStart(2, "0")}.`;
+
+      const existingSchedules = data.filter(
+        (schedule) =>
+          schedule.date === targetDateStr &&
+          schedule._id !== draggedSchedule._id
+      );
+
+      const hasTimeConflict = existingSchedules.some(
+        (schedule) => schedule.time === draggedSchedule.time
+      );
+
+      if (hasTimeConflict) {
+        alert(`${draggedSchedule.time}:00 시간에 이미 다른 수업이 있습니다.`);
+        setDraggedSchedule(null);
+        setDragOverDate(null);
+        return;
+      }
+
+      onScheduleMove(draggedSchedule, targetDate);
+
+      // 성공 메시지
+      console.log(
+        `✅ ${draggedSchedule.student_name}'s class moved to ${targetDateStr}`
+      );
+    }
+
+    setDraggedSchedule(null);
+    setDragOverDate(null);
   };
 
   // 이전/다음 달 이동
@@ -262,7 +321,7 @@ const CustomCalendar: React.FC<CustomCalendarProps> = ({
   ];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+    <div className="bg-[#f9fafb] rounded-xl p-2 border border-gray-200 shadow-lg overflow-scroll  w-[100%] h-full">
       {/* 캘린더 헤더 */}
       <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-4">
@@ -319,111 +378,40 @@ const CustomCalendar: React.FC<CustomCalendarProps> = ({
           const { schedules, notes, allNotes } = getDateData(date);
           const isCurrentMonthDate = isCurrentMonth(date);
           const isTodayDate = isToday(date);
+          const isDragOver =
+            dragOverDate?.toDateString() === date.toDateString();
 
           return (
-            <div
+            <DroppableCalendarCell
               key={date.toISOString()}
-              onClick={() => handleDateClick(date)}
-              className={`min-h-[120px] p-2 border-r border-b border-gray-100 cursor-pointer transition-all duration-200 hover:bg-blue-50 ${
-                !isCurrentMonthDate ? "bg-gray-50" : "bg-white"
-              } ${index % 7 === 6 ? "border-r-0" : ""}`}
-            >
-              {/* 날짜 표시 */}
-              <div
-                className={`text-sm font-medium mb-2 ${
-                  isTodayDate
-                    ? "bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center"
-                    : !isCurrentMonthDate
-                    ? "text-gray-400"
-                    : index % 7 === 0
-                    ? "text-red-500"
-                    : index % 7 === 6
-                    ? "text-blue-500"
-                    : "text-gray-700"
-                }`}
-              >
-                {date.getDate()}
-              </div>
-
-              {/* 스케줄 표시 */}
-              <div className="space-y-1">
-                {schedules.slice(0, 2).map((schedule) => (
-                  <div key={schedule._id} className="flex items-center gap-1">
-                    <div
-                      className={`text-xs px-2 py-1 rounded text-white font-medium truncate flex-1 ${getRoomColor(
-                        schedule.room_name
-                      )}`}
-                      title={`${schedule.time}:00 ${schedule.student_name} (${schedule.room_name}호, ${schedule.teacher_name})`}
-                    >
-                      {schedule.time}:00 {schedule.student_name}
-                    </div>
-                    {/* 해당 학생의 클래스 노트가 있는지 확인 */}
-                    {allNotes.some(
-                      (note) => note.student_name === schedule.student_name
-                    ) && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const note = allNotes.find(
-                            (n) => n.student_name === schedule.student_name
-                          );
-                          if (note && onViewNote) {
-                            onViewNote(note);
-                          }
-                        }}
-                        className="p-1 hover:bg-white/20 rounded transition-colors"
-                        title="View Class Note"
-                      >
-                        <Eye size={12} className="text-white" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-
-                {/* 클래스 노트 표시 (스케줄이 없는 경우만) */}
-                {notes
-                  .slice(0, 2 - schedules.slice(0, 2).length)
-                  .map((note) => (
-                    <div key={note._id} className="flex items-center gap-1">
-                      <div
-                        className="text-xs px-2 py-1 rounded bg-red-100 text-red-700 font-medium truncate border border-red-200 flex-1"
-                        title={`Class Note: ${note.student_name}`}
-                      >
-                        📝 {note.student_name}
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (onViewNote) {
-                            onViewNote(note);
-                          }
-                        }}
-                        className="p-1 hover:bg-red-200 rounded transition-colors"
-                        title="View Class Note"
-                      >
-                        <Eye size={12} className="text-red-600" />
-                      </button>
-                    </div>
-                  ))}
-
-                {/* 더 많은 이벤트가 있을 때 */}
-                {schedules.length + notes.length > 2 && (
-                  <div className="text-xs text-gray-500 font-medium">
-                    +{schedules.length + notes.length - 2} more
-                  </div>
-                )}
-              </div>
-            </div>
+              date={date}
+              schedules={schedules}
+              notes={notes}
+              allNotes={allNotes}
+              isCurrentMonth={isCurrentMonthDate}
+              isToday={isTodayDate}
+              isDragOver={isDragOver}
+              onDateClick={handleDateClick}
+              onViewNote={onViewNote || (() => {})}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onDragEnter={(e) => handleDragEnter(e, date)}
+              onDragLeave={handleDragLeave}
+              onScheduleDragStart={handleScheduleDragStart}
+              index={index}
+            />
           );
         })}
       </div>
 
-      {/* 범례 */}
+      {/* 가이드 */}
       <div className="flex justify-center p-4 bg-gray-50 border-t border-gray-200">
         <div className="flex items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-blue-500 rounded"></div>
-            <span className="text-gray-700">정규 스케줄</span>
+            <span className="text-gray-700">
+              정규 스케줄 (캘린더에서도 드래그 가능)
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
@@ -439,7 +427,7 @@ const CustomCalendar: React.FC<CustomCalendarProps> = ({
   );
 };
 
-const SchedulePage = () => {
+const DragDropSchedulePage = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
   const type = searchParams.get("type");
@@ -453,9 +441,10 @@ const SchedulePage = () => {
   const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
   const [filteredNotes, setFilteredNotes] = useState<ClassNote[]>([]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
-  // 클래스 노트 뷰어 상태 추가
   const [selectedNote, setSelectedNote] = useState<ClassNote | null>(null);
+
+  // 드래그 상태
+  const [draggedSchedule, setDraggedSchedule] = useState<Schedule | null>(null);
 
   const openAddSchedule = () => setIsModalOpen(true);
   const closeAddSchedule = () => setIsModalOpen(false);
@@ -482,7 +471,6 @@ const SchedulePage = () => {
 
     const fetchAllClassNotes = async () => {
       try {
-        // 학생 목록 가져오기
         const studentListResponse = await fetch(`/api/diary/${type}/${user}`, {
           cache: "no-store",
         });
@@ -491,7 +479,6 @@ const SchedulePage = () => {
         const studentList = await studentListResponse.json();
         console.log("Student list:", studentList);
 
-        // 각 학생의 노트 가져오기
         const allNotes: ClassNote[] = [];
 
         for (const studentName of studentList) {
@@ -521,6 +508,21 @@ const SchedulePage = () => {
     fetchAllClassNotes();
   }, [user, type, classNotes.length]);
 
+  // 스케줄 이동 핸들러 (로컬 상태만 업데이트)
+  const handleScheduleMove = (schedule: Schedule, newDate: Date) => {
+    const newDateStr = `${newDate.getFullYear()}. ${String(
+      newDate.getMonth() + 1
+    ).padStart(2, "0")}. ${String(newDate.getDate()).padStart(2, "0")}.`;
+
+    setClasses((prevClasses) =>
+      prevClasses.map((cls) =>
+        cls._id === schedule._id ? { ...cls, date: newDateStr } : cls
+      )
+    );
+
+    console.log(`Moved ${schedule.student_name}'s class to ${newDateStr}`);
+  };
+
   useEffect(() => {
     if (selectedDate) {
       const originalFormattedDate = selectedDate.toLocaleDateString("ko-KR", {
@@ -531,7 +533,6 @@ const SchedulePage = () => {
 
       const formattedDates = [originalFormattedDate];
 
-      // 스케줄 필터링
       const studentsForDate = classes.filter((cls) => {
         const isMatch = formattedDates.some((formattedDate) => {
           const classDateParts = cls.date?.trim().split(". ") || [];
@@ -549,7 +550,6 @@ const SchedulePage = () => {
         return isMatch;
       });
 
-      // 클래스 노트 필터링 (class_date 필드 사용)
       const notesForDate = classNotes.filter((note) => {
         return formattedDates.some((formattedDate) => {
           const noteDateParts = note.class_date.trim().split(". ");
@@ -573,16 +573,12 @@ const SchedulePage = () => {
         type: "schedule",
       }));
 
-      console.log("Formatted Students:", formattedStudents);
-      console.log("Filtered Notes:", notesForDate);
-
       setFilteredStudents(formattedStudents);
       setFilteredNotes(notesForDate);
     }
   }, [selectedDate, classes, classNotes]);
 
   const handleDateSelect = (date: Date) => {
-    console.log("날짜 선택됨:", date);
     setSelectedDate(date);
     setIsCalendarOpen(false);
   };
@@ -593,6 +589,10 @@ const SchedulePage = () => {
 
   const handleCloseNoteViewer = () => {
     setSelectedNote(null);
+  };
+
+  const handleDragStart = (e: React.DragEvent, student: any) => {
+    setDraggedSchedule(student);
   };
 
   // 날짜 포맷 함수
@@ -711,6 +711,15 @@ const SchedulePage = () => {
       .student-card:hover {
         border-color: #3366CC;
         box-shadow: 0 2px 6px rgba(51, 102, 204, 0.1);
+      }
+
+      .student-card.draggable {
+        cursor: grab;
+      }
+
+      .student-card.dragging {
+        opacity: 0.5;
+        transform: rotate(2deg);
       }
 
       .note-card {
@@ -840,14 +849,7 @@ const SchedulePage = () => {
         background-color: #3D8B40;
       }
 
-      .calendar-container {
-        flex-grow: 1;
-        background-color: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        padding: 20px;
-        overflow: hidden;
-      }
+      
 
       .empty-state {
         color: #888;
@@ -910,6 +912,27 @@ const SchedulePage = () => {
       .note-view-button:hover {
         background-color: #aa2222;
       }
+
+      .drag-over {
+        background-color: #e3f2fd !important;
+        border: 2px dashed #2196f3 !important;
+      }
+
+      /* 캘린더 스케줄 드래그 스타일 */
+      .cursor-grab {
+        cursor: grab;
+      }
+
+      .active\\:cursor-grabbing:active {
+        cursor: grabbing;
+      }
+
+      /* 드래그 중일 때 캘린더 스케줄 스타일 */
+      .bg-blue-500:hover {
+        background-color: #2563eb !important;
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+      }
       
       @media (max-width: 768px) {
         .schedule-container {
@@ -922,9 +945,7 @@ const SchedulePage = () => {
           margin-bottom: 16px;
         }
         
-        .calendar-container {
-          width: 100%;
-        }
+        
       }
     `;
     document.head.appendChild(styleElement);
@@ -973,53 +994,24 @@ const SchedulePage = () => {
                 fill="#666666"
               />
             </svg>
-            스케줄 및 수업 노트
+            스케줄 및 수업 노트 (모든 곳에서 드래그 가능)
           </div>
           {filteredStudents.length > 0 || filteredNotes.length > 0 ? (
             <div className="student-list">
               {filteredStudents.map((student, index) => {
-                // 해당 학생의 클래스 노트 찾기
                 const studentNote = filteredNotes.find(
                   (note) => note.student_name === student.student_name
                 );
 
                 return (
-                  <div key={`schedule-${index}`} className="student-card">
-                    <div className="student-header">
-                      <div className="student-name">
-                        {student.student_name} 학생
-                      </div>
-                      <div className="student-time">
-                        {student.time.toString().padStart(2, "0")}:00
-                      </div>
-                    </div>
-                    <div className="student-details">
-                      <div className="student-info">
-                        <span>{student.room_name}호</span>
-                        <span>•</span>
-                        <span>{student.teacher_name}</span>
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        {studentNote && (
-                          <button
-                            onClick={() => handleViewNote(studentNote)}
-                            className="view-note-button"
-                            title="클래스 노트 보기"
-                          >
-                            <Eye size={12} />
-                            보기
-                          </button>
-                        )}
-                        <div className="status-dot"></div>
-                      </div>
-                    </div>
-                  </div>
+                  <DraggableScheduleCard
+                    key={`schedule-${index}`}
+                    student={student}
+                    studentNote={studentNote}
+                    onViewNote={handleViewNote}
+                    onDragStart={handleDragStart}
+                    isDragging={draggedSchedule?._id === student._id}
+                  />
                 );
               })}
 
@@ -1036,7 +1028,7 @@ const SchedulePage = () => {
                       <div className="note-student-name">
                         {note.student_name} 학생
                       </div>
-                      <div className="note-tag">Class Note</div>
+                      <div className="note-tag">Class Record</div>
                     </div>
                     <div className="student-details">
                       <div className="note-info">
@@ -1059,7 +1051,6 @@ const SchedulePage = () => {
                           <Eye size={12} />
                           보기
                         </button>
-                        <div className="note-status-dot"></div>
                       </div>
                     </div>
                   </div>
@@ -1084,14 +1075,13 @@ const SchedulePage = () => {
         </div>
       </div>
 
-      <div className="calendar-container">
-        <CustomCalendar
-          data={classes}
-          classNotes={classNotes}
-          onDateSelect={handleDateSelect}
-          onViewNote={handleViewNote}
-        />
-      </div>
+      <CustomCalendar
+        data={classes}
+        classNotes={classNotes}
+        onDateSelect={handleDateSelect}
+        onViewNote={handleViewNote}
+        onScheduleMove={handleScheduleMove}
+      />
 
       {type !== "student" && isModalOpen && (
         <div className="modal-overlay">
@@ -1115,7 +1105,7 @@ const SchedulePage = () => {
 export default function Schedule() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <SchedulePage />
+      <DragDropSchedulePage />
     </Suspense>
   );
 }
