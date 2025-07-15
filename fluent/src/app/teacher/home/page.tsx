@@ -645,15 +645,6 @@ const HomePageContent = () => {
                           >
                             스케줄 보기
                           </Link>
-
-                          <Link
-                            href={`/teacher/student/curriculum?user=${user}&type=teacher&id=${id}&student_name=${student.name}`}
-                            className="text-xs text-yellow-500 font-medium hover:text-yellow-700 transition-colors"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            커리큘럼
-                          </Link>
                         </div>
                       </div>
                     );
@@ -702,12 +693,6 @@ const HomePageContent = () => {
                         className="px-3 py-3 text-center whitespace-nowrap"
                       >
                         스케줄
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        커리큘럼
                       </th>
                     </tr>
                   </thead>
@@ -889,17 +874,6 @@ const HomePageContent = () => {
                               rel="noopener noreferrer"
                             >
                               스케줄 보기
-                            </Link>
-                          </td>
-
-                          <td className="px-3 py-3 text-center">
-                            <Link
-                              href={`/teacher/student/curriculum?user=${user}&type=teacher&id=${id}&student_name=${student.name}`}
-                              className="text-xs text-yellow-500 hover:text-yellow-700 font-medium transition-colors hover:bg-yellow-50 px-3 py-2 rounded-lg inline-block"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              커리큘럼
                             </Link>
                           </td>
                         </tr>

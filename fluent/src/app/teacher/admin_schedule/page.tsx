@@ -43,11 +43,11 @@ interface FilterState {
 // 개선된 스케줄 블록 컴포넌트
 interface ScheduleBlockProps {
   schedule: Schedule;
-  roomColor: string;
+  teacherColor: string;
 }
 
 const ScheduleBlock: React.FC<ScheduleBlockProps> = React.memo(
-  ({ schedule, roomColor }) => {
+  ({ schedule, teacherColor }) => {
     const [showTooltip, setShowTooltip] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
@@ -84,7 +84,7 @@ const ScheduleBlock: React.FC<ScheduleBlockProps> = React.memo(
           transition-all duration-200 ease-in-out
           hover:shadow-md hover:scale-[1.02] hover:z-10
           active:scale-95
-          ${roomColor}
+          ${teacherColor}
         `}
           style={{
             height: `${Math.max(schedule.duration * 35, 45)}px`,
@@ -161,18 +161,24 @@ const FixedFilterSidebar: React.FC<FixedFilterSidebarProps> = ({
   activeFilters,
   onFilterChange,
 }) => {
-  const roomColorMap: { [key: string]: string } = {
-    HF1: "bg-blue-500",
-    HF2: "bg-green-500",
-    HF3: "bg-purple-500",
-    HF4: "bg-orange-500",
-    HF5: "bg-pink-500",
-    "2-3": "bg-yellow-400",
-  };
+  // 선생님별 색상 매핑
+  const getTeacherColor = (teacherName: string): string => {
+    const teacherColorMap: { [key: string]: string } = {
+      David: "bg-blue-500",
+      Serah: "bg-green-500",
+      Chris: "bg-purple-500",
+      Phil: "bg-orange-500",
+      "Seo Jung": "bg-pink-500",
+      Jeff: "bg-yellow-500",
+      Dooho: "bg-red-500",
+      Konnie: "bg-indigo-500",
+      Joonseok: "bg-cyan-500",
+      Eric: "bg-teal-500",
+      Jack: "bg-lime-500",
+      Juno: "bg-amber-500",
+    };
 
-  const getRoomColor = (roomName: string): string => {
-    const roomKey = roomName.replace(/호$/, "");
-    return roomColorMap[roomKey] || "bg-gray-500";
+    return teacherColorMap[teacherName] || "bg-gray-500";
   };
 
   const handleTeacherToggle = (teacher: string) => {
@@ -234,7 +240,7 @@ const FixedFilterSidebar: React.FC<FixedFilterSidebarProps> = ({
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-700">선생님</h3>
-            <div className="space-x-2">
+            <div className="space-x-4">
               <button
                 onClick={selectAllTeachers}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
@@ -252,7 +258,7 @@ const FixedFilterSidebar: React.FC<FixedFilterSidebarProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <div className="space-y-2 max-h-full overflow-y-auto">
             {teachers.map((teacher) => (
               <label
                 key={teacher}
@@ -264,9 +270,16 @@ const FixedFilterSidebar: React.FC<FixedFilterSidebarProps> = ({
                   onChange={() => handleTeacherToggle(teacher)}
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <span className="text-sm text-gray-700 font-medium">
-                  {teacher}
-                </span>
+                <div className="flex items-center space-x-2">
+                  <div
+                    className={`w-4 h-4 rounded-full ${getTeacherColor(
+                      teacher
+                    )}`}
+                  ></div>
+                  <span className="text-sm text-gray-700 font-medium">
+                    {teacher}
+                  </span>
+                </div>
               </label>
             ))}
           </div>
@@ -276,7 +289,7 @@ const FixedFilterSidebar: React.FC<FixedFilterSidebarProps> = ({
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-700">강의실</h3>
-            <div className="space-x-2">
+            <div className="space-x-4">
               <button
                 onClick={selectAllRooms}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"
@@ -304,14 +317,9 @@ const FixedFilterSidebar: React.FC<FixedFilterSidebarProps> = ({
                   onChange={() => handleRoomToggle(room)}
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
-                <div className="flex items-center space-x-2">
-                  <div
-                    className={`w-4 h-4 rounded-full ${getRoomColor(room)}`}
-                  ></div>
-                  <span className="text-sm text-gray-700 font-medium">
-                    {room}호
-                  </span>
-                </div>
+                <span className="text-sm text-gray-700 font-medium">
+                  {room}호
+                </span>
               </label>
             ))}
           </div>
@@ -387,7 +395,6 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
     const scheduleTeachers = [
       ...new Set(allSchedules.map((s) => s.teacher_name)),
     ].filter(Boolean);
-    // 기본 선생님 목록과 스케줄에서 나온 선생님들을 합치고 중복 제거
     const allTeachers = [...new Set([...defaultTeachers, ...scheduleTeachers])];
     return allTeachers.sort();
   };
@@ -396,7 +403,6 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
     const scheduleRooms = [
       ...new Set(allSchedules.map((s) => s.room_name)),
     ].filter(Boolean);
-    // 기본 강의실 목록과 스케줄에서 나온 강의실들을 합치고 중복 제거
     const allRooms = [...new Set([...defaultRooms, ...scheduleRooms])];
     return allRooms.sort();
   };
@@ -406,7 +412,6 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
     return allSchedules.filter((schedule) => {
       const teacherMatch = filters.teachers.includes(schedule.teacher_name);
       const roomMatch = filters.rooms.includes(schedule.room_name);
-
       return teacherMatch && roomMatch;
     });
   };
@@ -475,7 +480,6 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
     const loadWeekSchedules = async () => {
       const schedules = await fetchWeekSchedules(weekDates);
 
-      // 새로운 강의실이 있다면 필터에 추가 (선생님은 이미 기본값으로 설정됨)
       if (schedules.length > 0) {
         const uniqueRooms = getUniqueRooms();
 
@@ -540,19 +544,24 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
     }
   };
 
-  // 강의실별 고정 색상 매핑
-  const getRoomColor = (roomName: string): string => {
-    const roomColorMap: { [key: string]: string } = {
-      HF1: "bg-blue-500",
-      HF2: "bg-green-500",
-      HF3: "bg-purple-500",
-      HF4: "bg-orange-500",
-      HF5: "bg-pink-500",
-      "2-3": "bg-yellow-400",
+  // 선생님별 고정 색상 매핑
+  const getTeacherColor = (teacherName: string): string => {
+    const teacherColorMap: { [key: string]: string } = {
+      David: "bg-blue-500",
+      Serah: "bg-green-500",
+      Chris: "bg-purple-500",
+      Phil: "bg-orange-500",
+      "Seo Jung": "bg-pink-500",
+      Jeff: "bg-yellow-500",
+      Dooho: "bg-red-500",
+      Konnie: "bg-indigo-500",
+      Joonseok: "bg-cyan-500",
+      Eric: "bg-teal-500",
+      Jack: "bg-lime-500",
+      Juno: "bg-amber-500",
     };
 
-    const roomKey = roomName.replace(/호$/, "");
-    return roomColorMap[roomKey] || "bg-gray-500";
+    return teacherColorMap[teacherName] || "bg-gray-500";
   };
 
   const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -669,7 +678,9 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
                           <ScheduleBlock
                             key={schedule._id}
                             schedule={schedule}
-                            roomColor={getRoomColor(schedule.room_name)}
+                            teacherColor={getTeacherColor(
+                              schedule.teacher_name
+                            )}
                           />
                         ))}
                       </div>
@@ -681,32 +692,56 @@ const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({
           </div>
         </div>
 
-        {/* 강의실 색상 가이드 */}
+        {/* 선생님별 색상 가이드 */}
         <div className="flex justify-center p-6 bg-gray-50 border-t border-gray-200">
-          <div className="grid grid-cols-6 gap-3 max-w-md">
+          <div className="grid grid-cols-4 gap-4 max-w-4xl">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">HF1호</span>
+              <span className="text-sm text-gray-700">David</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">HF2호</span>
+              <span className="text-sm text-gray-700">Serah</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">HF3호</span>
+              <span className="text-sm text-gray-700">Chris</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">HF4호</span>
+              <span className="text-sm text-gray-700">Phil</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-pink-500 rounded-full"></div>
-              <span className="text-sm text-gray-700">HF5호</span>
+              <span className="text-sm text-gray-700">Seo Jung</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-              <span className="text-sm text-gray-700">2-3호</span>
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">Jeff</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">Dooho</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">Konnie</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">Joonseok</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-teal-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">Eric</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-lime-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">Jack</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+              <span className="text-sm text-gray-700">Juno</span>
             </div>
           </div>
         </div>
