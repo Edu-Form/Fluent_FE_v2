@@ -212,6 +212,103 @@ export async function saveScheduleData(schedule: any) {
   }
 }
 
+export async function saveProgressData(progress: {
+  student_name: string;
+  step: string;
+  date: string;
+}) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  const collection = db.collection("progress"); // ✅ updated collection name
+
+  const { student_name, step, date } = progress;
+
+  // Step 1: Check if student already has a progress doc
+  const existing = await collection.findOne({ student_name });
+
+  if (!existing) {
+    // Step 2: Create a new document if not found
+    const newDoc = {
+      student_name,
+      current_progress: [{ schedule: date }],
+      history: [],
+      created_at: new Date()
+    };
+
+    const result = await collection.insertOne(newDoc);
+    return { insertedId: result.insertedId };
+  } else {
+    // Step 3: Update existing document
+    const result = await collection.updateOne(
+      { student_name },
+      {
+        $set: {
+          current_progress: [{ schedule: date }]
+        },
+        $push: {
+          history: {
+            step: step,
+            date: date,
+            updated_at: new Date()
+          } as any // ✅ prevent TypeScript error from push operator typing
+        }
+      }
+    );
+
+    return {
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount
+    };
+  }
+}
+
+export async function getProgressDataByStudentName(student_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const progress = await db
+      .collection("progress")
+      .findOne({ student_name });
+
+    return progress;
+  } catch (error) {
+    console.error("Error fetching progress data:", error);
+    throw new Error("Database error");
+  }
+}
+
+export async function updateProgressData(
+  student_name: string,
+  current_progress_update: Record<string, any>
+) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const result = await db.collection("progress").updateOne(
+      { student_name }, // find by student_name
+      {
+        $set: Object.fromEntries(
+          Object.entries(current_progress_update).map(([key, value]) => [
+            `current_progress.${key}`,
+            value,
+          ])
+        ),
+      },
+      { upsert: true } // create if not exists
+    );
+
+    return result;
+  } catch (error) {
+    console.error("Error updating progress data:", error);
+    throw new Error("Database error");
+  }
+}
+
+
+
+
 export const getSchedulesByDate = async (dateStr: string) => {
   try {
     const client = await clientPromise;

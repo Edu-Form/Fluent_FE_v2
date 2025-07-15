@@ -23,6 +23,233 @@ const Teacher_toastUI = dynamic(
   { ssr: false }
 );
 
+const StepProgress = ({ currentStep }: { currentStep: number }) => {
+  const steps = ["Step 1: 수업 등록", "Step 2: 수업 노트", "퀴즐렛", "다이어리", "완료"];
+  const minPercent = 10; // Minimum width to show some progress
+  const progressPercent =
+    currentStep === 1
+      ? minPercent
+      : ((currentStep - 1) / (steps.length - 1)) * 100;
+  const currentLabel = steps[currentStep - 1] || "";
+
+  return (
+    <div className="relative w-full h-6 bg-purple-200 rounded-full overflow-hidden">
+      <div
+        className="absolute top-0 left-0 h-full bg-purple-600 transition-all duration-300"
+        style={{ width: `${progressPercent}%` }}
+      ></div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-white text-sm font-medium z-10">
+          {currentLabel}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const StepDetailPanel = ({
+  currentStep,
+  studentName,
+  classNoteDate,
+  onStepUpdated,
+  user,
+  student,
+}: {
+  currentStep: number;
+  studentName: string;
+  classNoteDate?: string;
+  onStepUpdated: (newStep: number) => void;
+  user?: string | null;
+  student?: any;
+}) => {
+  const [scheduleDates, setScheduleDates] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (currentStep === 1 && studentName) {
+      fetch(`/api/schedules/student/${studentName}`)
+        .then((res) => res.json())
+        .then((data) => setScheduleDates(data.map((d: any) => d.date)))
+        .catch((err) => console.error("Failed to fetch schedule:", err));
+    }
+  }, [currentStep, studentName]);
+
+  useEffect(() => {
+    if (currentStep === 2 && classNoteDate) {
+      setSelectedDate(classNoteDate);
+    }
+  }, [currentStep, classNoteDate]);
+
+  const handleSubmitStep1 = async () => {
+    if (!selectedDate) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_name: studentName,
+          step: "수업 등록",
+          date: selectedDate,
+        }),
+      });
+      if (res.ok) onStepUpdated(2);
+      else console.error("등록 실패");
+    } catch (error) {
+      console.error("Submit error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitStep2 = async () => {
+    if (!selectedDate) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/progress", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_name: studentName,
+          current_progress_update: { class_note: selectedDate },
+        }),
+      });
+      if (res.ok) onStepUpdated(3);
+      else console.error("업데이트 실패");
+    } catch (error) {
+      console.error("Update error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitStep4 = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/progress", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_name: studentName,
+          current_progress_update: { quizlet: student?.quizlet_link || "" },
+        }),
+      });
+      if (res.ok) onStepUpdated(5);
+      else console.error("업데이트 실패");
+    } catch (error) {
+      console.error("Update error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (currentStep === 1) {
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <label htmlFor="date-select" className="sr-only">
+          수업 날짜 선택
+        </label>
+        <select
+          id="date-select"
+          className="flex-1 border border-gray-300 rounded p-1 text-sm"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+        >
+          <option value="">날짜를 선택하세요</option>
+          {scheduleDates.map((date, idx) => (
+            <option key={idx} value={date}>
+              {date}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={handleSubmitStep1}
+          disabled={isSubmitting || !selectedDate}
+          className={`px-3 py-1 text-sm font-medium rounded text-white transition ${
+            isSubmitting || !selectedDate
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-700"
+          }`}
+        >
+          {isSubmitting ? "등록 중..." : "다음"}
+        </button>
+      </div>
+    );
+  }
+
+  if (currentStep === 2) {
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <label htmlFor="step2-date-select" className="sr-only">
+          클래스 노트 날짜 선택
+        </label>
+        <select
+          id="step2-date-select"
+          className="flex-1 border border-gray-300 rounded p-1 text-sm"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          disabled
+        >
+          <option value={classNoteDate}>{classNoteDate}</option>
+        </select>
+        <button
+          onClick={handleSubmitStep2}
+          disabled={isSubmitting}
+          className={`px-3 py-1 text-sm font-medium rounded text-white transition ${
+            isSubmitting
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-700"
+          }`}
+        >
+          {isSubmitting ? "업데이트 중..." : "다음"}
+        </button>
+      </div>
+    );
+  }
+
+  if (currentStep === 3) {
+    return (
+      <div className="mt-2">
+        Quizlet Link:{" "}
+        <Link
+          href={`/teacher/student/quizlet?user=${user}&student_name=${studentName}`}
+          className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          여기 클릭
+        </Link>
+      </div>
+    );
+  }
+
+  if (currentStep === 4) {
+    return (
+      <div className="mt-2">
+        <button
+          onClick={handleSubmitStep4}
+          disabled={isSubmitting}
+          className={`px-3 py-1 text-sm font-medium rounded text-white transition ${
+            isSubmitting
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-700"
+          }`}
+        >
+          {isSubmitting ? "처리중..." : "AI 확인 완료"}
+        </button>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+
+
+
+
+
 // 로딩 컴포넌트
 const SkeletonLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-full"></div>
@@ -39,6 +266,8 @@ const HomePageContent = () => {
   const [activeTab, setActiveTab] = useState("calendar"); // 'calendar' 또는 'students'
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  const [studentProgress, setStudentProgress] = useState<{ [name: string]: number }>({});
 
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;
@@ -91,25 +320,42 @@ const HomePageContent = () => {
 
   useEffect(() => {
     if (!user || classes.length > 0) return;
-
-    // 수업 스케줄 데이터 불러오기
+  
+    // Fetch schedules
     fetch(URL)
       .then((res) => res.json())
       .then((data) => {
-        console.log("Fetched data:", data);
         setClasses(data);
       })
       .catch((error) => console.log("Error fetching data:", error));
-
-    // 모든 학생 데이터 불러오기
+  
+    // Fetch student list
     fetch(ALL_STUDENTS_URL)
       .then((res) => res.json())
-      .then((data) => {
-        console.log("Fetched all students:", data);
+      .then(async (data) => {
         setAllStudents(data);
+  
+        // 🔽 Fetch individual progress for each student
+        const progressMap: { [name: string]: number } = {};
+  
+        await Promise.all(
+          data.map(async (student: any) => {
+            try {
+              const res = await fetch(`/api/progress/${student.name}`);
+              const result = await res.json();
+              progressMap[student.name] = result?.step || 1;
+            } catch (err) {
+              console.error(`Error loading progress for ${student.name}`, err);
+              progressMap[student.name] = 1; // fallback
+            }
+          })
+        );
+  
+        setStudentProgress(progressMap);
       })
       .catch((error) => console.log("Error fetching students:", error));
   }, [user, URL, ALL_STUDENTS_URL, classes.length]);
+  
 
   return (
     <div className="flex flex-col md:flex-row w-full h-screen bg-gray-50">
@@ -661,6 +907,57 @@ const HomePageContent = () => {
                     })}
                   </tbody>
                 </table>
+
+                {/* Step Progress View 추가 */}
+                <div className="hidden md:block mt-8">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                    전체 학생 Checklist
+                  </h3>
+                  <div className="bg-white shadow rounded-lg overflow-hidden">
+                    <table className="min-w-full">
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">학생 이름</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700">Progress</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-gray-700"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allStudents.map((student, index) => {
+                          const currentStep = studentProgress[student.name] || 1;
+                          return (
+                            <React.Fragment key={student.name}>
+                            <tr
+                              className="border-t"
+                            >
+                              <td className="px-4 py-3 text-sm text-gray-900 font-medium w-[15%]">{student.name}</td>
+                              <td className="px-4 py-3 w-[30%]">
+                                <StepProgress currentStep={currentStep} />
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="mt-2 bg-purple-50 p-3 rounded">
+                                <StepDetailPanel
+                                  currentStep={currentStep}
+                                  studentName={student.name}
+                                  classNoteDate={student.class_note}
+                                  onStepUpdated={(newStep) => {
+                                    setStudentProgress((prev) => ({
+                                      ...prev,
+                                      [student.name]: newStep,
+                                    }));
+                                  }}
+                                />
+                                </div>
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </div>
             )}
           </div>
