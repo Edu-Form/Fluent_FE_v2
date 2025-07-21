@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+
 
 
 type NoteData = {
@@ -3575,7 +3576,7 @@ End Timer: 45 minute mark (15 minutes left for feedback)
 
 };
 
-export default function TestPage() {
+function TestPage() {
   const [note, setNote] = useState<NoteData | null>(null);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
@@ -3681,3 +3682,12 @@ export default function TestPage() {
     </div>
   );
 }
+
+export default function PageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TestPage />
+    </Suspense>
+  );
+}
+
