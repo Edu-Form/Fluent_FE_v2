@@ -2975,7 +2975,7 @@ const ClassPageContent: React.FC = () => {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                      {student_name}'s Level Test
+                      {student_name} Level Test
                       </Link>
                     </div>
                     <h3 className="text-xs font-bold text-[#191F28] mb-3">

@@ -44,8 +44,6 @@ const HomePageContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  const [studentProgress, setStudentProgress] = useState<{ [name: string]: number }>({});
-
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;
 
@@ -111,24 +109,6 @@ const HomePageContent = () => {
       .then((res) => res.json())
       .then(async (data) => {
         setAllStudents(data);
-  
-        // 🔽 Fetch individual progress for each student
-        const progressMap: { [name: string]: number } = {};
-  
-        await Promise.all(
-          data.map(async (student: any) => {
-            try {
-              const res = await fetch(`/api/progress/${student.name}`);
-              const result = await res.json();
-              progressMap[student.name] = result?.step || 1;
-            } catch (err) {
-              console.error(`Error loading progress for ${student.name}`, err);
-              progressMap[student.name] = 1; // fallback
-            }
-          })
-        );
-  
-        setStudentProgress(progressMap);
       })
       .catch((error) => console.log("Error fetching students:", error));
   }, [user, URL, ALL_STUDENTS_URL, classes.length]);
