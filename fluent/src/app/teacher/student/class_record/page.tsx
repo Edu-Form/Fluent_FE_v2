@@ -192,112 +192,309 @@ const ClassPageContent: React.FC = () => {
   };
 
   const notesTemplate1 = `
-    <h1>📚 Notes Template</h1>
+  <h1>📚 First Class Template</h1>
 
-    <h2>✅ Tasks</h2>
-    <ul>
-      <li>Add Polishing Expressions (70%)</li>
-      <li>Add New Expressions (30%)</li>
-      <li>Use Textbook Grammar & Expressions throughout</li>
-    </ul>
+  <h2>🗓️ Date:</h2>
+  <h3>The First Class</h3>
 
-    <h3>📖 The First Class</h3>
-    <ol>
-      <li><strong>Go Over Notion Goals</strong><br/>🕐 Duration: 5 minutes</li>
-      <li><strong>Self Introduction</strong><br/>🕐 Duration: 15 minutes<br/>📝 Task: Add to Flashcards<br/>
-        Include:
-        <ul>
-          <li>Name</li>
-          <li>Age</li>
-          <li>Job</li>
-          <li>Job Details</li>
-          <li>Hobbies</li>
-        </ul>
-        (4–7 sentences is enough)
-      </li>
-      <li><strong>Small Talk</strong><br/>🕐 Duration: 15 minutes<br/>📌 If the student is below level 3 → Do Textbook for 30 minutes instead</li>
-      <li><strong>Textbook Work</strong><br/>🕐 Duration: 15 minutes<br/>📘 Pace: Finish Chapter 1 in about 4–8 classes</li>
-      <li><strong>App Downloads & Setup</strong><br/>🕐 Duration: 10 minutes<br/>📲 Download:
-        <ul>
-          <li>Quizlet App</li>
-          <li>Google Docs App</li>
-        </ul>
-        📤 Share this file via email<br/>📎 Send Kakao Channel link
-      </li>
-    </ol>
+  <ol>
+    <li>
+      <strong>Go Over Notion Goals</strong><br/>
+      🕐 Duration: 5 minutes<br/>
+      ✅ 주 2회 3~6개월 목표!<br/>
+      ⚠️ 레벨 1 이하는 더 걸릴 수도 있다<br/>
+      ❗ 숙제 안 해오고 수업 빠지기 시작하면 더 오래 걸릴 수 있다
+    </li>
 
-  `;
+    <li>
+      <strong>Self Introduction</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      😊 Keep it simple – don’t make it too hard<br/>
+      📌 Add to flashcards – ensure memorization in bulk<br/>
+      💬 Include:
+      <ul>
+        <li>Name</li>
+        <li>Age</li>
+        <li>Job</li>
+        <li>Job Details</li>
+        <li>Hobbies</li>
+      </ul>
+      (4–7 sentences is enough)
+    </li>
+
+    <li>
+      <strong>Small Talk</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      ⚠️ If student is under Level 3 → Do textbook for 30 minutes instead<br/>
+      💬 Questions to use:
+      <ul>
+        <li>What did you do yesterday?</li>
+        <li>How are you?</li>
+        <li>When did you wake up?</li>
+        <li>What did you do after that?</li>
+      </ul>
+      📥 Add these into Quizlet
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      📘 Pace: Finish Chapter 1 in 4–8 classes for Level 1–2 students
+    </li>
+
+    <li>
+      <strong>Homework Prep</strong><br/>
+      🕐 Duration: 10 minutes<br/>
+      🛠️ Setup:
+      <ul>
+        <li>Fluent App: <a href="https://fluent-five.vercel.app/">https://fluent-five.vercel.app/</a></li>
+        <li>Add to mobile home screen (iPhone Safari / Android Chrome)</li>
+        <li>Kakao Channel: <a href="http://pf.kakao.com/_ndxoZG/chat">http://pf.kakao.com/_ndxoZG/chat</a></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards (use the ‘star’ function properly)</li>
+    <li>📩 Message teacher if you can’t find or use your flashcards</li>
+  </ul>
+
+  <h2>📌 Recommended Plan for Next Class</h2>
+  <ul>
+    <li>Go deeper into 일반동사 + be 동사 Q&A</li>
+    <li>Test the student using the textbook with parts covered up</li>
+  </ul>
+`;
 
   const notesTemplate2 = `
-    <h2>📚 The Second Class</h2>
+  <h1>📚 Second Class Template</h1>
 
-    <ol>
-      <li><strong>Small Talk</strong> (5–15 minutes)<br/>- What did you do yesterday?<br/>- How are you?<br/>- When did you wake up? What did you do after that?</li>
-      <li><strong>Previous Flashcards Review</strong> (15 minutes)<br/>- Check if they memorized their self introduction</li>
-      <li><strong>Write Diary Together</strong> (15 minutes)<br/>- Refer to the diary examples in Chapter 1</li>
-      <li><strong>Textbook</strong> (15 minutes)<br/>- Add slow/wrong expressions to Quizlet</li>
-    </ol>
-  `;
+  <h2>🗓️ Date:</h2>
+  <h3>The Second Class</h3>
+
+  <ol>
+    <li>
+      <strong>Homework Check</strong><br/>
+      🕐 Duration: 5–7 minutes<br/>
+      ✅ Check if students did their homework<br/>
+      ✍️ If no diary: Give 5 minutes to write a 3-sentence diary before class<br/>
+      🌟 Check if they used the “star” function for flashcards<br/>
+      📋 Copy completed self-introductions into the “collect bulk answers template”
+    </li>
+
+    <li>
+      <strong>Small Talk</strong><br/>
+      🕐 Duration: 5–15 minutes (based on level)<br/>
+      💬 Questions to ask:
+      <ul>
+        <li>What did you do yesterday?</li>
+        <li>How are you?</li>
+        <li>When did you wake up?</li>
+        <li>What did you do after that?</li>
+      </ul>
+      📥 Add these into Quizlet
+    </li>
+
+    <li>
+      <strong>Flashcard Review</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🔁 Focus on memorizing self-introductions<br/>
+      ❌ If sentences are wrong → Star it → Retest → Still wrong? Copy into today’s notes<br/>
+      🔀 Shuffle and review about half the Quizlet deck per class
+    </li>
+
+    <li>
+      <strong>Write Diary Together</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      📖 Read example diaries in Chapter 1 that match their level<br/>
+      📌 Direct them to refer to those expressions in Quizlet when writing their next diary
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🗣️ Test the student by speaking while covering up the book<br/>
+      📝 Add any slow/wrong expressions into their Quizlet deck
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Write a similar diary after reviewing the flashcards</li>
+  </ul>
+
+  <h2>📌 Next Class Plan</h2>
+  <ul>
+    <li>Keep going deeper into 일반동사 + be 동사 Q&A</li>
+    <li>Take the first textbook test if ready</li>
+  </ul>
+`;
 
   const notesTemplate3 = `
-    <h2>📚 The Third Class</h2>
+  <h1>📚 Third Class Template</h1>
 
-    <ol>
-      <li><strong>Small Talk</strong> (5–15 minutes)</li>
-      <li><strong>Previous Flashcards Review</strong> (15 minutes)<br/>- Negotiate flashcard amount (30–60)</li>
-      <li><strong>Talk About Diary</strong> (15 minutes)<br/>- Refer to diary conversation examples in Chapter 1</li>
-      <li><strong>Textbook</strong> (15 minutes)<br/>- Add wrong/slow expressions from test or verbal checks</li>
-    </ol>
+  <h2>🗓️ Date:</h2>
+  <h3>The Third Class</h3>
 
-  `;
+  <ol>
+    <li>
+      <strong>Homework Check</strong><br/>
+      🕐 Duration: 5–7 minutes<br/>
+      ✅ Check if the student did their homework<br/>
+      ✍️ If no diary: Give 5 minutes to write a 3-sentence diary before starting<br/>
+      🌟 Check if they used the “star” function on flashcards
+    </li>
+
+    <li>
+      <strong>Small Talk</strong><br/>
+      🕐 Duration: 5–15 minutes (depending on level)<br/>
+      💬 Suggested Questions:
+      <ul>
+        <li>What did you do yesterday?</li>
+        <li>How are you?</li>
+        <li>When did you wake up?</li>
+        <li>What did you do after that?</li>
+      </ul>
+      ➕ Try new simple questions from the textbook if they’ve reached the questions section
+    </li>
+
+    <li>
+      <strong>Flashcard Review</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🧠 Negotiate flashcard count: 30–60 cards<br/>
+      ❌ Wrong answers → Star → Retest → Still wrong? Add to today’s notes<br/>
+      🔀 Shuffle & review ~50% of the Quizlet deck each class
+    </li>
+
+    <li>
+      <strong>Talk About Diary</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      💬 Follow the diary conversation examples in Chapter 1<br/>
+      📘 Refer to ‘diary expressions’ test in Chapter 1<br/>
+      1️⃣ Student tells the diary without looking<br/>
+      2️⃣ Open the AI-edited diary → Read through mistakes<br/>
+      ✍️ Add easy/common mistakes + strong sentences to today’s notes for future flashcards
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      ✅ If they took a test as homework, add wrong answers to flashcards<br/>
+      ⚡ If they hesitated for more than 5 seconds (even if correct), add it as a polishing flashcard
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Write Diary (include newly learned grammar)</li>
+    <li>If you’ve reached the be동사/일반동사 test → Solve & grade at home<br/>
+        🛑 Do not look at the answer sheet until after finishing the test
+    </li>
+  </ul>
+
+  <h2>📌 Recommended Plan for Next Class</h2>
+  <ul>
+    <li>Go deeper into 일반동사 + be동사 Q&A</li>
+    <li>Try harder diaries + diary conversations</li>
+  </ul>
+`;
+
   const notesTemplate4 = `
-    <h2>📚 The Fourth Class</h2>
+  <h1>📚 Fourth Class Template</h1>
 
-    <ol>
-      <li><strong>Small Talk</strong> (15 minutes)<br/>
-        - Sometimes let your student start the small talk with memorized expressions<br/>
-        - Make sure you have them ask you questions as well
-      </li>
-      <li><strong>Previous Flashcards Review</strong> (15 minutes)<br/>
-        - Wrong cards > 'star' it > test them again > if they still get it wrong copy and paste it in today's notes<br/>
-        - Students MUST memorize their flashcards
-      </li>
-      <li><strong>Talk about diary</strong> (15 minutes)<br/>
-        - Summarize the diary without looking > look at edits > add good expressions to flashcards<br/>
-        - Refer to diary related expressions in textbook<br/>
-        - Upgrade diary to include new grammar
-      </li>
-      <li><strong>Textbook</strong> (15 minutes)<br/>
-        - Understand > Memorize > Use<br/>
-        - You can do the tests in class or for homework depending on the student
-      </li>
-    </ol>
-    
-    <h3>📝 Recommended Homework:</h3>
-    <ol>
-      <li>Flashcards</li>
-      <li>Diary (including new grammar learned)</li>
-      <li>Include a test if you have reached it (solve and grade it for homework)</li>
-    </ol>
-  `;
+  <h2>🗓️ Date:</h2>
+  <h3>Class Title</h3>
+
+  <ol>
+    <li>
+      <strong>Homework Check</strong><br/>
+      🕐 Duration: 5–7 minutes<br/>
+      ✅ Check if the student did their homework<br/>
+      ✍️ If no diary: Give 5 minutes to write a 3-sentence diary before starting<br/>
+      🌟 Check if they used the “star” function on flashcards
+    </li>
+
+    <li>
+      <strong>Small Talk</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      💬 Review small talk using memorized expressions<br/>
+      🔄 Have the student ask questions back (2-way conversation)
+    </li>
+
+    <li>
+      <strong>Flashcard Review</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      ❌ Wrong cards → Star → Retest → Still wrong? Add to today’s notes<br/>
+      🔀 Shuffle & review ~50% of the Quizlet deck each class
+    </li>
+
+    <li>
+      <strong>Talk About Diary</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🧠 Student summarizes the diary without looking<br/>
+      📖 Look at AI-edited version → Add good expressions to flashcards<br/>
+      ➕ Refer to textbook’s diary-related expressions<br/>
+      🔁 Help the student upgrade the diary with new grammar
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      📘 Process: Understand → Memorize → Use<br/>
+      ✅ Tests can be done in class or assigned as homework depending on student level
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Write Diary (include newly learned grammar)</li>
+    <li>If reached test level: Solve and grade it at home</li>
+  </ul>
+`;
 
   const notesTemplate5 = `
-    <h2>📚 The Fifth Class</h2>
+  <h1>📚 Class Template</h1>
 
-    <ol>
-      <li><strong>Small Talk</strong> (15 minutes)</li>
-      <li><strong>Previous Flashcards Review</strong> (15 minutes)</li>
-      <li><strong>Talk about diary</strong> (15 minutes)</li>
-      <li><strong>Textbook</strong> (15 minutes)</li>
-    </ol>
-    
-    <h3>📝 Recommended Homework:</h3>
-    <ol>
-      <li>Flashcards</li>
-      <li>Diary (including new grammar learned)</li>
-      <li>Include a test if you have reached it (solve and grade it for homework)</li>
-    </ol>
-  `;
+  <h2>🗓️ Date:</h2>
+  <h3>Class Title</h3>
+
+  <ol>
+    <li>
+      <strong>Check Homework</strong>
+    </li>
+
+    <li>
+      <strong>Small Talk</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+
+    <li>
+      <strong>Previous Flashcards Review</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+
+    <li>
+      <strong>Talk About Diary</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Write Diary (including new grammar learned)</li>
+    <li>Include a test if reached (solve and grade it for homework)</li>
+  </ul>
+`;
 
   const notesTemplate9 = `
   <h2>Grading Rubric</h2>
@@ -1220,95 +1417,350 @@ const ClassPageContent: React.FC = () => {
 `;
 
   const intermediateTemplate1 = `
-    <h2>📚 The First Class (Intermediate)</h2>
+  <h1>📚 First Class Template</h1>
 
-    <ol>
-      <li><strong>Go Over Notion Goals</strong> (3–5 minutes)</li>
-      <li><strong>Small Talk</strong> (15 minutes)</li>
-      <li><strong>Self Introduction</strong> (15 minutes)<br/>- Add to flashcards</li>
-      <li><strong>Textbook</strong> (20 minutes)<br/>- Pace: Chapter 5 in 2–3 classes<br/>- Read storytelling examples</li>
-      <li><strong>App Setup</strong> (5 minutes)<br/>
-        <ul>
-          <li>Download Quizlet App</li>
-          <li>Download Google Docs App</li>
-          <li>Send Kakao Channel link</li>
-        </ul>
-      </li>
-    </ol>
+  <h2>🗓️ Date:</h2>
+  <h3>The First Class</h3>
 
+  <ol>
+    <li>
+      <strong>Go Over Notion Goals</strong><br/>
+      🕐 Duration: 3–5 minutes<br/>
+      ✅ 주 2회 3~6개월 목표!<br/>
+      ⚠ 숙제 안 해오고 수업 빠지기 시작하면 더 걸릴 수도 있다.
+    </li>
 
-  `;
+    <li>
+      <strong>Small Talk</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      💬 Topics:
+      <ul>
+        <li>Weekend / Today / Something new / Next weekend</li>
+        <li>What else did you do?</li>
+        <li>Did you do anything fun?</li>
+      </ul>
+      📌 Feel free to extend time if conversation flows well!
+    </li>
+
+    <li>
+      <strong>Self Introduction</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🧠 Make it harder than beginner level self-intro<br/>
+      📌 Add to flashcards — make sure they memorize in bulk!<br/>
+      💡 Include:
+      <ul>
+        <li>Name</li>
+        <li>Age</li>
+        <li>Job & job detail</li>
+        <li>Hobbies</li>
+      </ul>
+      (4–7 sentences is enough)
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 20 minutes<br/>
+      📘 Activities:
+      <ul>
+        <li>Read goals & homework together</li>
+        <li>Ask: “How many ways can you greet me without looking at the textbook?”</li>
+        <li>Read “preview examples” together</li>
+        <li>If comfortable (usually level 7+), skip to test</li>
+        <li>Read at least 1 storytelling example</li>
+        <li>Write a sample storytelling diary together</li>
+      </ul>
+      📏 Pace: Try to finish Chapter 5 in 2–3 classes
+    </li>
+
+    <li>
+      <strong>Homework Prep</strong><br/>
+      🕐 Duration: 5–7 minutes<br/>
+      🛠️ Setup:
+      <ul>
+        <li>Fluent App: <a href="https://fluent-five.vercel.app/">https://fluent-five.vercel.app/</a></li>
+        <li>Add to home screen (iPhone Safari / Android Chrome)</li>
+        <li>Kakao Channel: <a href="http://pf.kakao.com/_ndxoZG/chat">http://pf.kakao.com/_ndxoZG/chat</a></li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards (use the ‘star’ function properly)</li>
+    <li>Storytelling Diary</li>
+    <li>Chapter 5 Test – Solve & Grade at home<br/>(or next class if you're going slow)</li>
+    <li>📩 Message the teacher if flashcards are missing</li>
+  </ul>
+
+  <h2>📌 Recommended Plan for Next Class</h2>
+  <ul>
+    <li>Storytelling Diary – 대화로 검사</li>
+    <li>Chapter 5 Test – 틀린 표현들 검사 (틀리면 퀴즐렛 추가)</li>
+  </ul>
+`;
 
   const intermediateTemplate2 = `
-    <h2>📚 The Second Class (Intermediate)</h2>
+  <h1>📚 Second Class Template</h1>
 
-    <ol>
-      <li><strong>Student Driven Small Talk</strong> (15 minutes)<br/>- Let them ask questions first</li>
-      <li><strong>Flashcards Review</strong> (15 minutes)<br/>- Check self introduction<br/>- Negotiate flashcard amount (30–100)</li>
-      <li><strong>Storytell the Diary</strong> (15 minutes)<br/>- Follow-ups + your own example<br/>- Add slow expressions to Quizlet</li>
-      <li><strong>Textbook</strong> (15 minutes)<br/>- Review test expressions</li>
-    </ol>
+  <h2>🗓️ Date:</h2>
+  <h3>The Second Class</h3>
 
-    <h3>💬 Suggested Prompts</h3>
+  <ol>
+    <li>
+      <strong>Homework Check</strong><br/>
+      🕐 Duration: 5–7 minutes<br/>
+      ✅ Check if students did their homework<br/>
+      ✍️ If no diary: Give 5 minutes to write a 3-sentence diary before starting class<br/>
+      🌟 Check if they used the “star” function on their flashcards<br/>
+      📋 Copy completed self-introductions into the “collect bulk answers template”
+    </li>
+
+    <li>
+      <strong>Student-Driven Small Talk</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🎯 Students ask questions first (let them know it’s intentional)<br/>
+      💡 Provide small talk starter expressions:
+      <ul>
+        <li>What did you do last weekend?</li>
+        <li>Did anything fun or unexpected happen?</li>
+        <li>What are your plans for the upcoming weekend?</li>
+        <li>How was work this week?</li>
+        <li>What’s something you’re looking forward to?</li>
+      </ul>
+    </li>
+
+    <li>
+      <strong>Flashcard Review</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🎓 Check if they memorized their self-introduction in bulk<br/>
+      🔄 Negotiate amount: 30–100 cards (more is better, polishing encouraged)<br/>
+      ❌ Wrong cards → Star it → Retest → Still wrong? Copy into today's notes<br/>
+      📌 Students MUST memorize their flashcards
+    </li>
+
+    <li>
+      <strong>Storytell the Diary</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🗣️ Without looking, student retells diary in a fun, compact way<br/>
+      🤔 Ask a few follow-up questions<br/>
+      🎭 You give an example version of their diary<br/>
+      🔄 Student asks about your week/weekend<br/>
+      🧑‍🏫 You do a 5-minute storytelling session<br/>
+      ❓ Let the student ask you a few questions too<br/>
+      ✍️ Afterward: check AI diary edits & add good expressions to flashcards
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      📄 Go over Chapter 5 test & expressions they got wrong or don’t understand<br/>
+      🧠 Add those expressions to flashcards if needed<br/>
+      ⏱️ Finishing a chapter = 2–3 classes<br/>
+      📘 If they finish quickly → Try questions from the Intermediate Level Test<br/>
+      🏠 Optional Homework: Write Intermediate Test questions at home
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Storytelling Diary (or Work Diary if business-focused)</li>
+    <li>Chapter 5 Test – Solve & Grade at home</li>
+    <li>Already did Chapter 5? Write 1–3 Intermediate test questions at home:</li>
     <ul>
-      <li>Unexpected event</li>
-      <li>Fight/argument</li>
-      <li>Office gossip</li>
-      <li>Frustrating situation</li>
-      <li>Funny story about kids</li>
+      <li>Tell me about something unexpected that happened recently</li>
+      <li>Tell me about the most memorable fight or argument you had</li>
+      <li>Tell me some office gossip (someone you dislike maybe)</li>
+      <li>Tell me about a situation that annoyed you at work</li>
+      <li>Tell me about how your kids upset you or made you laugh</li>
     </ul>
+  </ul>
 
-
-  `;
-
+  <h2>📌 Recommended Plan for Next Class</h2>
+  <ul>
+    <li>Storytell Intermediate Level Test questions in person</li>
+    <li>Move on to the next textbook chapter</li>
+  </ul>
+`;
   const intermediateTemplate3 = `
-    <h2>📚 The Third Class (Intermediate)</h2>
+  <h1>📚 Third Class Template</h1>
 
-    <ol>
-      <li><strong>Student Driven Small Talk</strong> (15 minutes)</li>
-      <li><strong>Flashcards Review</strong> (15 minutes)<br/>- Re-add important wrong answers</li>
-      <li><strong>Storytell the Diary</strong> (15 minutes)<br/>- Add character, quotes, etc.</li>
-      <li><strong>Textbook</strong> (15 minutes)<br/>- Continue chapter, verbal checks</li>
-    </ol>
+  <h2>🗓️ Date:</h2>
+  <h3>The Third Class</h3>
 
+  <ol>
+    <li>
+      <strong>Homework Check</strong><br/>
+      🕐 Duration: 5–7 minutes<br/>
+      ✅ Check if students did their homework<br/>
+      ✍️ If no diary: Give 5 minutes to write a 3-sentence diary before starting class<br/>
+      🌟 Check if they used the “star” function on their flashcards
+    </li>
 
-  `;
+    <li>
+      <strong>Student-Driven Small Talk</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🎯 Students initiate conversation<br/>
+      💡 Teach & practice useful small talk starter expressions:
+      <ul>
+        <li>“How’s your week been?”</li>
+        <li>“Anything interesting happen recently?”</li>
+        <li>“How was work today?”</li>
+        <li>“What are your weekend plans?”</li>
+      </ul>
+    </li>
+
+    <li>
+      <strong>Flashcard Review</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      ❌ Wrong cards → Star it → Retest<br/>
+      📝 Still wrong? Copy into today's notes<br/>
+      📌 Students MUST memorize flashcards consistently
+    </li>
+
+    <li>
+      <strong>Storytell the Diary</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      📖 Diary must include:
+      <ul>
+        <li>Characters</li>
+        <li>Quotes</li>
+        <li>Interesting flow</li>
+      </ul>
+      🔄 Student should ask you questions too<br/>
+      🧠 Summarize diary without looking → Check AI edits → Add good expressions to flashcards<br/>
+      ⬆️ Upgrade the diary using new grammar if possible
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      📘 Continue the textbook<br/>
+      🗣️ Test them verbally on expressions<br/>
+      ❗ Add slow/wrong expressions to flashcards<br/>
+      ✍️ Try out intermediate level test questions per chapter
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Write Storytelling Diary (or Work Diary)</li>
+    <li>Solve another textbook test & grade it</li>
+    <li>📌 Keep a steady pace – don’t just talk!</li>
+  </ul>
+
+  <h2>📌 Recommended Plan for Next Class</h2>
+  <ul>
+    <li>Keep working on current or next textbook chapter</li>
+  </ul>
+`;
 
   const intermediateTemplate4 = `
-   <h2>📚 The Fourth Class (Intermediate)</h2>
+  <h1>📚 Class Template</h1>
 
-   <ol>
-     <li><strong>Student Driven Small Talk</strong> (15 minutes)<br/>- Sometimes let your student start the small talk with memorized expressions<br/>- Make sure you have them ask you questions as well</li>
-     <li><strong>Previous Flashcards Review</strong> (15 minutes)<br/>- Wrong cards > 'star' it > test them again > if they still get it wrong copy and paste it in today's notes<br/>- Students MUST memorize their flashcards</li>
-     <li><strong>Talk about diary</strong> (15 minutes)<br/>- Summarize the diary without looking > look at edits > add good expressions to flashcards<br/>- Refer to diary related expressions in textbook<br/>- Upgrade diary to include new grammar</li>
-     <li><strong>Textbook</strong> (15 minutes)<br/>- Understand > Memorize > Use<br/>- You can do the tests in class or for homework depending on the student</li>
-   </ol>
+  <h2>🗓️ Date:</h2>
+  <h3>Class Title:</h3>
 
-   <h3>📝 Recommended Homework:</h3>
-   <ol>
-     <li>Flashcards</li>
-     <li>Diary (including new grammar learned)</li>
-     <li>Include a test if you have reached it (solve and grade it for homework)</li>
-   </ol>
- `;
+  <ol>
+    <li>
+      <strong>Homework Check</strong><br/>
+      🕐 Duration: 5–7 minutes<br/>
+      ✅ Check if students did their homework<br/>
+      ✍️ If no diary: Give 5 minutes to write a 3-sentence diary before starting class<br/>
+      🌟 Check if they used the “star” function to study flashcards<br/>
+      📋 Copy long-form homework into “collect bulk answers template”
+    </li>
 
+    <li>
+      <strong>Student-Driven Small Talk</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🗣️ Let students start the conversation using memorized expressions<br/>
+      ❓ Make sure they also ask you questions during small talk
+    </li>
+
+    <li>
+      <strong>Flashcard Review</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      ❌ Wrong cards → Star it → Retest<br/>
+      📝 Still wrong? Copy into today's notes<br/>
+      📌 Students MUST memorize flashcards regularly
+    </li>
+
+    <li>
+      <strong>Talk About Diary</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🧠 Summarize diary without looking → Review AI edits<br/>
+      ✍️ Add good expressions to flashcards<br/>
+      📘 Refer to related expressions in the textbook<br/>
+      ⬆️ Upgrade the diary to include new grammar
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🎯 Goal: Understand → Memorize → Use<br/>
+      📄 Do textbook tests in class or assign them as homework based on the student
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Write Diary (use new grammar learned)</li>
+    <li>If you’ve reached a test section: Solve & Grade it at home</li>
+    <li>Give a chapter test topic (under 10 sentences)<br/>
+        📝 This can replace the diary if the student is short on time
+    </li>
+  </ul>
+`;
   const intermediateTemplate5 = `
-   <h2>📚 The Fifth Class (Intermediate)</h2>
+  <h1>📚 Class Template</h1>
 
-   <ol>
-     <li><strong>Small Talk</strong> (15 minutes)</li>
-     <li><strong>Previous Flashcards Review</strong> (15 minutes)</li>
-     <li><strong>Talk about diary</strong> (15 minutes)</li>
-     <li><strong>Textbook</strong> (15 minutes)</li>
-   </ol>
+  <h3>Class Title</h3>
 
-   <h3>📝 Recommended Homework:</h3>
-   <ol>
-     <li>Flashcards</li>
-     <li>Diary (including new grammar learned)</li>
-     <li>Include a test if you have reached it (solve and grade it for homework)</li>
-   </ol>
- `;
+  <ol>
+    <li>
+      <strong>Student-Driven Small Talk</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🗣️ Encourage students to begin the conversation using memorized expressions<br/>
+      ❓ Make sure they ask you questions as well
+    </li>
+
+    <li>
+      <strong>Flashcard Review</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      ❌ Wrong cards → Star it → Retest<br/>
+      📝 Still wrong? Copy into today's notes<br/>
+      📌 Students MUST continue to memorize flashcards
+    </li>
+
+    <li>
+      <strong>Talk About Diary</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🧠 Summarize without looking → Check AI edits<br/>
+      ✍️ Add strong expressions to flashcards<br/>
+      📘 Upgrade using new grammar and refer to textbook expressions
+    </li>
+
+    <li>
+      <strong>Textbook</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      🎯 Understand → Memorize → Use<br/>
+      📄 Tests can be done in class or assigned for homework
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Write Diary (with new grammar)</li>
+    <li>Complete textbook test (solve & grade at home if reached)</li>
+    <li>Write a chapter test topic (under 10 sentences)<br/>
+        📝 May be used in place of a diary if short on time
+    </li>
+  </ul>
+`;
 
   const intermediateTemplate9 = `
   <h1>Intermediate Level Test</h1>
