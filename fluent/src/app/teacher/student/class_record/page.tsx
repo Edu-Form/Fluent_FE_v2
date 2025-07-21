@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense, ReactNode, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
+import Link from "next/link";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
@@ -2063,66 +2064,128 @@ const ClassPageContent: React.FC = () => {
 `;
 
   const businessTemplate1 = `
-    <h2>📚 The First Business Class</h2>
+  <h1>📚 Business Class Template</h1>
 
-    <ol>
-      <li><strong>Notion Goals</strong> (5 minutes)</li>
-      <li><strong>Casual Self Intro Writing</strong> (15 minutes)</li>
-      <li><strong>Write Business Diary</strong> (15 minutes)<br/>Example:<br/>
-        - 지금 연구하고 있는 제품에 대한 셈플 생산을 위해서 12시간 근무를 했다 → Yesterday, I had a 12-hour shift making samples for our new vitamin B5 supplement.<br/>
-        - 다양한 설비를 조작하며 셈플이 나오게 실험들을 했다 → So I conducted various experiments to get a secure sample.
-      </li>
-      <li><strong>Small Talk</strong> (15 minutes)</li>
-      <li><strong>App Setup</strong> (10 minutes)
-        <ul>
-          <li>Download Quizlet App</li>
-          <li>Download Google Docs App</li>
-          <li>Send Kakao Channel link</li>
-        </ul>
-      </li>
-    </ol>
-  `;
+  <ol>
+    <li>
+      <strong>Go Over Notion Goals</strong><br/>
+      🕐 Duration: 5 minutes
+    </li>
+
+    <li>
+      <strong>Casual Self Introduction Writing</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+
+    <li>
+      <strong>Write Business Diary Together</strong><br/>
+      🕐 Duration: 15 minutes<br/>
+      <em>Example:</em><br/>
+      지금 연구하고 있는 제품에 대한 셈플 생산을 위해서 12시간 근무를 했다 → Yesterday, I had a 12 hour shift making samples for our new vitamin B5 supplement.<br/>
+      다양한 설비를 조작하며 셈플이 나오게 실험들을 했다 → So I conducted various experiments to get a secure sample.
+    </li>
+
+    <li>
+      <strong>Small Talk</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+
+    <li>
+      <strong>Homework Prep</strong><br/>
+      🕐 Duration: 10 minutes<br/>
+      🛠️ Set up Fluent App: <a href="https://fluent-five.vercel.app/">https://fluent-five.vercel.app/</a><br/>
+      📱 Add to mobile home screen (iPhone Safari / Android Chrome)<br/>
+      🔗 Set up Kakao Channel link: <a href="http://pf.kakao.com/_ndxoZG/chat">http://pf.kakao.com/_ndxoZG/chat</a>
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards (use the ‘star’ function properly)</li>
+    <li>Work Diary (focus on one task or meeting)</li>
+    <li>Write Business Self Introduction (distinct from casual, work-focused)</li>
+    <li>Memorize the casual self introduction in bulk</li>
+    <li>Message teacher if you can’t find or use your flashcards</li>
+  </ul>
+
+  <h2>📌 Recommended Plan for Next Class</h2>
+  <ul>
+    <li>Review casual self introduction</li>
+    <li>Edit business self introduction</li>
+    <li>Storytell the work diary (go into detail about the topic)</li>
+  </ul>
+`;
 
   const businessTemplate2 = `
-    <h2>📚 The Second Business Class</h2>
+  <h1>📚 Advanced Business Class Template</h1>
 
-    <ol>
-      <li><strong>Student Driven Small Talk</strong> (15 minutes)</li>
-      <li><strong>Previous Quizlet Review</strong> (15 minutes)</li>
-      <li><strong>Diary Review</strong> (15 minutes)</li>
-      <li><strong>Business Curriculum</strong> (15 minutes)<br/>- Business self intro<br/>- In-depth work conversations</li>
-    </ol>
+  <ol>
+    <li>
+      <strong>Student Driven Small Talk</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
 
-  `;
+    <li>
+      <strong>Previous Quizlet Review</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+
+    <li>
+      <strong>Business or Storytelling Diary Review</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+
+    <li>
+      <strong>In Depth Work Conversations</strong><br/>
+      🕐 Duration: 15 minutes
+    </li>
+  </ol>
+
+  <h2>📚 Recommended Homework</h2>
+  <ul>
+    <li>Study Flashcards</li>
+    <li>Work Diary or Storytelling Diary (focus on one appointment or one work task)</li>
+    <li>Write 1 in-depth work conversation topic (5–10 sentences)</li>
+    <li>Memorize the previous homework (keep it around 5–10 sentences, not too long)</li>
+  </ul>
+
+  <h2>📌 Recommended Plan for Next Class</h2>
+  <ul>
+    <li>Review memorized topic</li>
+    <li>Write new topic</li>
+    <li>Storytell the diary (go into detail about the topic)</li>
+  </ul>
+`;
+
   const businessTemplate3 = `
-   <h2>📚 Business Template 3</h2>
+  <h1>💼 Business Conversation Topics Guide</h1>
 
-   <p><strong>Use examples to explain but keep the answers under 15 sentences to be able to memorize</strong><br/>
-   <strong>Choose the topics based on the student. You may change them a bit if you want</strong></p>
+  <p>Use examples to explain, but keep answers under 15 sentences for memorization.<br/>
+  Choose topics based on the student’s background. Feel free to adjust.</p>
 
-   <ol>
-     <li>Tell me about the company that you work at in detail</li>
-     <li>Tell me about your specific role at your company in detail</li>
-     <li>Tell me about typical day at work in detail in chronological order</li>
-     <li>Tell me about your team and department in detail. What is your team in charge of?</li>
-     <li>Are you satisfied with your job? Why are you or aren't you satisfied with your job?</li>
-     <li>What was your previous job? Why did you change jobs?</li>
-     <li>What is your plan in the next 10 years?</li>
-     <li>When do you usually get stressed? How do you handle stress?</li>
-     <li>What motivates you to work harder or be better?</li>
-     <li>What are your strengths and weaknesses? Give examples.</li>
-     <li>Are there any coworkers you dislike? Spill the tea on some office gossip.</li>
-     <li>How would your colleagues describe you?</li>
-     <li>Are there any coworkers you like? why do you admire them?</li>
-     <li>What was the biggest challenge you've faced at work, and how did you overcome it?</li>
-     <li>What skills have you developed the most through your job, and how?</li>
-     <li>Have you ever made a mistake at work? What happened and how did you handle it?</li>
-     <li>What's your work-life balance like? Do you think it's healthy? Why or why not?</li>
-     <li>How do you stay productive or focused during long or difficult workdays?</li>
-     <li>Tell me about some unique culture in your company.</li>
-     <li>If you could change one thing about your current job, what would it be and why?</li>
-   </ol>
- `;
+  <ul>
+    <li>Tell me about the company that you work at in detail.</li>
+    <li>Tell me about your specific role at your company in detail.</li>
+    <li>Tell me about a typical day at work in chronological order.</li>
+    <li>Tell me about your team and department. What is your team in charge of?</li>
+    <li>Are you satisfied with your job? Why or why not?</li>
+    <li>What was your previous job? Why did you change jobs?</li>
+    <li>What is your plan for the next 10 years?</li>
+    <li>When do you usually get stressed? How do you handle stress?</li>
+    <li>What motivates you to work harder or be better?</li>
+    <li>What are your strengths and weaknesses? Give examples.</li>
+    <li>Are there any coworkers you dislike? Spill some office gossip.</li>
+    <li>How would your colleagues describe you?</li>
+    <li>Are there any coworkers you like? Why do you admire them?</li>
+    <li>What was the biggest challenge you’ve faced at work, and how did you overcome it?</li>
+    <li>What skills have you developed the most through your job, and how?</li>
+    <li>Have you ever made a mistake at work? What happened and how did you handle it?</li>
+    <li>What’s your work-life balance like? Do you think it’s healthy? Why or why not?</li>
+    <li>How do you stay productive or focused during long or difficult workdays?</li>
+    <li>Tell me about some unique culture in your company.</li>
+    <li>If you could change one thing about your current job, what would it be and why?</li>
+  </ul>
+`;
 
   const businessTemplate5 = `
    <h2>📚 Business Template 5</h2>
@@ -2902,6 +2965,19 @@ const ClassPageContent: React.FC = () => {
 
                 {activeOption === "option2" && (
                   <div className="p-3 bg-white border border-[#F2F4F6] rounded-2xl shadow-sm flex-1 flex flex-col">
+                    <h3 className="text-xs font-bold text-[#191F28] mb-1">
+                      Level Test
+                    </h3>
+                    <div className="hover:bg-blue-50 mb-1">
+                      <Link
+                        href={`/teacher/student/test?user=${user}&student_name=${student_name}`}
+                        className="text-md text-[#191F28] inline-flex items-center justify-center p-2 rounded-lg transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                      {student_name}'s Level Test
+                      </Link>
+                    </div>
                     <h3 className="text-xs font-bold text-[#191F28] mb-3">
                       Previous Notes
                     </h3>

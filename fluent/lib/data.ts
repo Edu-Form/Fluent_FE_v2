@@ -306,7 +306,41 @@ export async function updateProgressData(
   }
 }
 
+export async function getTestData(student_name: string, title: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db('school_management');
 
+    const result = await db.collection('test').findOne({
+      student_name,
+      title,
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error fetching test data:', error);
+    return null;
+  }
+}
+
+export async function saveOrUpdateTestData(student_name: string, title: string, text: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db('school_management');
+
+    const result = await db.collection('test').updateOne(
+      { student_name, title },
+      { $set: { text } },
+      { upsert: true }
+    );
+    console.log(result)
+    return result;
+    
+  } catch (error) {
+    console.error('Error saving/updating test data:', error);
+    return null;
+  }
+}
 
 
 export const getSchedulesByDate = async (dateStr: string) => {
