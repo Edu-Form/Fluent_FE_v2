@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Quizlets not found" }, { status: 404 });
     }
     // Get the last quizlet
-    const lastQuizlet = quizlets[quizlets.length - 1];
+    const lastQuizlet = quizlets[0];
 
     return NextResponse.json(lastQuizlet);
   } catch (error) {
