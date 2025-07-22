@@ -1956,7 +1956,8 @@ Make each recommendation simple and one line each instead of a long explanation.
           {
             role: "system",
             content:
-              `${selectedLevelInstruction}`
+              `Please make sure all summaries or corrections are written in the first person, maintaining the original perspective of the diary writer. 
+              Use this as a guideline: ${selectedLevelInstruction}`
           },
           {
             role: "user",
@@ -1971,14 +1972,15 @@ Make each recommendation simple and one line each instead of a long explanation.
     const corrected_diary = await ai_corrected_diary(original_text);
 
     const ai_diary_expressions = async (original_text: string, level: string) => {
-      const systemPrompt = expressionPrompts[level] || "Please recommend 10 useful English expressions for this diary.";
+      const systemPrompt = expressionPrompts[level] || "Please recommend 10 useful English expressions for this diary. Respond only with the list of expressions and nothing else.";
 
       const completion = await openaiClient.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system",
-            content: systemPrompt,
+            content: `Respond only with the list of expressions and nothing else. 
+            Guidelines: ${systemPrompt}`,
           },
           {
             role: "user",
@@ -2002,7 +2004,8 @@ Make each recommendation simple and one line each instead of a long explanation.
         messages: [
           {
             role: "system",
-            content: systemPrompt,
+            content: `Please make sure all summaries or corrections are written in the first person, maintaining the original perspective of the diary writer. 
+            Guidelines: ${systemPrompt}`,
           },
           {
             role: "user",
