@@ -3665,7 +3665,7 @@ function TestPage() {
         ) : (
           <>
             <textarea
-              className="w-full min-h-[480px] p-4 border rounded-lg text-gray-800"
+              className="w-full min-h-[480px] p-4 border rounded-lg bg-white text-black"
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
