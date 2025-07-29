@@ -1899,6 +1899,7 @@ const ClassPageContent: React.FC = () => {
                       <div className="space-y-1">
                         {["Mock Test Prep Class 1", "Mock Test Prep Class 2", "Collect Bulk Answers", "Filter Grammer", "Filter Pillar Expressions", "Actual Level Test"].map((label) => (
                           <button
+                            type="button"
                             key={`Beginner: ${label}`}
                             onClick={() => {
                               const url = `/teacher/student/test?student_name=${encodeURIComponent(student_name)}&user=teacher&title=${encodeURIComponent(`Beginner: ${label}`)}`;
@@ -1916,6 +1917,7 @@ const ClassPageContent: React.FC = () => {
                       <div className="space-y-1">
                         {["Mock Test Prep Class 1", "Mock Test Prep Class 2", "Collect Bulk Answers", "Filter Grammer", "Filter Pillar Expressions", "Actual Level Test"].map((label) => (
                           <button
+                            type="button"
                             key={`Intermediate: ${label}`}
                             onClick={() => {
                               const url = `/teacher/student/test?student_name=${encodeURIComponent(student_name)}&user=teacher&title=${encodeURIComponent(`Intermediate: ${label}`)}`;

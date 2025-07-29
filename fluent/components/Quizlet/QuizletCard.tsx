@@ -766,6 +766,34 @@ const QuizletCardContent = ({
     trackTouch: true,
   });
 
+  useEffect(() => {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (isAutoPlaying || isPreparingAudio) return;
+
+    // Prevent interfering with input fields if they exist
+    if (
+      document.activeElement &&
+      (document.activeElement.tagName === "INPUT" ||
+        document.activeElement.tagName === "TEXTAREA")
+    ) {
+      return;
+    }
+
+    if (e.key === "ArrowRight") {
+      handleNextCard();
+    } else if (e.key === "ArrowLeft") {
+      handlePrevCard();
+    } else if (e.key === " ") {
+      e.preventDefault(); // avoid page scroll
+      setIsFlipped((prev) => !prev);
+    }
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+  return () => window.removeEventListener("keydown", handleKeyDown);
+}, [handleNextCard, handlePrevCard, isAutoPlaying, isPreparingAudio]);
+
+
   // CRITICAL CLEANUP EFFECT - This must be the LAST useEffect
   useEffect(() => {
     // Set mounted flag
