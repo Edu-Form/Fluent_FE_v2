@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-
 
 
 type NoteData = {
@@ -10,7 +9,6 @@ type NoteData = {
   title: string;
   text: string;
 };
-
 
 
 const templates: Record<string, string> = {
@@ -3577,50 +3575,53 @@ End Timer: 45 minute mark (15 minutes left for feedback)
 };
 
 function TestPage() {
+  const searchParams = useSearchParams();
+  const student_name = searchParams.get('student_name') || 'Unknown Student';
+  const title = searchParams.get('title') || '';
+
   const [note, setNote] = useState<NoteData | null>(null);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
-  const searchParams = useSearchParams();
-  const studentName = searchParams.get('student_name') || 'Unknown Student';
 
-  const handleSelect = async (title: string) => {
-    const query = new URLSearchParams({ studentName, title });
-    const res = await fetch(`/api/test?${query.toString()}`);
-    let data;
-  
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      // Create fallback template and save to DB
-      const fallback = {
-        student_name: studentName,
-        title,
-        text: templates[title] || '',
-      };
-  
-      const postRes = await fetch('/api/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fallback),
-      });
-  
-      if (postRes.ok) {
-        data = fallback;
+  useEffect(() => {
+    const loadNote = async () => {
+      if (!title) return;
+      const query = new URLSearchParams({ studentName: student_name, title });
+      const res = await fetch(`/api/test?${query.toString()}`);
+      let data;
+
+      if (res.ok) {
+        data = await res.json();
       } else {
-        alert('Failed to create test entry.');
-        return;
+        const fallback = {
+          student_name,
+          title,
+          text: templates[title] || '',
+        };
+        const postRes = await fetch('/api/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fallback),
+        });
+
+        if (postRes.ok) {
+          data = fallback;
+        } else {
+          alert('Failed to create test entry.');
+          return;
+        }
       }
-    }
-  
-    setNote(data);
-    setText(data.text || '');
-  };
-  
+
+      setNote(data);
+      setText(data.text || '');
+    };
+
+    loadNote();
+  }, [student_name, title]);
 
   const handleSave = async () => {
     if (!note) return;
     setSaving(true);
-
     const res = await fetch('/api/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3633,36 +3634,14 @@ function TestPage() {
     setSaving(false);
   };
 
-  const renderButtons = (level: 'Beginner' | 'Intermediate') => (
-    <div className="space-y-2">
-      <h3 className="text-lg font-semibold text-gray-800">{level}</h3>
-      {Object.keys(templates)
-        .filter((key) => key.startsWith(level))
-        .map((title) => (
-          <button
-            key={title}
-            onClick={() => handleSelect(title)}
-            className="block w-full text-left bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-md text-gray-800"
-          >
-            {title.replace(`${level}: `, '')}
-          </button>
-        ))}
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-[#f8f9fa] p-8">
       <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow">
         <h2 className="text-2xl font-bold mb-6 text-[#191f28]">
-          {note ? note.title : `${studentName}'s Test Materials`}
+          {note ? note.title : 'Loading test material...'}
         </h2>
 
-        {!note ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {renderButtons('Beginner')}
-            {renderButtons('Intermediate')}
-          </div>
-        ) : (
+        {note ? (
           <>
             <textarea
               className="w-full min-h-[480px] p-4 border rounded-lg bg-white text-black"
@@ -3677,6 +3656,8 @@ function TestPage() {
               {saving ? 'Saving...' : 'Save'}
             </button>
           </>
+        ) : (
+          <p>Loading or invalid template...</p>
         )}
       </div>
     </div>
