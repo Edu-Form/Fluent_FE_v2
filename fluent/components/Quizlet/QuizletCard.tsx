@@ -767,31 +767,43 @@ const QuizletCardContent = ({
   });
 
   useEffect(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (isAutoPlaying || isPreparingAudio) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isAutoPlaying || isPreparingAudio) return;
 
-    // Prevent interfering with input fields if they exist
-    if (
-      document.activeElement &&
-      (document.activeElement.tagName === "INPUT" ||
-        document.activeElement.tagName === "TEXTAREA")
-    ) {
-      return;
-    }
+      // Prevent interfering with input fields
+      if (
+        document.activeElement &&
+        ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)
+      ) {
+        return;
+      }
 
-    if (e.key === "ArrowRight") {
-      handleNextCard();
-    } else if (e.key === "ArrowLeft") {
-      handlePrevCard();
-    } else if (e.key === " ") {
-      e.preventDefault(); // avoid page scroll
-      setIsFlipped((prev) => !prev);
-    }
-  };
+      switch (e.key) {
+        case "ArrowRight":
+          handleNextCard();
+          break;
+        case "ArrowLeft":
+          handlePrevCard();
+          break;
+        case "ArrowUp":
+        case "ArrowDown":
+        case " ":
+          e.preventDefault(); // avoid page scroll
+          setIsFlipped((prev) => !prev);
+          break;
+        case "s":
+        case "S":
+          checkCurrentCard(); // star/unstar
+          break;
+        default:
+          break;
+      }
+    };
 
-  window.addEventListener("keydown", handleKeyDown);
-  return () => window.removeEventListener("keydown", handleKeyDown);
-}, [handleNextCard, handlePrevCard, isAutoPlaying, isPreparingAudio]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleNextCard, handlePrevCard, isAutoPlaying, isPreparingAudio]);
+
 
 
   // CRITICAL CLEANUP EFFECT - This must be the LAST useEffect

@@ -11,9 +11,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const result = await saveQuizletData(quizletData, kor_quizlet, eng_quizlet, homework, nextClass);
+    const { student_names, ...rest } = quizletData;
 
-    return NextResponse.json({ message: "Data saved successfully", result }, { status: 200 });
+    const names = Array.isArray(student_names)
+      ? student_names
+      : typeof student_names === "string"
+        ? student_names.split(",").map((n: string) => n.trim()).filter(Boolean)
+        : [];
+
+    if (names.length === 0) {
+      return NextResponse.json({ error: "No student names provided" }, { status: 400 });
+    }
+
+    const results = [];
+
+    for (const name of names) {
+      const result = await saveQuizletData(
+        { ...rest, student_name: name },
+        kor_quizlet,
+        eng_quizlet,
+        homework,
+        nextClass
+      );
+      results.push({ name, result });
+    }
+
+    return NextResponse.json({ message: "Saved for all students", results }, { status: 200 });
+
   } catch (error) {
     console.error("Error saving data:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

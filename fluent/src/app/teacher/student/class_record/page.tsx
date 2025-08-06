@@ -2119,16 +2119,17 @@ const ClassPageContent: React.FC = () => {
               <table className="w-full text-sm border-collapse bg-white">
                 <thead>
                   <tr className="text-left bg-[#F8F9FA] border-b border-[#F2F4F6]">
+                    <th className="p-4 w-8 text-center font-bold text-[#191F28]"></th>
                     <th className="p-4 font-bold text-[#191F28]">English</th>
                     <th className="p-4 font-bold text-[#191F28]">Korean</th>
+                    <th className="p-4 font-bold text-[#191F28] text-center">Delete</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {quizletLines.map((line, idx) => (
-                    <tr
-                      key={idx}
-                      className="border-b border-[#F2F4F6] hover:bg-[#F8F9FA]"
-                    >
+                    <tr key={idx}>
+                      <td className="p-4 text-center text-gray-500 font-mono">{idx + 1}</td>
                       <td className="p-4">
                         <textarea
                           value={line.eng}
@@ -2137,7 +2138,7 @@ const ClassPageContent: React.FC = () => {
                             updated[idx].eng = e.target.value;
                             setQuizletLines(updated);
                           }}
-                          className="w-full p-3 border border-[#F2F4F6] rounded-xl bg-white text-black text-sm resize-none focus:border-[#3182F6] focus:ring-4 focus:ring-[#3182F6]/10 transition-all"
+                          className="w-full p-3 bg-white text-black border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                         />
                       </td>
                       <td className="p-4">
@@ -2148,12 +2149,29 @@ const ClassPageContent: React.FC = () => {
                             updated[idx].kor = e.target.value;
                             setQuizletLines(updated);
                           }}
-                          className="w-full p-3 border border-[#F2F4F6] rounded-xl bg-white text-black text-sm resize-none focus:border-[#3182F6] focus:ring-4 focus:ring-[#3182F6]/10 transition-all"
+                          className="w-full p-3 bg-white text-black border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                         />
+                      </td>
+                      <td className="p-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...quizletLines];
+                            updated.splice(idx, 1);
+                            setQuizletLines(updated);
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                          title="Delete this line"
+                        >
+                          ❌
+                        </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
+
+
+
               </table>
             </div>
 
@@ -2169,7 +2187,7 @@ const ClassPageContent: React.FC = () => {
                   try {
                     const payload = {
                       quizletData: {
-                        student_name,
+                        student_names: group_student_names,
                         class_date,
                         date,
                         original_text,
