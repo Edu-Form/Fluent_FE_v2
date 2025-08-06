@@ -485,30 +485,8 @@ const HomePageContent = () => {
                             {student.name}
                           </td>
 
-                          <td className="px-3 py-3">
-                            <div className="flex items-center justify-center">
-                              <div className="w-full max-w-[100px] bg-gray-200 rounded-full h-2 mr-2">
-                                <div
-                                  className="h-2 rounded-full"
-                                  style={{
-                                    width: `${progressPercent}%`,
-                                    backgroundColor:
-                                      progressColor === "green"
-                                        ? "#22c55e"
-                                        : progressColor === "blue"
-                                        ? "#3b82f6"
-                                        : progressColor === "orange"
-                                        ? "#f97316"
-                                        : "#ef4444",
-                                  }}
-                                ></div>
-                              </div>
-                              <span
-                                className={`text-xs px-2 py-0.5 rounded-full ${colorClasses[progressColor]}`}
-                              >
-                                {completedCount}/4
-                              </span>
-                            </div>
+                          <td className="px-3 py-3 text-center text-sm text-gray-500">
+                            Checking Process...
                           </td>
 
                           <td className="px-3 py-3 text-center">
@@ -567,33 +545,35 @@ const HomePageContent = () => {
                             </Link>
                           </td>
 
-                          <td className="px-3 py-3 text-center">
-                            <Link
-                              href={`/teacher/student/diary_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                        <td className="px-3 py-3 text-center">
+                          <Link
+                            href={`/teacher/student/diary_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
+                            className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <div
+                              className={`$\{
+                                student.diary_date && student.class_note && student.diary_date !== student.class_note
+                                  ? "text-red-500"
+                                  : student.diary_date
+                                  ? "text-green-500"
+                                  : "text-red-400"
+                              } mr-1`}
                             >
-                              <div
-                                className={`${
-                                  student.diary_date
-                                    ? "text-green-500"
-                                    : "text-red-400"
-                                } mr-1`}
-                              >
-                                {student.diary_date ? (
-                                  <IoCheckmarkCircle size={18} />
-                                ) : (
-                                  <IoCloseCircle size={18} />
-                                )}
-                              </div>
-                              {student.diary_date && student.diary_edit && (
-                                <span className="text-xs text-gray-500">
-                                  {student.diary_edit}
-                                </span>
+                              {student.diary_date ? (
+                                <IoCheckmarkCircle size={18} />
+                              ) : (
+                                <IoCloseCircle size={18} />
                               )}
-                            </Link>
-                          </td>
+                            </div>
+                            {student.diary_date && (
+                              <span className="text-xs text-gray-500">
+                                {student.diary_date}
+                              </span>
+                            )}
+                          </Link>
+                        </td>
 
                           <td className="px-3 py-3 text-center">
                             <Link
