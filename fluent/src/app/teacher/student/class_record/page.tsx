@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense, ReactNode, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
-import Link from "next/link";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
