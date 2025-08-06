@@ -1,6 +1,7 @@
 // /api/quizlet/translate/route.ts
 import { NextResponse } from "next/server";
 import { openaiClient } from "@/lib/openaiClient";
+import { decode } from "he"; 
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +14,12 @@ export async function POST(request: Request) {
     }
 
     const eng_quizlet = lines
-      .map((item: string) => item.replace(/<\/?mark>/g, '').trim())
+      .map((item: string) => {
+        const decoded = decode(item); // Convert &lt;u&gt; to <u>
+        const noMark = decoded.replace(/<\/?mark[^>]*>/g, '');
+        const noHtml = noMark.replace(/<[^>]*>/g, ''); // Strip all tags
+        return noHtml.trim();
+      })
       .filter((line: string) => line.length > 0);
 
     const eng_quizlet_text = eng_quizlet.join("\n");
@@ -24,7 +30,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward.\n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.",
+            "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward.\n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n Remove any HTML tags like <h1>, <p>, <bold>.",
         },
         { role: "user", content: eng_quizlet_text },
       ],

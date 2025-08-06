@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { saveQuizletData } from "@/lib/data";
 import { openaiClient } from "@/lib/openaiClient"; // Import the OpenAI client instance
+import * as cheerio from "cheerio";
+import { decode } from "he"
+
 
 export async function POST(request: Request) {
   try {
@@ -13,20 +16,29 @@ export async function POST(request: Request) {
 
     const { original_text, homework, nextClass } = quizletData;
 
-    // Process the original text to create eng_quizlet
-    let lines = original_text.match(/<mark>(.*?)<\/mark>/g);
+    console.log("📥 ORIGINAL_TEXT (raw input):", original_text);
 
-    if (lines.length === 0) {
+    const markBlocks = original_text.match(/<mark\b[^>]*>([\s\S]*?)<\/mark>/g) || [];
+
+    if (markBlocks.length === 0) {
       return NextResponse.json({ error: "No Translation" }, { status: 400 });
     }
 
-    // Trim numbers at the start of each Line
-    const noNumlines = lines.map((item: string) => item.replace(/<\/?mark>/g, '').trim());
+    const eng_quizlet = markBlocks.map((item: string) => {
+      // Step 1: Decode escaped HTML (&lt;u&gt; → <u>)
+      const decoded = decode(item);
 
-    lines = noNumlines
-      .map((line: string) => line.trim())
-      .filter((line: string) => line);
-    const eng_quizlet = lines;
+      // Step 2: Parse into HTML and clean tags
+      const $ = cheerio.load(decoded);
+
+      // Strip only <mark> but keep content
+      $('mark').each((_, el) => {
+        $(el).replaceWith($(el).html() || '');
+      });
+
+      // Strip all other tags (like <u>, <b>, etc.)
+      return $.text().trim();
+    }).filter((line: string) => line);
 
     // Join eng_quizlet lines for OpenAI API request
     const eng_quizlet_text = eng_quizlet.join("\n");
@@ -38,7 +50,7 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-          "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward.\n Leave punctuation marks like >, < as it is. \n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n Remove any HTML tags like <h1>, <p>, <bold>",
+          "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward.\n Leave punctuation marks like >, < as it is. \n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n Remove any HTML tags like <h1>, <p>, <bold>. \n MUST Remove <u> tags.",
         },
         { role: "user", content: eng_quizlet_text },
       ],
