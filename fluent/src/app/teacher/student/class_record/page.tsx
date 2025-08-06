@@ -939,51 +939,6 @@ const ClassPageContent: React.FC = () => {
   </ul>
 `;
 
-  const businessTemplate3 = `
-  <h1>💼 Business Conversation Topics Guide</h1>
-
-  <p>Use examples to explain, but keep answers under 15 sentences for memorization.<br/>
-  Choose topics based on the student’s background. Feel free to adjust.</p>
-
-  <ul>
-    <li>Tell me about the company that you work at in detail.</li>
-    <li>Tell me about your specific role at your company in detail.</li>
-    <li>Tell me about a typical day at work in chronological order.</li>
-    <li>Tell me about your team and department. What is your team in charge of?</li>
-    <li>Are you satisfied with your job? Why or why not?</li>
-    <li>What was your previous job? Why did you change jobs?</li>
-    <li>What is your plan for the next 10 years?</li>
-    <li>When do you usually get stressed? How do you handle stress?</li>
-    <li>What motivates you to work harder or be better?</li>
-    <li>What are your strengths and weaknesses? Give examples.</li>
-    <li>Are there any coworkers you dislike? Spill some office gossip.</li>
-    <li>How would your colleagues describe you?</li>
-    <li>Are there any coworkers you like? Why do you admire them?</li>
-    <li>What was the biggest challenge you’ve faced at work, and how did you overcome it?</li>
-    <li>What skills have you developed the most through your job, and how?</li>
-    <li>Have you ever made a mistake at work? What happened and how did you handle it?</li>
-    <li>What’s your work-life balance like? Do you think it’s healthy? Why or why not?</li>
-    <li>How do you stay productive or focused during long or difficult workdays?</li>
-    <li>Tell me about some unique culture in your company.</li>
-    <li>If you could change one thing about your current job, what would it be and why?</li>
-  </ul>
-`;
-
-  const businessTemplate5 = `
-   <h2>📚 Business Template 5</h2>
-
-   <p><strong>Use examples to explain but keep the answers under 15 sentences to be able to memorize</strong></p>
-
-   <p><strong>Tell me about your most memorable projects that shaped your career. Tell me in detail with examples about these projects.</strong></p>
-
-   <ol>
-     <li>Project 1 Title:</li>
-     <li>Project 2 Title:</li>
-     <li>Project 3 Title:</li>
-   </ol>
- `;
-
-
   interface Note {
     _id: string;
     student_name: string;
@@ -1058,8 +1013,6 @@ const ClassPageContent: React.FC = () => {
     business: [
       businessTemplate1,
       businessTemplate2,
-      businessTemplate3,
-      businessTemplate5,
     ],
   };
 
@@ -1755,19 +1708,6 @@ const ClassPageContent: React.FC = () => {
 
                 {activeOption === "option2" && (
                   <div className="p-3 bg-white border border-[#F2F4F6] rounded-2xl shadow-sm flex-1 flex flex-col">
-                    <h3 className="text-xs font-bold text-[#191F28] mb-1">
-                      Level Test
-                    </h3>
-                    <div className="hover:bg-blue-50 mb-1">
-                      <Link
-                        href={`/teacher/student/test?user=${user}&student_name=${student_name}`}
-                        className="text-md text-[#191F28] inline-flex items-center justify-center p-2 rounded-lg transition-colors"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                      {student_name} Level Test
-                      </Link>
-                    </div>
                     <h3 className="text-xs font-bold text-[#191F28] mb-3">
                       Previous Notes
                     </h3>
@@ -1921,6 +1861,24 @@ const ClassPageContent: React.FC = () => {
                             key={`Intermediate: ${label}`}
                             onClick={() => {
                               const url = `/teacher/student/test?student_name=${encodeURIComponent(student_name)}&user=teacher&title=${encodeURIComponent(`Intermediate: ${label}`)}`;
+                              window.open(url, '_blank');
+                            }}
+                            className="w-full px-3 py-1.5 bg-[#89baff] text-white rounded-lg text-xs font-semibold hover:bg-[#1B64DA] transition-all shadow-sm"
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Business Buttons */}
+                      <h4 className="text-sm font-semibold text-[#4E5968] mt-2">Business</h4>
+                      <div className="space-y-1">
+                        {["In Depth Business Conversation Topic List","Memorable Projects"].map((label) => (
+                          <button
+                            type="button"
+                            key={`Beginner: ${label}`}
+                            onClick={() => {
+                              const url = `/teacher/student/test?student_name=${encodeURIComponent(student_name)}&user=teacher&title=${encodeURIComponent(`Business: ${label}`)}`;
                               window.open(url, '_blank');
                             }}
                             className="w-full px-3 py-1.5 bg-[#89baff] text-white rounded-lg text-xs font-semibold hover:bg-[#1B64DA] transition-all shadow-sm"

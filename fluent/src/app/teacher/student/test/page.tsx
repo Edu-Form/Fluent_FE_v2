@@ -2,6 +2,10 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import Highlight from '@tiptap/extension-highlight';
 
 
 type NoteData = {
@@ -3571,6 +3575,48 @@ first of all / second of all
 straightforward
 End Timer: 45 minute mark (15 minutes left for feedback)
 `,
+"Business: In Depth Business Conversation Topic List": `
+  <h1>💼 Business Conversation Topics Guide</h1>
+
+  <p>Use examples to explain, but keep answers under 15 sentences for memorization.<br/>
+  Choose topics based on the student’s background. Feel free to adjust.</p>
+
+  <ul>
+    <li>Tell me about the company that you work at in detail.</li>
+    <li>Tell me about your specific role at your company in detail.</li>
+    <li>Tell me about a typical day at work in chronological order.</li>
+    <li>Tell me about your team and department. What is your team in charge of?</li>
+    <li>Are you satisfied with your job? Why or why not?</li>
+    <li>What was your previous job? Why did you change jobs?</li>
+    <li>What is your plan for the next 10 years?</li>
+    <li>When do you usually get stressed? How do you handle stress?</li>
+    <li>What motivates you to work harder or be better?</li>
+    <li>What are your strengths and weaknesses? Give examples.</li>
+    <li>Are there any coworkers you dislike? Spill some office gossip.</li>
+    <li>How would your colleagues describe you?</li>
+    <li>Are there any coworkers you like? Why do you admire them?</li>
+    <li>What was the biggest challenge you’ve faced at work, and how did you overcome it?</li>
+    <li>What skills have you developed the most through your job, and how?</li>
+    <li>Have you ever made a mistake at work? What happened and how did you handle it?</li>
+    <li>What’s your work-life balance like? Do you think it’s healthy? Why or why not?</li>
+    <li>How do you stay productive or focused during long or difficult workdays?</li>
+    <li>Tell me about some unique culture in your company.</li>
+    <li>If you could change one thing about your current job, what would it be and why?</li>
+  </ul>
+`,
+"Business: Memorable Projects":`
+   <h2>📚 Business Template 5</h2>
+
+   <p><strong>Use examples to explain but keep the answers under 15 sentences to be able to memorize</strong></p>
+
+   <p><strong>Tell me about your most memorable projects that shaped your career. Tell me in detail with examples about these projects.</strong></p>
+
+   <ol>
+     <li>Project 1 Title:</li>
+     <li>Project 2 Title:</li>
+     <li>Project 3 Title:</li>
+   </ol>
+ `
 
 };
 
@@ -3580,13 +3626,22 @@ function TestPage() {
   const title = searchParams.get('title') || '';
 
   const [note, setNote] = useState<NoteData | null>(null);
-  const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const editor = useEditor({
+    extensions: [StarterKit, Underline, Highlight],
+    content: '',
+  });
+
+  // Separate useEffect to load data
   useEffect(() => {
-    const loadNote = async () => {
+    const fetchNote = async () => {
       if (!title) return;
-      const query = new URLSearchParams({ studentName: student_name, title });
+      const query = new URLSearchParams({
+        student_name: student_name, // ✅ not studentName
+        title,
+      });
+
       const res = await fetch(`/api/test?${query.toString()}`);
       let data;
 
@@ -3612,57 +3667,88 @@ function TestPage() {
         }
       }
 
-      setNote(data);
-      setText(data.text || '');
+      setNote(data); // Set the note first — not calling setContent yet
     };
 
-    loadNote();
+    fetchNote();
   }, [student_name, title]);
 
-  const handleSave = async () => {
-    if (!note) return;
-    setSaving(true);
-    const res = await fetch('/api/test', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...note, text }),
-    });
+  useEffect(() => {
+  if (editor && note?.text) {
+    editor.commands.setContent(note.text);
+  }
+}, [editor, note]);
 
-    if (res.ok) alert('Saved!');
-    else alert('Save failed');
 
-    setSaving(false);
+
+const handleSave = async () => {
+  if (!note || !note.student_name || !note.title || !editor) {
+    alert("Note or editor not ready");
+    return;
+  }
+
+  const payload = {
+    student_name: note.student_name,
+    title: note.title,
+    text: editor.getHTML(),
   };
 
+  console.log("Saving payload:", payload);
+
+  setSaving(true);
+
+  const res = await fetch('/api/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (res.ok) {
+    alert('Saved!');
+  } else {
+    alert('Save failed');
+  }
+
+  setSaving(false);
+};
+
+
   return (
-    <div className="min-h-screen bg-[#f8f9fa] p-8">
-      <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow">
-        <h2 className="text-2xl font-bold mb-6 text-[#191f28]">
+    <div className="min-h-screen bg-[#F9FAFB] p-6">
+      <div className="max-w-4xl mx-auto bg-white text-black border border-[#F2F4F6] rounded-2xl shadow-sm p-6">
+        <h2 className="text-xl font-bold text-[#191F28] mb-4">
           {note ? note.title : 'Loading test material...'}
         </h2>
 
-        {note ? (
-          <>
-            <textarea
-              className="w-full min-h-[480px] p-4 border rounded-lg bg-white text-black"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-            <button
-              onClick={handleSave}
-              className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-xl"
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </>
-        ) : (
-          <p>Loading or invalid template...</p>
-        )}
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#F2F4F6] mb-6">
+          <div className="flex gap-2 flex-wrap">
+            <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${editor?.isActive('bold') ? 'bg-[#3182F6] text-white shadow-sm' : 'bg-[#F8F9FA] text-[#4E5968] hover:bg-[#F2F4F6] hover:text-[#3182F6]'}`}>Bold</button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${editor?.isActive('italic') ? 'bg-[#3182F6] text-white shadow-sm' : 'bg-[#F8F9FA] text-[#4E5968] hover:bg-[#F2F4F6] hover:text-[#3182F6]'}`}>Italic</button>
+            <button type="button" onClick={() => editor?.chain().focus().toggleUnderline().run()} className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${editor?.isActive('underline') ? 'bg-[#3182F6] text-white shadow-sm' : 'bg-[#F8F9FA] text-[#4E5968] hover:bg-[#F2F4F6] hover:text-[#3182F6]'}`}>Underline</button>
+          </div>
+        </div>
+
+        <div className="flex-grow overflow-y-auto border border-[#F2F4F6] bg-white text-black rounded-2xl shadow-sm p-6 ">
+          <EditorContent
+            editor={editor}
+            className="prose max-w-none text-black"
+          />
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={handleSave}
+            className="px-6 py-3 bg-[#3182F6] text-white rounded-xl text-sm font-semibold hover:bg-[#1B64DA] transition-all shadow-sm"
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
 
 export default function PageWrapper() {
   return (
