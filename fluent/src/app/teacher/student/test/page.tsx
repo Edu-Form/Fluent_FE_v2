@@ -91,7 +91,7 @@ function TestPage() {
 
       if (!res.ok) throw new Error("Failed to update");
       alert("Update successful!");
-    } catch (err) {
+    } catch {
       alert("Update failed");
     }
   };
