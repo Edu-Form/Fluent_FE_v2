@@ -455,26 +455,26 @@ const HomePageContent = () => {
                   </thead>
                   <tbody>
                     {allStudents.map((student, index) => {
-                      const completedCount = countCompletedItems(student);
-                      const progressPercent = calculateProgress(student);
+                      // const completedCount = countCompletedItems(student);
+                      // const progressPercent = calculateProgress(student);
 
                       // 진행 상황에 따른 색상 설정
-                      const progressColor =
-                        progressPercent >= 75
-                          ? "green"
-                          : progressPercent >= 50
-                          ? "blue"
-                          : progressPercent >= 25
-                          ? "orange"
-                          : "red";
+                      // const progressColor =
+                      //   progressPercent >= 75
+                      //     ? "green"
+                      //     : progressPercent >= 50
+                      //     ? "blue"
+                      //     : progressPercent >= 25
+                      //     ? "orange"
+                      //     : "red";
 
-                      const colorClasses = {
-                        green: "bg-green-100 text-green-800 border-green-200",
-                        blue: "bg-blue-100 text-blue-800 border-blue-200",
-                        orange:
-                          "bg-orange-100 text-orange-800 border-orange-200",
-                        red: "bg-red-100 text-red-800 border-red-200",
-                      };
+                      // const colorClasses = {
+                      //   green: "bg-green-100 text-green-800 border-green-200",
+                      //   blue: "bg-blue-100 text-blue-800 border-blue-200",
+                      //   orange:
+                      //     "bg-orange-100 text-orange-800 border-orange-200",
+                      //   red: "bg-red-100 text-red-800 border-red-200",
+                      // };
 
                       return (
                         <tr
