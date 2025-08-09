@@ -523,6 +523,7 @@ const QuizletCardContent = ({
         const newIndex = currentCard >= updatedFavorites.length ? updatedFavorites.length - 1 : currentCard;
         setCurrentCard(newIndex);
       }
+      setIsFlipped(false); // ✅ reset flip status to front
     }
   }
 
