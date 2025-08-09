@@ -98,6 +98,15 @@ function TestPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
+      <header className="bg-white border-b border-[#F2F4F6] rounded-2xl px-6 py-5 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-[#191F28]">{title}</h1>
+        <div className="px-4 py-2 bg-[#F2F8FF] rounded-full border border-[#E8F3FF]">
+          <span className="text-sm font-semibold text-[#3182F6]">
+            {student_name}
+          </span>
+        </div>
+      </header>
+      
       <div className="bg-white mb-5 rounded-2xl p-4 shadow-sm border border-[#F2F4F6] shrink-0">
         <div className="flex gap-2 flex-wrap">
           <button
