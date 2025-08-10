@@ -30,7 +30,19 @@ export async function POST(request: Request) {
         {
           role: "system",
           content:
-            "Translate the following English text into Korean.\n\nGuidelines:\n- Make the translations as natural but accurate as possible.\n- Do not make the Korean grammar awkward.\n- Each English line should be paired with exactly one Korean line. This is important for making flashcards.\n Remove any HTML tags like <h1>, <p>, <bold>.",
+            `
+          You are a professional translator helping generate flashcards.
+
+          **Your task**: Translate each English sentence to Korean. If a sentence is already in Korean or mostly Korean, just return it as-is.
+
+          **Rules**:
+          - Keep the line order and count identical to the input.
+          - For each input line, output exactly one translated line.
+          - Do NOT omit or skip any lines, even if they're already Korean or gibberish.
+          - Do NOT include any extra comments or formatting.
+          - Strip HTML tags like <h1>, <p>, <bold>, etc.
+          - Output only the Korean translations, one per line.
+          `
         },
         { role: "user", content: eng_quizlet_text },
       ],
