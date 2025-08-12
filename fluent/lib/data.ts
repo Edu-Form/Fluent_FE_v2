@@ -105,6 +105,85 @@ export async function getStudentListData(teacherName: string) {
   }
 }
 
+export async function getAllBillingData() {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  return await db.collection("billing").find({}).toArray();
+}
+
+export async function getBillingDataByStudent(student_name: string) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  return await db.collection("billing").findOne({ student_name });
+}
+
+export async function updateBillingProgress({
+  student_name,
+  step,
+  date,
+}: {
+  student_name: string;
+  step: "class_note" | "quizlet" | "diary" | "calendar";
+  date: string;
+}) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  const collection = db.collection("billing");
+
+  const existing = await collection.findOne({ student_name });
+
+  if (!existing) {
+    const newEntry = {
+      student_name,
+      teacher_name: "", // Optional: fill dynamically if needed
+      current_class: { [step]: date },
+      history: [],
+    };
+    await collection.insertOne(newEntry);
+    return { created: true };
+  }
+
+  const current_class = existing.current_class || {};
+
+  // ✅ Special case: "calendar" step completes the process
+  if (step === "calendar") {
+    const updatedHistory = [...(existing.history || []), current_class];
+    await collection.updateOne(
+      { _id: new ObjectId(existing._id) },
+      {
+        $set: {
+          current_class: {}, // clear
+          history: updatedHistory,
+        },
+      }
+    );
+    return { finished: true };
+  }
+
+  // ✅ Normal update path
+  current_class[step] = date;
+
+  const isComplete =
+    "class_note" in current_class &&
+    "quizlet" in current_class &&
+    "diary" in current_class;
+
+  if (isComplete) {
+    // All 3 steps are set → wait for "calendar" to finish it
+    await collection.updateOne(
+      { _id: new ObjectId(existing._id) },
+      { $set: { current_class } }
+    );
+    return { ready_for_calendar: true };
+  } else {
+    await collection.updateOne(
+      { _id: new ObjectId(existing._id) },
+      { $set: { current_class } }
+    );
+    return { updated: true };
+  }
+}
+
 export const getRoomData = async (date: string, time: string) => {
   try {
     const client = await clientPromise;
@@ -165,7 +244,7 @@ export const getStudentScheduleData = async (studentName: string) => {
     const studentSchedule = await db
       .collection("schedules")
       .find({ student_name: studentName })
-      .sort({ date: 1, time: 1, room_name: 1 })
+      .sort({ date: -1, time: 1, room_name: 1 })
       .toArray(); // Convert to array (MongoDB cursor)
 
     return studentSchedule.map(serialize_document); // Serialize and return

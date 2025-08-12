@@ -46,6 +46,15 @@ const HomePageContent = () => {
 
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;
+  const [studentSelections, setStudentSelections] = useState<Record<
+  string,
+  {
+    classNoteDate: string;
+    diaryDate: string;
+    calendarDate: string;
+  }
+>>({});
+
 
   // 화면 크기 감지
   useEffect(() => {
@@ -93,9 +102,27 @@ const HomePageContent = () => {
     ].reduce((a, b) => a + b, 0);
   };
 
+const [billingData, setBillingData] = useState<Record<string, any>>({});
+
+useEffect(() => {
+  fetch("/api/billing")
+    .then((res) => res.json())
+    .then((data) => {
+      const map: Record<string, any> = {};
+      data.forEach((entry: any) => {
+        map[entry.student_name] = entry;
+      });
+      setBillingData(map);
+    })
+    .catch(() => {
+      console.error("Billing info fetch failed");
+    });
+}, []);
+
+
   useEffect(() => {
     if (!user || classes.length > 0) return;
-  
+
     // Fetch schedules
     fetch(URL)
       .then((res) => res.json())
@@ -103,16 +130,32 @@ const HomePageContent = () => {
         setClasses(data);
       })
       .catch((error) => console.log("Error fetching data:", error));
-  
+
     // Fetch student list
     fetch(ALL_STUDENTS_URL)
       .then((res) => res.json())
-      .then(async (data) => {
+      .then((data) => {
         setAllStudents(data);
+
+        // ✅ Initialize studentSelections AFTER fetching student list
+        setStudentSelections((prev) => {
+          const updated = { ...prev };
+          data.forEach((student: any) => {
+            if (!updated[student.name]) {
+              updated[student.name] = {
+                classNoteDate: "",
+                diaryDate: "",
+                calendarDate: "",
+              };
+            }
+          });
+          return updated;
+        });
       })
       .catch((error) => console.log("Error fetching students:", error));
+
   }, [user, URL, ALL_STUDENTS_URL, classes.length]);
-  
+
 
   return (
     <div className="flex flex-col md:flex-row w-full h-screen bg-gray-50">
@@ -409,215 +452,288 @@ const HomePageContent = () => {
                 </div>
 
                 {/* 데스크톱 뷰 - 테이블 형태로 표시 */}
-                <table className="hidden md:table w-full text-sm text-left">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-3 py-3 whitespace-nowrap">
-                        학생 이름
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        진행 상황
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        Class Note
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        Quizlet
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        Diary 작성
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        Diary 첨삭
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        스케줄
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allStudents.map((student, index) => {
-                      // const completedCount = countCompletedItems(student);
-                      // const progressPercent = calculateProgress(student);
+                <tbody>
+                  {allStudents.map((student, index) => {
+                    type SelectionKeys = "classNoteDate" | "diaryDate" | "calendarDate";
 
-                      // 진행 상황에 따른 색상 설정
-                      // const progressColor =
-                      //   progressPercent >= 75
-                      //     ? "green"
-                      //     : progressPercent >= 50
-                      //     ? "blue"
-                      //     : progressPercent >= 25
-                      //     ? "orange"
-                      //     : "red";
+                    const updateSelection = (key: SelectionKeys, value: string) => {
+                      setStudentSelections((prev) => ({
+                        ...prev,
+                        [student.name]: {
+                          ...prev[student.name],
+                          [key]: value,
+                        },
+                      }));
+                    };
 
-                      // const colorClasses = {
-                      //   green: "bg-green-100 text-green-800 border-green-200",
-                      //   blue: "bg-blue-100 text-blue-800 border-blue-200",
-                      //   orange:
-                      //     "bg-orange-100 text-orange-800 border-orange-200",
-                      //   red: "bg-red-100 text-red-800 border-red-200",
-                      // };
+                    const handleCheck = async (
+                      step: "class_note" | "quizlet" | "diary" | "calendar",
+                      date: string,
+                      studentName: string
+                    ) => {
+                      if (!date && step !== "diary") {
+                        return alert("날짜를 선택해주세요.");
+                      }
 
-                      return (
-                        <tr
-                          key={index}
-                          className="border-b hover:bg-gray-50 transition-colors"
+                      try {
+                        const res = await fetch("/api/billing", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            student_name: studentName,
+                            step,
+                            date,
+                          }),
+                        });
+
+                        if (res.ok) {
+                          if (step === "calendar") {
+                            window.location.reload(); // ✅ refreshes to start new flow
+                            return;
+                          }
+                          // ✅ Automatically style next column via DOM manipulation
+                          const nextColumn = document.querySelector(
+                            `[data-student="${studentName}"][data-step="${getNextStep(step)}"]`
+                          );
+                          if (nextColumn) {
+                            nextColumn.classList.add("border-green-500", "border-2");
+                          }
+                        } else {
+                          window.location.reload(); // ❌ On failure
+                        }
+                      } catch {
+                        window.location.reload(); // ❌ On error
+                      }
+                    };
+
+                    const getNextStep = (step: string) => {
+                      if (step === "class_note") return "2";
+                      if (step === "diary") return "3";
+                      return "1";
+                    };
+
+                    const currentStep = (() => {
+                      const currentClass = billingData[student.name]?.current_class;
+                      if (!currentClass) return 1;
+                      if ("class_note" in currentClass && !("diary" in currentClass)) return 2;
+                      if ("diary" in currentClass) return 3;
+                      return 1;
+                    })();
+
+
+                    const billing = billingData[student.name];
+                    const currentClass = billing?.current_class || {};
+
+                    const classNoteDate = studentSelections[student.name]?.classNoteDate || currentClass.class_note || "";
+                    const diaryDate = studentSelections[student.name]?.diaryDate || currentClass.diary || "";
+                    const calendarDate = studentSelections[student.name]?.calendarDate || currentClass.calendar || "";
+
+
+                    return (
+                      <tr key={index} className="border-b hover:bg-gray-50 transition-colors align-top">
+                        {/* 학생 이름 */}
+                        <td className="px-3 py-4 font-medium text-gray-900">{student.name}</td>
+
+                        {/* Class Notes & Quizlet Section */}
+                        <td
+                          className={`px-3 py-4 border ${
+                            currentStep === 1 ? "border-green-500 border-2" : ""
+                          }`}
+                          data-student={student.name}
+                          data-step="1"
                         >
-                          <td className="px-3 py-3 font-medium text-gray-900">
-                            {student.name}
-                          </td>
-
-                          <td className="px-3 py-3 text-center text-sm text-gray-500">
-                            Checking Process...
-                          </td>
-
-                          <td className="px-3 py-3 text-center">
-                            <Link
-                              href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <div
-                                className={`${
-                                  student.class_note
-                                    ? "text-green-500"
-                                    : "text-red-400"
-                                } mr-1`}
+                          <div className="flex flex-col gap-2">
+                            <h3 className="font-semibold text-sm text-blue-600 mb-1">Class Notes & Quizlet</h3>
+                            <div>
+                              <span className="text-sm">Write your class notes: </span>
+                              <Link
+                                href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 underline text-sm"
                               >
-                                {student.class_note ? (
-                                  <IoCheckmarkCircle size={18} />
-                                ) : (
-                                  <IoCloseCircle size={18} />
-                                )}
-                              </div>
-                              {student.class_note && (
-                                <span className="text-xs text-gray-500">
-                                  {student.class_note}
-                                </span>
-                              )}
-                            </Link>
-                          </td>
-
-                          <td className="px-3 py-3 text-center">
-                            <Link
-                              href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <div
-                                className={`${
-                                  student.quizlet_date
-                                    ? "text-green-500"
-                                    : "text-red-400"
-                                } mr-1`}
-                              >
-                                {student.quizlet_date ? (
-                                  <IoCheckmarkCircle size={18} />
-                                ) : (
-                                  <IoCloseCircle size={18} />
-                                )}
-                              </div>
-                              {student.quizlet_date && (
-                                <span className="text-xs text-gray-500">
-                                  완료
-                                </span>
-                              )}
-                            </Link>
-                          </td>
-
-                        <td className="px-3 py-3 text-center">
-                          <Link
-                            href={`/teacher/student/diary_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                            className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <div
-                              className={`$\{
-                                student.diary_date && student.class_note && student.diary_date !== student.class_note
-                                  ? "text-red-500"
-                                  : student.diary_date
-                                  ? "text-green-500"
-                                  : "text-red-400"
-                              } mr-1`}
-                            >
-                              {student.diary_date ? (
-                                <IoCheckmarkCircle size={18} />
-                              ) : (
-                                <IoCloseCircle size={18} />
-                              )}
+                                Open Class Notes
+                              </Link>
                             </div>
-                            {student.diary_date && (
-                              <span className="text-xs text-gray-500">
-                                {student.diary_date}
-                              </span>
+
+                            <div>
+                              <span className="text-sm">Check your Vocabulary Cards here: </span>
+                              <Link
+                                href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 underline text-sm"
+                              >
+                                Open Quizlet
+                              </Link>
+                            </div>
+
+                            {currentClass.class_note ? (
+                              <div className="text-sm text-green-600">
+                                Recorded class: {currentClass.class_note}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm whitespace-nowrap">Record your class:</span>
+                                <select
+                                  value={classNoteDate}
+                                  onChange={(e) => updateSelection("classNoteDate", e.target.value)}
+                                  className="bg-white text-black border px-2 py-1 rounded text-sm shadow-sm w-full"
+                                >
+                                  <option value="">날짜 선택</option>
+                                    {student.class_note_dates?.map((date: string, idx: number) => (
+                                    <option key={idx} value={date}>
+                                      {date}
+                                    </option>
+                                    ))}
+                                </select>
+                                <button
+                                  onClick={() => handleCheck("class_note", classNoteDate, student.name)}
+                                  className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                                >
+                                  Check
+                                </button>
+                              </div>
                             )}
-                          </Link>
+
+                          </div>
                         </td>
 
-                          <td className="px-3 py-3 text-center">
-                            <Link
-                              href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <div
-                                className={`${
-                                  student.diary_edit
-                                    ? "text-green-500"
-                                    : "text-red-400"
-                                } mr-1`}
-                              >
-                                {student.diary_edit ? (
-                                  <IoCheckmarkCircle size={18} />
-                                ) : (
-                                  <IoCloseCircle size={18} />
-                                )}
-                              </div>
-                              {student.diary_edit && (
-                                <span className="text-xs text-gray-500">
-                                  완료
-                                </span>
-                              )}
-                            </Link>
-                          </td>
+                        {/* Diary Section */}
+                        <td
+                          className={`px-3 py-4 border ${
+                            currentStep === 2 ? "border-green-500 border-2" : ""
+                          }`}
+                          data-student={student.name}
+                          data-step="2"
+                        >
+                          <div className="flex flex-col gap-2">
+                            <h3 className="font-semibold text-sm text-blue-600 mb-1">Diary</h3>
 
-                          <td className="px-3 py-3 text-center">
-                            <Link
-                              href={`/teacher/schedule?user=${user}&type=teacher&id=${id}`}
-                              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors hover:bg-indigo-50 px-3 py-2 rounded-lg inline-block"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              스케줄 보기
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            <div>
+                              <span className="text-sm">Write your diary: </span>
+                              <Link
+                                href={`/teacher/student/diary_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 underline text-sm"
+                              >
+                                Open Diary Note
+                              </Link>
+                            </div>
+
+                            <div>
+                              <span className="text-sm">Diary Correction: </span>
+                              <Link
+                                href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 underline text-sm"
+                              >
+                                Open Diary Correction
+                              </Link>
+                            </div>
+
+                            {"diary" in currentClass ? (
+                              <div className="text-sm text-green-600">
+                                Confirmed diary: {currentClass.diary}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm whitespace-nowrap">Confirm diary date:</span>
+                                <select
+                                  value={diaryDate}
+                                  onChange={(e) => updateSelection("diaryDate", e.target.value)}
+                                  className="bg-white text-black border px-2 py-1 rounded text-sm shadow-sm w-full"
+                                >
+                                  <option value="">날짜 선택</option>
+                                  {student.diary_class_dates?.map((date: string, idx: number)=> (
+                                    <option key={idx} value={date}>
+                                      {date}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => handleCheck("diary", diaryDate, student.name)}
+                                  className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                                >
+                                  Check
+                                </button>
+                              </div>
+                            )}
+
+                          </div>
+                        </td>
+
+                        {/* Schedule Section */}
+                        <td
+                          className={`px-3 py-4 border ${
+                            currentStep === 3 ? "border-green-500 border-2" : ""
+                          }`}
+                          data-student={student.name}
+                          data-step="3"
+                        >
+                          <div className="flex flex-col gap-2">
+                            <h3 className="font-semibold text-sm text-blue-600 mb-1">Schedule</h3>
+
+                            <div>
+                              <span className="text-sm">Check your Calendar: </span>
+                              <Link
+                                href={`/teacher/schedule?user=${user}&type=teacher&id=${id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 underline text-sm"
+                              >
+                                Open Calendar
+                              </Link>
+                            </div>
+
+                            <div>
+                              <span className="text-sm">Check your Billings: </span>
+                              <Link
+                                href={`/teacher/student/billings?user=${user}&type=teacher&id=${id}&student_name=${student.name}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 underline text-sm"
+                              >
+                                Open Billings
+                              </Link>
+                            </div>
+
+                            {currentClass.calendar ? (
+                              <div className="text-sm text-green-600">
+                                Scheduled: {currentClass.calendar}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm whitespace-nowrap">Choose your schedule date:</span>
+                                <select
+                                  value={calendarDate}
+                                  onChange={(e) => updateSelection("calendarDate", e.target.value)}
+                                  className="bg-white text-black border px-2 py-1 rounded text-sm shadow-sm w-full"
+                                >
+                                  <option value="">날짜 선택</option>
+                                  {student.schedule_dates?.map((date: string, idx: number) => (
+                                    <option key={idx} value={date}>
+                                      {date}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => handleCheck("calendar", calendarDate, student.name)}
+                                  className="text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                                >
+                                  Check
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+                </tbody>
 
                 {/* Step Progress View 추가 */}
 
