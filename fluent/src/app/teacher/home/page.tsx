@@ -547,7 +547,7 @@ useEffect(() => {
                             <div>
                               <span className="text-sm">Write your class notes: </span>
                               <Link
-                                href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
+                                href={`/teacher/student/class_record?user=${user}&type=teacher&id=${id}&student_name=${student.name}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-500 underline text-sm"
