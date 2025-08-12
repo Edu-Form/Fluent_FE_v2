@@ -769,1074 +769,1154 @@ const templates: Record<string, string> = {
   <h3>Timer: 45 minute mark</h3>
 
 `,
-  "Intermediate: Collect Bulk Answers": `Paste student answers written for homework here 
+  "Intermediate: Collect Bulk Answers": `<h1>Student Homework Practice Questions</h1>
 
-Common questions (ask all)
-Hi XX, long time no see, can you introduce yourself? [talking about oneself] [Must memorize an upgraded version]
+<h3>Common Questions (Ask All)</h3>
+<p><b>Hi XX, long time no see, can you introduce yourself?</b> [talking about oneself] [Must memorize an upgraded version]</p>
+<p><b>What are your hobbies nowadays? What are you into?</b> Tell me in detail (Or: tell me about your hobbies in more detail!) [Must memorize upgraded version]</p>
+<p><b>What do you look forward to in your day?</b></p>
+<p><b>What do you do?</b> (what is your job?) Tell me more about your job & company. [Must memorize upgraded version] (skip if it was mentioned in detail already)</p>
+<p><b>Or:</b> tell me about being a student. How is it? Do you wanna grow up faster? (For students)</p>
+<p><i>There may be follow-up questions to test their basic grammar and speed.</i></p>
 
+<h3>Work Questions (Ask at least 3 that apply to them)</h3>
+<p><i>There may be follow-up questions.</i></p>
+<p><i>Looking for grammar mistakes, advanced grammar, intermediate vocabulary, speed, and flow.</i></p>
+<p><b>Advanced grammar = Have pp, could, should, relative pronouns, verbal nouns, might</b></p>
+<p>Tell me about a typical day at work</p>
+<p>Tell me about your most recent project</p>
+<p>What was your previous job?</p>
+<p>Why are you taking a break from work?</p>
+<p>How are you enjoying taking a break from school / work?</p>
+<p>How is being a housewife treating you? (student / an employee)</p>
+<p>Do you like your company or school? What about your major?</p>
+<p>Tell me about your team and position</p>
+<p>What do you plan to do for work in your future</p>
+<p>Do you like school? How is it different from other schools?</p>
+<p>Do you like your homeroom class? Your teacher?</p>
+<p>Are there any professors / managers / coworkers that you like?</p>
 
-What are your hobbies nowadays? What are you into? Tell me in detail (Or: tell me about your hobbies in more detail!) [Must memorize upgraded version]
+<h3>Storytelling (Ask at least 2)</h3>
+<p><i>Must use advanced grammar.</i></p>
+<p><i>Good storytelling = characters, dialogue, and entertaining flow.</i></p>
+<p>Tell me about something unexpected that happened recently</p>
+<p>Tell me about the most memorable fight or argument you had</p>
+<p>Tell me some office gossip</p>
+<p>Tell me about a situation that annoyed you at work</p>
+<p>Tell me about how your kids upset you or made you laugh</p>
 
+<h3>Movies (Ask at least 2)</h3>
+<p><i>Must use multiple relative pronouns & verbal nouns.</i></p>
+<p>What movie did you watch recently? What was the story about in detail?</p>
+<p>What is your all time favorite movie? Why do you like it?</p>
+<p>Ask me 3 questions about my movie taste and recommend a movie</p>
+<p>Tell me about your favorite actor/actress and what they were in</p>
+<p>What TV program did you watch as a kid? What was it about?</p>
 
-what do you look forward to in your day?
+<h3>Drinking (Ask at least 2)</h3>
+<p><i>All answers must include storytelling & advanced grammar</i></p>
+<p>When is the last time that you drank?</p>
+<p>Do you drink often?</p>
+<p>Tell me about an embarrassing drinking experience</p>
+<p>Recommend a pub and explain why you like it. What do they serve?</p>
+<p>Ask me 5 drinking questions & have a conversation about it</p>
 
+<h3>Dating (Ask at least 2)</h3>
+<p><i>All answers must include storytelling & advanced grammar</i></p>
+<p>Tell me about your most recent dating experience</p>
+<p>Why didn’t it work out? / How is the relationship going?</p>
+<p>What are your thoughts about marriage and kids?</p>
+<p>What is your ideal type? Does that person match it?</p>
+<p>Do you have a crush on someone? What kind of person are they?</p>
+<p>Tell me about your ex (if okay)</p>
+<p>Ask me 5 dating questions & have a conversation</p>
 
-What do you do? (what is your job?) Tell me more about your job & company. [Must memorize upgraded version] (skip if it was mentioned in detail already)
-Or : tell me about being a student. How is it? do you wanna grow up faster? (For students)
-(There may be follow up questions to test their basic grammar and speed)
-
-
-
-Work questions (ask at least 3 that apply to them)
-there may be follow up questions
-I am looking for any grammar mistakes, the use of advanced grammar, intermediate vocabulary, speed, natural flow
-Advanced grammar = Have pp, could, should, relative pronouns, verbal nouns, might
-
-Tell me about a typical day at work
-
-Tell me about your most recent project
-
-What was your previous job?
-
-Why are you taking a break from work?
-
-How are you enjoying taking a break from school / work?
-
-How is being a housewife treating you? (student / an employee)
-
-do you like your company or school? what about your major?
-
-tell me about your team and position?
-
-what do you plan to do for work in your future
-
-do you like school? how is it different from other schools?
-
-do you like your homeroom class?
-
-do you like your homeroom teacher?
-
-are there any professors / managers / coworkers that you like?
-
-Storytelling (ask at least 2) (click to open up)
-Must use advanced grammar
-Good storytelling = incorporating characters, dialogue, and an entertaining flow. (practice makes perfect)
-
-Tell me about something unexpected that happened recently
-
-Tell me about the most memorable fight or argument you had with someone that you know
-
-Tell me some office gossip. (maybe someone you dislike at work)
-
-Tell me about a situation that annoyed you at work
-
-Tell me about how your kids upset you or made you laugh
-
-Movies (ask at least 2) 
-(or TV shows, Anime, webtoons, books, entertainment shows)
-
-(must use multiple relative pronouns & verbal nouns ) 
-What movie did you watch recently?
-What was the story about in detail?
-
-What is your all time favorite movie?
-What was the story about in detail
-Why do you like this movie so much?
-
-Ask me 3 questions about my movie taste and recommend a movie for me and explain why you think I would like it
-
-Tell me about your favorite actor or actress and why you like them. What did they come out in?
-
-what TV program did you watch when you were a kid? what is it about?
-
-
-
-
-
-Drinking (ask at least 2)
-All answers must incorporate storytelling & advanced grammar
-
-When is the last time that you drank?
-
-Do you drink often?
-
-Tell me about a embarrassing drinking experience (must explain situation well / express why it was embarrassing)
-
-Recommend a pub and explain why you like it
-what can I order there? What do they serve?
-
-Ask me 5 drinking questions & have a small conversation with me regarding the topic
-The questions cannot all be too easy and must connect like a conversation
-
-
-Dating (ask at least 2)
-All answers must incorporate storytelling & advanced grammar
-Tell me about your most recent dating experience
-
-Why didn’t it work out? / How is the relationship going?
-
-What are your thoughts about marriage and kids?
-
-What is your ideal type? Does that person match your ideal type?
-
-Do you have a crush on someone right now? what kind of person are they?
-
-Tell me about your ex (if it’s okay to ask)
-
-Ask me 5 dating questions & have a small conversation with me regarding the topic
-The questions cannot all be too easy and must connect like a conversation
-
-
-
-Being sick (ask at least 2)
-All answers must incorporate storytelling & advanced grammar
-
-Tell me about the last time you were sick. How were you sick and how painful was it? How did you recover?
-
-Tell me about the last time you hurt yourself physically. What happened and how painful was it? How did you deal with it?
-
-Are you stressed nowadays? What are you stressed about? How are you dealing with it?
-
-When is the last time that you went to the hospital?
-
-Ask me 5 questions about being sick or hurt and have a small conversation with me regarding the topic
-The questions cannot all be too easy and must connect like a conversation		
+<h3>Being Sick (Ask at least 2)</h3>
+<p><i>All answers must include storytelling & advanced grammar</i></p>
+<p>Tell me about the last time you were sick. How did you recover?</p>
+<p>Tell me about the last time you hurt yourself. What happened?</p>
+<p>Are you stressed nowadays? How are you dealing with it?</p>
+<p>When is the last time that you went to the hospital?</p>
+<p>Ask me 5 questions about being sick or hurt & have a conversation</p>	
 `,
   "Intermediate: Filter Grammer": `
-  Erase the ones that the student gets right
-Grammar: Verbal Nouns and Relative Pronouns (ask at least 7) 
-저 여자가 [제가 어제 만난 여자]에요.  
-[제가 좋아했던 그 여자]가 이사 갔어요.  
-[제가 만난 그 남자]는 코미디언이었어요.  
-제가 [당신이 만난 사람]을 봤어요.  
-[제가 어제 뭘 했는지] 기억이 안 나요.  
-[그녀가 그것이 예쁘다고] 말했어요.  
-[제가 어릴 때], 저는 아팠어요.  
-제가 [왜 그녀가 화났는지] 모르겠어요.  
-제가 [당신이 어디 있는지] 알아요.  
-그게 [제가 우유를 못 마시는 이유]에요.  
-제가 [당신이 거짓말한 걸] 알아요.  
-[제가 예쁘지 않다고] 생각했어요.  
-제가 [1000원짜리 물]을 샀어요.  
-[제가 좋아하는 음식]은 피자예요.  
-[제가 일하는 회사]는 부산에 있어요.  
-제가 좋아하는 [여자를 만났어요]. 
-[그게 바로 당신을 좋아하는 이유예요].  
-저는 유명한 영화인 포레스트 검프를 좋아해요
-저는 유명한 kpop 보이그룹인 BTS를 좋아해요
-저거 [내가 어제 산] 거야.
-걔는 [내가 파티에서 만난] 여자애야.
-나 [내가 매일 아침 가는] 카페에 갔어.
-걔는 [내가 얘기했던] 남자야.
-저거 [내가 지금 보고 있는] 프로그램이야.
-걔는 [내가 매일 문자하는] 친구야.
-저기가 [내가 식료품 사는] 곳이야.
-저게 [내가 찾고 있던] 거야.
-걔는 [내가 점심 같이 먹는] 사람이야.
-이거 [내가 요즘 빠져있는] 게임이야.
-저기가 [우리가 지난 금요일에 놀았던] 바야.
-걔는 [내가 너한테 말했던] 사람이야.
-저기가 [내가 밥 먹고 싶은] 식당이야.
-이거 [모두가 얘기하고 있는] 영화야.
-저거 [내가 항상 주문하는] 음식이야.
-여기가 [내가 매 주말마다 술 마시는] 곳이야.
-걔는 [나 이사하는 거 도와준] 친구야.
-그때가 [내가 변해야겠다고 깨달은] 순간이야.
-이게 [내가 항상 늦는] 이유야.
-저게 [내가 한국을 떠나야 하는] 이유야.
-나는 그가 내 이름을 기억하는지 궁금해.
-나는 너가 여행을 즐겼기를 바래.
-그녀는 왜 늦었는지 설명했어.
-내가 이걸 제시간에 끝낼 수 있을지 확신이 안 서.
-나는 오늘이 그녀의 생일이라는 걸 잊었어.
-나는 네가 내일 쉬는 날인 걸 알기 때문에 계획을 세웠어.
-그가 쓴 보고서가 이 프로젝트의 핵심 자료야.
-그가 언급했던 프로젝트가 드디어 시작됐어.
-[내가 다니는 헬스장은] 24시간 운영해.
-[그녀가 요리한 음식이] 오늘의 메인 요리야.
-[내가 매일 이용하는 지하철역이] 이번 주에 공사 중이야.
-내일 [우리가 등산을 갈 수 있을지] 모르겠어. (whether / if)
-나는 전을 먹었는데 그것은 한국 전통 펜케익 같은거야
-나는 막걸리를 마셨는데 그것은 한국 전통 술의 종류야
-나는 [그가 추천한 곳에] 못갔어
-그곳은 [아이스크림을 파는 카페였어]
-나는 [그가 얼마나 많이 마셨는지]에 충격 받았어.
-나도 여의도에 [벚꽃이 많다는 것을] 알고 있어.
-나 [그 영화 본 다른 학생을] 가르치고 있어.
-그게 [내가 마지막으로 마셨을 때야].
- [내가 예상한게] 아닌데.
+<h1>Grammar: Verbal Nouns and Relative Pronouns (ask at least 7)</h1>
+<p>저 여자가 [제가 어제 만난 여자]에요.</p>
+<p>[제가 좋아했던 그 여자]가 이사 갔어요.</p>
+<p>[제가 만난 그 남자]는 코미디언이었어요.</p>
+<p>제가 [당신이 만난 사람]을 봤어요.</p>
+<p>[제가 어제 뭘 했는지] 기억이 안 나요.</p>
+<p>[그녀가 그것이 예쁘다고] 말했어요.</p>
+<p>[제가 어릴 때], 저는 아팠어요.</p>
+<p>제가 [왜 그녀가 화났는지] 모르겠어요.</p>
+<p>제가 [당신이 어디 있는지] 알아요.</p>
+<p>그게 [제가 우유를 못 마시는 이유]에요.</p>
+<p>제가 [당신이 거짓말한 걸] 알아요.</p>
+<p>[제가 예쁘지 않다고] 생각했어요.</p>
+<p>제가 [1000원짜리 물]을 샀어요.</p>
+<p>[제가 좋아하는 음식]은 피자예요.</p>
+<p>[제가 일하는 회사]는 부산에 있어요.</p>
+<p>제가 좋아하는 [여자를 만났어요].</p>
+<p>[그게 바로 당신을 좋아하는 이유예요].</p>
+<p>저는 유명한 영화인 포레스트 검프를 좋아해요</p>
+<p>저는 유명한 kpop 보이그룹인 BTS를 좋아해요</p>
+<p>저거 [내가 어제 산] 거야.</p>
+<p>걔는 [내가 파티에서 만난] 여자애야.</p>
+<p>나 [내가 매일 아침 가는] 카페에 갔어.</p>
+<p>걔는 [내가 얘기했던] 남자야.</p>
+<p>저거 [내가 지금 보고 있는] 프로그램이야.</p>
+<p>걔는 [내가 매일 문자하는] 친구야.</p>
+<p>저기가 [내가 식료품 사는] 곳이야.</p>
+<p>저게 [내가 찾고 있던] 거야.</p>
+<p>걔는 [내가 점심 같이 먹는] 사람이야.</p>
+<p>이거 [내가 요즘 빠져있는] 게임이야.</p>
+<p>저기가 [우리가 지난 금요일에 놀았던] 바야.</p>
+<p>걔는 [내가 너한테 말했던] 사람이야.</p>
+<p>저기가 [내가 밥 먹고 싶은] 식당이야.</p>
+<p>이거 [모두가 얘기하고 있는] 영화야.</p>
+<p>저거 [내가 항상 주문하는] 음식이야.</p>
+<p>여기가 [내가 매 주말마다 술 마시는] 곳이야.</p>
+<p>걔는 [나 이사하는 거 도와준] 친구야.</p>
+<p>그때가 [내가 변해야겠다고 깨달은] 순간이야.</p>
+<p>이게 [내가 항상 늦는] 이유야.</p>
+<p>저게 [내가 한국을 떠나야 하는] 이유야.</p>
+<p>나는 그가 내 이름을 기억하는지 궁금해.</p>
+<p>나는 너가 여행을 즐겼기를 바래.</p>
+<p>그녀는 왜 늦었는지 설명했어.</p>
+<p>내가 이걸 제시간에 끝낼 수 있을지 확신이 안 서.</p>
+<p>나는 오늘이 그녀의 생일이라는 걸 잊었어.</p>
+<p>나는 네가 내일 쉬는 날인 걸 알기 때문에 계획을 세웠어.</p>
+<p>그가 쓴 보고서가 이 프로젝트의 핵심 자료야.</p>
+<p>그가 언급했던 프로젝트가 드디어 시작됐어.</p>
+<p>[내가 다니는 헬스장은] 24시간 운영해.</p>
+<p>[그녀가 요리한 음식이] 오늘의 메인 요리야.</p>
+<p>[내가 매일 이용하는 지하철역이] 이번 주에 공사 중이야.</p>
+<p>내일 [우리가 등산을 갈 수 있을지] 모르겠어. (whether / if)</p>
+<p>나는 전을 먹었는데 그것은 한국 전통 펜케익 같은거야</p>
+<p>나는 막걸리를 마셨는데 그것은 한국 전통 술의 종류야</p>
+<p>나는 [그가 추천한 곳에] 못갔어</p>
+<p>그곳은 [아이스크림을 파는 카페였어]</p>
+<p>나는 [그가 얼마나 많이 마셨는지]에 충격 받았어.</p>
+<p>나도 여의도에 [벚꽃이 많다는 것을] 알고 있어.</p>
+<p>나 [그 영화 본 다른 학생을] 가르치고 있어.</p>
+<p>그게 [내가 마지막으로 마셨을 때야].</p>
+<p>[내가 예상한게] 아닌데.</p>
 
+<h1>Talking to a Foreigner</h1>
+<p>Let’s have a conversation. Please ask me about my childhood, where I grew up, and how I came to Korea.</p>
+<p>(Make the student ask you about 5~10 questions about yourself and your foreign background)</p>
+<p>Must use at least 5 of the following questions. The flow of questioning must be natural.</p>
 
+<h3>Questions Bank — For David</h3>
+<p>Where did you grow up?</p>
+<p>Where in the states did you live?</p>
+<p>What state are you from?</p>
+<p>Do you miss living in America?</p>
+<p>Are you planning to go back anytime soon?</p>
+<p>Where do you like living better? Korea or the US?</p>
+<p>How long has it been since you lived in the US?</p>
+<p>What’s the best part about living in Korea? (being back in Korea)</p>
+<p>Do you speak any other languages?</p>
+<p>Did you live anywhere else other than the US? (any other countries)</p>
+<p>Where did you go to school?</p>
 
-
-
-Talking to a foreigner 
-
-Let’s have a conversation. Please ask me about my childhood, where I grew up, and how I came to korea. (refer to the expressions below)
-(Make the student ask you about 5~10 questions about yourself and your foreign background)
-Must use at least 5 of the following questions
-The flow of questioning must be natural
-
-
-Questions Bank
-
- For David
-
-
-Where did you grow up?
-Where in the states did you live?
-What state are you from?
-Do you miss living in america?
-Are you planning to go back anytime soon?
-Where do you like living better? Korea or the US?
-How long has it been since you lived in the US?
-What’s the best part about living in korea? (being back in korea)
-Do you speak any other lanugages?
-Did you live anywhere else other than the US? (any other countries)
-Where did you go to school?
-
-For other teachers (try to memorize this one as well)
-
-
-Are you teaching full time?
-Where did you learn your english? (how to speak english)
-how long did you live in ~
-How long has it been since you came back to korea?
-what brings you back to korea?
-Are you staying for good? or are you just visiting for a while?
-Where do you prefer living?
-What do you miss about your home country?
-Have you traveled in other countries as well?
-Did you get to travel a lot in korea?
-What’s the best part about living in Germany?
-How is korea treating you?
-What was your job back in California?
-Are there any places you recommend to visit back in France?
-How many languages do you speak?
-How is korea compared to Europe?
-How’s the food treating you?
+<h3>For Other Teachers</h3>
+<p>Are you teaching full time?</p>
+<p>Where did you learn your English? (how to speak English)</p>
+<p>How long did you live in ~</p>
+<p>How long has it been since you came back to Korea?</p>
+<p>What brings you back to Korea?</p>
+<p>Are you staying for good? or are you just visiting for a while?</p>
+<p>Where do you prefer living?</p>
+<p>What do you miss about your home country?</p>
+<p>Have you traveled in other countries as well?</p>
+<p>Did you get to travel a lot in Korea?</p>
+<p>What’s the best part about living in Germany?</p>
+<p>How is Korea treating you?</p>
+<p>What was your job back in California?</p>
+<p>Are there any places you recommend to visit back in France?</p>
+<p>How many languages do you speak?</p>
+<p>How is Korea compared to Europe?</p>
+<p>How’s the food treating you?</p>
 `,
   "Intermediate: Filter Pillar Expressions": `
-  Erase the ones that the student gets right
-
-Intermediate Expressions & Vocab Part 1
-
-이 영화 해리 포터랑 비슷해.
-이거 우리가 지난주에 본 영화야(거야).
-나 한국에서 제일 유명한 음식점 중 하나에서 밥 먹었어.
-결론적으로 / 정리하자면
-결국에는 / 마지막엔
-그래서 결과적으로
-내가 파티 안 간 이유는 일 때문에 너무 기빨려서였어.
-내가 고향 마지막으로 방문한 게 엄청 오래됐어.
-긍정적인 / 부정적인
-부담 주지 마!
-민망한 / 민망하게 하는
-난 차라리 그 돈을 너한테 쓰고 싶어.
-난 차라리 술 마시러 가는 것보다 운동하러 갈래.
-나 질투나 / 부러워.
-내가 말했는지 모르겠는데~
-지난 2개월 동안.
-나 정신적으로 무너졌어.
-내가 알기로는.
-네가 날 사랑하는 한.
-최악의 상황은 뭐야?(최상의 상황은?)
-오랜만에 옛 친구랑 만났어.
-날씨에 달렸어.
-가능하면 나중에 헬스장 갈 수도 있어.
-보통 나는 매일 아침 7시에 일어나.
-드디어 / 마침내
-버스 놓쳤어. 그래서 늦었어.
-등산이 힘들었지만, 가치 있었어.
-어쩔 수 없어.
-걔가 나한테 30만원 빚졌어.
-개인적으로, 이게 최선의 선택인 것 같아.
-대화가 이상해졌어.
-우린 아직 서로 알아가는 중이야.
-이 프로젝트를 통해 걔를 잘 알게 됐어.
-결국 내가 그 행사에 자원봉사하게 됐어.
-이거 좀 도와줄래?
-걔는 내내 조용했어.
-왠지 그 노래가 계속 생각나더라.
-공부 더 열심히 했어야 했는데.
-중간고사 거의 다 끝났어.
-응원할게! / 너 응원해!
-얼마나 오래 밖에 있었어?
-어떻게 될지 두고 보자!
-걔가 불쌍했어.
-약 먹는 거 깜빡했어.
-말 끊어서 미안해.
-내 자신한테 너무 실망했어.
-그냥 궁금한데, 어떤 영화 봤어?
-내가 너라면 나도 긴장됐을 거야.
-왠지 잠이 안 왔어.
-대략 5만원 정도 했어.
-시간이 지날수록
-먹을수록 더 좋아져.
-여자친구가 운전하지 말라고 했어.
-우리 애들이 잘 지내서 다행이야.
-단어
-까다로운
-정착하다
-은퇴하다
-고려하다
-참조하다
-~에 관해서
-편리한
-편안한/여유로운
-지친
-존중하는
-장례식
-공통 친구
-아프다고 연락하다
-집착하는
-첫째로 / 둘째로
-솔직한 / 직설적인
-치아교정기
-치실
-정치
-욕하기 / 욕설
-장소
-유행하는 것
-음료수 / 음료
-귀걸이 / 목걸이 / 팔찌
-명백히
-기술적으로
-오글거리는
-어색한
-감당할 수 있는
-처리하다
-말이 돼!
-내가 알아낼게
-이제 괜찮아
-기대돼
-웃긴
+ <h1>Intermediate: Filter Pillar Expressions</h1>
 
 
-Intermediate Expressions & Vocab Part 2
+<p><b>Erase the ones that the student gets right</b></p>
 
-우리가 지난번에 본 거 아니야?
-나 모든 종류의 음악 좋아하는데, 특히 재즈를 좋아해.
-어떻게든 프로젝트 끝냈어.
-프로젝트가 어려웠지만, 끝냈어.
-원래는 해외여행 갈 계획이었는데, 대신 집에 있기로 했어.
-건강에 안 좋은 거 알지만, 어쩔 수 없어.
-150만원이 달러로 얼마야?
-카페에서 전 애인을 만났을 때 어색했어.
-그 영화 보는 건 시간 낭비였어.
-그 비싼 가방 사는 건 돈 낭비였어.
-내가 너라면, 매니저한테 말할 거야.
-그런데, 장소가 어디였지?
-어제 소개팅 갈 예정이었는데 취소됐어.
-결국 시험에 늦었어.
-빨리 끝내자.
-네가 자고 있을 거라 생각했어.
-다이어트 중이라서 살 빼려고 해.
-지난 2주 동안 살이 많이 쪘어.
-넷플릭스 시리즈에서 나온 이 밈이 소셜미디어에서 바이럴 됐어. (대박났어)
-말도 안 돼! (안 믿어!)
-보통 여자애들은 달리기에서 남자애들을 따라가지 못해.
-행사에 더 일찍 왔어야 했는데! 근데 교통체증이 심했어.
-우리는 서로 그렇게 잘 맞지 않아.
-우리 사이에 잘 안 될 것 같아.
-그게 정말 필요해?
-오늘 당직이야 (야간 근무).
-이게 우리가 어제 산 것보다 두 배 비싸.
-우리 그냥 안 가면 안 돼?
-아무도 왜인지 몰라.
-걔가 떠난 줄도 몰랐어.
-왜 그런 거야?
-그게 이거랑 무슨 상관이야?
-너한테 부담 주기 싫어.
-너 생각에는 어떤 게 제일 좋아?
-좀 삼천포로 빠지는데...
-10명 중 9명은 그렇게 할 거야.
-다시 생각해보니, 그 가방 절대 사지 말았어야 했어.
-나 '프렌즈' 드라마에 완전 빠졌어.
-사업은 어떻게 돼가?
-그건 너랑 관련 없어 / 너랑 아무 상관 없어.
-분위기 파악해 / 조심해서 말해.
-짧게 방문해도 항상 밥값 내야 해.
-나 얘기는 됐고, 너희 얘기 좀 해봐.
-모니터 암이 뭔지 알아?
-네 일만 잘하면 괜찮아.
-걱정 마, 내가 먼저 연락할게.
-가야 할 것 같은 부담감이 있었어.
-흥미롭게도,
-우리 셰프가 운영하는 펜션을 예약했어.
-나이 들수록
-다시 생각해보고 있어.
-나 FOMO야 (놓치는 것에 대한 두려움)
-우리가 이걸 처음부터 만들었어.
-걔는 정말 신사야.
-그녀는 완벽주의자야.
-더 편하게 말할 수 있게 되고 싶어.
-그건 좀 삼천포로 빠졌어 / 주제에서 벗어났어 / 우린 좀 딴길로 샜어.
-어휘
-협상하다
-재무 감사
-동시에
-주식과 채권에 투자하다
-의심스러운
-자극하다
-유능한 직원
-시간을 잘 지키는
-총각 파티 / 브라이덜 샤워
-스트리퍼
-필수적인
-망설이고 있어
-숙박 시설
-야심 찬
-골드 디거 (돈 목적의 교제)
-일생에 한 번뿐인 기회
-세심하고 배려하는
-증명하다 / 승인
-선거에 투표하다
-이용하다
-일반적으로
-마지막 순간에
-일부러
-스트레스 받은
-압도된
-의욕 있는
-연기하다
-(계획을) 고수하다
-돋보이다
-공감할 수 있어
-~처럼 보이다
-연락하며 지내다
-조만간
-다시 생각해보면
-아이디어를 떠올리다
-처리하다
-실수로 (우연히)
+
+<h3>Intermediate Expressions &amp; Vocab Part 1</h3>
+
+
+<p>이 영화 해리 포터랑 비슷해.</p>
+
+
+<p>이거 우리가 지난주에 본 영화야(거야).</p>
+
+
+<p>나 한국에서 제일 유명한 음식점 중 하나에서 밥 먹었어.</p>
+
+
+<p>결론적으로 / 정리하자면</p>
+
+
+<p>결국에는 / 마지막엔</p>
+
+
+<p>그래서 결과적으로</p>
+
+
+<p>내가 파티 안 간 이유는 일 때문에 너무 기빨려서였어.</p>
+
+
+<p>내가 고향 마지막으로 방문한 게 엄청 오래됐어.</p>
+
+
+<p>긍정적인 / 부정적인</p>
+
+
+<p>부담 주지 마!</p>
+
+
+<p>민망한 / 민망하게 하는</p>
+
+
+<p>난 차라리 그 돈을 너한테 쓰고 싶어.</p>
+
+
+<p>난 차라리 술 마시러 가는 것보다 운동하러 갈래.</p>
+
+
+<p>나 질투나 / 부러워.</p>
+
+
+<p>내가 말했는지 모르겠는데~</p>
+
+
+<p>지난 2개월 동안.</p>
+
+
+<p>나 정신적으로 무너졌어.</p>
+
+
+<p>내가 알기로는.</p>
+
+
+<p>네가 날 사랑하는 한.</p>
+
+
+<p>최악의 상황은 뭐야?(최상의 상황은?)</p>
+
+
+<p>오랜만에 옛 친구랑 만났어.</p>
+
+
+<p>날씨에 달렸어.</p>
+
+
+<p>가능하면 나중에 헬스장 갈 수도 있어.</p>
+
+
+<p>보통 나는 매일 아침 7시에 일어나.</p>
+
+
+<p>드디어 / 마침내</p>
+
+
+<p>버스 놓쳤어. 그래서 늦었어.</p>
+
+
+<p>등산이 힘들었지만, 가치 있었어.</p>
+
+
+<p>어쩔 수 없어.</p>
+
+
+<p>걔가 나한테 30만원 빚졌어.</p>
+
+
+<p>개인적으로, 이게 최선의 선택인 것 같아.</p>
+
+
+<p>대화가 이상해졌어.</p>
+
+
+<p>우린 아직 서로 알아가는 중이야.</p>
+
+
+<p>이 프로젝트를 통해 걔를 잘 알게 됐어.</p>
+
+
+<p>결국 내가 그 행사에 자원봉사하게 됐어.</p>
+
+
+<p>이거 좀 도와줄래?</p>
+
+
+<p>걔는 내내 조용했어.</p>
+
+
+<p>왠지 그 노래가 계속 생각나더라.</p>
+
+
+<p>공부 더 열심히 했어야 했는데.</p>
+
+
+<p>중간고사 거의 다 끝났어.</p>
+
+
+<p>응원할게! / 너 응원해!</p>
+
+
+<p>얼마나 오래 밖에 있었어?</p>
+
+
+<p>어떻게 될지 두고 보자!</p>
+
+
+<p>걔가 불쌍했어.</p>
+
+
+<p>약 먹는 거 깜빡했어.</p>
+
+
+<p>말 끊어서 미안해.</p>
+
+
+<p>내 자신한테 너무 실망했어.</p>
+
+
+<p>그냥 궁금한데, 어떤 영화 봤어?</p>
+
+
+<p>내가 너라면 나도 긴장됐을 거야.</p>
+
+
+<p>왠지 잠이 안 왔어.</p>
+
+
+<p>대략 5만원 정도 했어.</p>
+
+
+<p>시간이 지날수록</p>
+
+
+<p>먹을수록 더 좋아져.</p>
+
+
+<p>여자친구가 운전하지 말라고 했어.</p>
+
+
+<p>우리 애들이 잘 지내서 다행이야.</p>
+
+
+<h3>단어</h3>
+
+
+<p>까다로운</p>
+<p>정착하다</p>
+<p>은퇴하다</p>
+<p>고려하다</p>
+<p>참조하다</p>
+<p>~에 관해서</p>
+
+
+<p>편리한</p>
+<p>편안한</p>
+<p>여유로운</p>
+<p>지친</p>
+<p>존중하는</p>
+<p>장례식</p>
+<p>공통 친구</p>
+
+
+<p>아프다고 연락하다</p>
+<p>집착하는</p>
+<p>첫째로</p>
+<p>둘째로</p>
+<p>솔직한</p>
+<p>직설적인</p>
+
+
+<p>치아교정기</p>
+<p>치실</p>
+<p>정치</p>
+<p>욕하기</p>
+<p>욕설</p>
+<p>장소</p>
+<p>유행하는 것</p>
+
+
+<p>음료수</p>
+<p>음료</p>
+<p>귀걸이</p>
+<p>목걸이</p>
+<p>팔찌</p>
+<p>명백히</p>
+<p>기술적으로</p>
+
+
+<p>오글거리는</p>
+<p>어색한</p>
+<p>감당할 수 있는</p>
+<p>처리하다</p>
+<p>말이 돼!</p>
+
+
+<p>내가 알아낼게</p>
+<p>이제 괜찮아</p>
+<p>기대돼</p>
+<p>웃긴</p>
+
+
+<h3>Intermediate Expressions &amp; Vocab Part 2</h3>
+
+
+<p>우리가 지난번에 본 거 아니야?</p>
+
+
+<p>나 모든 종류의 음악 좋아하는데, 특히 재즈를 좋아해.</p>
+
+
+<p>어떻게든 프로젝트 끝냈어.</p>
+
+
+<p>프로젝트가 어려웠지만, 끝냈어.</p>
+
+
+<p>원래는 해외여행 갈 계획이었는데, 대신 집에 있기로 했어.</p>
+
+
+<p>건강에 안 좋은 거 알지만, 어쩔 수 없어.</p>
+
+
+<p>150만원이 달러로 얼마야?</p>
+
+
+<p>카페에서 전 애인을 만났을 때 어색했어.</p>
+
+
+<p>그 영화 보는 건 시간 낭비였어.</p>
+
+
+<p>그 비싼 가방 사는 건 돈 낭비였어.</p>
+
+
+<p>내가 너라면, 매니저한테 말할 거야.</p>
+
+
+<p>그런데, 장소가 어디였지?</p>
+
+
+<p>어제 소개팅 갈 예정이었는데 취소됐어.</p>
+
+
+<p>결국 시험에 늦었어.</p>
+
+
+<p>빨리 끝내자.</p>
+
+
+<p>네가 자고 있을 거라 생각했어.</p>
+
+
+<p>다이어트 중이라서 살 빼려고 해.</p>
+
+
+<p>지난 2주 동안 살이 많이 쪘어.</p>
+
+
+<p>넷플릭스 시리즈에서 나온 이 밈이 소셜미디어에서 바이럴 됐어. (대박났어)</p>
+
+
+<p>말도 안 돼! (안 믿어!)</p>
+
+
+<p>보통 여자애들은 달리기에서 남자애들을 따라가지 못해.</p>
+
+
+<p>행사에 더 일찍 왔어야 했는데! 근데 교통체증이 심했어.</p>
+
+
+<p>우리는 서로 그렇게 잘 맞지 않아.</p>
+
+
+<p>우리 사이에 잘 안 될 것 같아.</p>
+
+
+<p>그게 정말 필요해?</p>
+
+
+<p>오늘 당직이야 (야간 근무).</p>
+
+
+<p>이게 우리가 어제 산 것보다 두 배 비싸.</p>
+
+
+<p>우리 그냥 안 가면 안 돼?</p>
+
+
+<p>아무도 왜인지 몰라.</p>
+
+
+<p>걔가 떠난 줄도 몰랐어.</p>
+
+
+<p>왜 그런 거야?</p>
+
+
+<p>그게 이거랑 무슨 상관이야?</p>
+
+
+<p>너한테 부담 주기 싫어.</p>
+
+
+<p>너 생각에는 어떤 게 제일 좋아?</p>
+
+
+<p>좀 삼천포로 빠지는데...</p>
+
+
+<p>10명 중 9명은 그렇게 할 거야.</p>
+
+
+<p>다시 생각해보니, 그 가방 절대 사지 말았어야 했어.</p>
+
+
+<p>나 '프렌즈' 드라마에 완전 빠졌어.</p>
+
+
+<p>사업은 어떻게 돼가?</p>
+
+
+<p>그건 너랑 관련 없어</p>
+<p>너랑 아무 상관 없어.</p>
+
+
+<p>분위기 파악해</p>
+<p>조심해서 말해.</p>
+
+
+<p>짧게 방문해도 항상 밥값 내야 해.</p>
+
+
+<p>나 얘기는 됐고, 너희 얘기 좀 해봐.</p>
+
+
+<p>모니터 암이 뭔지 알아?</p>
+
+
+<p>네 일만 잘하면 괜찮아.</p>
+
+
+<p>걱정 마, 내가 먼저 연락할게.</p>
+
+
+<p>가야 할 것 같은 부담감이 있었어.</p>
+
+
+<p>흥미롭게도, 우리 셰프가 운영하는 펜션을 예약했어.</p>
+
+
+<p>나이 들수록</p>
+<p>다시 생각해보고 있어.</p>
+
+
+<p>나 FOMO야 (놓치는 것에 대한 두려움)</p>
+
+
+<p>우리가 이걸 처음부터 만들었어.</p>
+
+
+<p>걔는 정말 신사야.</p>
+
+
+<p>그녀는 완벽주의자야.</p>
+
+
+<p>더 편하게 말할 수 있게 되고 싶어.</p>
+
+
+<p>그건 좀 삼천포로 빠졌어</p>
+<p>주제에서 벗어났어</p>
+<p>우린 좀 딴길로 샜어.</p>
+
+
+<h3>어휘</h3>
+
+
+<p>협상하다</p>
+<p>재무 감사</p>
+<p>동시에</p>
+<p>주식과 채권에 투자하다</p>
+
+
+<p>의심스러운</p>
+<p>자극하다</p>
+<p>유능한 직원</p>
+<p>시간을 잘 지키는</p>
+
+
+<p>총각 파티</p>
+<p>브라이덜 샤워</p>
+<p>스트리퍼</p>
+<p>필수적인</p>
+<p>망설이고 있어</p>
+
+
+<p>숙박 시설</p>
+<p>야심 찬</p>
+<p>골드 디거</p>
+<p>일생에 한 번뿐인 기회</p>
+
+
+<p>세심하고 배려하는</p>
+<p>증명하다</p>
+<p>승인</p>
+<p>선거에 투표하다</p>
+
+
+<p>이용하다</p>
+<p>일반적으로</p>
+<p>마지막 순간에</p>
+<p>일부러</p>
+
+
+<p>스트레스 받은</p>
+<p>압도된</p>
+<p>의욕 있는</p>
+<p>연기하다</p>
+
+
+<p>(계획을) 고수하다</p>
+<p>돋보이다</p>
+<p>공감할 수 있어</p>
+
+
+<p>~처럼 보이다</p>
+<p>연락하며 지내다</p>
+<p>조만간</p>
+<p>다시 생각해보면</p>
+
+
+<p>아이디어를 떠올리다</p>
+<p>처리하다</p>
+<p>실수로 (우연히)</p>
 `,
   "Intermediate: Actual Level Test": `
-  Grading Rubric
-
-
-Must get over 65% correct + major bulk answers all correct
-Forgive: a, the, plural s, and sentences that mean the same thing and sound natural
-Will fail the question if it takes too long for student to respond
-The test will keep being updated so please adjust your mock tests according to this page
-Rules: you can share the actual questions with the students . You can even share the link for the test.
-
-
-I will try to finish the test in 45 minutes and give feedback for 15 minutes.
-Take notes via google docs
-Key: * = small mistake (will forgive) / ** = this mistake will affect grade / *** = big mistake (should not appear at this level)
-How students usually fail
-
-
-Simply not memorizing the expressions
-if your student took class properly, these sentences shouldn’t be too difficult to memorize. They should already know 80% of the sentence but will make small mistakes when you test them. Use the pressure from the exam to do make sure students know these expressions for sure.
-You already know what will come out on the test. If the student still gets it wrong, they just didn’t study or are not qualified to take this test.
-The Teacher didn’t help students make long form scripts
-There are no curveballs with the long form speaking questions. Help students write responses that you know will pass and make sure to buff out any small grammar mistakes through mock tests.
-You didn’t take enough mock tests
-you think they know, they think they know, but sometimes they still get it wrong regardless
-make sure you start mock testing at least 1 month before the exam.
-me personally I just put everything they get wrong into quizlet > and then do the mock test again.
-(no need to review everything via quizlet. just review via another mock test)
-record the mock tests and send it to them
-If your students don’t study, just mock test them. If they still don’t study have them fail the test.
-Have students write out the long form responses for homework instead of the diary to save prep time.
-of course you may need to edit and upgrade their answers to help them pass
-
-The Test Starts Here
-Timer: 0 minute mark
-Basic Questions (click to open up)
-Date: What is the date today? > must respond & ask the right questions
-오늘 날짜가 어떻게 되나요?
-오늘 무슨 요일인가요?
-시간 & 날짜 (NEW)
-7월 20일 / 11월 30일 / 2월 12일 / 4월 15일
-지금 몇시인지 아시나요? > 지금 12시 반이에요 (현재 시간으로)
-학원 오는데 얼마나 걸리나요? > 한 30분 정도 걸려요 (it takes about half an hour)
-미국 언제 갈꺼야? > 8월 7일쯤 갈거야. (i’m gonna go on august 7th)
-Greet the teacher: can you say hi to me in 3 different ways? (greetings that are in the “easy” level in the textbook will not count)
-how is it going? > it’s going well
-how are you doing? > I’m doing well
-what’s going on? > nothing special
-what’s up? > nothing much
-how is everything? > everything is good
-is everything going well? > yeah, everything’s good
-What’s on your mind? > nothing much (there’s nothing on my mind)
-It’s been a while! Long time no see > Yeha it’s been a while! How are you?
-Let’s catch up sometime!
-Timer: 5 minute mark
-Common Questions (ask all)
-Hi XX, long time no see, can you introduce yourself? [talking about oneself] [Must memorize an upgraded version]
-What are your hobbies nowadays? What are you into? Tell me in detail (Or: tell me about your hobbies in more detail!) [Must memorize upgraded version]
-what do you look forward to in your day?
-What do you do? (what is your job?) Tell me more about your job & company. [Must memorize upgraded version] (skip if it was mentioned in detail already)
-Or : tell me about being a student. How is it? do you wanna grow up faster? (For students)
-(There may be follow up questions to test their basic grammar and speed)
-Timer: 10 minute mark
-Work questions (ask at least 3)
-there may be follow up questions
-I am looking for any grammar mistakes, the use of advanced grammar, intermediate vocabulary, speed, natural flow
-Advanced grammar = Have pp, could, should, relative pronouns, verbal nouns, might
-Tell me about a typical day at work
-Tell me about your most recent project
-What was your previous job?
-Why are you taking a break from work?
-How are you enjoying taking a break from school / work?
-How is being a housewife treating you? (student / an employee)
-do you like your company or school? what about your major?
-tell me about your team and position?
-what do you plan to do for work in your future
-do you like school? how is it different from other schools?
-do you like your homeroom class?
-do you like your homeroom teacher?
-are there any professors / managers / coworkers that you like?
-Timer: 15 minute mark
-Storytelling (ask at least 2) (click to open up)
-Must use advanced grammar
-Good storytelling = incorporating characters, dialogue, and an entertaining flow. (practice makes perfect)
-Tell me about something unexpected that happened recently
-Tell me about the most memorable fight or argument you had with someone that you know
-Tell me some office gossip. (maybe someone you dislike at work)
-Tell me about a situation that annoyed you at work
-Tell me about how your kids upset you or made you laugh
-Timer: 20 minute mark
-Grammar: Verbal Nouns and Relative Pronouns (ask at least 7) (click to open up)
-저 여자가 [제가 어제 만난 여자]에요.
-[제가 좋아했던 그 여자]가 이사 갔어요.
-[제가 만난 그 남자]는 코미디언이었어요.
-제가 [당신이 만난 사람]을 봤어요.
-[제가 어제 뭘 했는지] 기억이 안 나요.
-[그녀가 이게 예쁘다고] 말했어요.
-[제가 어릴 때], 저는 아팠어요.
-제가 [왜 그녀가 화났는지] 모르겠어요.
-제가 [당신이 어디 있는지] 알아요.
-그게 [제가 우유를 못 마시는 이유]에요.
-제가 [당신이 거짓말한 걸] 알아요.
-[제가 예쁘지 않다고] 생각했어요.
-제가 [1000원짜리 물]을 샀어요.
-[제가 좋아하는 음식]은 피자예요.
-[제가 일하는 회사]는 부산에 있어요.
-제가 좋아하는 장면은 [주인공이 악당과 싸우는 장면]이에요.
-제가 좋아하는 [여자를 만났어요].
-[그게 바로 당신을 좋아하는 이유예요].
-제가 [포레스트 검프라는 영화]를 봤어요.
-저는 [유명한 케이팝 보이그룹인 BTS]를 좋아해요.
-나는 그가 내 이름을 기억하는지 궁금해.
-나는 네가 여행을 즐겼기를 바라.
-그녀는 왜 늦었는지 설명했어.
-내가 이걸 제시간에 끝낼 수 있을지 확신이 안 서.
-나는 오늘이 그녀의 생일이라는 걸 잊었어.
-나는 네가 내일 쉬는 날인 걸 알기 때문에 계획을 세웠어.
-그가 쓴 보고서가 이 프로젝트의 핵심 자료야.
-그가 언급했던 프로젝트가 드디어 시작됐어.
-내가 다니는 헬스장은 24시간 운영해.
-그녀가 요리한 음식이 오늘의 메인 요리야.
-내가 매일 이용하는 지하철역이 이번 주에 공사 중이야.
-Timer: 25 minute mark
-Choose 3 of 5 topics to talk about (5 min each)
-Movies (ask at least 2) (must use multiple relative pronouns & verbal nouns ) (click to open up)
-(or TV shows, Anime, webtoons, books, entertainment shows)
-What movie did you watch recently?
-What was the story about in detail?
-What is your all time favorite movie?
-What was the story about in detail?
-Why do you like this movie so much?
-Ask me 3 questions about my movie taste and recommend a movie for me and explain why you think I would like it
-Tell me about your favorite actor or actress and why you like them. What did they come out in?
-what TV program did you watch when you were a kid? what is it about?
-Talking to a foreigner (click to open up)
-Let’s have a conversation. Please ask me about my childhood, where I grew up, and how I came to korea. (refer to the expressions below)
-
-
-Make the student ask you about 5~10 questions about yourself and your foreign background
-Must use at least 5 of the following questions
-
- The flow of questioning must be natural
-
- For David
-
-
-Where did you grow up?
-Where in the states did you live?
-What state are you from?
-Do you miss living in america?
-Are you planning to go back anytime soon?
-Where do you like living better? Korea or the US?
-How long has it been since you lived in the US?
-What’s the best part about living in korea? (being back in korea)
-Do you speak any other lanugages?
-Did you live anywhere else other than the US? (any other countries)
-Where did you go to school?
-For other teachers (try to memorize this one as well)
-
-
-Are you teaching full time?
-Where did you learn your english? (how to speak english)
-how long did you live in ~
-How long has it been since you came back to korea?
-what brings you back to korea?
-Are you staying for good? or are you just visiting for a while?
-Where do you prefer living?
-What do you miss about your home country?
-Have you traveled in other countries as well?
-Did you get to travel a lot in korea?
-What’s the best part about living in Germany?
-How is korea treating you?
-What was your job back in California?
-Are there any places you recommend to visit back in France?
-How many languages do you speak?
-How is korea compared to Europe?
-How’s the food treating you?
-Drinking (ask at least 2)
-All answers must incorporate storytelling & advanced grammar
-When is the last time that you drank?
-Do you drink often?
-Tell me about a embarrassing drinking experience (must explain situation well / express why it was embarrassing)
-Recommend a pub and explain why you like it
-what can I order there? What do they serve?
-Ask me 5 drinking questions & have a small conversation with me regarding the topic
-The questions cannot all be too easy and must connect like a conversation
-Dating (ask at least 2)
-All answers must incorporate storytelling & advanced grammar
-Tell me about your most recent dating experience
-Why didn’t it work out? / How is the relationship going?
-What are your thoughts about marriage and kids?
-What is your ideal type? Does that person match your ideal type?
-Do you have a crush on someone right now? what kind of person are they?
-Tell me about your ex (if it’s okay to ask)
-Ask me 5 dating questions & have a small conversation with me regarding the topic
-The questions cannot all be too easy and must connect like a conversation
-Being sick (ask at least 2)
-All answers must incorporate storytelling & advanced grammar
-Tell me about the last time you were sick. How were you sick and how painful was it? How did you recover?
-Tell me about the last time you hurt yourself physically. What happened and how painful was it? How did you deal with it?
-Are you stressed nowadays? What are you stressed about? How are you dealing with it?
-When is the last time that you went to the hospital?
-Ask me 5 questions about being sick or hurt and have a small conversation with me regarding the topic
-The questions cannot all be too easy and must connect like a conversation
-Timer : 40 minute mark
-Intermediate Pillar expressions (ask 20)
-가능하면 헬스장에 갈 수도 있어.
-이 영화는 해리 포터와 비슷해.
-그게 우리가 지난번에 본 거 아니야?
-그 영화는 우리가 지난주에 본 거야.
-오랜만에 옛 친구와 안부를 나눴어. (근황토크)
-한국에서 가장 유명한 레스토랑 중 하나에서 식사했어.
-날씨에 따라 달라.
-나는 모든 종류의 음악을 좋아하지만, 특히 재즈를 사랑해.
-어떻게든 프로젝트를 끝냈어.
-프로젝트가 어려웠지만, 그래도 끝냈어.
-원래는 해외여행을 계획했지만, 대신 집에 있기로 결정했어.
-보통 나는 매일 아침 7시에 일어나.
-결론적으로 2가지
-결국에는 2가지
-드디어 2가지
-결과로서
-내가 파티에 가지 않은 이유는 일 때문에 너무 지쳤기 때문이야.
-내가 고향을 마지막으로 방문한 것은 아주 오래 전이야.
-버스를 놓쳤어. 그래서 늦었어.
-등산은 힘들었지만, 그만한 가치가 있었어.
-개인적으로, 나는 이것이 최선의 선택이라고 생각해.
-건강에 좋지 않다는 걸 알지만, 어쩔 수 없어.
-150만원은 달러로 얼마야?
-그는 나에게 30만원을 빚졌어.
-대화가 이상해졌어.
-카페에서 전 애인을 만났을 때 어색했어.
-이 프로젝트를 통해 그녀를 잘 알게 됐어. (close 아님)
-우리는 아직 서로를 알아가는 중이야.
-그 영화를 보는 것은 시간 낭비였어.
-그 비싼 가방을 사는 것은 돈 낭비였어.
-내가 너라면, 매니저와 얘기할 거야.
-이것 좀 도와줄 수 있을까?
-결국 그 행사에 자원봉사를 하게 됐어.
-왠지 그 노래에 대해 계속 생각이 났어.
-그녀는 내내 조용했어.
-그런데, 장소가 어디였지?
-어쩔 수 없어.
-어제 소개팅을 가기로 했는데 취소됐어.
-그렇게 했어야 했는데.
-내가 너라면 그렇게 했을 거야.
-결국 시험에 늦었어.
-중간고사를 거의 다 끝냈어.
-우리 아이들이 잘 어울려서 기뻐.
-내가 너라면, 나도 긴장됐을 거야.
-왠지 잠을 잘 수 없었어.
-대략 5만원 정도 들었어.
-빨리 끝내자.
-그만한 가치가 있었어! / 그만한 가치가 없었어.
-네가 자고 있을 거라고 생각했어.
-다이어트 중이라서 체중을 줄이려고 노력 중이야.
-지난 2주 동안 체중이 많이 늘었어.
-넷플릭스 시리즈의 이 밈이 소셜 미디어에서 바이럴했어.
-난 그걸 믿지 않아!
-일반적으로, 달리기에서 여자들은 남자들을 따라가지 못해.
-행사에 더 일찍 왔어야 했는데! 하지만 교통이 혼잡했어.
-낙관적인 / 비관적인
-응원할게! / 널 응원해!
-얼마나 오래 밖에 있었어?
-우리는 서로 그다지 잘 맞지 않아.
-우리 사이에 잘 안 될 것 같아.
-그게 정말 필요해?
-오늘 당직이야 (야간 근무)
-어제 우리가 산 것보다 두 배나 비싸 (두 배의 가격)
-그냥 안 가면 안 돼?
-어떻게 될지 두고 보자!
-가야 한다는 압박감을 느꼈어 / 나한테 압박 주지 마!
-아무도 그 이유를 몰라.
-그가 떠났다는 것도 몰랐어.
-왜 그런 거야?
-그게 무슨 상관이야?
-너에게 부담을 주고 싶지 않아.
-그가 안타까웠어.
-너의 의견으로는 어떤 게 제일 좋아?
-그 돈을 너한테 쓰는 게 낫겠어.
-술 마시러 가는 것보다 운동하러 가는 게 낫겠어.
-당황한 / 당황스러운
-좀 주제에서 벗어나지만...
-10명 중 9명은 그렇게 할 거야.
-다시 생각해보니, 그 가방을 사지 말았어야 했어.
-나는 "프렌즈" TV 쇼에 완전히 빠졌어.
-말 끊어서 미안해.
-약 먹는 걸 잊었어.
-사업은 어떻게 돼가?
-부럽다 / 네가 부러워.
-내가 말했는지 모르겠네.
-너와는 관련이 없어 / 너와는 아무 상관이 없어.
-지난 2개월 동안
-분위기를 읽어 / 조심스럽게 행동해
-짧은 방문인데도 항상 내가 음식값을 내야 해.
-나 얘기는 그만하고, 너희 얘기 좀 해봐.
-모니터 암이 뭔지 알아?
-정신적 붕괴가 왔어.
-나 자신에게 매우 실망했어.
-네가 나를 사랑하는 한
-네가 일만 하면 돼.
-내가 아는 바로는
-걱정 마, 내가 먼저 연락할게.
-최악의 상황이 뭐야?
-신기하게도,
-나이가 먹을수록 (2가지)
-시간이 갈수록
-다시 고민중이야
-나 FOMO 있어
-이거 처음부터 만들었어
-너무 신사다 (예의바르다)
-그녀는 완벽주의자야
-너 편하게 말할 수 있었으면 좋겠어
-다른 이야기긴 한데 (3가지)
-밤샜다 (2가지)
-해볼만해 (2가지)
-Answer Key
-Intermediate Pillar expressions (ask 20)
-I might go to the gym later if I can.
-This movie is similar to Harry potter
-isn’t that what we watched last time?
-The movie is one that we watched last week.
-I caught up with an old friend for the first time in a while.
-I dined at one of the most famous restaurants in Korea.
-It depends on the weather.
-I like all kinds of music, but I specifically love jazz.
-I finished the project somehow
-even though the project was difficult, I finished it (even if)
-Originally, I planned to travel abroad, but I decided to stay home instead.
-Normally, I wake up at 7 AM every day.
-All in all / In conclusion
-eventually / In the end
-finally / at last
-As a result
-The reason that I didn’t go to the party was because I was too drained from work.
-The last time that I visited my hometown was ages ago.
-I missed the bus. That’s why I was late.
-The hike was tough, but it was worth it.
-Personally, I think this is the best option.
-I know it’s unhealthy, but I can’t help it.
-How much is 1,500,000 won in dollars?
-He owes me 300,000 won.
-The conversation got weird.
-It felt awkward when I met my ex at the café.
-I got to know her well through this project.
-we’re still getting to know each other
-Watching that movie was a waste of time.
-Buying that expensive bag was a waste of money.
-If I were you, I would talk to the manager.
-Would you mind helping me with this?
-I ended up volunteering for the event.
-For some reason, I couldn’t stop thinking about that song.
-She was quiet for the whole time.
-By the way, where is the venue again?
-I can’t help it
-I was supposed to go on a blind date yesterday but it got canceled
-I should’ve {~했었어야 했다}
-I would’ve {나라면 ~를 했을 것이다}
-I ended up being late to the test
-I’m pretty much done with my midterms
-I’m glad that our kids got along
-if I were you, I would be nervous too
-I couldn’t sleep for some reason
-it cost roughly 50,000won
-let’s get it over with
-it was worth it! / it wasn’t worth it
-I figured that you were sleeping
-I’m trying to lose weight because I’m on a diet.
-I gained a lot of weight over the last 2 weeks.
-this meme from a netflix series went viral on social media. (it blew up)
-I don’t buy it!
-generally, girls can’t keep up with guys when running
-I should’ve come to the event earlier! but the traffic was heavy.
-optimistic / pessimistic
-I’m cheering for you! / I’m rooting for you!
-how long did you stay out?
-we’re not that compatible with each other
-it’s not gonna work out between us
-is that even neccesary?
-I’m on duty today (the night shift)
-it’s twice as expensive as the one we bought yesterday (twice the price)
-why can’t we just not go?
-we’ll see how it goes!
-I felt pressured to go / stop pressuring me!
-no one knows why
-I didn’t even know that he left
-why is that the case?
-what does that have to do with anything?
-I don’t want to burden you
-I felt bad for him
-In your opinion, which one is the best?
-I would rather spend that money on you
-I would rather go work out than go drink
-embarrassed / embarrassing
-this is kind of a tangent but ..
-9 out of 10 people would do that
-on second thought, I should’ve never bought that bag
-I’m totally obsessed with the TV show “friends”
-sorry to cut you off
-I forgot to take my medicine
-how is your business going?
-I'm jealous / I envy you
-I'm not sure if I told you
-it’s not related with / it doesn’t have anything to do with you
-for the last 2 months
-read the room / walk on eggshells
-I always have to pay for food even though it’s a short visit.
-enough about me, tell me about you guys
-do you know what a monitor arm is?
-I had a mental breakdown
-I was very disappointed in myself
-as long as you love me
-as long as you do your work, it’s all good
-from what I know
-don’t worry, I’ll reach out first
-what’s the worst case scenario?
-interestingly enough,
-As I get older / the older I get
-As time goes by
-I’m having second thoughts
-I have FOMO (fear of missing out)
-we made this from scratch
-he’s such a gentleman
-she’s a perfectionist
-I want to be able to say it more comfortably
-that was a tangent / that was off topic / we sidetracked a bit
-I pulled an all nighter / I stayed up all night
-it's worth a try
-Pillar Vocab (ask 10)
-보아하니 / 듣자 하니
-
-
-엄밀히 말하면 / 기술적으로
-
-
-협상하다
-
-
-정착하다 / 자리 잡다
-
-
-재무 감사
-
-
-은퇴하다
-
-
-동시에
-
-
-까다로운
-
-
-주식과 채권에 투자하다
-
-
-고려하다 / 생각하다
-
-
-~을 언급하다 / ~을 참조하다
-
-
-~에 관하여 / ~와 관련하여
-
-
-회의적인
-
-
-피해망상적인 / 과민한
-
-
-자극하다
-
-
-유능한 직원
-
-
-시간을 잘 지키는 / 시간 엄수하는
-
-
-정치
-
-
-욕설 / 욕하기
-
-
-총각 파티 / 신부 파티 (결혼 전 파티)
-
-
-스트리퍼들 (춤추는 사람들)
-
-
-장소 / 개최지
-
-
-의무적인 / 필수의
-
-
-무언가가 유행하고 있다
-
-
-망설이고 있어요
-
-
-편리한
-
-
-직설적인 / 솔직한
-
-
-숙소 / 숙박 시설
-
-
-다과 / 음료수들
-
-
-야망 있는 / 포부가 큰
-
-
-느긋한 / 여유로운 (혹은 "진정해"라는 표현으로도 사용)
-
-
-기진맥진한 / 매우 지친
-
-
-꽃뱀들 (돈만 노리는 사람들)
-
-
-일생에 한 번뿐인 기회
-
-
-귀걸이 / 목걸이 / 팔찌들
-
-
-치아 교정기 (브레이스)
-
-
-치실 (플로스)
-
-
-섬세하고 배려심 있는
-
-
-존중하는 / 예의 있는
-
-
-오글거리는 / 민망한
-
-
-증명하다 / 승인(허가)하다
-
-
-선거에서 투표하다
-
-
-장례식
-
-
-공통 친구들
-
-
-~을 이용하다 (부정적 뉘앙스 포함 가능)
-
-
-병가를 내다 (아프다고 연락하다)
-
-
-집착하는 / 푹 빠진
-
-
-첫째로 / 둘째로
-
-
-직설적인 / 솔직한
-
-
-Vocab (ask 10) > make fun phrases chapter
-apparently,
-technically,
-negotiate
-settle down
-financial audit
-retire
-simultaneously
-picky
-invest in stocks and bonds
-consider
-refer to
-regarding ~
-skeptical
-paranoid(delete?)
-stimulate
-a competent employee
-punctual
-politics
-swearing / cussing / cursing
-bachelor party / bridal shower
-strippers
-venue
-mandatory
-something is trending
-i’m hesitating
-convenient
-straightforward / direct
-accommodation
-refreshments / beverages
-ambitious
-chill
-exhausted
-gold diggers
-once in a lifetime opportunity
-earrings / necklaces / bracelets
-braces
-floss
-sensitive and caring
-respectful
-cringy
-prove / approval
-vote for the election
-funeral
-mutual friends
-take advantage of
-call in sick
-obsessed
-first of all / second of all
-straightforward
-End Timer: 45 minute mark (15 minutes left for feedback)
+ <h1>Grading Rubric</h1>
+<p>Must get over 65% correct + major bulk answers all correct</p>
+<p>Forgive: a, the, plural s, and sentences that mean the same thing and sound natural</p>
+<p>Will fail the question if it takes too long for student to respond</p>
+<p>The test will keep being updated so please adjust your mock tests according to this page</p>
+<p>Rules: you can share the actual questions with the students . You can even share the link for the test.</p>
+<p>I will try to finish the test in 45 minutes and give feedback for 15 minutes.</p>
+<p>Take notes via google docs</p>
+<p>Key: * = small mistake (will forgive) / ** = this mistake will affect grade / *** = big mistake (should not appear at this level)</p>
+<p>How students usually fail</p>
+<p>Simply not memorizing the expressions</p>
+<p>if your student took class properly, these sentences shouldn’t be too difficult to memorize. They should already know 80% of the sentence but will make small mistakes when you test them. Use the pressure from the exam to do make sure students know these expressions for sure.</p>
+<p>You already know what will come out on the test. If the student still gets it wrong, they just didn’t study or are not qualified to take this test.</p>
+<p>The Teacher didn’t help students make long form scripts</p>
+<p>There are no curveballs with the long form speaking questions. Help students write responses that you know will pass and make sure to buff out any small grammar mistakes through mock tests.</p>
+<p>You didn’t take enough mock tests</p>
+<p>you think they know, they think they know, but sometimes they still get it wrong regardless</p>
+<p>make sure you start mock testing at least 1 month before the exam.</p>
+<p>me personally I just put everything they get wrong into quizlet > and then do the mock test again.</p>
+<p>(no need to review everything via quizlet. just review via another mock test)</p>
+<p>record the mock tests and send it to them</p>
+<p>If your students don’t study, just mock test them. If they still don’t study have them fail the test.</p>
+<p>Have students write out the long form responses for homework instead of the diary to save prep time.</p>
+<p>of course you may need to edit and upgrade their answers to help them pass</p>
+<h2>The Test Starts Here</h2>
+<h2>Timer: 0 minute mark</h2>
+<h3>Basic Questions (click to open up)</h3>
+<p>Date: What is the date today? > must respond & ask the right questions</p>
+<p>오늘 날짜가 어떻게 되나요?</p>
+<p>오늘 무슨 요일인가요?</p>
+<p>시간 & 날짜 (NEW)</p>
+<p>7월 20일 / 11월 30일 / 2월 12일 / 4월 15일</p>
+<p>지금 몇시인지 아시나요? > 지금 12시 반이에요 (현재 시간으로)</p>
+<p>학원 오는데 얼마나 걸리나요? > 한 30분 정도 걸려요 (it takes about half an hour)</p>
+<p>미국 언제 갈꺼야? > 8월 7일쯤 갈거야. (i’m gonna go on august 7th)</p>
+<p>Greet the teacher: can you say hi to me in 3 different ways? (greetings that are in the “easy” level in the textbook will not count)</p>
+<p>how is it going? > it’s going well</p>
+<p>how are you doing? > I’m doing well</p>
+<p>what’s going on? > nothing special</p>
+<p>what’s up? > nothing much</p>
+<p>how is everything? > everything is good</p>
+<p>is everything going well? > yeah, everything’s good</p>
+<p>What’s on your mind? > nothing much (there’s nothing on my mind)</p>
+<p>It’s been a while! Long time no see > Yeha it’s been a while! How are you?</p>
+<p>Let’s catch up sometime!</p>
+<h2>Timer: 5 minute mark</h2>
+<h3>Common Questions (ask all)</h3>
+<p>Hi XX, long time no see, can you introduce yourself? [talking about oneself] [Must memorize an upgraded version]</p>
+<p>What are your hobbies nowadays? What are you into? Tell me in detail (Or: tell me about your hobbies in more detail!) [Must memorize upgraded version]</p>
+<p>what do you look forward to in your day?</p>
+<p>What do you do? (what is your job?) Tell me more about your job & company. [Must memorize upgraded version] (skip if it was mentioned in detail already)</p>
+<p>Or : tell me about being a student. How is it? do you wanna grow up faster? (For students)</p>
+<p>(There may be follow up questions to test their basic grammar and speed)</p>
+<h2>Timer: 10 minute mark</h2>
+<h3>Work questions (ask at least 3)</h3>
+<p>there may be follow up questions</p>
+<p>I am looking for any grammar mistakes, the use of advanced grammar, intermediate vocabulary, speed, natural flow</p>
+<p>Advanced grammar = Have pp, could, should, relative pronouns, verbal nouns, might</p>
+<p>Tell me about a typical day at work</p>
+<p>Tell me about your most recent project</p>
+<p>What was your previous job?</p>
+<p>Why are you taking a break from work?</p>
+<p>How are you enjoying taking a break from school / work?</p>
+<p>How is being a housewife treating you? (student / an employee)</p>
+<p>do you like your company or school? what about your major?</p>
+<p>tell me about your team and position?</p>
+<p>what do you plan to do for work in your future</p>
+<p>do you like school? how is it different from other schools?</p>
+<p>do you like your homeroom class?</p>
+<p>do you like your homeroom teacher?</p>
+<p>are there any professors / managers / coworkers that you like?</p>
+<h2>Timer: 15 minute mark</h2>
+<h3>Storytelling (ask at least 2) (click to open up)</h3>
+<p>Must use advanced grammar</p>
+<p>Good storytelling = incorporating characters, dialogue, and an entertaining flow. (practice makes perfect)</p>
+<p>Tell me about something unexpected that happened recently</p>
+<p>Tell me about the most memorable fight or argument you had with someone that you know</p>
+<p>Tell me some office gossip. (maybe someone you dislike at work)</p>
+<p>Tell me about a situation that annoyed you at work</p>
+<p>Tell me about how your kids upset you or made you laugh</p>
+<h2>Timer: 20 minute mark</h2>
+<h3>Grammar: Verbal Nouns and Relative Pronouns (ask at least 7) (click to open up)</h3>
+<p>저 여자가 [제가 어제 만난 여자]에요.</p>
+<p>[제가 좋아했던 그 여자]가 이사 갔어요.</p>
+<p>[제가 만난 그 남자]는 코미디언이었어요.</p>
+<p>제가 [당신이 만난 사람]을 봤어요.</p>
+<p>[제가 어제 뭘 했는지] 기억이 안 나요.</p>
+<p>[그녀가 이게 예쁘다고] 말했어요.</p>
+<p>[제가 어릴 때], 저는 아팠어요.</p>
+<p>제가 [왜 그녀가 화났는지] 모르겠어요.</p>
+<p>제가 [당신이 어디 있는지] 알아요.</p>
+<p>그게 [제가 우유를 못 마시는 이유]에요.</p>
+<p>제가 [당신이 거짓말한 걸] 알아요.</p>
+<p>[제가 예쁘지 않다고] 생각했어요.</p>
+<p>제가 [1000원짜리 물]을 샀어요.</p>
+<p>[제가 좋아하는 음식]은 피자예요.</p>
+<p>[제가 일하는 회사]는 부산에 있어요.</p>
+<p>제가 좋아하는 장면은 [주인공이 악당과 싸우는 장면]이에요.</p>
+<p>제가 좋아하는 [여자를 만났어요].</p>
+<p>[그게 바로 당신을 좋아하는 이유예요].</p>
+<p>제가 [포레스트 검프라는 영화]를 봤어요.</p>
+<p>저는 [유명한 케이팝 보이그룹인 BTS]를 좋아해요.</p>
+<p>나는 그가 내 이름을 기억하는지 궁금해.</p>
+<p>나는 네가 여행을 즐겼기를 바라.</p>
+<p>그녀는 왜 늦었는지 설명했어.</p>
+<p>내가 이걸 제시간에 끝낼 수 있을지 확신이 안 서.</p>
+<p>나는 오늘이 그녀의 생일이라는 걸 잊었어.</p>
+<p>나는 네가 내일 쉬는 날인 걸 알기 때문에 계획을 세웠어.</p>
+<p>그가 쓴 보고서가 이 프로젝트의 핵심 자료야.</p>
+<p>그가 언급했던 프로젝트가 드디어 시작됐어.</p>
+<p>내가 다니는 헬스장은 24시간 운영해.</p>
+<p>그녀가 요리한 음식이 오늘의 메인 요리야.</p>
+<p>내가 매일 이용하는 지하철역이 이번 주에 공사 중이야.</p>
+<h2>Timer: 25 minute mark</h2>
+<p>Choose 3 of 5 topics to talk about (5 min each)</p>
+<h3>Movies (ask at least 2) (must use multiple relative pronouns & verbal nouns ) (click to open up)</h3>
+<p>(or TV shows, Anime, webtoons, books, entertainment shows)</p>
+<p>What movie did you watch recently?</p>
+<p>What was the story about in detail?</p>
+<p>What is your all time favorite movie?</p>
+<p>What was the story about in detail?</p>
+<p>Why do you like this movie so much?</p>
+<p>Ask me 3 questions about my movie taste and recommend a movie for me and explain why you think I would like it</p>
+<p>Tell me about your favorite actor or actress and why you like them. What did they come out in?</p>
+<p>what TV program did you watch when you were a kid? what is it about?</p>
+<h3>Talking to a foreigner (click to open up)</h3>
+<p>Let’s have a conversation. Please ask me about my childhood, where I grew up, and how I came to korea. (refer to the expressions below)</p>
+<p>Make the student ask you about 5~10 questions about yourself and your foreign background</p>
+<p>Must use at least 5 of the following questions</p>
+<p>The flow of questioning must be natural</p>
+<p>For David</p>
+<p>Where did you grow up?</p>
+<p>Where in the states did you live?</p>
+<p>What state are you from?</p>
+<p>Do you miss living in america?</p>
+<p>Are you planning to go back anytime soon?</p>
+<p>Where do you like living better? Korea or the US?</p>
+<p>How long has it been since you lived in the US?</p>
+<p>What’s the best part about living in korea? (being back in korea)</p>
+<p>Do you speak any other lanugages?</p>
+<p>Did you live anywhere else other than the US? (any other countries)</p>
+<p>Where did you go to school?</p>
+<p>For other teachers (try to memorize this one as well)</p>
+<p>Are you teaching full time?</p>
+<p>Where did you learn your english? (how to speak english)</p>
+<p>how long did you live in ~</p>
+<p>How long has it been since you came back to korea?</p>
+<p>what brings you back to korea?</p>
+<p>Are you staying for good? or are you just visiting for a while?</p>
+<p>Where do you prefer living?</p>
+<p>What do you miss about your home country?</p>
+<p>Have you traveled in other countries as well?</p>
+<p>Did you get to travel a lot in korea?</p>
+<p>What’s the best part about living in Germany?</p>
+<p>How is korea treating you?</p>
+<p>What was your job back in California?</p>
+<p>Are there any places you recommend to visit back in France?</p>
+<p>How many languages do you speak?</p>
+<p>How is korea compared to Europe?</p>
+<p>How’s the food treating you?</p>
+<h3>Drinking (ask at least 2)</h3>
+<p>All answers must incorporate storytelling & advanced grammar</p>
+<p>When is the last time that you drank?</p>
+<p>Do you drink often?</p>
+<p>Tell me about a embarrassing drinking experience (must explain situation well / express why it was embarrassing)</p>
+<p>Recommend a pub and explain why you like it</p>
+<p>what can I order there? What do they serve?</p>
+<p>Ask me 5 drinking questions & have a small conversation with me regarding the topic</p>
+<p>The questions cannot all be too easy and must connect like a conversation</p>
+<h3>Dating (ask at least 2)</h3>
+<p>All answers must incorporate storytelling & advanced grammar</p>
+<p>Tell me about your most recent dating experience</p>
+<p>Why didn’t it work out? / How is the relationship going?</p>
+<p>What are your thoughts about marriage and kids?</p>
+<p>What is your ideal type? Does that person match your ideal type?</p>
+<p>Do you have a crush on someone right now? what kind of person are they?</p>
+<p>Tell me about your ex (if it’s okay to ask)</p>
+<p>Ask me 5 dating questions & have a small conversation with me regarding the topic</p>
+<p>The questions cannot all be too easy and must connect like a conversation</p>
+<h3>Being sick (ask at least 2)</h3>
+<p>All answers must incorporate storytelling & advanced grammar</p>
+<p>Tell me about the last time you were sick. How were you sick and how painful was it? How did you recover?</p>
+<p>Tell me about the last time you hurt yourself physically. What happened and how painful was it? How did you deal with it?</p>
+<p>Are you stressed nowadays? What are you stressed about? How are you dealing with it?</p>
+<p>When is the last time that you went to the hospital?</p>
+<p>Ask me 5 questions about being sick or hurt and have a small conversation with me regarding the topic</p>
+<p>The questions cannot all be too easy and must connect like a conversation</p>
+<h2>Timer : 40 minute mark</h2>
+<h2>Intermediate Pillar expressions (ask 20)</h2>
+<p>가능하면 헬스장에 갈 수도 있어.</p>
+<p>이 영화는 해리 포터와 비슷해.</p>
+<p>그게 우리가 지난번에 본 거 아니야?</p>
+<p>그 영화는 우리가 지난주에 본 거야.</p>
+<p>오랜만에 옛 친구와 안부를 나눴어. (근황토크)</p>
+<p>한국에서 가장 유명한 레스토랑 중 하나에서 식사했어.</p>
+<p>날씨에 따라 달라.</p>
+<p>나는 모든 종류의 음악을 좋아하지만, 특히 재즈를 사랑해.</p>
+<p>어떻게든 프로젝트를 끝냈어.</p>
+<p>프로젝트가 어려웠지만, 그래도 끝냈어.</p>
+<p>원래는 해외여행을 계획했지만, 대신 집에 있기로 결정했어.</p>
+<p>보통 나는 매일 아침 7시에 일어나.</p>
+<p>결론적으로 2가지</p>
+<p>결국에는 2가지</p>
+<p>드디어 2가지</p>
+<p>결과로서</p>
+<p>내가 파티에 가지 않은 이유는 일 때문에 너무 지쳤기 때문이야.</p>
+<p>내가 고향을 마지막으로 방문한 것은 아주 오래 전이야.</p>
+<p>버스를 놓쳤어. 그래서 늦었어.</p>
+<p>등산은 힘들었지만, 그만한 가치가 있었어.</p>
+<p>개인적으로, 나는 이것이 최선의 선택이라고 생각해.</p>
+<p>건강에 좋지 않다는 걸 알지만, 어쩔 수 없어.</p>
+<p>150만원은 달러로 얼마야?</p>
+<p>그는 나에게 30만원을 빚졌어.</p>
+<p>대화가 이상해졌어.</p>
+<p>카페에서 전 애인을 만났을 때 어색했어.</p>
+<p>이 프로젝트를 통해 그녀를 잘 알게 됐어. (close 아님)</p>
+<p>우리는 아직 서로를 알아가는 중이야.</p>
+<p>그 영화를 보는 것은 시간 낭비였어.</p>
+<p>그 비싼 가방을 사는 것은 돈 낭비였어.</p>
+<p>내가 너라면, 매니저와 얘기할 거야.</p>
+<p>이것 좀 도와줄 수 있을까?</p>
+<p>결국 그 행사에 자원봉사를 하게 됐어.</p>
+<p>왠지 그 노래에 대해 계속 생각이 났어.</p>
+<p>그녀는 내내 조용했어.</p>
+<p>그런데, 장소가 어디였지?</p>
+<p>어쩔 수 없어.</p>
+<p>어제 소개팅을 가기로 했는데 취소됐어.</p>
+<p>그렇게 했어야 했는데.</p>
+<p>내가 너라면 그렇게 했을 거야.</p>
+<p>결국 시험에 늦었어.</p>
+<p>중간고사를 거의 다 끝냈어.</p>
+<p>우리 아이들이 잘 어울려서 기뻐.</p>
+<p>내가 너라면, 나도 긴장됐을 거야.</p>
+<p>왠지 잠을 잘 수 없었어.</p>
+<p>대략 5만원 정도 들었어.</p>
+<p>빨리 끝내자.</p>
+<p>그만한 가치가 있었어! / 그만한 가치가 없었어.</p>
+<p>네가 자고 있을 거라고 생각했어.</p>
+<p>다이어트 중이라서 체중을 줄이려고 노력 중이야.</p>
+<p>지난 2주 동안 체중이 많이 늘었어.</p>
+<p>넷플릭스 시리즈의 이 밈이 소셜 미디어에서 바이럴했어.</p>
+<p>난 그걸 믿지 않아!</p>
+<p>일반적으로, 달리기에서 여자들은 남자들을 따라가지 못해.</p>
+<p>행사에 더 일찍 왔어야 했는데! 하지만 교통이 혼잡했어.</p>
+<p>낙관적인 / 비관적인</p>
+<p>응원할게! / 널 응원해!</p>
+<p>얼마나 오래 밖에 있었어?</p>
+<p>우리는 서로 그다지 잘 맞지 않아.</p>
+<p>우리 사이에 잘 안 될 것 같아.</p>
+<p>그게 정말 필요해?</p>
+<p>오늘 당직이야 (야간 근무)</p>
+<p>어제 우리가 산 것보다 두 배나 비싸 (두 배의 가격)</p>
+<p>그냥 안 가면 안 돼?</p>
+<p>어떻게 될지 두고 보자!</p>
+<p>가야 한다는 압박감을 느꼈어 / 나한테 압박 주지 마!</p>
+<p>아무도 그 이유를 몰라.</p>
+<p>그가 떠났다는 것도 몰랐어.</p>
+<p>왜 그런 거야?</p>
+<p>그게 무슨 상관이야?</p>
+<p>너에게 부담을 주고 싶지 않아.</p>
+<p>그가 안타까웠어.</p>
+<p>너의 의견으로는 어떤 게 제일 좋아?</p>
+<p>그 돈을 너한테 쓰는 게 낫겠어.</p>
+<p>술 마시러 가는 것보다 운동하러 가는 게 낫겠어.</p>
+<p>당황한 / 당황스러운</p>
+<p>좀 주제에서 벗어나지만...</p>
+<p>10명 중 9명은 그렇게 할 거야.</p>
+<p>다시 생각해보니, 그 가방을 사지 말았어야 했어.</p>
+<p>나는 "프렌즈" TV 쇼에 완전히 빠졌어.</p>
+<p>말 끊어서 미안해.</p>
+<p>약 먹는 걸 잊었어.</p>
+<p>사업은 어떻게 돼가?</p>
+<p>부럽다 / 네가 부러워.</p>
+<p>내가 말했는지 모르겠네.</p>
+<p>너와는 관련이 없어 / 너와는 아무 상관이 없어.</p>
+<p>지난 2개월 동안</p>
+<p>분위기를 읽어 / 조심스럽게 행동해</p>
+<p>짧은 방문인데도 항상 내가 음식값을 내야 해.</p>
+<p>나 얘기는 그만하고, 너희 얘기 좀 해봐.</p>
+<p>모니터 암이 뭔지 알아?</p>
+<p>정신적 붕괴가 왔어.</p>
+<p>나 자신에게 매우 실망했어.</p>
+<p>네가 나를 사랑하는 한</p>
+<p>네가 일만 하면 돼.</p>
+<p>내가 아는 바로는</p>
+<p>걱정 마, 내가 먼저 연락할게.</p>
+<p>최악의 상황이 뭐야?</p>
+<p>신기하게도,</p>
+<p>나이가 먹을수록 (2가지)</p>
+<p>시간이 갈수록</p>
+<p>다시 고민중이야</p>
+<p>나 FOMO 있어</p>
+<p>이거 처음부터 만들었어</p>
+<p>너무 신사다 (예의바르다)</p>
+<p>그녀는 완벽주의자야</p>
+<p>너 편하게 말할 수 있었으면 좋겠어</p>
+<p>다른 이야기긴 한데 (3가지)</p>
+<p>밤샜다 (2가지)</p>
+<p>해볼만해 (2가지)</p>
+<h2>Answer Key</h2>
+<h2>Intermediate Pillar expressions (ask 20)</h2>
+<p>I might go to the gym later if I can.</p>
+<p>This movie is similar to Harry potter</p>
+<p>isn’t that what we watched last time?</p>
+<p>The movie is one that we watched last week.</p>
+<p>I caught up with an old friend for the first time in a while.</p>
+<p>I dined at one of the most famous restaurants in Korea.</p>
+<p>It depends on the weather.</p>
+<p>I like all kinds of music, but I specifically love jazz.</p>
+<p>I finished the project somehow</p>
+<p>even though the project was difficult, I finished it (even if)</p>
+<p>Originally, I planned to travel abroad, but I decided to stay home instead.</p>
+<p>Normally, I wake up at 7 AM every day.</p>
+<p>All in all / In conclusion</p>
+<p>eventually / In the end</p>
+<p>finally / at last</p>
+<p>As a result</p>
+<p>The reason that I didn’t go to the party was because I was too drained from work.</p>
+<p>The last time that I visited my hometown was ages ago.</p>
+<p>I missed the bus. That’s why I was late.</p>
+<p>The hike was tough, but it was worth it.</p>
+<p>Personally, I think this is the best option.</p>
+<p>I know it’s unhealthy, but I can’t help it.</p>
+<p>How much is 1,500,000 won in dollars?</p>
+<p>He owes me 300,000 won.</p>
+<p>The conversation got weird.</p>
+<p>It felt awkward when I met my ex at the café.</p>
+<p>I got to know her well through this project.</p>
+<p>we’re still getting to know each other</p>
+<p>Watching that movie was a waste of time.</p>
+<p>Buying that expensive bag was a waste of money.</p>
+<p>If I were you, I would talk to the manager.</p>
+<p>Would you mind helping me with this?</p>
+<p>I ended up volunteering for the event.</p>
+<p>For some reason, I couldn’t stop thinking about that song.</p>
+<p>She was quiet for the whole time.</p>
+<p>By the way, where is the venue again?</p>
+<p>I can’t help it</p>
+<p>I was supposed to go on a blind date yesterday but it got canceled</p>
+<p>I should’ve {~했었어야 했다}</p>
+<p>I would’ve {나라면 ~를 했을 것이다}</p>
+<p>I ended up being late to the test</p>
+<p>I’m pretty much done with my midterms</p>
+<p>I’m glad that our kids got along</p>
+<p>if I were you, I would be nervous too</p>
+<p>I couldn’t sleep for some reason</p>
+<p>it cost roughly 50,000won</p>
+<p>let’s get it over with</p>
+<p>it was worth it! / it wasn’t worth it</p>
+<p>I figured that you were sleeping</p>
+<p>I’m trying to lose weight because I’m on a diet.</p>
+<p>I gained a lot of weight over the last 2 weeks.</p>
+<p>this meme from a netflix series went viral on social media. (it blew up)</p>
+<p>I don’t buy it!</p>
+<p>generally, girls can’t keep up with guys when running</p>
+<p>I should’ve come to the event earlier! but the traffic was heavy.</p>
+<p>optimistic / pessimistic</p>
+<p>I’m cheering for you! / I’m rooting for you!</p>
+<p>how long did you stay out?</p>
+<p>we’re not that compatible with each other</p>
+<p>it’s not gonna work out between us</p>
+<p>is that even neccesary?</p>
+<p>I’m on duty today (the night shift)</p>
+<p>it’s twice as expensive as the one we bought yesterday (twice the price)</p>
+<p>why can’t we just not go?</p>
+<p>we’ll see how it goes!</p>
+<p>I felt pressured to go / stop pressuring me!</p>
+<p>no one knows why</p>
+<p>I didn’t even know that he left</p>
+<p>why is that the case?</p>
+<p>what does that have to do with anything?</p>
+<p>I don’t want to burden you</p>
+<p>I felt bad for him</p>
+<p>In your opinion, which one is the best?</p>
+<p>I would rather spend that money on you</p>
+<p>I would rather go work out than go drink</p>
+<p>embarrassed / embarrassing</p>
+<p>this is kind of a tangent but ..</p>
+<p>9 out of 10 people would do that</p>
+<p>on second thought, I should’ve never bought that bag</p>
+<p>I’m totally obsessed with the TV show “friends”</p>
+<p>sorry to cut you off</p>
+<p>I forgot to take my medicine</p>
+<p>how is your business going?</p>
+<p>I'm jealous / I envy you</p>
+<p>I'm not sure if I told you</p>
+<p>it’s not related with / it doesn’t have anything to do with you</p>
+<p>for the last 2 months</p>
+<p>read the room / walk on eggshells</p>
+<p>I always have to pay for food even though it’s a short visit.</p>
+<p>enough about me, tell me about you guys</p>
+<p>do you know what a monitor arm is?</p>
+<p>I had a mental breakdown</p>
+<p>I was very disappointed in myself</p>
+<p>as long as you love me</p>
+<p>as long as you do your work, it’s all good</p>
+<p>from what I know</p>
+<p>don’t worry, I’ll reach out first</p>
+<p>what’s the worst case scenario?</p>
+<p>interestingly enough,</p>
+<p>As I get older / the older I get</p>
+<p>As time goes by</p>
+<p>I’m having second thoughts</p>
+<p>I have FOMO (fear of missing out)</p>
+<p>we made this from scratch</p>
+<p>he’s such a gentleman</p>
+<p>she’s a perfectionist</p>
+<p>I want to be able to say it more comfortably</p>
+<p>that was a tangent / that was off topic / we sidetracked a bit</p>
+<p>I pulled an all nighter / I stayed up all night</p>
+<p>it's worth a try</p>
+<p>Pillar Vocab (ask 10)</p>
+<p>보아하니 / 듣자 하니</p>
+<p>엄밀히 말하면 / 기술적으로</p>
+<p>협상하다</p>
+<p>정착하다 / 자리 잡다</p>
+<p>재무 감사</p>
+<p>은퇴하다</p>
+<p>동시에</p>
+<p>까다로운</p>
+<p>주식과 채권에 투자하다</p>
+<p>고려하다 / 생각하다</p>
+<p>~을 언급하다 / ~을 참조하다</p>
+<p>~에 관하여 / ~와 관련하여</p>
+<p>회의적인</p>
+<p>피해망상적인 / 과민한</p>
+<p>자극하다</p>
+<p>유능한 직원</p>
+<p>시간을 잘 지키는 / 시간 엄수하는</p>
+<p>정치</p>
+<p>욕설 / 욕하기</p>
+<p>총각 파티 / 신부 파티 (결혼 전 파티)</p>
+<p>스트리퍼들 (춤추는 사람들)</p>
+<p>장소 / 개최지</p>
+<p>의무적인 / 필수의</p>
+<p>무언가가 유행하고 있다</p>
+<p>망설이고 있어요</p>
+<p>편리한</p>
+<p>직설적인 / 솔직한</p>
+<p>숙소 / 숙박 시설</p>
+<p>다과 / 음료수들</p>
+<p>야망 있는 / 포부가 큰</p>
+<p>느긋한 / 여유로운 (혹은 "진정해"라는 표현으로도 사용)</p>
+<p>기진맥진한 / 매우 지친</p>
+<p>꽃뱀들 (돈만 노리는 사람들)</p>
+<p>일생에 한 번뿐인 기회</p>
+<p>귀걸이 / 목걸이 / 팔찌들</p>
+<p>치아 교정기 (브레이스)</p>
+<p>치실 (플로스)</p>
+<p>섬세하고 배려심 있는</p>
+<p>존중하는 / 예의 있는</p>
+<p>오글거리는 / 민망한</p>
+<p>증명하다 / 승인(허가)하다</p>
+<p>선거에서 투표하다</p>
+<p>장례식</p>
+<p>공통 친구들</p>
+<p>~을 이용하다 (부정적 뉘앙스 포함 가능)</p>
+<p>병가를 내다 (아프다고 연락하다)</p>
+<p>집착하는 / 푹 빠진</p>
+<p>첫째로 / 둘째로</p>
+<p>직설적인 / 솔직한</p>
+<p>Vocab (ask 10) > make fun phrases chapter</p>
+<p>apparently,</p>
+<p>technically,</p>
+<p>negotiate</p>
+<p>settle down</p>
+<p>financial audit</p>
+<p>retire</p>
+<p>simultaneously</p>
+<p>picky</p>
+<p>invest in stocks and bonds</p>
+<p>consider</p>
+<p>refer to</p>
+<p>regarding ~</p>
+<p>skeptical</p>
+<p>paranoid(delete?)</p>
+<p>stimulate</p>
+<p>a competent employee</p>
+<p>punctual</p>
+<p>politics</p>
+<p>swearing / cussing / cursing</p>
+<p>bachelor party / bridal shower</p>
+<p>strippers</p>
+<p>venue</p>
+<p>mandatory</p>
+<p>something is trending</p>
+<p>i’m hesitating</p>
+<p>convenient</p>
+<p>straightforward / direct</p>
+<p>accommodation</p>
+<p>refreshments / beverages</p>
+<p>ambitious</p>
+<p>chill</p>
+<p>exhausted</p>
+<p>gold diggers</p>
+<p>once in a lifetime opportunity</p>
+<p>earrings / necklaces / bracelets</p>
+<p>braces</p>
+<p>floss</p>
+<p>sensitive and caring</p>
+<p>respectful</p>
+<p>cringy</p>
+<p>prove / approval</p>
+<p>vote for the election</p>
+<p>funeral</p>
+<p>mutual friends</p>
+<p>take advantage of</p>
+<p>call in sick</p>
+<p>obsessed</p>
+<p>first of all / second of all</p>
+<p>straightforward</p>
+<p>End Timer: 45 minute mark (15 minutes left for feedback)</p>
 `,
 "Business: In Depth Business Conversation Topic List": `
   <h1>💼 Business Conversation Topics Guide</h1>
