@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getTeacherStatus, getStudentDiaryData, getStudentQuizletData, getStudentScheduleData } from "@/lib/data";
+import { getTeacherStatus, getStudentDiaryData, getStudentQuizletData } from "@/lib/data";
 
 export async function GET(request: Request) {
   try {
@@ -20,17 +20,15 @@ export async function GET(request: Request) {
 
     const teacherChecklist = await Promise.all(
         teacherStatus.map(async (student) => {
-          const diaryEntries = await getStudentDiaryData(student.name) ?? [{ class_date: '', date: '' }]; // Default to empty object
-          const quizletEntries = await getStudentQuizletData(student.name) ?? [{ class_date: '', date: '' }]; // Default to empty object
-          const scheduleEntries = await getStudentScheduleData(student.name) ?? []; // Default to empty object
+          const recent_diary = await getStudentDiaryData(student.name) ?? [{ class_date: '', date: '' }]; // Default to empty object
+          const recent_quizlet = await getStudentQuizletData(student.name) ?? [{ class_date: '', date: '' }]; // Default to empty object
           return {
             name: student.name,
             phoneNumber: student.phoneNumber,
-            class_note_dates: quizletEntries.map(e => e.class_date),
-            quizlet_dates: quizletEntries.map(e => e.date),
-            diary_class_dates: diaryEntries.map(e => e.date),
-            diary_edit_dates: diaryEntries.map(e => e.date),
-            schedule_dates: scheduleEntries.map(e => e.date),
+            class_note: recent_quizlet[0].class_date ?? '',
+            quizlet_date: recent_quizlet[0].date ?? '',
+            diary_date: recent_diary[0].class_date ?? '',
+            diary_edit: recent_diary[0].date ?? ''
           };
         })
       );
