@@ -19,6 +19,7 @@ export async function getStudentQuizletData(student_name: string) {
       .collection("quizlet")
       .find({ student_name, deleted: { $ne: true } })
       .sort({ date: -1 })
+      .limit(2) // Limit to the most recent 2 quizlets
       .toArray(); // Convert cursor to an array
 
     if (!filteredQuizlets || filteredQuizlets.length === 0) {
@@ -67,6 +68,7 @@ export async function getStudentDiaryData(student_name: string) {
       .collection("diary")
       .find({ student_name })
       .sort({ date: -1 })
+      .limit(2)
       .toArray(); // Convert cursor to an array
     console.log(filteredDiaries);
     if (!filteredDiaries || filteredDiaries.length === 0) {

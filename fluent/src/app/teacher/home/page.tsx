@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { IoCheckmarkCircle, IoCloseCircle, IoMenu } from "react-icons/io5";
+import { IoCheckmarkCircle, IoCloseCircle, IoMenu, IoBook,   IoDocumentText, IoCalendar } from "react-icons/io5";
 import Link from "next/link";
 
 // 동적 컴포넌트 로딩
@@ -46,6 +46,33 @@ const HomePageContent = () => {
 
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;
+
+
+  // ⬇️ Put these right after your imports (outside any component)
+  const toDate = (v: any) => {
+    if (!v) return null;
+    // Expect "YYYY. MM. DD" (with or without spaces)
+    const m = String(v).trim().match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+    if (!m) return null;
+    const [y, mo, d] = m;
+    const dt = new Date(Number(y), Number(mo) - 1, Number(d));
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+
+  const isSameDay = (a: Date | null, b: Date | null) =>
+    !!(a && b) && ymd(a) === ymd(b);
+
+  const isBetweenInclusive = (d: Date | null, a: Date | null, b: Date | null) => {
+    if (!d || !a || !b) return false;
+    const min = a < b ? a : b;
+    const max = a < b ? b : a;
+    return d >= min && d <= max;
+  };
 
 
   // 화면 크기 감지
@@ -415,47 +442,14 @@ const HomePageContent = () => {
                 <table className="hidden md:table w-full text-sm text-left">
                   <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-3 py-3 whitespace-nowrap">
-                        학생 이름
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        진행 상황
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        Class Note
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        Quizlet
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        Diary 작성
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        Diary 첨삭
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-3 py-3 text-center whitespace-nowrap"
-                      >
-                        스케줄
-                      </th>
+                      <th className="px-3 py-3 text-center whitespace-nowrap">학생 이름</th>
+                      <th className="px-3 py-3 text-center whitespace-nowrap">Class Note</th>
+                      <th className="px-3 py-3 text-center whitespace-nowrap">Quizlet</th>
+                      <th className="px-3 py-3 text-center whitespace-nowrap">AI Diary</th>
+                      <th className="px-3 py-3 text-center whitespace-nowrap">스케줄</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {allStudents.map((student, index) => {
                       // const completedCount = countCompletedItems(student);
@@ -479,16 +473,21 @@ const HomePageContent = () => {
                       //   red: "bg-red-100 text-red-800 border-red-200",
                       // };
 
+                      const classNoteDate = toDate(student.class_note);
+                      const prevClassNoteDate = toDate(student.previous_class_note);
+                      const quizletDate = toDate(student.quizlet_date);
+                      const diaryDate = toDate(student.diary_date);
+                      const quizletGreen = isSameDay(quizletDate, classNoteDate); // Rule 2
+                      const diaryGreen = isBetweenInclusive(diaryDate, classNoteDate, prevClassNoteDate); // Rule 3
+
+
                       return (
                         <tr
                           key={index}
                           className="border-b hover:bg-gray-50 transition-colors"
                         >
-                          <td className="px-3 py-3 font-medium text-gray-900">
+                          <td className="px-3 py-3 text-center text-lg font-bold text-gray-900">
                             {student.name}
-                          </td>
-                           <td className="px-3 py-3 text-center text-sm text-gray-500">
-                            Checking Process...
                           </td>
                           <td className="px-3 py-3 text-center">
                             <Link
@@ -497,119 +496,69 @@ const HomePageContent = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              <div
-                                className={`${
-                                  student.class_note
-                                    ? "text-green-500"
-                                    : "text-red-400"
-                                } mr-1`}
-                              >
-                                {student.class_note ? (
-                                  <IoCheckmarkCircle size={18} />
-                                ) : (
-                                  <IoCloseCircle size={18} />
-                                )}
-                              </div>
                               {student.class_note && (
-                                <span className="text-xs text-gray-500">
+                                <span className="text-lg font-bold text-gray-900">
                                   {student.class_note}
                                 </span>
                               )}
                             </Link>
                           </td>
-                          <td className="px-3 py-3 text-center">
+
+                          <td className={`px-3 py-3 text-center ${quizletGreen ? "bg-purple-300" : ""}`}>
                             <Link
                               href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                              className="inline-flex w-full items-center justify-center p-2 rounded-lg transition-colors"
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              <div
-                                className={`${
-                                  student.quizlet_date
-                                    ? "text-green-500"
-                                    : "text-red-400"
-                                } mr-1`}
-                              >
-                                {student.quizlet_date ? (
-                                  <IoCheckmarkCircle size={18} />
-                                ) : (
-                                  <IoCloseCircle size={18} />
-                                )}
-                                </div>
-                              {student.quizlet_date && (
-                                <span className="text-xs text-gray-500">
-                                  완료
-                                </span>
+                              {student.quizlet_date ? (
+                                <IoDocumentText size={22} className="text-purple-700" />
+                              ) : (
+                                <IoDocumentText size={22} className="text-red-500" />
                               )}
                             </Link>
                           </td>
-                          <td className="px-3 py-3 text-center">
-                          <Link
-                            href={`/teacher/student/diary_note?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                            className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <div
-                              className={`$\{
-                                student.diary_date && student.class_note && student.diary_date !== student.class_note
-                                  ? "text-red-500"
-                                  : student.diary_date
-                                  ? "text-green-500"
-                                  : "text-red-400"
-                              } mr-1`}
-                            >
-                              {student.diary_date ? (
-                                <IoCheckmarkCircle size={18} />
-                              ) : (
-                                <IoCloseCircle size={18} />
-                              )}
-                              </div>
-                            {student.diary_date && (
-                              <span className="text-xs text-gray-500">
-                                {student.diary_date}
-                              </span>
-                              )}
-                          </Link>
-                          </td>
-                          <td className="px-3 py-3 text-center">
+
+
+
+
+                          <td className={`px-3 py-3 text-center ${student.diary_date && diaryGreen ? "bg-purple-300" : ""}`}>
                             <Link
                               href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                              className="inline-flex w-full items-center justify-center p-2 rounded-lg transition-colors"
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              <div
-                                className={`${
-                                  student.diary_edit
-                                    ? "text-green-500"
-                                    : "text-red-400"
-                                } mr-1`}
-                                 >
-                                {student.diary_edit ? (
-                                  <IoCheckmarkCircle size={18} />
-                                ) : (
-                                  <IoCloseCircle size={18} />
-                                )}
-                                 </div>
-                              {student.diary_edit && (
-                                <span className="text-xs text-gray-500">
-                                  완료
-                                </span>
+                              {student.diary_date && diaryGreen ? (
+                                <IoBook size={22} className="text-purple-700" />
+                              ) : (
+                                <IoBook size={22} className="text-red-500" />
                               )}
                             </Link>
                           </td>
-                          <td className="px-3 py-3 text-center">
+
+
+
+
+                          <td className={`px-3 py-3 text-center ${student.schedule_date ? "bg-purple-300" : ""}`}>
                             <Link
                               href={`/teacher/schedule?user=${user}&type=teacher&id=${id}`}
-                              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors hover:bg-indigo-50 px-3 py-2 rounded-lg inline-block"
+                              className="inline-flex w-full items-center justify-center p-2 rounded-lg transition-colors"
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              스케줄 보기
+                              {student.schedule_date ? (
+                                <IoCalendar size={22} className="text-purple-700" />
+                              ) : (
+                                <IoCalendar size={22} className="text-red-500" />
+                              )}
                             </Link>
                           </td>
+
+
+
+
+
                         </tr>
                       );
                     })}
@@ -628,6 +577,7 @@ const HomePageContent = () => {
 };
 
 export default function HomePage() {
+
   return (
     <Suspense
       fallback={
