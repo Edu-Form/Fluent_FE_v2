@@ -43,6 +43,229 @@ interface ClassNoteViewerProps {
   onClose: () => void;
 }
 
+// ⬇️ Add this above DragDropSchedulePage (same file for simplicity)
+import { X as CloseIcon } from "lucide-react";
+
+type WeekdayIndex = 0|1|2|3|4|5|6; // Sun=0 ... Sat=6
+
+const formatDotDate = (d: Date) =>
+  `${d.getFullYear()}. ${String(d.getMonth()+1).padStart(2,"0")}. ${String(d.getDate()).padStart(2,"0")}.`;
+
+const datesForWeeklyRecurrence = (
+  startDate: Date,
+  weeks: number,
+  weekdays: WeekdayIndex[]
+): Date[] => {
+  // Normalize weekdays and sort ascending (Sun..Sat)
+  const wd = [...new Set(weekdays)].sort((a,b)=>a-b);
+  if (wd.length === 0 || weeks <= 0) return [];
+
+  // Find the first week’s Sunday (beginning-of-week) for easier stepping
+  const start = new Date(startDate);
+  start.setHours(0,0,0,0);
+  const firstSunday = new Date(start);
+  firstSunday.setDate(firstSunday.getDate() - firstSunday.getDay()); // back to Sunday
+
+  const out: Date[] = [];
+  for (let w = 0; w < weeks; w++) {
+    for (const day of wd) {
+      const d = new Date(firstSunday);
+      d.setDate(d.getDate() + w*7 + day);
+      // Only include dates that are >= startDate (if startDate is mid-week)
+      if (d >= start) out.push(d);
+    }
+  }
+  return out;
+};
+
+interface RecurringScheduleModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreate: (payload: {
+    student_name: string;
+    room_name: string;
+    time: number;
+    duration: number;
+    dates: string[]; // "YYYY. MM. DD."
+  }) => void;
+  // Optional convenience list to pick from
+  studentNames?: string[];
+}
+
+const weekdayLabels: {label: string; idx: WeekdayIndex}[] = [
+  { label: "일", idx: 0 },
+  { label: "월", idx: 1 },
+  { label: "화", idx: 2 },
+  { label: "수", idx: 3 },
+  { label: "목", idx: 4 },
+  { label: "금", idx: 5 },
+  { label: "토", idx: 6 },
+];
+
+const RecurringScheduleModal: React.FC<RecurringScheduleModalProps> = ({
+  isOpen,
+  onClose,
+  onCreate,
+  studentNames = []
+}) => {
+  const [student, setStudent] = React.useState("");
+  const [room, setRoom] = React.useState("");
+  const [time, setTime] = React.useState<number>(16);
+  const [duration, setDuration] = React.useState<number>(60);
+  const [startDate, setStartDate] = React.useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  });
+  const [weeks, setWeeks] = React.useState<number>(8);
+  const [days, setDays] = React.useState<WeekdayIndex[]>([2,4]); // default Tue/Thu
+
+  if (!isOpen) return null;
+
+  const toggleDay = (idx: WeekdayIndex) => {
+    setDays(prev => prev.includes(idx) ? prev.filter(d=>d!==idx) : [...prev, idx]);
+  };
+
+  const handleCreate = () => {
+    if (!student || !room || !startDate || days.length === 0) return;
+
+    const sd = new Date(startDate+"T00:00:00");
+    const occurrences = datesForWeeklyRecurrence(sd, weeks, days);
+    const dateStrings = occurrences.map(formatDotDate);
+
+    onCreate({
+      student_name: student,
+      room_name: room,
+      time,
+      duration,
+      dates: dateStrings
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <h3 className="text-lg font-semibold">반복 스케줄 생성</h3>
+          <button onClick={onClose} className="p-2 rounded hover:bg-gray-100">
+            <CloseIcon size={18}/>
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-1">학생</label>
+              {studentNames.length > 0 ? (
+                <select
+                  className="w-full border rounded-lg px-3 py-2"
+                  value={student}
+                  onChange={(e)=>setStudent(e.target.value)}
+                >
+                  <option value="">학생 선택</option>
+                  {studentNames.map(n=>(
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  placeholder="학생 이름"
+                  className="w-full border rounded-lg px-3 py-2"
+                  value={student}
+                  onChange={(e)=>setStudent(e.target.value)}
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">룸</label>
+              <input
+                className="w-full border rounded-lg px-3 py-2"
+                placeholder="예: A-1"
+                value={room}
+                onChange={(e)=>setRoom(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">시작 날짜</label>
+              <input
+                type="date"
+                className="w-full border rounded-lg px-3 py-2"
+                value={startDate}
+                onChange={(e)=>setStartDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">시간 (시, 0-23)</label>
+              <input
+                type="number"
+                min={0}
+                max={23}
+                className="w-full border rounded-lg px-3 py-2"
+                value={time}
+                onChange={(e)=>setTime(Number(e.target.value))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">수업 길이 (분)</label>
+              <input
+                type="number"
+                className="w-full border rounded-lg px-3 py-2"
+                value={duration}
+                onChange={(e)=>setDuration(Number(e.target.value))}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">몇 주 반복?</label>
+              <input
+                type="number"
+                min={1}
+                className="w-full border rounded-lg px-3 py-2"
+                value={weeks}
+                onChange={(e)=>setWeeks(Number(e.target.value))}
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium mb-2">요일</label>
+              <div className="flex flex-wrap gap-2">
+                {weekdayLabels.map(d => (
+                  <button
+                    key={d.idx}
+                    type="button"
+                    onClick={()=>toggleDay(d.idx)}
+                    className={`px-3 py-1.5 rounded-full border text-sm ${
+                      days.includes(d.idx)
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white text-gray-700 border-gray-300"
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border">취소</button>
+          <button
+            onClick={handleCreate}
+            className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          >
+            생성
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 const ClassNoteViewer: React.FC<ClassNoteViewerProps> = ({ note, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -451,6 +674,12 @@ const DragDropSchedulePage = () => {
   const closeVariousSchedule = () => setIsVariousRoomOpen(false);
 
   const scheduleURL = `/api/schedules/${type}/${user}`;
+
+  // ⬇️ Inside DragDropSchedulePage component state
+const [isRecurringOpen, setIsRecurringOpen] = useState(false);
+
+// convenient unique student names from existing schedules (fallback to empty)
+const uniqueStudentNames = Array.from(new Set(classes.map(c => c.student_name))).filter(Boolean);
 
   // 스케줄 데이터 가져오기
   useEffect(() => {
@@ -951,6 +1180,8 @@ const DragDropSchedulePage = () => {
     document.head.appendChild(styleElement);
   }, []);
 
+  
+
   return (
     <div className="schedule-container">
       <div className="sidebar">
@@ -1022,6 +1253,8 @@ const DragDropSchedulePage = () => {
 
                 if (hasSchedule) return null;
 
+                
+
                 return (
                   <div key={`note-${index}`} className="note-card">
                     <div className="student-header">
@@ -1071,6 +1304,13 @@ const DragDropSchedulePage = () => {
           >
             <Plus size={16} />
             수업 추가
+          </button>
+
+          <button
+            onClick={() => setIsRecurringOpen(true)}
+            className="action-button secondary-button"
+          >
+            반복 스케줄 추가
           </button>
         </div>
       </div>
