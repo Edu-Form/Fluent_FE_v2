@@ -3,58 +3,104 @@
 import { useEffect, useRef, useState } from "react";
 import Calendar from "@toast-ui/calendar";
 import "@toast-ui/calendar/dist/toastui-calendar.min.css";
-import axios from "axios"; // Axios를 사용하여 API 호출
+import axios from "axios";
+
+interface StudentLite {
+  name: string;
+  class_note?: string;            // "YYYY. MM. DD"
+  previous_class_note?: string;   // "YYYY. MM. DD"
+}
 
 interface ToastUIProps {
   data: {
-    _id: string; // _id 필드 추가
+    _id: string;
     id: string;
     calendarId: string;
     room_name: string;
-    date: string | undefined;
-    time: number;
-    duration: number;
+    date: string | undefined; // "YYYY. MM. DD"
+    time: number;             // hour 0-23
+    duration: number;         // hours
     teacher_name: string;
     student_name: string;
   }[];
+  students?: StudentLite[];       // optional, for Predict button
 }
 
-const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
+const ToastUI: React.FC<ToastUIProps> = ({ data, students }) => {
   const calendarContainerRef = useRef<HTMLDivElement>(null);
-  const calendarInstanceRef = useRef<typeof Calendar | null>(null);
-  const [scheduleData, setScheduleData] = useState<any[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null); // 선택된 이벤트
+  const calendarInstanceRef = useRef<InstanceType<typeof Calendar> | null>(null);
 
-  //시간췌크
+  const [scheduleData, setScheduleData] = useState<any[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+
   const [currentDate, setCurrentDate] = useState({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
   });
 
+  const [viewName, setViewName] = useState<"week" | "month">("week");
+  const [isPredicting, setIsPredicting] = useState(false);
+
+  // ---------- utils ----------
+  const parseYmd = (s?: string | null) => {
+    if (!s) return null;
+    const m = s.trim().match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const fmtYmd = (d: Date) =>
+    `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(
+      d.getDate()
+    ).padStart(2, "0")}`;
+
+  const daysBetween = (a: Date, b: Date) =>
+    Math.round((a.getTime() - b.getTime()) / 86400000);
+
+  const getLastSlotForStudent = (studentName: string) => {
+    const events = scheduleData
+      .filter((e) => e.raw?.student_name === studentName)
+      .sort(
+        (a, b) =>
+          (a.start?.getTime?.() ?? 0) - (b.start?.getTime?.() ?? 0)
+      );
+    const last = events[events.length - 1];
+    if (!last) return null;
+    return {
+      room_name: last.raw?.room_name,
+      teacher_name: last.raw?.teacher_name,
+      time: (last.start as Date).getHours?.() ?? 10,
+      duration: Math.max(
+        1,
+        Math.round(
+          ((last.end as Date).getTime() - (last.start as Date).getTime()) /
+            3600000
+        )
+      ),
+      calendarId: last.calendarId || "1",
+    };
+  };
+
+  // ---------- normalize incoming data to Toast events ----------
   useEffect(() => {
     const formattedData = data
       .map((event) => {
         const eventId = event._id || event.id;
-
-        // date와 time이 존재하는지, 그리고 유효한 형식인지 확인
         if (!event.date || isNaN(event.time) || isNaN(event.duration))
           return null;
 
-        const [year, month, day] = event.date.split(". ").map(Number);
-
-        // 날짜 형식이 올바르지 않으면 제외
+        const parts = event.date.split(". ").map((v) => Number(v));
+        const [year, month, day] = [parts[0], parts[1], parts[2]];
         if (!year || !month || !day) return null;
 
-        // 이벤트 시작 시간과 종료 시간 계산
         const start = new Date(year, month - 1, day, event.time, 0, 0);
-        const end = new Date(start.getTime() + event.duration * 60 * 60 * 1000);
-
-        // 유효하지 않은 날짜 값은 제외
+        const end = new Date(start.getTime() + event.duration * 3600000);
         if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
 
         return {
           id: eventId,
-          calendarId: event.calendarId,
+          calendarId: event.calendarId ?? "1",
           title: `${event.room_name}호 ${event.student_name}님`,
           category: "time",
           start,
@@ -67,157 +113,249 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
           },
         };
       })
-      .filter((event) => event !== null); // 유효한 이벤트만 남기기
+      .filter(Boolean) as any[];
 
     setScheduleData(formattedData);
   }, [data]);
 
+  // ---------- create/init calendar & keep options/theme/listeners ----------
   useEffect(() => {
     if (calendarContainerRef.current && !calendarInstanceRef.current) {
       calendarInstanceRef.current = new Calendar(calendarContainerRef.current, {
         defaultView: "week",
-        useDetailPopup: true,
+        useDetailPopup: false,
         usageStatistics: false,
+        isReadOnly: true,
+        gridSelection: false,
       });
     }
-    if (calendarInstanceRef.current && scheduleData.length > 0) {
-      calendarInstanceRef.current.clear(); // 기존 이벤트 제거
-      calendarInstanceRef.current.createEvents(scheduleData); // 새로운 이벤트 추가
+
+    if (calendarInstanceRef.current) {
+      calendarInstanceRef.current.clear();
+      if (scheduleData.length > 0) {
+        calendarInstanceRef.current.createEvents(scheduleData);
+      }
+
+      // Options per view
+      calendarInstanceRef.current.setOptions({
+        template: {
+          // compact time renderer: 18:00 • 101호 홍길동
+          time(event: any) {
+            const s = new Date(event.start);
+            const hh = String(s.getHours()).padStart(2, "0");
+            const mm = String(s.getMinutes()).padStart(2, "0");
+            return `<div class="tuic-event">
+              <span class="tuic-event-time">${hh}:${mm}</span>
+              <span class="tuic-dot"></span>
+              <span class="tuic-event-title">${event.title ?? ""}</span>
+            </div>`;
+          },
+        },
+        week: {
+          startDayOfWeek: 0,
+          dayNames: ["일", "월", "화", "수", "목", "금", "토"],
+          taskView: false,
+          eventView: ["time"],
+          showNowIndicator: true,
+          hourStart: 7,     // tighter morning start
+          hourEnd: 23,      // later end
+          workweek: false,
+        },
+        month: {
+          isAlways6Weeks: false,
+          visibleWeeksCount: 0, // auto
+          startDayOfWeek: 0,
+          dayNames: ["일", "월", "화", "수", "목", "금", "토"],
+          narrowWeekend: false,
+        },
+      });
+
+      // Inject CSS overrides (scoped, modern look)
+      const styleId = "tuic-modern-theme";
+      if (!document.getElementById(styleId)) {
+        const styleElement = document.createElement("style");
+        styleElement.id = styleId;
+        styleElement.textContent = `
+/* -------- Base polish -------- */
+.toastui-calendar-layout { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; }
+.toastui-calendar-panel { background: #fff; border-radius: 16px; overflow: hidden; }
+.toastui-calendar-daygrid, .toastui-calendar-week { border-color: #eef1f4; }
+
+/* Headings (week & month) */
+.toastui-calendar-dayname { background: #f7f8fa; color: #4b5563; font-weight: 600; border-bottom: 1px solid #eef1f4; }
+.toastui-calendar-dayname-date-area { padding: 8px 0; }
+
+/* Today badge */
+.toastui-calendar-today .toastui-calendar-dayname-date-area,
+.toastui-calendar-today .toastui-calendar-weekday-grid-line { background: #eef6ff; }
+.toastui-calendar-today .toastui-calendar-dayname-date { color: #0f172a; font-weight: 700; }
+
+/* Week grid lines & current time */
+.toastui-calendar-timegrid,
+.toastui-calendar-timegrid .toastui-calendar-gridline,
+.toastui-calendar-timegrid .toastui-calendar-timegrid-timezone,
+.toastui-calendar-timegrid-schedules { border-color: #eef1f4; }
+.toastui-calendar-timegrid-now-indicator { background: #0ea5e9; } /* line dot */
+.toastui-calendar-timegrid-now-indicator-arrow { border-bottom-color: #0ea5e9; }
+
+/* Hour labels */
+.toastui-calendar-timegrid-hour { color: #6b7280; font-size: 12px; }
+
+/* Event chips */
+.toastui-calendar-time-schedule { border: none !important; }
+.toastui-calendar-time-schedule-content { padding: 6px 8px !important; }
+.toastui-calendar-time-schedule-block { border-radius: 10px !important; box-shadow: 0 1px 2px rgba(16,24,40,.08), 0 1px 1px rgba(16,24,40,.06); background: #eff6ff; }
+.toastui-calendar-time-schedule .toastui-calendar-event-time-content { background: transparent !important; }
+.tuic-event { display:flex; align-items:center; gap:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tuic-event-time { font-weight:700; color:#1d4ed8; font-variant-numeric: tabular-nums; }
+.tuic-event-title { color:#1f2937; font-weight:600; overflow:hidden; text-overflow:ellipsis; }
+.tuic-dot { width:6px; height:6px; border-radius:9999px; background:#6366f1; opacity:.9; }
+
+/* Hover state */
+.toastui-calendar-time-schedule:hover .toastui-calendar-time-schedule-block { box-shadow: 0 4px 10px rgba(17, 24, 39, .08); transform: translateY(-1px); transition: all .15s ease; }
+
+/* Month view events */
+.toastui-calendar-month-daygrid .toastui-calendar-weekday .toastui-calendar-month-more { color:#334155; }
+.toastui-calendar-month-more { border-radius:10px; box-shadow: 0 8px 24px rgba(16,24,40,.12); }
+.toastui-calendar-month-more .toastui-calendar-more-title { font-weight:700; color:#0f172a; }
+.toastui-calendar-month-week-item { border-color:#eef2f7; }
+.toastui-calendar-month-daygrid { --cellPad: 8px; }
+.toastui-calendar-month-daygrid .toastui-calendar-weekday > .toastui-calendar-daygrid-cell {
+  padding: var(--cellPad);
+}
+.toastui-calendar-month-week > .toastui-calendar-weekday .toastui-calendar-template-monthMoreTitle {
+  font-weight:600;
+}
+
+/* Weekend subtle tint */
+.toastui-calendar-week .toastui-calendar-daygrid-cell.tui-full-calendar-sat, 
+.toastui-calendar-week .toastui-calendar-daygrid-cell.tui-full-calendar-sun,
+.toastui-calendar-month .toastui-calendar-weekday.tui-full-calendar-sat .toastui-calendar-daygrid-cell,
+.toastui-calendar-month .toastui-calendar-weekday.tui-full-calendar-sun .toastui-calendar-daygrid-cell {
+  background: #fbfdff;
+}
+
+/* Drag/selection disabled visuals just in case */
+.toastui-calendar-grid-selection { background: rgba(99,102,241,0.06) !important; border: 1px dashed #c7d2fe !important; }
+
+/* More popover sizing */
+.toastui-calendar-more-popup { width: 360px !important; border-radius: 14px !important; }
+
+/* Scrollbars */
+.toastui-calendar-timegrid-schedules::-webkit-scrollbar { height: 8px; width: 8px; }
+.toastui-calendar-timegrid-schedules::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+.toastui-calendar-timegrid-schedules::-webkit-scrollbar-track { background: #f1f5f9; }
+
+/* Readonly cursor */
+.toastui-calendar-time-schedule, 
+.toastui-calendar-month-more { cursor: pointer; }
+        `;
+        document.head.appendChild(styleElement);
+      }
+
+      // Theme API: fine-grained tokens
+      calendarInstanceRef.current.setTheme({
+        common: {
+          // matching our neutral surface
+          backgroundColor: "#ffffff",
+          border: "1px solid #eef1f4",
+          saturday: { color: "#334155" },
+          today: { color: "#0f172a", backgroundColor: "#eef6ff" },
+          gridSelection: {
+            backgroundColor: "rgba(99,102,241,0.06)",
+            border: "1px dashed #c7d2fe",
+          },
+        },
+        week: {
+          dayName: {
+            borderBottom: "1px solid #eef1f4",
+            backgroundColor: "#f7f8fa",
+            color: "#475569",
+          },
+          timeGrid: { borderRight: "1px solid #eef1f4" },
+          nowIndicatorLabel: { color: "#0ea5e9", backgroundColor: "#0ea5e9" },
+          nowIndicatorPast: { border: "1px solid #0ea5e9" },
+          nowIndicatorBullet: { backgroundColor: "#0ea5e9" },
+        },
+        month: {
+          dayName: {
+            borderBottom: "1px solid #eef1f4",
+            backgroundColor: "#f7f8fa",
+            color: "#475569",
+          },
+          weekend: { backgroundColor: "#fbfdff" },
+          moreView: {
+            boxShadow: "0 8px 24px rgba(16,24,40,.12)",
+            backgroundColor: "#ffffff",
+            border: "1px solid #e5e7eb",
+            borderRadius: "14px",
+          },
+        },
+        // smaller typography for times
+        time: {
+          fontSize: "12px",
+          fontWeight: "500",
+          color: "#1f2937",
+          backgroundColor: "#eff6ff",
+        },
+      });
+
+      // click → select event for deletion modal
+      // calendarInstanceRef.current.on("clickEvent", ({ event }: { event: any }) => {
+      //   setSelectedEvent(event.raw);
+      // });
+
+      // keep current yyyy/mm in header
+      calendarInstanceRef.current.on("afterRender", () => {
+        const date = calendarInstanceRef.current?.getDate();
+        if (date) {
+          setCurrentDate({ year: date.getFullYear(), month: date.getMonth() + 1 });
+        }
+      });
     }
-
-    // setOptions 호출 추가
-    calendarInstanceRef.current.setOptions({
-      useFormPopup: false,
-      useDetailPopup: false,
-      isReadOnly: true,
-      gridSelection: false,
-      template: {
-        popupDetailAttendees({ raw }: { raw: any }) {
-          const teacherName = raw?.teacher_name || "알 수 없음";
-          return `${teacherName} 선생님`;
-        },
-        popupDetailState() {
-          return "lesson"; // 항상 "lesson"으로 설정
-        },
-      },
-      week: {
-        startDayOfWeek: 0, // 일요일부터 시작 (0: 일요일, 1: 월요일)
-        dayNames: ["일", "월", "화", "수", "목", "금", "토"],
-        taskView: false, // 작업 보기 비활성화
-        eventView: ["time"], // 시간 이벤트만 표시
-      },
-      month: {
-        isAlways6Weeks: false, // 다음달 한주까지 보이게 할지말지
-      },
-    });
-    const styleElement = document.createElement("style");
-    styleElement.textContent = `
-      .toastui-calendar-event-time-content .toastui-calendar-template-time strong {
-        color: #3366CC !important;
-      }
-      .toastui-calendar-event-time-content {
-        background-color: #E6F0FF !important;
-      }
-    `;
-    document.head.appendChild(styleElement);
-
-    // 기본 테마 설정
-    calendarInstanceRef.current.setTheme({
-      common: {
-        border: "1px dotted #e5e5e5",
-
-        today: {
-          color: "white",
-          backgroundColor: "#3f4166",
-        },
-        saturday: {
-          color: "rgba(64, 64, 255)",
-        },
-        gridSelection: {
-          backgroundColor: "rgba(81, 230, 92, 0.05)",
-          border: "1px dotted #ff0000",
-        },
-      },
-      week: {
-        dayName: {
-          borderBottom: "1px solid #e5e5e5",
-          backgroundColor: "#f8f8f8",
-        },
-        timeGrid: {
-          borderRight: "1px solid #e5e5e5",
-        },
-        weekend: {
-          backgroundColor: "aliceblue",
-        },
-      },
-      time: {
-        fontSize: "12px",
-        fontWeight: "normal",
-        color: "#333",
-        backgroundColor: "#E6F0FF", // 이벤트 배경색 변경
-      },
-      timeTemplate: {
-        fontWeight: "bold",
-        color: "#3366CC", // 시간 색상 변경
-      },
-      month: {
-        weekend: {
-          backgroundColor: "aliceblue",
-        },
-        holidayExceptThisMonth: {
-          color: "red",
-        },
-        dayName: {
-          border: "20px",
-          backgroundColor: "none",
-        },
-        moreView: {
-          border: "1px solid #3f4166",
-          borderRadius: "1rem",
-          boxShadow: "0 2px 6px 0 grey",
-          backgroundColor: "white",
-          width: 320,
-          height: 200,
-        },
-      },
-    });
-
-    // clickEvent 이벤트 리스너 추가
-    calendarInstanceRef.current.on(
-      "clickEvent",
-      ({ event }: { event: any }) => {
-        const clickedEvent = event.raw;
-        console.log("클릭한 이벤트 데이터:", clickedEvent); // 클릭한 이벤트 데이터 콘솔에 출력
-        setSelectedEvent(clickedEvent); // 클릭한 이벤트 저장
-      }
-    );
-    // 현재 표시 중인 연도와 월 업데이트
-    calendarInstanceRef.current.on("afterRender", () => {
-      const date = calendarInstanceRef.current?.getDate();
-      if (date) {
-        setCurrentDate({
-          year: date.getFullYear(),
-          month: date.getMonth() + 1,
-        });
-      }
-    });
   }, [scheduleData]);
 
-  // 이벤트 삭제 함수
+  // ---------- header controls ----------
+  const updateCurrentDate = () => {
+    const date = calendarInstanceRef.current?.getDate();
+    if (date) setCurrentDate({ year: date.getFullYear(), month: date.getMonth() + 1 });
+  };
+
+  const handleTodayClick = () => {
+    calendarInstanceRef.current?.today();
+    updateCurrentDate();
+  };
+  const handlePrevClick = () => {
+    calendarInstanceRef.current?.prev();
+    updateCurrentDate();
+  };
+  const handleNextClick = () => {
+    calendarInstanceRef.current?.next();
+    updateCurrentDate();
+  };
+
+  const handleSwitchToWeek = () => {
+    if (!calendarInstanceRef.current) return;
+    calendarInstanceRef.current.changeView("week");
+    setViewName("week");
+  };
+
+  const handleSwitchToMonth = () => {
+    if (!calendarInstanceRef.current) return;
+    calendarInstanceRef.current.changeView("month");
+    setViewName("month");
+  };
+
+  // ---------- delete ----------
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
-
     try {
-      const response = await axios.delete(
-        `/api/schedules/${selectedEvent.schedule_id}`
-      );
-
+      const response = await axios.delete(`/api/schedules/${selectedEvent.schedule_id}`);
       if (response.status === 200) {
-        // 성공적으로 삭제된 경우 캘린더에서 해당 이벤트를 제거
-        setScheduleData((prevData) =>
-          prevData.filter((event) => event.id !== selectedEvent.schedule_id)
+        setScheduleData((prev) =>
+          prev.filter((event) => event.id !== selectedEvent.schedule_id)
         );
-        setSelectedEvent(null); // 삭제 후 선택된 이벤트 초기화
+        setSelectedEvent(null);
       } else {
         console.log("삭제 실패");
       }
@@ -226,85 +364,162 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
     }
   };
 
-  const updateCurrentDate = () => {
-    const date = calendarInstanceRef.current?.getDate();
-    if (date) {
-      setCurrentDate({
-        year: date.getFullYear(),
-        month: date.getMonth() + 1,
-      });
+  // ---------- predict & register ----------
+  const handlePredictAndRegister = async () => {
+    if (!students?.length) {
+      alert("학생 데이터가 없습니다.");
+      return;
     }
-  };
+    setIsPredicting(true);
+    try {
+      const payload: any[] = [];
 
-  // today 버튼 클릭 핸들러
-  const handleTodayClick = () => {
-    calendarInstanceRef.current?.today();
-    updateCurrentDate();
-  };
+      for (const s of students) {
+        const d1 = parseYmd(s.class_note);
+        const d0 = parseYmd(s.previous_class_note);
+        if (!d1 || !d0) continue;
 
-  const handlePrevClick = () => {
-    calendarInstanceRef.current?.prev();
-    updateCurrentDate();
-  };
+        const interval = Math.abs(daysBetween(d1, d0));
+        // accept roughly weekly 5~15 days; expand as needed
+        if (interval < 5 || interval > 15) continue;
 
-  const handleNextClick = () => {
-    calendarInstanceRef.current?.next();
-    updateCurrentDate();
+        const slot = getLastSlotForStudent(s.name);
+        if (!slot) continue;
+
+        const N = 4; // how many future classes to create
+        for (let i = 1; i <= N; i++) {
+          const next = new Date(d1.getTime() + interval * i * 86400000);
+          payload.push({
+            calendarId: slot.calendarId,
+            room_name: slot.room_name,
+            date: fmtYmd(next),      // "YYYY. MM. DD"
+            time: slot.time,         // hour
+            duration: slot.duration, // hours
+            teacher_name: slot.teacher_name,
+            student_name: s.name,
+          });
+        }
+      }
+
+      if (payload.length === 0) {
+        alert("예측 가능한 데이터가 없습니다. (두 개의 연속 수업일 + 최근 슬롯 필요)");
+        setIsPredicting(false);
+        return;
+      }
+
+      // POST to your backend (adjust endpoint/schema if different)
+      const resp = await axios.post("/api/schedules/bulk", { schedules: payload });
+      const created = resp?.data ?? payload;
+
+      // Convert to calendar events and paint immediately
+      const newEvents = created.map((ev: any) => {
+        const [y, m, d] = ev.date.split(". ").map(Number);
+        const start = new Date(y, m - 1, d, ev.time, 0, 0);
+        const end = new Date(start.getTime() + ev.duration * 3600000);
+        return {
+          id: ev._id || `${ev.student_name}-${ev.date}-${ev.time}`,
+          calendarId: ev.calendarId ?? "1",
+          title: `${ev.room_name}호 ${ev.student_name}님`,
+          category: "time",
+          start,
+          end,
+          raw: {
+            room_name: ev.room_name,
+            teacher_name: ev.teacher_name,
+            student_name: ev.student_name,
+            schedule_id: ev._id,
+          },
+        };
+      });
+
+      setScheduleData((prev) => [...prev, ...newEvents]);
+      calendarInstanceRef.current?.createEvents(newEvents);
+    } catch (e) {
+      console.error(e);
+      alert("예측 등록 중 오류가 발생했습니다.");
+    } finally {
+      setIsPredicting(false);
+    }
   };
 
   return (
     <div>
-      <div className="flex items-center my-5">
+      <div className="flex items-center my-5 gap-2">
         <button
           onClick={handlePrevClick}
-          className="p-1 px-3  border-2 rounded-[100%] hover:bg-slate-500 hover:text-white"
+          className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300"
         >
           ←
         </button>
 
-        <div className="text-xl mx-8">
+        <div className="text-xl mx-4 font-semibold tracking-tight">
           {currentDate.year}. {currentDate.month}
         </div>
 
         <button
           onClick={handleNextClick}
-          className=" p-1 px-3  border-2 rounded-[100%] hover:bg-slate-500 hover:text-white"
+          className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300"
         >
           →
         </button>
 
         <button
           onClick={handleTodayClick}
-          className="ml-5 p-1 px-3  border-2 rounded-2xl  hover:bg-slate-500 hover:text-white"
+          className="ml-2 p-1 px-3 border rounded-2xl hover:bg-slate-700 hover:text-white border-slate-300"
         >
           Today
         </button>
+
+        <div className="ml-4 flex items-center gap-2">
+          <button
+            onClick={handleSwitchToWeek}
+            className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${
+              viewName === "week" ? "bg-slate-900 text-white" : ""
+            }`}
+          >
+            Week
+          </button>
+          <button
+            onClick={handleSwitchToMonth}
+            className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${
+              viewName === "month" ? "bg-slate-900 text-white" : ""
+            }`}
+          >
+            Month
+          </button>
+        </div>
+
+        {/* <button
+          onClick={handlePredictAndRegister}
+          disabled={isPredicting}
+          className="ml-auto p-1 px-3 border rounded-2xl border-indigo-300 hover:bg-indigo-600 hover:text-white disabled:opacity-50"
+          title="최근/이전 Class Note 간격으로 앞으로의 수업을 예측해 등록"
+        >
+          {isPredicting ? "Predicting…" : "Predict & Register"}
+        </button> */}
       </div>
 
-      <div
-        ref={calendarContainerRef}
-        style={{ width: "100%", height: "65vh" }}
-      />
+      <div ref={calendarContainerRef} style={{ width: "100%", height: "65vh" }} />
 
-      {/* 삭제할지 물어보는 모달 */}
+      {/* 삭제 모달 */}
       {selectedEvent && (
-        <div className="fixed top-0 left-0 right-0 bottom-0 bg-gray-500 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-xl mb-4">정말로 삭제하시겠습니까?</h3>
-            <p>
-              일정: {selectedEvent.room_name}호 {selectedEvent.teacher_name}{" "}
-              선생님
+        <div className="fixed top-0 left-0 right-0 bottom-0 bg-gray-500/40 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-xl shadow-2xl w-[360px]">
+            <h3 className="text-lg font-semibold mb-2">정말로 삭제하시겠습니까?</h3>
+            <p className="text-sm text-slate-600">
+              일정: <span className="font-medium">{selectedEvent.room_name}호</span>{" "}
+              {selectedEvent.teacher_name} 선생님
             </p>
-            <div className="flex mt-4 gap-4">
+            <div className="flex mt-5 gap-3">
               <button
                 onClick={handleDeleteEvent}
-                className="px-10 py-2 bg-red-500 text-white rounded-lg"
+                className="flex-1 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700"
               >
                 삭제
               </button>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="px-10 py-2 bg-gray-300 text-black rounded-lg"
+                className="flex-1 px-4 py-2 bg-slate-200 text-slate-900 rounded-lg hover:bg-slate-300"
               >
                 취소
               </button>

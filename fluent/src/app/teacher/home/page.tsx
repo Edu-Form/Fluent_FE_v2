@@ -256,7 +256,7 @@ const HomePageContent = () => {
               캘린더
             </h2>
             <Suspense fallback={<SkeletonLoader />}>
-              <Teacher_toastUI data={classes} />
+              <Teacher_toastUI data={classes} students={allStudents}/>
             </Suspense>
           </div>
         </div>
