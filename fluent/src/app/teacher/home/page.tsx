@@ -54,8 +54,10 @@ const HomePageContent = () => {
     // Expect "YYYY. MM. DD" (with or without spaces)
     const m = String(v).trim().match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
     if (!m) return null;
-    const [y, mo, d] = m;
-    const dt = new Date(Number(y), Number(mo) - 1, Number(d));
+    const year = Number(m[1]);
+    const month = Number(m[2]);
+    const day = Number(m[3]);
+    const dt = new Date(year, month - 1, day);
     return isNaN(dt.getTime()) ? null : dt;
   };
 
@@ -542,7 +544,7 @@ const HomePageContent = () => {
 
                           <td className={`px-3 py-3 text-center ${student.schedule_date ? "bg-purple-300" : ""}`}>
                             <Link
-                              href={`/teacher/schedule?user=${user}&type=teacher&id=${id}`}
+                              href={`/teacher/schedule?user=${user}&type=teacher&student_name=${student.name}&id=${id}`}
                               className="inline-flex w-full items-center justify-center p-2 rounded-lg transition-colors"
                               target="_blank"
                               rel="noopener noreferrer"

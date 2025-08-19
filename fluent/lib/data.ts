@@ -19,7 +19,6 @@ export async function getStudentQuizletData(student_name: string) {
       .collection("quizlet")
       .find({ student_name, deleted: { $ne: true } })
       .sort({ date: -1 })
-      .limit(2) // Limit to the most recent 2 quizlets
       .toArray(); // Convert cursor to an array
 
     if (!filteredQuizlets || filteredQuizlets.length === 0) {
@@ -68,7 +67,6 @@ export async function getStudentDiaryData(student_name: string) {
       .collection("diary")
       .find({ student_name })
       .sort({ date: -1 })
-      .limit(2)
       .toArray(); // Convert cursor to an array
     console.log(filteredDiaries);
     if (!filteredDiaries || filteredDiaries.length === 0) {
@@ -440,6 +438,41 @@ export const getSchedulesByDate = async (dateStr: string) => {
     throw new Error("Database error");
   }
 };
+
+export async function updateScheduleData(
+  id: string,
+  patch: Partial<{
+    date: string;
+    room_name: string;
+    time: string;
+    duration: string;
+    teacher_name: string;
+    student_name: string;
+  }>
+): Promise<{ status: number; message: string; updated?: any }> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");   // 👈 your DB name
+    const collection = db.collection("schedules");
+
+    const _id = new ObjectId(id);
+
+    const result = await collection.findOneAndUpdate(
+      { _id },
+      { $set: patch },
+      { returnDocument: "after" } // returns the updated doc
+    );
+
+    if (!result) {
+      return { status: 404, message: "Schedule not found" };
+    }
+
+    return { status: 200, message: "Schedule updated successfully", updated: result };
+  } catch (error) {
+    console.error("Error updating schedule:", error);
+    return { status: 500, message: "Internal Server Error" };
+  }
+}
 
 export async function deleteScheduleData(
   schedule_id: string
