@@ -681,6 +681,55 @@ const [isRecurringOpen, setIsRecurringOpen] = useState(false);
 // convenient unique student names from existing schedules (fallback to empty)
 const uniqueStudentNames = Array.from(new Set(classes.map(c => c.student_name))).filter(Boolean);
 
+// ⬇️ Create handler
+const handleCreateRecurring = async (payload: {
+  student_name: string;
+  room_name: string;
+  time: number;
+  duration: number;
+  dates: string[]; // "YYYY. MM. DD."
+}) => {
+  // Make local schedule objects to append
+  const newItems: Schedule[] = payload.dates.map((d, i) => ({
+    _id: `temp-${Date.now()}-${i}`,       // temp id for UI
+    id: "",
+    calendarId: "",
+    room_name: payload.room_name,
+    date: d,
+    time: payload.time,
+    duration: payload.duration,
+    teacher_name: String(user || ""),
+    student_name: payload.student_name,
+  }));
+
+  // Update UI immediately
+  setClasses(prev => [...newItems, ...prev]);
+
+  // Optional: persist to backend (create this route)
+  try {
+    await fetch("/api/schedules/recurring", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        teacher_name: user,
+        items: newItems.map(({ _id, ...rest }) => rest), // strip temp _id
+      }),
+    });
+  } catch (e) {
+    console.error("Failed to persist recurring schedules:", e);
+  }
+
+  setIsRecurringOpen(false);
+};
+
+// ⬇️ Render the modal near the bottom of DragDropSchedulePage
+<RecurringScheduleModal
+  isOpen={isRecurringOpen}
+  onClose={() => setIsRecurringOpen(false)}
+  onCreate={handleCreateRecurring}
+  studentNames={uniqueStudentNames}
+/>
+
   // 스케줄 데이터 가져오기
   useEffect(() => {
     if (!user || classes.length > 0) return;
