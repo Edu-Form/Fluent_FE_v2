@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ChatSchedulerPanel from "@/components/ChatSchedulerPanel";
 
@@ -31,8 +31,8 @@ const formatCellKey = (d: Date) =>
     d.getDate()
   ).padStart(2, "0")}`;
 
-// ── Component ─────────────────────────────────────────────────────────────────
-const StudentCalendarWithChat: React.FC = () => {
+// ── Inner client component (uses useSearchParams) ─────────────────────────────
+function StudentCalendarWithChatInner() {
   const searchParams = useSearchParams();
   const studentName = searchParams.get("student_name") ?? "";
   const teacherName = searchParams.get("user") ?? ""; // from URL
@@ -41,15 +41,12 @@ const StudentCalendarWithChat: React.FC = () => {
 
   // Schedules (teacher planned)
   const [scheduleDates, setScheduleDates] = useState<string[]>([]);
-  const [scheduledRows, setScheduledRows] = useState<ScheduledRow[]>([]); // ✅ add this
+  const [scheduledRows, setScheduledRows] = useState<ScheduledRow[]>([]);
   const [schedulesLoaded, setSchedulesLoaded] = useState(false);
 
   // Quizlets/class-notes (actually happened)
   const [quizletDates, setQuizletDates] = useState<string[]>([]);
   const [quizletsLoaded, setQuizletsLoaded] = useState(false);
-
-  // (kept for future use if you want to gate auto-chat push)
-  const initialPromptedRef = useRef(false);
 
   // ── Fetch schedules for the student ─────────────────────────────────────────
   useEffect(() => {
@@ -68,13 +65,11 @@ const StudentCalendarWithChat: React.FC = () => {
         }
         const data = await res.json();
 
-        // For calendar coloring: keep just normalized dates (no trailing dot)
         const normalizedDates = (Array.isArray(data) ? data : [])
           .map((s: any) => normalizeDotDate(s?.date))
           .filter(Boolean);
         setScheduleDates(normalizedDates);
 
-        // For chat tools: keep full rows (normalize date the same way)
         const rows: ScheduledRow[] = (Array.isArray(data) ? data : []).map((s: any) => ({
           _id: s?._id,
           date: normalizeDotDate(s?.date),
@@ -84,7 +79,7 @@ const StudentCalendarWithChat: React.FC = () => {
           teacher_name: s?.teacher_name ?? "",
           student_name: s?.student_name ?? studentName,
         }));
-        setScheduledRows(rows); // ✅ provide to ChatSchedulerPanel
+        setScheduledRows(rows);
       } catch (err) {
         console.error("Error fetching schedules:", err);
       } finally {
@@ -128,15 +123,6 @@ const StudentCalendarWithChat: React.FC = () => {
   // ── Sets & comparisons ──────────────────────────────────────────────────────
   const scheduleSet = useMemo(() => new Set(scheduleDates), [scheduleDates]);
   const quizletSet = useMemo(() => new Set(quizletDates), [quizletDates]);
-
-  const quizletOnly = useMemo(
-    () => quizletDates.filter((d) => !scheduleSet.has(d)),
-    [quizletDates, scheduleSet]
-  );
-  const scheduleOnly = useMemo(
-    () => scheduleDates.filter((d) => !quizletSet.has(d)),
-    [scheduleDates, quizletSet]
-  );
 
   // ── Calendar building ───────────────────────────────────────────────────────
   const getMonthDays = (d: Date) => {
@@ -267,8 +253,8 @@ const StudentCalendarWithChat: React.FC = () => {
       <ChatSchedulerPanel
         studentName={studentName ?? ""}
         teacherName={teacherName || undefined}
-        unscheduledDates={quizletOnly}         // class happened but not scheduled
-        scheduled={scheduledRows}              // ✅ pass full rows to chat
+        unscheduledDates={useMemo(() => quizletDates.filter((d) => !scheduleSet.has(d)), [quizletDates, scheduleSet])}
+        scheduled={scheduledRows}
         ready={schedulesLoaded && quizletsLoaded}
         onApply={(items) => {
           // optimistic add to calendar (dates only)
@@ -277,10 +263,17 @@ const StudentCalendarWithChat: React.FC = () => {
             return Array.from(new Set([...prev, ...add]));
           });
         }}
-        onRefreshCalendar={refetchSchedules}    // authoritative refresh after save/update/delete
+        onRefreshCalendar={refetchSchedules}
       />
     </div>
   );
-};
+}
 
-export default StudentCalendarWithChat;
+// ── Page export wrapped in Suspense (required for useSearchParams) ────────────
+export default function StudentCalendarWithChat() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading…</div>}>
+      <StudentCalendarWithChatInner />
+    </Suspense>
+  );
+}

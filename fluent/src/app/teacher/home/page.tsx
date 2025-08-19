@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { IoCheckmarkCircle, IoCloseCircle, IoMenu, IoBook,   IoDocumentText, IoCalendar } from "react-icons/io5";
+import { IoCheckmarkCircle, IoCloseCircle, IoMenu} from "react-icons/io5";
 import Link from "next/link";
 
 // 동적 컴포넌트 로딩
@@ -23,6 +23,26 @@ const Teacher_toastUI = dynamic(
   { ssr: false }
 );
 
+// --- UI helpers ---
+const Pill = ({
+  ok,
+  children,
+  className = "",
+}: {
+  ok: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) => {
+  const base =
+    "inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ring-1";
+  const okCls = "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  const noCls = "bg-rose-50 text-rose-700 ring-rose-200";
+  return <span className={`${base} ${ok ? okCls : noCls} ${className}`}>{children}</span>;
+};
+
+const CellWrap = ({ children }: { children: React.ReactNode }) => (
+  <div className="inline-flex flex-col items-center gap-1">{children}</div>
+);
 
 
 
@@ -60,14 +80,6 @@ const HomePageContent = () => {
     const dt = new Date(year, month - 1, day);
     return isNaN(dt.getTime()) ? null : dt;
   };
-
-  const ymd = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-      d.getDate()
-    ).padStart(2, "0")}`;
-
-  const isSameDay = (a: Date | null, b: Date | null) =>
-    !!(a && b) && ymd(a) === ymd(b);
 
   const isBetweenInclusive = (d: Date | null, a: Date | null, b: Date | null) => {
     if (!d || !a || !b) return false;
@@ -441,131 +453,118 @@ const HomePageContent = () => {
                 </div>
 
                 {/* 데스크톱 뷰 - 테이블 형태로 표시 */}
-                <table className="hidden md:table w-full text-sm text-left">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                <table className="hidden md:table w-full text-sm text-left border-separate border-spacing-y-2">
+                  <thead className="text-[11px] tracking-wide text-gray-600 uppercase">
                     <tr>
-                      <th className="px-3 py-3 text-center whitespace-nowrap">학생 이름</th>
-                      <th className="px-3 py-3 text-center whitespace-nowrap">Class Note</th>
-                      <th className="px-3 py-3 text-center whitespace-nowrap">Quizlet</th>
-                      <th className="px-3 py-3 text-center whitespace-nowrap">AI Diary</th>
-                      <th className="px-3 py-3 text-center whitespace-nowrap">스케줄</th>
+                      <th className="px-3 py-2 text-center">학생 이름</th>
+                      <th className="px-3 py-2 text-center">Class Note</th>
+                      <th className="px-3 py-2 text-center">Quizlet</th>
+                      <th className="px-3 py-2 text-center">AI Diary</th>
+                      <th className="px-3 py-2 text-center">스케줄</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {allStudents.map((student, index) => {
-                      // const completedCount = countCompletedItems(student);
-                      // const progressPercent = calculateProgress(student);
-
-                      // 진행 상황에 따른 색상 설정
-                      // const progressColor =
-                      //   progressPercent >= 75
-                      //     ? "green"
-                      //     : progressPercent >= 50
-                      //     ? "blue"
-                      //     : progressPercent >= 25
-                      //     ? "orange"
-                      //     : "red";
-
-                      // const colorClasses = {
-                      //   green: "bg-green-100 text-green-800 border-green-200",
-                      //   blue: "bg-blue-100 text-blue-800 border-blue-200",
-                      //   orange:
-                      //     "bg-orange-100 text-orange-800 border-orange-200",
-                      //   red: "bg-red-100 text-red-800 border-red-200",
-                      // };
-
                       const classNoteDate = toDate(student.class_note);
                       const prevClassNoteDate = toDate(student.previous_class_note);
-                      const quizletDate = toDate(student.quizlet_date);
                       const diaryDate = toDate(student.diary_date);
-                      const quizletGreen = isSameDay(quizletDate, classNoteDate); // Rule 2
                       const diaryGreen = isBetweenInclusive(diaryDate, classNoteDate, prevClassNoteDate); // Rule 3
 
+                      const classNoteOk = !!student.class_note;
+                      const quizletOk = !!student.quizlet_date;
+                      const diaryOk = !!student.diary_date && diaryGreen;
+                      const scheduleOk = !!student.schedule_date;
 
                       return (
-                        <tr
-                          key={index}
-                          className="border-b hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="px-3 py-3 text-center text-lg font-bold text-gray-900">
-                            {student.name}
+                        <tr key={index} className="shadow-sm">
+                          <td className="px-3 py-3 text-center align-middle bg-white rounded-l-xl border border-gray-100">
+                            <div className="text-[15px] font-semibold text-gray-900">{student.name}</div>
                           </td>
-                          <td className="px-3 py-3 text-center">
+
+                          {/* Class Note */}
+                          <td className="px-3 py-3 text-center align-middle bg-white border border-l-0 border-gray-100">
                             <Link
                               href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
-                              className="inline-flex items-center justify-center hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              target="_blank" rel="noopener noreferrer"
+                              className="hover:opacity-90"
+                              title="Open Class Note"
                             >
-                              {student.class_note && (
-                                <span className="text-lg font-bold text-gray-900">
-                                  {student.class_note}
-                                </span>
-                              )}
+                              <CellWrap>
+                                <Pill ok={classNoteOk}>
+                                  {classNoteOk ? "Done" : "Missing"}
+                                </Pill>
+                                {student.class_note && (
+                                  <span className="text-[11px] text-gray-500">{student.class_note}</span>
+                                )}
+                              </CellWrap>
                             </Link>
                           </td>
 
-                          <td className={`px-3 py-3 text-center ${quizletGreen ? "bg-purple-300" : ""}`}>
+                          {/* Quizlet */}
+                          <td className="px-3 py-3 text-center align-middle bg-white border border-l-0 border-gray-100">
                             <Link
                               href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
-                              className="inline-flex w-full items-center justify-center p-2 rounded-lg transition-colors"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              target="_blank" rel="noopener noreferrer"
+                              className="hover:opacity-90"
+                              title="Open Quizlet"
                             >
-                              {student.quizlet_date ? (
-                                <IoDocumentText size={22} className="text-purple-700" />
-                              ) : (
-                                <IoDocumentText size={22} className="text-red-500" />
-                              )}
+                              <CellWrap>
+                                <Pill ok={quizletOk}>
+                                  {quizletOk ? "Done" : "Missing"}
+                                </Pill>
+                                {student.class_note && (
+                                  <span className="text-[11px] text-gray-500">{student.class_note}</span>
+                                )}
+                              </CellWrap>
                             </Link>
                           </td>
 
-
-
-
-                          <td className={`px-3 py-3 text-center ${student.diary_date && diaryGreen ? "bg-purple-300" : ""}`}>
+                          {/* AI Diary */}
+                          <td className="px-3 py-3 text-center align-middle bg-white border border-l-0 border-gray-100">
                             <Link
                               href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
-                              className="inline-flex w-full items-center justify-center p-2 rounded-lg transition-colors"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              target="_blank" rel="noopener noreferrer"
+                              className="hover:opacity-90"
+                              title="Open AI Diary"
                             >
-                              {student.diary_date && diaryGreen ? (
-                                <IoBook size={22} className="text-purple-700" />
-                              ) : (
-                                <IoBook size={22} className="text-red-500" />
-                              )}
+                              <CellWrap>
+                                <Pill ok={diaryOk}>
+                                  {diaryOk ? "Done" : "Missing"}
+                                </Pill>
+                                {student.diary_date && (
+                                  <>
+                                    <span className="text-[11px] text-gray-500">{student.diary_date}</span>
+                                  </>
+                                )}
+                              </CellWrap>
                             </Link>
                           </td>
 
-
-
-
-                          <td className={`px-3 py-3 text-center ${student.schedule_date ? "bg-purple-300" : ""}`}>
+                          {/* Schedule */}
+                          <td className="px-3 py-3 text-center align-middle bg-white rounded-r-xl border border-l-0 border-gray-100">
                             <Link
                               href={`/teacher/schedule?user=${user}&type=teacher&student_name=${student.name}&id=${id}`}
-                              className="inline-flex w-full items-center justify-center p-2 rounded-lg transition-colors"
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              target="_blank" rel="noopener noreferrer"
+                              className="hover:opacity-90"
+                              title="Open Schedule"
                             >
-                              {student.schedule_date ? (
-                                <IoCalendar size={22} className="text-purple-700" />
-                              ) : (
-                                <IoCalendar size={22} className="text-red-500" />
-                              )}
+                              <CellWrap>
+                                <Pill ok={scheduleOk}>
+                                  {scheduleOk ? "Ready" : "Missing"}
+                                </Pill>
+                                {student.schedule_date && (
+                                  <span className="text-[11px] text-gray-500">{student.schedule_date}</span>
+                                )}
+                              </CellWrap>
                             </Link>
                           </td>
-
-
-
-
-
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
+
 
                 {/* Step Progress View 추가 */}
 
