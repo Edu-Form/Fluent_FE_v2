@@ -26,7 +26,7 @@ interface ToastUIProps {
   students?: StudentLite[];       // optional, for Predict button
 }
 
-const ToastUI: React.FC<ToastUIProps> = ({ data, students }) => {
+const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const calendarInstanceRef = useRef<InstanceType<typeof Calendar> | null>(null);
 
@@ -39,48 +39,11 @@ const ToastUI: React.FC<ToastUIProps> = ({ data, students }) => {
   });
 
   const [viewName, setViewName] = useState<"week" | "month">("week");
-  const [isPredicting, setIsPredicting] = useState(false);
 
   // ---------- utils ----------
-  const parseYmd = (s?: string | null) => {
-    if (!s) return null;
-    const m = s.trim().match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
-    if (!m) return null;
-    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    return isNaN(d.getTime()) ? null : d;
-  };
 
-  const fmtYmd = (d: Date) =>
-    `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(
-      d.getDate()
-    ).padStart(2, "0")}`;
 
-  const daysBetween = (a: Date, b: Date) =>
-    Math.round((a.getTime() - b.getTime()) / 86400000);
 
-  const getLastSlotForStudent = (studentName: string) => {
-    const events = scheduleData
-      .filter((e) => e.raw?.student_name === studentName)
-      .sort(
-        (a, b) =>
-          (a.start?.getTime?.() ?? 0) - (b.start?.getTime?.() ?? 0)
-      );
-    const last = events[events.length - 1];
-    if (!last) return null;
-    return {
-      room_name: last.raw?.room_name,
-      teacher_name: last.raw?.teacher_name,
-      time: (last.start as Date).getHours?.() ?? 10,
-      duration: Math.max(
-        1,
-        Math.round(
-          ((last.end as Date).getTime() - (last.start as Date).getTime()) /
-            3600000
-        )
-      ),
-      calendarId: last.calendarId || "1",
-    };
-  };
 
   // ---------- normalize incoming data to Toast events ----------
   useEffect(() => {
@@ -365,82 +328,6 @@ const ToastUI: React.FC<ToastUIProps> = ({ data, students }) => {
   };
 
   // ---------- predict & register ----------
-  const handlePredictAndRegister = async () => {
-    if (!students?.length) {
-      alert("학생 데이터가 없습니다.");
-      return;
-    }
-    setIsPredicting(true);
-    try {
-      const payload: any[] = [];
-
-      for (const s of students) {
-        const d1 = parseYmd(s.class_note);
-        const d0 = parseYmd(s.previous_class_note);
-        if (!d1 || !d0) continue;
-
-        const interval = Math.abs(daysBetween(d1, d0));
-        // accept roughly weekly 5~15 days; expand as needed
-        if (interval < 5 || interval > 15) continue;
-
-        const slot = getLastSlotForStudent(s.name);
-        if (!slot) continue;
-
-        const N = 4; // how many future classes to create
-        for (let i = 1; i <= N; i++) {
-          const next = new Date(d1.getTime() + interval * i * 86400000);
-          payload.push({
-            calendarId: slot.calendarId,
-            room_name: slot.room_name,
-            date: fmtYmd(next),      // "YYYY. MM. DD"
-            time: slot.time,         // hour
-            duration: slot.duration, // hours
-            teacher_name: slot.teacher_name,
-            student_name: s.name,
-          });
-        }
-      }
-
-      if (payload.length === 0) {
-        alert("예측 가능한 데이터가 없습니다. (두 개의 연속 수업일 + 최근 슬롯 필요)");
-        setIsPredicting(false);
-        return;
-      }
-
-      // POST to your backend (adjust endpoint/schema if different)
-      const resp = await axios.post("/api/schedules/bulk", { schedules: payload });
-      const created = resp?.data ?? payload;
-
-      // Convert to calendar events and paint immediately
-      const newEvents = created.map((ev: any) => {
-        const [y, m, d] = ev.date.split(". ").map(Number);
-        const start = new Date(y, m - 1, d, ev.time, 0, 0);
-        const end = new Date(start.getTime() + ev.duration * 3600000);
-        return {
-          id: ev._id || `${ev.student_name}-${ev.date}-${ev.time}`,
-          calendarId: ev.calendarId ?? "1",
-          title: `${ev.room_name}호 ${ev.student_name}님`,
-          category: "time",
-          start,
-          end,
-          raw: {
-            room_name: ev.room_name,
-            teacher_name: ev.teacher_name,
-            student_name: ev.student_name,
-            schedule_id: ev._id,
-          },
-        };
-      });
-
-      setScheduleData((prev) => [...prev, ...newEvents]);
-      calendarInstanceRef.current?.createEvents(newEvents);
-    } catch (e) {
-      console.error(e);
-      alert("예측 등록 중 오류가 발생했습니다.");
-    } finally {
-      setIsPredicting(false);
-    }
-  };
 
   return (
     <div>
