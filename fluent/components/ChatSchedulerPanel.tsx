@@ -146,6 +146,14 @@ export default function ChatSchedulerPanel({
     const text = input.trim();
     if (!text) return;
 
+    const history = messages
+    .filter(m => typeof m.content === "string") // only text, ignore React nodes
+    .map(m => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content as string,
+    }))
+    .slice(-10); // keep last 10 turns max
+
     const userMsg: ChatMessage = { role: "user", content: text };
     setMessages((m) => [...m, userMsg]);
     setInput("");
@@ -159,7 +167,8 @@ export default function ChatSchedulerPanel({
             student_name: studentName,
             teacher_name: teacherName,
             unscheduledDates: cleanDates,   // string[] of dates missing schedules
-            scheduled,                      // [{ _id, date, time, room_name, duration }]
+            scheduled,   
+            history,                    // [{ _id, date, time, room_name, duration }]
             message: text,
             today: new Date().toISOString(),
         }),
