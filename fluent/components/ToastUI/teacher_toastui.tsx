@@ -392,6 +392,75 @@ export default function TeacherToastUI({
     }
   };
 
+  const handleRepeatSubmit = async () => {
+  const base = toDateYMD(addForm.date);
+  const timeNum = Number(addForm.time);
+  const durNum = Number(addForm.duration);
+
+  if (!base) return alert("날짜 형식: YYYY. MM. DD");
+  if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
+  if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
+  if (!addForm.room_name) return alert("Room is required");
+  if (!addForm.student_name) return alert("Student is required");
+
+  // Generate weekly dates up to +6 months (inclusive)
+  const end = new Date(base);
+  end.setMonth(end.getMonth() + 6);
+
+  const payloads: Array<{
+    date: string; time: number; duration: number;
+    room_name: string; teacher_name: string; student_name: string; calendarId?: string;
+  }> = [];
+
+  for (let d = new Date(base); d <= end; d.setDate(d.getDate() + 7)) {
+    payloads.push({
+      date: ymdString(d),
+      time: timeNum,
+      duration: durNum,
+      room_name: addForm.room_name,
+      teacher_name: addForm.teacher_name ?? "",
+      student_name: addForm.student_name,
+      calendarId: "1",
+    });
+  }
+
+  try {
+    const createdEvents: EventObject[] = [];
+    for (const p of payloads) {
+      const created = await saveCreate(p);
+      const id = String(created?._id ?? `${Date.now()}-${Math.random()}`);
+      const d = toDateYMD(p.date)!;
+      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), timeNum, 0, 0);
+      const endDt = new Date(start.getTime() + durNum * 3600000);
+
+      createdEvents.push({
+        id,
+        calendarId: "1",
+        title: `${p.room_name}호 ${p.student_name}님`,
+        category: "time",
+        start,
+        end: endDt,
+        // keep your modern colors
+        backgroundColor: "#EEF2FF",
+        borderColor: "#C7D2FE",
+        dragBackgroundColor: "#E0E7FF",
+        color: "#111827",
+        raw: {
+          schedule_id: id,
+          room_name: p.room_name,
+          teacher_name: p.teacher_name,
+          student_name: p.student_name,
+        },
+      });
+    }
+    calRef.current?.createEvents(createdEvents);
+    setAddOpen(false);
+  } catch (e: any) {
+    alert(`반복 등록 실패: ${e?.message ?? e}`);
+  }
+};
+
+
   // Positioning of the clicked-event popover
   const popStyle = (() => {
     if (!detail || !containerRef.current) return { display: "none" } as React.CSSProperties;
@@ -444,7 +513,7 @@ export default function TeacherToastUI({
           title="새 수업 등록"
           className={`ml-auto text-xs px-3 py-1 rounded-full border ${addOpen ? "bg-indigo-600 text-white border-indigo-600" : "border-indigo-300 hover:bg-indigo-50 text-indigo-700"}`}
         >
-          Add Calendar
+          Add Class
         </button>
       </div>
 
@@ -536,11 +605,23 @@ export default function TeacherToastUI({
               </label>
             </div>
 
-            <div className="mt-3 flex justify-end">
-              <button onClick={handleAddSubmit} className="px-3 py-1 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+            <div className="mt-3 flex justify-between">
+              <button
+                onClick={handleRepeatSubmit}
+                className="px-3 py-1 text-xs rounded-md border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                title="매주 같은 시간/강의실로 6개월 반복 등록"
+              >
+                Repeat Class
+              </button>
+
+              <button
+                onClick={handleAddSubmit}
+                className="px-3 py-1 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+              >
                 Add
               </button>
             </div>
+
           </div>
         )}
       </div>
