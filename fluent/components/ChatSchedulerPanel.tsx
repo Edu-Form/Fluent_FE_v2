@@ -246,7 +246,7 @@ export default function ChatSchedulerPanel({
         ]);
         return;
       }
-    } catch (e) {
+    } catch {
       // ignore network errors → fallback below
     }
 
