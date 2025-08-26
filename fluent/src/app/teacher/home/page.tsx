@@ -44,6 +44,24 @@ const CellWrap = ({ children }: { children: React.ReactNode }) => (
   <div className="inline-flex flex-col items-center gap-1">{children}</div>
 );
 
+// --- helpers (top of file, above any component) ---
+function toDate(v: any): Date | null {
+  if (!v) return null;
+  const m = String(v).trim().match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+  const dt = new Date(year, month - 1, day);
+  return Number.isFinite(dt.getTime()) ? dt : null;
+}
+
+function isBetweenInclusive(d: Date | null, a: Date | null, b: Date | null) {
+  if (!d || !a || !b) return false;
+  const min = a < b ? a : b;
+  const max = a < b ? b : a;
+  return d >= min && d <= max;
+}
 
 
 
@@ -64,29 +82,30 @@ const HomePageContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+    // Put below other useState hooks
+  const INACTIVE_DAYS_THRESHOLD = 7;
+  const MS = 24 * 60 * 60 * 1000;
+
+  const sortedStudents = React.useMemo(() => {
+    const now = Date.now();
+    const withFlag = (allStudents || []).map((s: any) => {
+      const dt = toDate(s.class_note); // returns Date | null
+      const inactive =
+        dt ? (now - dt.getTime()) > (INACTIVE_DAYS_THRESHOLD * MS) : false;
+      return { ...s, _inactive: inactive };
+    });
+    // inactive at bottom
+    withFlag.sort((a: any, b: any) => {
+      const ai = !!a._inactive;
+      const bi = !!b._inactive;
+      return ai === bi ? 0 : ai ? 1 : -1;
+    });
+    return withFlag;
+  }, [allStudents]);
+
+
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;
-
-
-  // ⬇️ Put these right after your imports (outside any component)
-  const toDate = (v: any) => {
-    if (!v) return null;
-    // Expect "YYYY. MM. DD" (with or without spaces)
-    const m = String(v).trim().match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
-    if (!m) return null;
-    const year = Number(m[1]);
-    const month = Number(m[2]);
-    const day = Number(m[3]);
-    const dt = new Date(year, month - 1, day);
-    return isNaN(dt.getTime()) ? null : dt;
-  };
-
-  const isBetweenInclusive = (d: Date | null, a: Date | null, b: Date | null) => {
-    if (!d || !a || !b) return false;
-    const min = a < b ? a : b;
-    const max = a < b ? b : a;
-    return d >= min && d <= max;
-  };
 
 
   // 화면 크기 감지
@@ -256,7 +275,7 @@ const HomePageContent = () => {
               캘린더
             </h2>
             <Suspense fallback={<SkeletonLoader />}>
-              <Teacher_toastUI data={classes} students={allStudents}/>
+              <Teacher_toastUI data={classes} studentOptions={allStudents.map((s: any) => s.name)} defaults={{ teacher_name: user || "", room_name: "HF1", time: 18, duration: 1 }} variant="compact"/>
             </Suspense>
           </div>
         </div>
@@ -465,7 +484,8 @@ const HomePageContent = () => {
                   </thead>
 
                   <tbody>
-                    {allStudents.map((student, index) => {
+                    {sortedStudents.map((student: any, index: number) => {
+                      const isInactive = !!student._inactive;
                       const classNoteDate = toDate(student.class_note);
                       const prevClassNoteDate = toDate(student.previous_class_note);
                       const diaryDate = toDate(student.diary_date);
@@ -476,14 +496,21 @@ const HomePageContent = () => {
                       const diaryOk = !!student.diary_date && diaryGreen;
                       const scheduleOk = !!student.schedule_date;
 
+                      const cellBg = isInactive ? "bg-gray-100" : "bg-white";
+                      const textTone = isInactive ? "text-gray-400" : "text-gray-900";
+
+
                       return (
-                        <tr key={index} className="shadow-sm">
-                          <td className="px-3 py-3 text-center align-middle bg-white rounded-l-xl border border-gray-100">
-                            <div className="text-[15px] font-semibold text-gray-900">{student.name}</div>
+                        <tr
+                          key={index}
+                          className={`shadow-sm ${isInactive ? "opacity-90" : ""}`}
+                        >
+                          <td className={`px-3 py-3 text-center align-middle rounded-l-xl border border-gray-100 ${cellBg}`}>
+                            <div className={`text-[15px] font-semibold ${textTone}`}>{student.name}</div>
                           </td>
 
                           {/* Class Note */}
-                          <td className="px-3 py-3 text-center align-middle bg-white border border-l-0 border-gray-100">
+                          <td className={`px-3 py-3 text-center align-middle border border-l-0 border-gray-100 ${cellBg}`}>
                             <Link
                               href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
                               target="_blank" rel="noopener noreferrer"
@@ -502,7 +529,7 @@ const HomePageContent = () => {
                           </td>
 
                           {/* Quizlet */}
-                          <td className="px-3 py-3 text-center align-middle bg-white border border-l-0 border-gray-100">
+                          <td className={`px-3 py-3 text-center align-middle border border-l-0 border-gray-100 ${cellBg}`}>
                             <Link
                               href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
                               target="_blank" rel="noopener noreferrer"
@@ -521,7 +548,7 @@ const HomePageContent = () => {
                           </td>
 
                           {/* AI Diary */}
-                          <td className="px-3 py-3 text-center align-middle bg-white border border-l-0 border-gray-100">
+                          <td className={`px-3 py-3 text-center align-middle border border-l-0 border-gray-100 ${cellBg}`}>
                             <Link
                               href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
                               target="_blank" rel="noopener noreferrer"
@@ -542,7 +569,7 @@ const HomePageContent = () => {
                           </td>
 
                           {/* Schedule */}
-                          <td className="px-3 py-3 text-center align-middle bg-white rounded-r-xl border border-l-0 border-gray-100">
+                          <td className={`px-3 py-3 text-center align-middle rounded-r-xl border border-l-0 border-gray-100 ${cellBg}`}>
                             <Link
                               href={`/teacher/schedule?user=${user}&type=teacher&student_name=${student.name}&id=${id}`}
                               target="_blank" rel="noopener noreferrer"
