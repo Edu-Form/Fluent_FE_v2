@@ -83,7 +83,7 @@ const HomePageContent = () => {
   const [isMobile, setIsMobile] = useState(false);
 
     // Put below other useState hooks
-  const INACTIVE_DAYS_THRESHOLD = 7;
+  const INACTIVE_DAYS_THRESHOLD = 21;
   const MS = 24 * 60 * 60 * 1000;
 
   const sortedStudents = React.useMemo(() => {

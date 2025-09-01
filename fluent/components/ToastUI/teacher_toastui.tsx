@@ -34,7 +34,7 @@ interface Props {
     time?: number;       // 0-23
     duration?: number;   // hours
   };
-  studentOptions?: string[];         // 👈 list of student names for the Add card dropdown
+  studentOptions?: string[];         // list of student names for the Add card dropdown
 }
 
 function toDateYMD(str?: string | null) {
@@ -56,7 +56,7 @@ export default function TeacherToastUI({
   saveEndpointBase = "/api/schedules",
   forceView,
   defaults,
-  studentOptions = [],              // ✅ destructure with default
+  studentOptions = [],
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const calRef = useRef<InstanceType<CalendarCtor> | null>(null);
@@ -81,12 +81,16 @@ export default function TeacherToastUI({
   });
   const updateAdd = (patch: Partial<typeof addForm>) => setAddForm((p) => ({ ...p, ...patch }));
 
-  // ✅ When the Add card opens, prefill the first option if empty
+  const [repeatMode, setRepeatMode] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+
+  // Prefill first student option when add card opens
   useEffect(() => {
     if (addOpen && !addForm.student_name && studentOptions.length > 0) {
       setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
     }
-  }, [addOpen, studentOptions]); // (intentionally not depending on addForm)
+  }, [addOpen, studentOptions]);
 
   // Normalize incoming -> Toast events
   const events = useMemo(() => {
@@ -161,7 +165,7 @@ export default function TeacherToastUI({
 
   // --- Init Toast UI (lazy import to avoid SSR "window is not defined") ---
   useEffect(() => {
-    const isMounted = true;
+    let isMounted = true;
 
     (async () => {
       const mod = await import("@toast-ui/calendar");
@@ -177,10 +181,20 @@ export default function TeacherToastUI({
           gridSelection: false,     // creation via Add card (not drag-select)
           template: {
             time(ev: any) {
+              const student = ev?.raw?.student_name ?? "";
+              const room = ev?.raw?.room_name ?? "";
               const s = new Date(ev.start);
-              const hh = String(s.getHours()).padStart(2, "0");
-              const mm = String(s.getMinutes()).padStart(2, "0");
-              return `<div class="tuic-event"><span class="tuic-event-time">${hh}:${mm}</span><span class="tuic-dot"></span><span class="tuic-event-title">${ev.title ?? ""}</span></div>`;
+              const e = new Date(ev.end);
+              const hhmm = (d: Date) =>
+                `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+              const timeRange = `${hhmm(s)}–${hhmm(e)}`;
+
+              return `
+                <div class="tuic-event-sm">
+                  <div class="tuic-line1">${student} • ${room}</div>
+                  <div class="tuic-line2">${timeRange}</div>
+                </div>
+              `;
             },
           },
           week: {
@@ -208,6 +222,7 @@ export default function TeacherToastUI({
           const el = document.createElement("style");
           el.id = styleId;
           el.textContent = `
+/* ===== Base look ===== */
 .toastui-calendar-layout { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; }
 .toastui-calendar-panel { background:#fff; border-radius:16px; overflow:hidden; }
 .toastui-calendar-daygrid, .toastui-calendar-week { border-color:#eef1f4; }
@@ -215,21 +230,49 @@ export default function TeacherToastUI({
 .toastui-calendar-today .toastui-calendar-dayname-date-area, .toastui-calendar-today .toastui-calendar-weekday-grid-line { background:#eef6ff; }
 .toastui-calendar-timegrid-now-indicator { background:#0ea5e9; }
 .toastui-calendar-timegrid-now-indicator-arrow { border-bottom-color:#0ea5e9; }
-.toastui-calendar-timegrid-hour { color:#6b7280; font-size:12px; }
+.toastui-calendar-timegrid-hour { color:#6b7280; font-size:10px; }
 .toastui-calendar-time-schedule { border:none !important; }
-.toastui-calendar-time-schedule-block {
-  background: #EEF2FF !important;            /* soft indigo */
-  border: 1px solid #C7D2FE !important;      /* subtle border */
-  border-radius: 12px !important;
-  box-shadow: 0 1px 2px rgba(16,24,40,.06);
+.toastui-calendar-time-schedule-block { background:#EEF2FF !important; border:1px solid #C7D2FE !important; border-radius:12px !important; box-shadow:0 1px 2px rgba(16,24,40,.06); }
+.toastui-calendar-time-schedule .toastui-calendar-event-time-content { background:transparent !important; }
+/* Compact 2-line event content */
+.tuic-event-sm{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  line-height:1.15;
 }
-.toastui-calendar-time-schedule .toastui-calendar-event-time-content {
-  background: transparent !important;
-}  
-.tuic-event { display:flex; align-items:center; gap:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.tuic-event-time { color: #1d4ed8; } 
-.tuic-event-title { color:#1f2937; font-weight:600; overflow:hidden; text-overflow:ellipsis; }
-.tuic-dot { background: #6366f1; } 
+.tuic-event-sm .tuic-line1{
+  font-size:11px;         /* smaller */
+  font-weight:600;
+  color:#111827;          /* slate-900 */
+}
+.tuic-event-sm .tuic-line2{
+  font-size:10px;         /* smaller */
+  color:#4b5563;          /* slate-600 */
+  font-variant-numeric: tabular-nums;
+}
+/* ===== Make week time slots shorter WITHOUT scaling ===== */
+/* Kill the internal min-heights and inner scroll so the 24 hours compress to fit the container */
+.toastui-calendar-panel.toastui-calendar-time { overflow-y: hidden !important; }
+.toastui-calendar-timegrid,
+.toastui-calendar-timegrid-container,
+.toastui-calendar-timegrid-scrollarea,
+.toastui-calendar-timegrid-hour-area,
+.toastui-calendar-timegrid-schedules {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: hidden !important;
+}
+
+/* In some versions gridlines/half-hour rows have fixed px heights; unset them */
+.toastui-calendar-timegrid-gridline,
+.toastui-calendar-timegrid-half-hour {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+/* Optional: slightly tighter event paddings for dense rows */
+.toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 1px; padding-bottom: 1px; }
           `;
           document.head.appendChild(el);
         }
@@ -294,6 +337,7 @@ export default function TeacherToastUI({
         cal.destroy();
         calRef.current = null;
       } catch {}
+      isMounted = false;
     };
   }, [events, variant, forceView]);
 
@@ -340,9 +384,21 @@ export default function TeacherToastUI({
     }
   };
 
-  // Add: submit new schedule
-  const handleAddSubmit = async () => {
-    // Basic validation
+// Orchestrator: called by the Add button
+const handleAddClick = async () => {
+  if (submitting) return;
+  if (repeatMode) {
+    await handleRepeatSubmit();
+  } else {
+    await handleAddSubmit();
+  }
+};
+
+// SINGLE add (wrap existing logic with submitting lock)
+const handleAddSubmit = async () => {
+  if (submitting) return;
+  setSubmitting(true);
+  try {
     const dt = toDateYMD(addForm.date);
     const timeNum = Number(addForm.time);
     const durNum = Number(addForm.duration);
@@ -362,76 +418,82 @@ export default function TeacherToastUI({
       calendarId: "1",
     };
 
-    try {
-      const created = await saveCreate(payload);
-      const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-      const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), timeNum, 0, 0);
-      const end = new Date(start.getTime() + durNum * 3600000);
-      const evt: EventObject = {
-        id: newId,
-        calendarId: "1",
-        title: `${payload.room_name}호 ${payload.student_name}님`,
-        category: "time",
-        start,
-        end,
-        backgroundColor: "#EEF2FF",
-        borderColor: "#C7D2FE",
-        dragBackgroundColor: "#E0E7FF",
-        color: "#111827",
-        raw: {
-          schedule_id: newId,
-          room_name: payload.room_name,
-          teacher_name: payload.teacher_name,
-          student_name: payload.student_name,
-        },
-      };
-      calRef.current?.createEvents([evt]);
-      setAddOpen(false);
-    } catch (e: any) {
-      alert(`생성 실패: ${e?.message ?? e}`);
-    }
-  };
+    const created = await saveCreate(payload);
+    const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
+    const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), timeNum, 0, 0);
+    const end = new Date(start.getTime() + durNum * 3600000);
 
-  const handleRepeatSubmit = async () => {
-  const base = toDateYMD(addForm.date);
-  const timeNum = Number(addForm.time);
-  const durNum = Number(addForm.duration);
-
-  if (!base) return alert("날짜 형식: YYYY. MM. DD");
-  if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
-  if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
-  if (!addForm.room_name) return alert("Room is required");
-  if (!addForm.student_name) return alert("Student is required");
-
-  // Generate weekly dates up to +6 months (inclusive)
-  const end = new Date(base);
-  end.setMonth(end.getMonth() + 6);
-
-  const payloads: Array<{
-    date: string; time: number; duration: number;
-    room_name: string; teacher_name: string; student_name: string; calendarId?: string;
-  }> = [];
-
-  for (let d = new Date(base); d <= end; d.setDate(d.getDate() + 7)) {
-    payloads.push({
-      date: ymdString(d),
-      time: timeNum,
-      duration: durNum,
-      room_name: addForm.room_name,
-      teacher_name: addForm.teacher_name ?? "",
-      student_name: addForm.student_name,
+    calRef.current?.createEvents([{
+      id: newId,
       calendarId: "1",
-    });
-  }
+      title: `${payload.room_name}호 ${payload.student_name}님`,
+      category: "time",
+      start,
+      end,
+      backgroundColor: "#EEF2FF",
+      borderColor: "#C7D2FE",
+      dragBackgroundColor: "#E0E7FF",
+      color: "#111827",
+      raw: {
+        schedule_id: newId,
+        room_name: payload.room_name,
+        teacher_name: payload.teacher_name,
+        student_name: payload.student_name,
+      },
+    }]);
 
+    setAddOpen(false);
+    setRepeatMode(false);
+  } catch (e: any) {
+    alert(`생성 실패: ${e?.message ?? e}`);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+// REPEAT add for 1 year (weekly), with submitting lock
+const handleRepeatSubmit = async () => {
+  if (submitting) return;
+  setSubmitting(true);
   try {
+    const base = toDateYMD(addForm.date);
+    const timeNum = Number(addForm.time);
+    const durNum = Number(addForm.duration);
+
+    if (!base) return alert("날짜 형식: YYYY. MM. DD");
+    if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
+    if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
+    if (!addForm.room_name) return alert("Room is required");
+    if (!addForm.student_name) return alert("Student is required");
+
+    // 1 year instead of 6 months
+    const until = new Date(base);
+    until.setFullYear(until.getFullYear() + 1);
+
+    const payloads: Array<{
+      date: string; time: number; duration: number;
+      room_name: string; teacher_name: string; student_name: string; calendarId?: string;
+    }> = [];
+
+    for (let d = new Date(base); d <= until; d.setDate(d.getDate() + 7)) {
+      payloads.push({
+        date: ymdString(d),
+        time: timeNum,
+        duration: durNum,
+        room_name: addForm.room_name,
+        teacher_name: addForm.teacher_name ?? "",
+        student_name: addForm.student_name,
+        calendarId: "1",
+      });
+    }
+
     const createdEvents: EventObject[] = [];
     for (const p of payloads) {
       const created = await saveCreate(p);
       const id = String(created?._id ?? `${Date.now()}-${Math.random()}`);
       const d = toDateYMD(p.date)!;
       const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), timeNum, 0, 0);
-      const endDt = new Date(start.getTime() + durNum * 3600000);
+      const end = new Date(start.getTime() + durNum * 3600000);
 
       createdEvents.push({
         id,
@@ -439,8 +501,7 @@ export default function TeacherToastUI({
         title: `${p.room_name}호 ${p.student_name}님`,
         category: "time",
         start,
-        end: endDt,
-        // keep your modern colors
+        end,
         backgroundColor: "#EEF2FF",
         borderColor: "#C7D2FE",
         dragBackgroundColor: "#E0E7FF",
@@ -453,10 +514,14 @@ export default function TeacherToastUI({
         },
       });
     }
+
     calRef.current?.createEvents(createdEvents);
     setAddOpen(false);
+    setRepeatMode(false);
   } catch (e: any) {
     alert(`반복 등록 실패: ${e?.message ?? e}`);
+  } finally {
+    setSubmitting(false);
   }
 };
 
@@ -503,7 +568,7 @@ export default function TeacherToastUI({
           onClick={() =>
             setAddOpen((v) => {
               const next = !v;
-              // ✅ ensure a selection exists when opening
+              if (!next) setRepeatMode(false); // clear toggle when closing
               if (next && !addForm.student_name && studentOptions.length > 0) {
                 setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
               }
@@ -515,6 +580,7 @@ export default function TeacherToastUI({
         >
           Add Class
         </button>
+
       </div>
 
       {/* Calendar container must be relative for popovers */}
@@ -583,8 +649,6 @@ export default function TeacherToastUI({
                     value={addForm.student_name}
                     onChange={(e) => updateAdd({ student_name: e.target.value })}
                   >
-                    {/* Optional placeholder:
-                    <option value="" disabled>학생 선택</option> */}
                     {studentOptions.map((name) => (
                       <option key={name} value={name}>{name}</option>
                     ))}
@@ -607,19 +671,35 @@ export default function TeacherToastUI({
 
             <div className="mt-3 flex justify-between">
               <button
-                onClick={handleRepeatSubmit}
-                className="px-3 py-1 text-xs rounded-md border border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                title="매주 같은 시간/강의실로 6개월 반복 등록"
+                type="button"
+                onClick={() => setRepeatMode((v) => !v)}
+                aria-pressed={repeatMode}
+                className={`px-3 py-1 text-xs rounded-md border ${
+                  repeatMode
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                }`}
+                title="매주 같은 시간/강의실 반복 등록 토글"
               >
                 Repeat Class
               </button>
 
               <button
-                onClick={handleAddSubmit}
-                className="px-3 py-1 text-xs rounded-md bg-indigo-600 text-white hover:bg-indigo-700"
+                onClick={handleAddClick}
+                disabled={submitting}
+                className={`px-3 py-1 text-xs rounded-md ${
+                  submitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
+                } text-white disabled:opacity-60 inline-flex items-center`}
               >
-                Add
+                {submitting && (
+                  <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z" />
+                  </svg>
+                )}
+                {repeatMode ? "Add Multiple" : "Add"}
               </button>
+
             </div>
 
           </div>
