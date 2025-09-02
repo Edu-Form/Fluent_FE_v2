@@ -42,13 +42,18 @@ function convertTo12HourFormat(time24: string) {
   return `${hours12} ${suffix}`;
 }
 
-const today_formatted = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${year}. ${month}. ${day}.`;
+// KST-safe, no trailing dot
+const today_formatted = (tz = "Asia/Seoul") => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date())
+    .reduce((acc: any, p) => (acc[p.type] = p.value, acc), {});
+  return `${parts.year}. ${parts.month}. ${parts.day}`; // <-- no trailing dot
 };
+
 
 const AnnouncementPage = () => {
   const searchParams = useSearchParams();

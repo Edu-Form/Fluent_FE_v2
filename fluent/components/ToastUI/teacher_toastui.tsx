@@ -26,7 +26,6 @@ interface Props {
   variant?: Variant;                 // "compact" | "full"
   saveEndpointBase?: string;         // default: "/api/schedules"
   forceView?: "month" | "week";      // optional lock
-  // Optional defaults for Add card (handy on schedule page):
   defaults?: {
     teacher_name?: string;
     student_name?: string;
@@ -68,9 +67,15 @@ export default function TeacherToastUI({
   const popRef = useRef<HTMLDivElement | null>(null);
   const [detail, setDetail] = useState<{ event: EventObject | null; x: number; y: number } | null>(null);
 
+  // Delete choice UI state
+  const [showDeleteChoice, setShowDeleteChoice] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   // Add card popover (top-right inside calendar)
   const addRef = useRef<HTMLDivElement | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [repeatMode, setRepeatMode] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [addForm, setAddForm] = useState({
     date: ymdString(new Date()),
     room_name: defaults?.room_name ?? "101",
@@ -81,19 +86,18 @@ export default function TeacherToastUI({
   });
   const updateAdd = (patch: Partial<typeof addForm>) => setAddForm((p) => ({ ...p, ...patch }));
 
-  const [repeatMode, setRepeatMode] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
+  // anchor for Add card when opened from grid click
+  const [addAnchor, setAddAnchor] = useState<null | { x: number; y: number }>(null);
 
   // Prefill first student option when add card opens
   useEffect(() => {
     if (addOpen && !addForm.student_name && studentOptions.length > 0) {
       setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
     }
-  }, [addOpen, studentOptions]);
+  }, [addOpen, studentOptions, addForm.student_name]);
 
   // Normalize incoming -> Toast events
-  const events = useMemo(() => {
+  const eventsFromProps = useMemo(() => {
     return (data || [])
       .map((e) => {
         const eventId = e._id || e.id;
@@ -163,6 +167,15 @@ export default function TeacherToastUI({
     await postJSON(`${saveEndpointBase}/${scheduleId}`, "DELETE");
   };
 
+  // Helpers
+  const getAllEvents = (): EventObject[] => {
+    try {
+      return (calRef.current?.getEvents?.() ?? []) as EventObject[];
+    } catch {
+      return [];
+    }
+  };
+
   // --- Init Toast UI (lazy import to avoid SSR "window is not defined") ---
   useEffect(() => {
     let isMounted = true;
@@ -178,7 +191,7 @@ export default function TeacherToastUI({
           useDetailPopup: false,    // we render our own popovers
           usageStatistics: false,
           isReadOnly: false,        // enable drag & drop updates
-          gridSelection: false,     // creation via Add card (not drag-select)
+          gridSelection: true,      // enable time selection to open Add card
           template: {
             time(ev: any) {
               const student = ev?.raw?.student_name ?? "";
@@ -234,6 +247,7 @@ export default function TeacherToastUI({
 .toastui-calendar-time-schedule { border:none !important; }
 .toastui-calendar-time-schedule-block { background:#EEF2FF !important; border:1px solid #C7D2FE !important; border-radius:12px !important; box-shadow:0 1px 2px rgba(16,24,40,.06); }
 .toastui-calendar-time-schedule .toastui-calendar-event-time-content { background:transparent !important; }
+
 /* Compact 2-line event content */
 .tuic-event-sm{
   display:flex;
@@ -242,15 +256,16 @@ export default function TeacherToastUI({
   line-height:1.15;
 }
 .tuic-event-sm .tuic-line1{
-  font-size:11px;         /* smaller */
+  font-size:11px;
   font-weight:600;
-  color:#111827;          /* slate-900 */
+  color:#111827;
 }
 .tuic-event-sm .tuic-line2{
-  font-size:10px;         /* smaller */
-  color:#4b5563;          /* slate-600 */
+  font-size:10px;
+  color:#4b5563;
   font-variant-numeric: tabular-nums;
 }
+
 /* ===== Make week time slots shorter WITHOUT scaling ===== */
 /* Kill the internal min-heights and inner scroll so the 24 hours compress to fit the container */
 .toastui-calendar-panel.toastui-calendar-time { overflow-y: hidden !important; }
@@ -303,6 +318,7 @@ export default function TeacherToastUI({
           const x = (nativeEvent?.clientX ?? 0) - (rect?.left ?? 0);
           const y = (nativeEvent?.clientY ?? 0) - (rect?.top ?? 0);
           setDetail({ event, x, y });
+          setShowDeleteChoice(false);
           setAddOpen(false);
         };
 
@@ -312,13 +328,46 @@ export default function TeacherToastUI({
           saveUpdate({ ...event, ...changes }).catch((e) => alert(`저장 실패: ${e.message}`));
         };
 
+        const handleSelectDateTime = (args: any) => {
+          const { start, end, nativeEvent } = args || {};
+          if (!containerRef.current || !start) return;
+
+          // close other popovers
+          setDetail(null);
+          setShowDeleteChoice(false);
+
+          // anchor position
+          const rect = containerRef.current.getBoundingClientRect();
+          const x = (nativeEvent?.clientX ?? rect.left) - rect.left;
+          const y = (nativeEvent?.clientY ?? rect.top) - rect.top;
+
+          // clicked times
+          const s = new Date(start);
+          const e = end ? new Date(end) : new Date(s.getTime() + 60 * 60 * 1000); // default 1h
+          const hours = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 3600000));
+
+          // open Add card with prefilled values at the anchor
+          setAddOpen(true);
+          setRepeatMode(false);
+          setAddAnchor({ x, y });
+          setAddForm((p) => ({
+            ...p,
+            date: ymdString(s),
+            time: String(s.getHours()),
+            duration: String(hours),
+          }));
+
+          try { calRef.current?.clearGridSelections?.(); } catch {}
+        };
+
         calRef.current.on("clickEvent", handleClick);
         calRef.current.on("beforeUpdateEvent", handleBeforeUpdate);
+        calRef.current.on("selectDateTime", handleSelectDateTime);
       }
 
       const cal = calRef.current!;
       cal.clear();
-      if (events.length) cal.createEvents(events);
+      if (eventsFromProps.length) cal.createEvents(eventsFromProps);
       cal.setOptions({
         week: {
           hourStart: variant === "compact" ? 8 : 7,
@@ -334,24 +383,33 @@ export default function TeacherToastUI({
       try {
         cal.off("clickEvent");
         cal.off("beforeUpdateEvent");
+        cal.off("selectDateTime");
         cal.destroy();
         calRef.current = null;
       } catch {}
       isMounted = false;
     };
-  }, [events, variant, forceView]);
+  }, [eventsFromProps, variant, forceView]);
 
   // Close popovers on outside click / ESC
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node | null;
-      if (popRef.current && !popRef.current.contains(t as Node)) setDetail(null);
-      if (addRef.current && !addRef.current.contains(t as Node)) setAddOpen(false);
+      if (popRef.current && !popRef.current.contains(t as Node)) {
+        setDetail(null);
+        setShowDeleteChoice(false);
+      }
+      if (addRef.current && !addRef.current.contains(t as Node)) {
+        setAddOpen(false);
+        setAddAnchor(null);
+      }
     };
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setDetail(null);
+        setShowDeleteChoice(false);
         setAddOpen(false);
+        setAddAnchor(null);
       }
     };
     document.addEventListener("mousedown", onDown);
@@ -369,136 +427,104 @@ export default function TeacherToastUI({
   const toWeek = () => { calRef.current?.changeView("week"); setViewName("week"); };
   const toMonth = () => { calRef.current?.changeView("month"); setViewName("month"); };
 
-  // Delete from event popover
-  const handleDeleteFromPopover = async () => {
-    const ev = detail?.event;
-    if (!ev) return;
-    const scheduleId = ev.raw?.schedule_id || ev.id;
-    if (!scheduleId) return;
+  // Delete logic
+  const handleDeleteSingle = async () => {
+    if (!detail?.event) return;
+    setDeleting(true);
     try {
+      const ev = detail.event;
+      const scheduleId = ev.raw?.schedule_id || ev.id;
+      if (!scheduleId) return;
       await saveDelete(String(scheduleId));
       calRef.current?.deleteEvent(ev.id as string, ev.calendarId as string);
       setDetail(null);
+      setShowDeleteChoice(false);
     } catch (e: any) {
       alert(`삭제 실패: ${e?.message ?? e}`);
+    } finally {
+      setDeleting(false);
     }
   };
 
-// Orchestrator: called by the Add button
-const handleAddClick = async () => {
-  if (submitting) return;
-  if (repeatMode) {
-    await handleRepeatSubmit();
-  } else {
-    await handleAddSubmit();
-  }
-};
+  const handleDeleteFutureSameWeekday = async () => {
+    if (!detail?.event) return;
+    setDeleting(true);
+    try {
+      const base = detail.event;
+      const baseStart = new Date(base.start as any);
+      const baseDow = baseStart.getDay();
+      const baseDateOnly = new Date(baseStart.getFullYear(), baseStart.getMonth(), baseStart.getDate());
+      const student = base?.raw?.student_name;
 
-// SINGLE add (wrap existing logic with submitting lock)
-const handleAddSubmit = async () => {
-  if (submitting) return;
-  setSubmitting(true);
-  try {
-    const dt = toDateYMD(addForm.date);
-    const timeNum = Number(addForm.time);
-    const durNum = Number(addForm.duration);
-    if (!dt) return alert("날짜 형식: YYYY. MM. DD");
-    if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
-    if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
-    if (!addForm.room_name) return alert("Room is required");
-    if (!addForm.student_name) return alert("Student is required");
+      const all = getAllEvents();
+      const targets = all.filter((e) => {
+        const s = new Date(e.start as any);
+        const sDateOnly = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+        const sameDow = s.getDay() === baseDow;
+        const sameStudent = e?.raw?.student_name === student;
+        return sameDow && sameStudent && sDateOnly.getTime() >= baseDateOnly.getTime();
+      });
 
-    const payload = {
-      date: addForm.date,
-      time: timeNum,
-      duration: durNum,
-      room_name: addForm.room_name,
-      teacher_name: addForm.teacher_name ?? "",
-      student_name: addForm.student_name,
-      calendarId: "1",
-    };
+      for (const e of targets) {
+        const id = e.raw?.schedule_id || e.id;
+        if (id) {
+          await saveDelete(String(id));
+          calRef.current?.deleteEvent(e.id as string, e.calendarId as string);
+        }
+      }
 
-    const created = await saveCreate(payload);
-    const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-    const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), timeNum, 0, 0);
-    const end = new Date(start.getTime() + durNum * 3600000);
+      setDetail(null);
+      setShowDeleteChoice(false);
+    } catch (e: any) {
+      alert(`일괄 삭제 실패: ${e?.message ?? e}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-    calRef.current?.createEvents([{
-      id: newId,
-      calendarId: "1",
-      title: `${payload.room_name}호 ${payload.student_name}님`,
-      category: "time",
-      start,
-      end,
-      backgroundColor: "#EEF2FF",
-      borderColor: "#C7D2FE",
-      dragBackgroundColor: "#E0E7FF",
-      color: "#111827",
-      raw: {
-        schedule_id: newId,
-        room_name: payload.room_name,
-        teacher_name: payload.teacher_name,
-        student_name: payload.student_name,
-      },
-    }]);
+  // Add orchestrator
+  const handleAddClick = async () => {
+    if (submitting) return;
+    if (repeatMode) {
+      await handleRepeatSubmit();
+    } else {
+      await handleAddSubmit();
+    }
+  };
 
-    setAddOpen(false);
-    setRepeatMode(false);
-  } catch (e: any) {
-    alert(`생성 실패: ${e?.message ?? e}`);
-  } finally {
-    setSubmitting(false);
-  }
-};
+  // SINGLE add
+  const handleAddSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const dt = toDateYMD(addForm.date);
+      const timeNum = Number(addForm.time);
+      const durNum = Number(addForm.duration);
+      if (!dt) return alert("날짜 형식: YYYY. MM. DD");
+      if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
+      if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
+      if (!addForm.room_name) return alert("Room is required");
+      if (!addForm.student_name) return alert("Student is required");
 
-// REPEAT add for 1 year (weekly), with submitting lock
-const handleRepeatSubmit = async () => {
-  if (submitting) return;
-  setSubmitting(true);
-  try {
-    const base = toDateYMD(addForm.date);
-    const timeNum = Number(addForm.time);
-    const durNum = Number(addForm.duration);
-
-    if (!base) return alert("날짜 형식: YYYY. MM. DD");
-    if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
-    if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
-    if (!addForm.room_name) return alert("Room is required");
-    if (!addForm.student_name) return alert("Student is required");
-
-    // 1 year instead of 6 months
-    const until = new Date(base);
-    until.setFullYear(until.getFullYear() + 1);
-
-    const payloads: Array<{
-      date: string; time: number; duration: number;
-      room_name: string; teacher_name: string; student_name: string; calendarId?: string;
-    }> = [];
-
-    for (let d = new Date(base); d <= until; d.setDate(d.getDate() + 7)) {
-      payloads.push({
-        date: ymdString(d),
+      const payload = {
+        date: addForm.date,
         time: timeNum,
         duration: durNum,
         room_name: addForm.room_name,
         teacher_name: addForm.teacher_name ?? "",
         student_name: addForm.student_name,
         calendarId: "1",
-      });
-    }
+      };
 
-    const createdEvents: EventObject[] = [];
-    for (const p of payloads) {
-      const created = await saveCreate(p);
-      const id = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-      const d = toDateYMD(p.date)!;
-      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), timeNum, 0, 0);
+      const created = await saveCreate(payload);
+      const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
+      const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), timeNum, 0, 0);
       const end = new Date(start.getTime() + durNum * 3600000);
 
-      createdEvents.push({
-        id,
+      calRef.current?.createEvents([{
+        id: newId,
         calendarId: "1",
-        title: `${p.room_name}호 ${p.student_name}님`,
+        title: `${payload.room_name}호 ${payload.student_name}님`,
         category: "time",
         start,
         end,
@@ -507,33 +533,121 @@ const handleRepeatSubmit = async () => {
         dragBackgroundColor: "#E0E7FF",
         color: "#111827",
         raw: {
-          schedule_id: id,
-          room_name: p.room_name,
-          teacher_name: p.teacher_name,
-          student_name: p.student_name,
+          schedule_id: newId,
+          room_name: payload.room_name,
+          teacher_name: payload.teacher_name,
+          student_name: payload.student_name,
         },
-      });
+      }]);
+
+      setAddOpen(false);
+      setAddAnchor(null);
+      setRepeatMode(false);
+    } catch (e: any) {
+      alert(`생성 실패: ${e?.message ?? e}`);
+    } finally {
+      setSubmitting(false);
     }
+  };
 
-    calRef.current?.createEvents(createdEvents);
-    setAddOpen(false);
-    setRepeatMode(false);
-  } catch (e: any) {
-    alert(`반복 등록 실패: ${e?.message ?? e}`);
-  } finally {
-    setSubmitting(false);
-  }
-};
+  // REPEAT add for 1 year (weekly), with submitting lock
+  const handleRepeatSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const base = toDateYMD(addForm.date);
+      const timeNum = Number(addForm.time);
+      const durNum = Number(addForm.duration);
 
+      if (!base) return alert("날짜 형식: YYYY. MM. DD");
+      if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
+      if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
+      if (!addForm.room_name) return alert("Room is required");
+      if (!addForm.student_name) return alert("Student is required");
+
+      // 1 year
+      const until = new Date(base);
+      until.setFullYear(until.getFullYear() + 1);
+
+      const payloads: Array<{
+        date: string; time: number; duration: number;
+        room_name: string; teacher_name: string; student_name: string; calendarId?: string;
+      }> = [];
+
+      for (let d = new Date(base); d <= until; d.setDate(d.getDate() + 7)) {
+        payloads.push({
+          date: ymdString(d),
+          time: timeNum,
+          duration: durNum,
+          room_name: addForm.room_name,
+          teacher_name: addForm.teacher_name ?? "",
+          student_name: addForm.student_name,
+          calendarId: "1",
+        });
+      }
+
+      const createdEvents: EventObject[] = [];
+      for (const p of payloads) {
+        const created = await saveCreate(p);
+        const id = String(created?._id ?? `${Date.now()}-${Math.random()}`);
+        const d = toDateYMD(p.date)!;
+        const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), timeNum, 0, 0);
+        const end = new Date(start.getTime() + durNum * 3600000);
+
+        createdEvents.push({
+          id,
+          calendarId: "1",
+          title: `${p.room_name}호 ${p.student_name}님`,
+          category: "time",
+          start,
+          end,
+          backgroundColor: "#EEF2FF",
+          borderColor: "#C7D2FE",
+          dragBackgroundColor: "#E0E7FF",
+          color: "#111827",
+          raw: {
+            schedule_id: id,
+            room_name: p.room_name,
+            teacher_name: p.teacher_name,
+            student_name: p.student_name,
+          },
+        });
+      }
+
+      calRef.current?.createEvents(createdEvents);
+      setAddOpen(false);
+      setAddAnchor(null);
+      setRepeatMode(false);
+    } catch (e: any) {
+      alert(`반복 등록 실패: ${e?.message ?? e}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Positioning of the clicked-event popover
   const popStyle = (() => {
     if (!detail || !containerRef.current) return { display: "none" } as React.CSSProperties;
-    const POP_W = 320, POP_H = 180, pad = 8;
+    const POP_W = 360, POP_H = 210, pad = 8;
     const cw = containerRef.current.clientWidth;
     const ch = containerRef.current.clientHeight;
     let left = detail.x + 10;
     let top = detail.y + 10;
+    if (left + POP_W + pad > cw) left = Math.max(pad, cw - POP_W - pad);
+    if (top + POP_H + pad > ch) top = Math.max(pad, ch - POP_H - pad);
+    return { left, top, width: POP_W } as React.CSSProperties;
+  })();
+
+  // Positioning for Add card when opened from grid click
+  const addAnchoredStyle = (() => {
+    if (!addAnchor || !containerRef.current) {
+      return { top: 12, right: 12 } as React.CSSProperties; // fallback to top-right
+    }
+    const POP_W = 320, POP_H = 220, pad = 8;
+    const cw = containerRef.current.clientWidth;
+    const ch = containerRef.current.clientHeight;
+    let left = addAnchor.x + 10;
+    let top = addAnchor.y + 10;
     if (left + POP_W + pad > cw) left = Math.max(pad, cw - POP_W - pad);
     if (top + POP_H + pad > ch) top = Math.max(pad, ch - POP_H - pad);
     return { left, top, width: POP_W } as React.CSSProperties;
@@ -568,10 +682,11 @@ const handleRepeatSubmit = async () => {
           onClick={() =>
             setAddOpen((v) => {
               const next = !v;
-              if (!next) setRepeatMode(false); // clear toggle when closing
+              if (!next) setRepeatMode(false);
               if (next && !addForm.student_name && studentOptions.length > 0) {
                 setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
               }
+              setAddAnchor(null); // ensure top-right placement when opened via button
               return next;
             })
           }
@@ -580,6 +695,15 @@ const handleRepeatSubmit = async () => {
         >
           Add Class
         </button>
+
+        <a
+          href="https://fluent-erp-eight.vercel.app/student-registration"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-2 text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+        >
+          Register Student
+        </a>
 
       </div>
 
@@ -596,8 +720,9 @@ const handleRepeatSubmit = async () => {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="font-semibold text-gray-900 leading-snug">{ev.title || "이벤트"}</div>
-              <button onClick={() => setDetail(null)} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
+              <button onClick={() => { setDetail(null); setShowDeleteChoice(false); }} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
             </div>
+
             <div className="mt-2 space-y-1 text-gray-700">
               <div><span className="text-gray-500">시작:</span> {startStr}</div>
               <div><span className="text-gray-500">종료:</span> {endStr}</div>
@@ -605,8 +730,42 @@ const handleRepeatSubmit = async () => {
               {ev.raw?.student_name && <div><span className="text-gray-500">학생:</span> {ev.raw.student_name}</div>}
               {ev.raw?.teacher_name && <div><span className="text-gray-500">선생님:</span> {ev.raw.teacher_name}</div>}
             </div>
-            <div className="mt-3 flex justify-end">
-              <button onClick={handleDeleteFromPopover} className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700" title="삭제">Delete</button>
+
+            {/* Delete actions */}
+            <div className="mt-3 flex justify-end gap-2">
+              {!showDeleteChoice ? (
+                <button
+                  onClick={() => setShowDeleteChoice(true)}
+                  className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700"
+                  title="삭제"
+                >
+                  Delete
+                </button>
+              ) : (
+                <div className="flex flex-col items-stretch gap-2 w-full">
+                  <button
+                    onClick={deleting ? undefined : handleDeleteSingle}
+                    disabled={deleting}
+                    className={`px-3 py-1 text-xs rounded-md ${deleting ? "bg-rose-400" : "bg-rose-600 hover:bg-rose-700"} text-white`}
+                  >
+                    {deleting ? "Deleting..." : "Delete only this event"}
+                  </button>
+                  <button
+                    onClick={deleting ? undefined : handleDeleteFutureSameWeekday}
+                    disabled={deleting}
+                    className={`px-3 py-1 text-xs rounded-md ${deleting ? "bg-rose-400" : "bg-rose-600 hover:bg-rose-700"} text-white`}
+                    title="이 날짜 포함 이후의 동일 요일 수업 전체 삭제"
+                  >
+                    {deleting ? "Deleting..." : "Delete this weekday from this date →"}
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteChoice(false)}
+                    className="px-3 py-1 text-xs rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -615,11 +774,12 @@ const handleRepeatSubmit = async () => {
         {addOpen && (
           <div
             ref={addRef}
-            className="absolute z-50 top-3 right-3 w-[320px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+            className="absolute z-50 w-[320px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+            style={addAnchoredStyle}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="font-semibold text-gray-900 leading-snug">새 수업 등록</div>
-              <button onClick={() => setAddOpen(false)} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
+              <button onClick={() => { setAddOpen(false); setAddAnchor(null); }} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
             </div>
 
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -699,7 +859,6 @@ const handleRepeatSubmit = async () => {
                 )}
                 {repeatMode ? "Add Multiple" : "Add"}
               </button>
-
             </div>
 
           </div>
