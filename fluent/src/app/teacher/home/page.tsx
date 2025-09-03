@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
-import { IoCheckmarkCircle, IoCloseCircle, IoMenu} from "react-icons/io5";
+import { IoCheckmarkCircle, IoCloseCircle, IoMenu, IoCloseCircle as IoCloseIcon } from "react-icons/io5";
 import Link from "next/link";
 
 // 동적 컴포넌트 로딩
@@ -11,13 +11,7 @@ const Announcement = dynamic(
   () => import("@/components/Announcement/TeacherAnnouncement"),
   { ssr: false }
 );
-
-// const TeacherNotice = dynamic(() => import("@/components/TeacherNotice"), {
-//   ssr: false,
-// });
-
 const Alert = dynamic(() => import("@/components/Alert"), { ssr: false });
-
 const Teacher_toastUI = dynamic(
   () => import("@/components/ToastUI/teacher_toastui"),
   { ssr: false }
@@ -63,8 +57,6 @@ function isBetweenInclusive(d: Date | null, a: Date | null, b: Date | null) {
   return d >= min && d <= max;
 }
 
-
-
 // 로딩 컴포넌트
 const SkeletonLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-full"></div>
@@ -82,7 +74,7 @@ const HomePageContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-    // Put below other useState hooks
+  // Put below other useState hooks
   const INACTIVE_DAYS_THRESHOLD = 21;
   const MS = 24 * 60 * 60 * 1000;
 
@@ -103,10 +95,48 @@ const HomePageContent = () => {
     return withFlag;
   }, [allStudents]);
 
-
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;
 
+  // --- fetch helpers (with no-store) ---
+  const fetchSchedules = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(URL, { cache: "no-store" });
+      const data = await res.json();
+      setClasses(data || []);
+    } catch (error) {
+      console.log("Error fetching data:", error);
+    }
+  };
+
+  const fetchStudents = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(ALL_STUDENTS_URL, { cache: "no-store" });
+      const data = await res.json();
+      setAllStudents(data || []);
+    } catch (error) {
+      console.log("Error fetching students:", error);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    if (!user) return;
+    fetchSchedules();
+    fetchStudents();
+  }, [user, URL, ALL_STUDENTS_URL]);
+
+  // Listen for calendar mutations (POST/PATCH/DELETE) from toastui
+  useEffect(() => {
+    const onSaved = () => {
+      fetchSchedules();
+      fetchStudents();
+    };
+    window.addEventListener("calendar:saved", onSaved);
+    return () => window.removeEventListener("calendar:saved", onSaved);
+  }, [user, URL, ALL_STUDENTS_URL]);
 
   // 화면 크기 감지
   useEffect(() => {
@@ -153,29 +183,6 @@ const HomePageContent = () => {
       student.diary_edit ? 1 : 0,
     ].reduce((a, b) => a + b, 0);
   };
-
-
-  useEffect(() => {
-    if (!user || classes.length > 0) return;
-
-    // Fetch schedules
-    fetch(URL)
-      .then((res) => res.json())
-      .then((data) => {
-        setClasses(data);
-      })
-      .catch((error) => console.log("Error fetching data:", error));
-
-    // Fetch student list
-    fetch(ALL_STUDENTS_URL)
-      .then((res) => res.json())
-      .then(async(data) => {
-        setAllStudents(data);
-      })
-      .catch((error) => console.log("Error fetching students:", error));
-
-  }, [user, URL, ALL_STUDENTS_URL, classes.length]);
-
 
   return (
     <div className="flex flex-col md:flex-row w-full h-screen bg-gray-50">
@@ -231,7 +238,7 @@ const HomePageContent = () => {
             onClick={() => setSidebarOpen(false)}
             className="p-2 rounded-full bg-gray-100 text-gray-600"
           >
-            <IoCloseCircle size={20} />
+            <IoCloseIcon size={20} />
           </button>
         </div>
 
@@ -243,15 +250,6 @@ const HomePageContent = () => {
               <Alert />
             </Suspense>
           </div>
-
-          {/* 공지사항 */}
-          {/* <div className="bg-white rounded-lg p-4 shadow-sm md:h-[20%]">
-            <div className="h-full">
-              <Suspense fallback={<SkeletonLoader />}>
-                <TeacherNotice />
-              </Suspense>
-            </div>
-          </div> */}
 
           {/* 오늘의 학생 리스트 */}
           <div className="bg-white rounded-lg p-4 shadow-sm flex-1">
@@ -275,7 +273,12 @@ const HomePageContent = () => {
               캘린더
             </h2>
             <Suspense fallback={<SkeletonLoader />}>
-              <Teacher_toastUI data={classes} studentOptions={allStudents.map((s: any) => s.name)} defaults={{ teacher_name: user || "", room_name: "HF1", time: 18, duration: 1 }} variant="compact"/>
+              <Teacher_toastUI
+                data={classes}
+                studentOptions={allStudents.map((s: any) => s.name)}
+                defaults={{ teacher_name: user || "", room_name: "HF1", time: 18, duration: 1 }}
+                variant="compact"
+              />
             </Suspense>
           </div>
         </div>
@@ -335,7 +338,7 @@ const HomePageContent = () => {
                             {student.name}
                           </h3>
                           <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${colorClasses[progressColor]}`}
+                            className={`text-xs px-2 py-0.5 rounded-full ${colorClasses[progressColor as keyof typeof colorClasses]}`}
                           >
                             {completedCount}/4
                           </span>
@@ -499,7 +502,6 @@ const HomePageContent = () => {
                       const cellBg = isInactive ? "bg-gray-100" : "bg-white";
                       const textTone = isInactive ? "text-gray-400" : "text-gray-900";
 
-
                       return (
                         <tr
                           key={index}
@@ -592,9 +594,7 @@ const HomePageContent = () => {
                   </tbody>
                 </table>
 
-
                 {/* Step Progress View 추가 */}
-
               </div>
             )}
           </div>

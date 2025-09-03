@@ -42,17 +42,19 @@ function convertTo12HourFormat(time24: string) {
   return `${hours12} ${suffix}`;
 }
 
-// KST-safe, no trailing dot
+// KST-safe, WITH trailing dot
 const today_formatted = (tz = "Asia/Seoul") => {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: tz,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(new Date())
-    .reduce((acc: any, p) => (acc[p.type] = p.value, acc), {});
-  return `${parts.year}. ${parts.month}. ${parts.day}`; // <-- no trailing dot
+  })
+    .formatToParts(new Date())
+    .reduce((acc: any, p) => ((acc[p.type] = p.value), acc), {});
+  return `${parts.year}. ${parts.month}. ${parts.day}.`; // ← trailing dot added
 };
+
 
 
 const AnnouncementPage = () => {
