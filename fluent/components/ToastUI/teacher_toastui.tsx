@@ -196,7 +196,7 @@ export default function TeacherToastUI({
   // Build color map for teachers
   const teacherColorMap = useMemo(() => {
     const map = new Map<string, { bg: string; border: string }>();
-    uniqueTeachers.forEach((t, idx) => {
+    uniqueTeachers.forEach((t) => {
       const base =
         (teacherColors && teacherColors[t]) ||
         PASTEL_PALETTE[hashIdx(t, PASTEL_PALETTE.length)];
