@@ -23,9 +23,15 @@ interface ToastEventInput {
 
 interface Props {
   data: ToastEventInput[];
+
+  // visuals
   variant?: Variant;
-  saveEndpointBase?: string;
   forceView?: "month" | "week";
+
+  // API base for save/update/delete
+  saveEndpointBase?: string;
+
+  // defaults for "Add Class"
   defaults?: {
     teacher_name?: string;
     student_name?: string;
@@ -34,6 +40,13 @@ interface Props {
     duration?: number;   // hours
   };
   studentOptions?: string[];
+
+  /** Enable the left sidebar (admin page) */
+  enableTeacherSidebar?: boolean;
+  /** Optional allow-list / order for teacher filters; otherwise derived from data */
+  allowedTeachers?: string[];
+  /** Optional explicit per-teacher color map (background). e.g., { "Amy": "#FBCFE8" } */
+  teacherColors?: Record<string, string>;
 }
 
 /* ---------------------------- Date helpers (KST) ---------------------------- */
@@ -52,12 +65,58 @@ function toDateYMD(str?: string | null) {
 function ymdString(d: Date) {
   return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(d.getDate()).padStart(2, "0")}.`;
 }
-
 function toLocalDateOnly(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 function getDurationHours(start: Date, end: Date) {
   return Math.max(1, Math.round((end.getTime() - start.getTime()) / 3600000));
+}
+
+/* ----------------------------- Color utilities ----------------------------- */
+// Replace your existing PASTEL_PALETTE with this:
+const PASTEL_PALETTE = [
+  "#FBCFE8", // pink-200
+  "#FECDD3", // rose-200
+  "#F5D0FE", // fuchsia-200
+  "#E9D5FF", // purple-200
+  "#DDD6FE", // violet-200
+  "#C7D2FE", // indigo-200
+  "#BFDBFE", // blue-200
+  "#BAE6FD", // sky-200
+  "#A5F3FC", // cyan-200
+  "#99F6E4", // teal-200
+  "#A7F3D0", // emerald-200
+  "#BBF7D0", // green-200
+  "#D9F99D", // lime-200
+  "#FEF08A", // yellow-200
+  "#FDE68A", // amber-200
+  "#FED7AA", // orange-200
+  "#FECACA", // red-200
+  "#E7E5E4", // stone-200
+  "#E5E7EB", // gray-200
+  "#E2E8F0", // slate-200
+];
+
+
+function hashIdx(name: string, mod: number) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
+  return Math.abs(h) % Math.max(1, mod);
+}
+function shade(hex: string, p: number) {
+  // p in [-100..100], negative = darker
+  const n = Math.max(-100, Math.min(100, p));
+  const amt = (n / 100) * 255;
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  if (!m) return hex;
+  let r = parseInt(m[1], 16) + amt;
+  let g = parseInt(m[2], 16) + amt;
+  let b = parseInt(m[3], 16) + amt;
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  const toHex = (v: number) => v.toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 /* ------------------------------ UI small chip ------------------------------ */
@@ -90,6 +149,9 @@ export default function TeacherToastUI({
   forceView,
   defaults,
   studentOptions = [],
+  enableTeacherSidebar = false,
+  allowedTeachers,
+  teacherColors,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const calRef = useRef<InstanceType<CalendarCtor> | null>(null);
@@ -123,22 +185,47 @@ export default function TeacherToastUI({
     }
   }, [addOpen, studentOptions, addForm.student_name]);
 
-  /* ------------------------------ Filters state ------------------------------ */
-  const [onlyMine, setOnlyMine] = useState(false);
-  const [roomFilter, setRoomFilter] = useState<Set<string>>(new Set());
-  const [studentFilter, setStudentFilter] = useState<string | "">("");
-
-  const uniqueRooms = useMemo(() => {
+  /* ------------------------------ Teacher filters --------------------------- */
+  const uniqueTeachers = useMemo(() => {
+    if (allowedTeachers && allowedTeachers.length) return [...allowedTeachers];
     const s = new Set<string>();
-    (data || []).forEach(d => { if (d.room_name) s.add(d.room_name); });
+    (data || []).forEach(d => { const t = d.teacher_name?.trim(); if (t) s.add(t); });
     return Array.from(s).sort((a, b) => a.localeCompare(b, "en"));
-  }, [data]);
+  }, [data, allowedTeachers?.join("|")]);
 
-  const uniqueStudents = useMemo(() => {
-    const s = new Set<string>();
-    (data || []).forEach(d => { if (d.student_name) s.add(d.student_name); });
-    return Array.from(s).sort((a, b) => a.localeCompare(b, "en"));
-  }, [data]);
+  // Build color map for teachers
+  const teacherColorMap = useMemo(() => {
+    const map = new Map<string, { bg: string; border: string }>();
+    uniqueTeachers.forEach((t, idx) => {
+      const base =
+        (teacherColors && teacherColors[t]) ||
+        PASTEL_PALETTE[hashIdx(t, PASTEL_PALETTE.length)];
+      map.set(t, { bg: base, border: shade(base, -14) });
+    });
+    return map;
+  }, [uniqueTeachers.join("|"), teacherColors ? JSON.stringify(teacherColors) : ""]);
+
+  // Selected filters (default: all)
+  const [teacherFilter, setTeacherFilter] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setTeacherFilter((prev) => {
+      if (prev.size === 0) return new Set(uniqueTeachers);
+      // keep intersection; if becomes empty (teacher list changed), revert to all
+      const next = new Set<string>();
+      uniqueTeachers.forEach((t) => { if (prev.has(t)) next.add(t); });
+      return next.size ? next : new Set(uniqueTeachers);
+    });
+  }, [uniqueTeachers.join("|")]);
+
+  const toggleTeacher = (t: string) =>
+    setTeacherFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+  const selectAllTeachers = () => setTeacherFilter(new Set(uniqueTeachers));
+  const clearTeachers = () => setTeacherFilter(new Set());
 
   /* ----------------------- Normalize incoming -> events ---------------------- */
   const eventsFromProps = useMemo(() => {
@@ -152,6 +239,9 @@ export default function TeacherToastUI({
         const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), e.time, 0, 0);
         const end = new Date(start.getTime() + e.duration * 3600000);
 
+        const tName = e.teacher_name?.trim() ?? "";
+        const color = teacherColorMap.get(tName);
+
         const evt: EventObject = {
           id: String(eventId ?? (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`)),
           calendarId: e.calendarId ?? "1",
@@ -159,36 +249,33 @@ export default function TeacherToastUI({
           category: "time",
           start,
           end,
-          backgroundColor: "#EEF2FF",
-          borderColor: "#C7D2FE",
-          dragBackgroundColor: "#E0E7FF",
+          // Per-teacher color
+          backgroundColor: color?.bg ?? "#EEF2FF",
+          borderColor: color?.border ?? "#C7D2FE",
+          dragBackgroundColor: color?.bg ?? "#E0E7FF",
           color: "#111827",
           raw: {
             schedule_id: eventId,
             room_name: e.room_name,
-            teacher_name: e.teacher_name,
+            teacher_name: tName,
             student_name: e.student_name,
           },
         };
         return evt;
       })
       .filter(Boolean) as EventObject[];
-  }, [data]);
+  }, [data, teacherColorMap]);
 
-  /* ------------------------------- Apply filters ------------------------------ */
+  /* ------------------------------- Apply filters ---------------------------- */
   const filteredEvents = useMemo(() => {
-    const mineTeacher = defaults?.teacher_name?.trim();
-    return (eventsFromProps || []).filter(ev => {
-      const room = ev?.raw?.room_name || "";
-      const student = ev?.raw?.student_name || "";
+    return (eventsFromProps || []).filter((ev) => {
       const teacher = ev?.raw?.teacher_name || "";
-
-      if (onlyMine && mineTeacher && teacher !== mineTeacher) return false;
-      if (roomFilter.size > 0 && !roomFilter.has(room)) return false;
-      if (studentFilter && student !== studentFilter) return false;
+      if (enableTeacherSidebar) {
+        if (teacherFilter.size > 0 && !teacherFilter.has(teacher)) return false;
+      }
       return true;
     });
-  }, [eventsFromProps, onlyMine, roomFilter, studentFilter, defaults?.teacher_name]);
+  }, [eventsFromProps, enableTeacherSidebar, teacherFilter]);
 
   /* ------------------------------- API helpers ------------------------------- */
   const postJSON = async (url: string, method: "POST" | "PATCH" | "DELETE", body?: any) => {
@@ -374,7 +461,8 @@ export default function TeacherToastUI({
 .toastui-calendar-timegrid-now-indicator-arrow { border-bottom-color:#0ea5e9; }
 .toastui-calendar-timegrid-hour { color:#6b7280; font-size:10px; }
 .toastui-calendar-time-schedule { border:none !important; }
-.toastui-calendar-time-schedule-block { background:#EEF2FF !important; border:1px solid #C7D2FE !important; border-radius:12px !important; box-shadow:0 1px 2px rgba(16,24,40,.06); }
+/* IMPORTANT: don't hard-code colors so per-event colors show */
+.toastui-calendar-time-schedule-block { border-radius:12px !important; box-shadow:0 1px 2px rgba(16,24,40,.06); }
 .toastui-calendar-time-schedule .toastui-calendar-event-time-content { background:transparent !important; }
 .tuic-event-sm{ display:flex; flex-direction:column; gap:2px; line-height:1.15; }
 .tuic-event-sm .tuic-line1{ font-size:11px; font-weight:600; color:#111827; }
@@ -561,6 +649,8 @@ export default function TeacherToastUI({
   const goToday = () => { calRef.current?.today(); setCurrentDate(calRef.current?.getDate() ?? new Date()); };
   const goPrev  = () => { calRef.current?.prev();  setCurrentDate(calRef.current?.getDate() ?? new Date()); };
   const goNext  = () => { calRef.current?.next();  setCurrentDate(calRef.current?.getDate() ?? new Date()); };
+  const toWeek  = () => { calRef.current?.changeView("week");  setViewName("week");  };
+  const toMonth = () => { calRef.current?.changeView("month"); setViewName("month"); };
 
   /* ------------------------ Single delete (clicked event) -------------------- */
   const handleDeleteSingle = async () => {
@@ -632,7 +722,6 @@ export default function TeacherToastUI({
   };
 
   /* ------------------------- Positioning of popovers ------------------------- */
-
   const ev = detail?.event;
   const startStr = ev ? new Date(ev.start as any).toLocaleString() : "";
   const endStr = ev ? new Date(ev.end as any).toLocaleString() : "";
@@ -642,267 +731,323 @@ export default function TeacherToastUI({
   const wrapClass = variant === "compact" ? "tuic-compact" : "tuic-full";
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center my-3 gap-2">
-        <button onClick={goPrev} className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300">←</button>
-        <div className="text-xl mx-4 font-semibold tracking-tight">
-          {currentDate.getFullYear()}. {currentDate.getMonth() + 1}
-        </div>
-        <button onClick={goNext} className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300">→</button>
-        <button onClick={goToday} className="ml-2 p-1 px-3 border rounded-2xl hover:bg-slate-700 hover:text-white border-slate-300">Today</button>
+    <div className={`w-full ${enableTeacherSidebar ? "flex gap-4" : ""}`}>
+      {/* LEFT: Teacher filter sidebar (admin only) */}
+      {enableTeacherSidebar && (
+        <aside className="w-[240px] shrink-0 bg-white border border-gray-200 rounded-2xl p-3 h-fit sticky top-3">
+          <div className="font-semibold text-gray-900 mb-2">Teachers</div>
 
-        <div className="ml-4 flex items-center gap-2">
-          {!forceView && (
-            <>
-              <button onClick={() => { calRef.current?.changeView("week");  setViewName("week");  }} className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${viewName === "week"  ? "bg-slate-900 text-white" : ""}`}>Week</button>
-              <button onClick={() => { calRef.current?.changeView("month"); setViewName("month"); }} className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${viewName === "month" ? "bg-slate-900 text-white" : ""}`}>Month</button>
-            </>
-          )}
-        </div>
-
-        {/* Filters */}
-        <div className="ml-4 flex items-center gap-2 flex-wrap">
-          <Chip active={onlyMine} onClick={() => setOnlyMine(v => !v)}>
-            Mine {defaults?.teacher_name ? `(${defaults.teacher_name})` : ""}
-          </Chip>
-
-          {uniqueRooms.map(r => {
-            const active = roomFilter.has(r);
-            return (
-              <Chip
-                key={r}
-                active={active}
-                onClick={() =>
-                  setRoomFilter(prev => {
-                    const next = new Set(prev);
-                    if (next.has(r)) next.delete(r);
-                    else next.add(r);
-                    return next;
-                  })
-                }
-              >
-                Room {r}
-              </Chip>
-            );
-          })}
-
-          <select
-            className="text-xs px-2 py-1 border border-slate-300 rounded-lg bg-white"
-            value={studentFilter}
-            onChange={(e) => setStudentFilter(e.target.value as any)}
-            title="Filter by student"
-          >
-            <option value="">All students</option>
-            {uniqueStudents.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-
-          <button
-            type="button"
-            onClick={() => { setOnlyMine(false); setRoomFilter(new Set()); setStudentFilter(""); }}
-            className="text-xs px-3 py-1 rounded-full border border-slate-300 hover:bg-slate-50"
-            title="Clear filters"
-          >
-            Clear
-          </button>
-        </div>
-
-        {/* Add Calendar button */}
-        <button
-          onClick={() =>
-            setAddOpen((v) => {
-              const next = !v;
-              if (!next) setRepeatMode(false);
-              if (next && !addForm.student_name && studentOptions.length > 0) {
-                setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
-              }
-              setAddAnchor(null);
-              return next;
-            })
-          }
-          title="새 수업 등록"
-          className={`ml-auto text-xs px-3 py-1 rounded-full border ${addOpen ? "bg-indigo-600 text-white border-indigo-600" : "border-indigo-300 hover:bg-indigo-50 text-indigo-700"}`}
-        >
-          Add Class
-        </button>
-      </div>
-
-      {/* Calendar container must be relative for popovers */}
-      <div className={`relative ${wrapClass}`} style={{ width: "100%", height: calendarHeight }}>
-        <div ref={containerRef} className="absolute inset-0" />
-
-        {/* Event popover (click an event) */}
-        {ev && (
-          <div
-            ref={popRef}
-            className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
-            style={(() => {
-              if (!detail || !containerRef.current) return { display: "none" } as React.CSSProperties;
-              const POP_W = 360, POP_H = 230, pad = 8;
-              const cw = containerRef.current.clientWidth;
-              const ch = containerRef.current.clientHeight;
-              let left = detail.x + 10;
-              let top = detail.y + 10;
-              if (left + POP_W + pad > cw) left = Math.max(pad, cw - POP_W - pad);
-              if (top + POP_H + pad > ch) top = Math.max(pad, ch - POP_H - pad);
-              return { left, top, width: POP_W } as React.CSSProperties;
-            })()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="font-semibold text-gray-900 leading-snug">{ev.title || "이벤트"}</div>
-              <button onClick={() => setDetail(null)} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
-            </div>
-
-            <div className="mt-2 space-y-1 text-gray-700">
-              <div><span className="text-gray-500">시작:</span> {startStr}</div>
-              <div><span className="text-gray-500">종료:</span> {endStr}</div>
-              {ev.raw?.room_name && <div><span className="text-gray-500">강의실:</span> {ev.raw.room_name}</div>}
-              {ev.raw?.student_name && <div><span className="text-gray-500">학생:</span> {ev.raw.student_name}</div>}
-              {ev.raw?.teacher_name && <div><span className="text-gray-500">선생님:</span> {ev.raw.teacher_name}</div>}
-            </div>
-
-            {/* Action buttons */}
-            <div className="mt-3 flex flex-col gap-2">
-              <button
-                onClick={handleDeleteSingle}
-                className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700"
-                title="삭제"
-              >
-                Delete (single)
-              </button>
-
-              <button
-                onClick={() => openBulkDeletePanel(ev, { x: (detail?.x ?? 0), y: (detail?.y ?? 0) })}
-                className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700"
-                title="같은 학생 & 같은 요일 & 같은 시간/길이(이 날짜 포함 이후) 삭제"
-              >
-                Delete future classes
-              </button>
-            </div>
+          <div className="flex items-center gap-2 mb-3">
+            <button onClick={selectAllTeachers} className="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50">Select All</button>
+            <button onClick={clearTeachers} className="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50">Clear</button>
           </div>
-        )}
 
-        {/* Add card */}
-        {addOpen && (
-          <div
-            ref={addRef}
-            className="absolute z-50 w-[320px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
-            style={(() => {
-              if (!addAnchor || !containerRef.current) return { top: 12, right: 12 } as React.CSSProperties;
-              const POP_W = 320, POP_H = 220, pad = 8;
-              const cw = containerRef.current.clientWidth;
-              const ch = containerRef.current.clientHeight;
-              let left = addAnchor.x + 10;
-              let top = addAnchor.y + 10;
-              if (left + POP_W + pad > cw) left = Math.max(pad, cw - POP_W - pad);
-              if (top + POP_H + pad > ch) top = Math.max(pad, ch - POP_H - pad);
-              return { left, top, width: POP_W } as React.CSSProperties;
-            })()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="font-semibold text-gray-900 leading-snug">새 수업 등록</div>
-              <button onClick={() => { setAddOpen(false); setAddAnchor(null); }} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
+          <div className="space-y-2 max-h-[60vh] overflow-auto pr-1">
+            {uniqueTeachers.map((t) => {
+              const c = teacherColorMap.get(t);
+              const active = teacherFilter.has(t);
+              return (
+                <label key={t} className={`flex items-center gap-2 text-sm rounded-lg px-2 py-1 cursor-pointer ${active ? "bg-slate-50" : ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={active}
+                    onChange={() => toggleTeacher(t)}
+                    className="accent-slate-700"
+                  />
+                  <span className="inline-flex items-center gap-2">
+                    <span className="w-3.5 h-3.5 rounded" style={{ backgroundColor: c?.bg, border: `1px solid ${c?.border}` }} />
+                    <span className="text-gray-800">{t}</span>
+                  </span>
+                </label>
+              );
+            })}
+            {uniqueTeachers.length === 0 && (
+              <div className="text-xs text-gray-500">No teachers in current data.</div>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {/* RIGHT: Header + Calendar */}
+      <div className="flex-1">
+        {/* Header */}
+        <div className="flex items-center my-3 gap-2">
+          <button onClick={goPrev} className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300">←</button>
+          <div className="text-xl mx-4 font-semibold tracking-tight">
+            {currentDate.getFullYear()}. {currentDate.getMonth() + 1}
+          </div>
+          <button onClick={goNext} className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300">→</button>
+          <button onClick={goToday} className="ml-2 p-1 px-3 border rounded-2xl hover:bg-slate-700 hover:text-white border-slate-300">Today</button>
+
+          {!forceView && (
+            <div className="ml-2 flex items-center gap-2">
+              <button onClick={toWeek}  className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${viewName === "week"  ? "bg-slate-900 text-white" : ""}`}>Week</button>
+              <button onClick={toMonth} className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${viewName === "month" ? "bg-slate-900 text-white" : ""}`}>Month</button>
             </div>
+          )}
 
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <label className="text-xs">
-                <div className="text-gray-600 mb-1">Date</div>
-                <input
-                  className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                  value={addForm.date}
-                  onChange={(e) => updateAdd({ date: e.target.value })}
-                  onBlur={(e) => { const dt = toDateYMD(e.target.value); if (dt) updateAdd({ date: ymdString(dt) }); }}
-                  placeholder="YYYY. MM. DD."
-                />
-              </label>
-              <label className="text-xs">
-                <div className="text-gray-600 mb-1">Room</div>
-                <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.room_name} onChange={(e) => updateAdd({ room_name: e.target.value })} placeholder="101" />
-              </label>
-              <label className="text-xs">
-                <div className="text-gray-600 mb-1">Time</div>
-                <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.time} onChange={(e) => updateAdd({ time: e.target.value })} placeholder="18" />
-              </label>
-              <label className="text-xs">
-                <div className="text-gray-600 mb-1">Duration</div>
-                <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.duration} onChange={(e) => updateAdd({ duration: e.target.value })} placeholder="1" />
-              </label>
+          <div className="ml-auto flex items-center gap-2">
+            <a
+              href="/teacher/schedule/admin/"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open Full Calendar"
+              className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+            >
+              Full Calendar
+            </a>
 
-              <label className="text-xs col-span-2">
-                <div className="text-gray-600 mb-1">Student</div>
-                {studentOptions.length ? (
-                  <select
-                    className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                    value={addForm.student_name}
-                    onChange={(e) => updateAdd({ student_name: e.target.value })}
-                  >
-                    {studentOptions.map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
-                ) : (
+            <a
+              href="https://fluent-erp-eight.vercel.app/student-registration"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open Student Registration"
+              className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+            >
+              Student Registration
+            </a>
+
+            {/* Add Calendar button */}
+            <button
+              onClick={() =>
+                setAddOpen((v) => {
+                  const next = !v;
+                  if (!next) setRepeatMode(false);
+                  if (next && !addForm.student_name && studentOptions.length > 0) {
+                    setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
+                  }
+                  setAddAnchor(null);
+                  return next;
+                })
+              }
+              title="새 수업 등록"
+              className={`text-xs px-3 py-1 rounded-full border ${addOpen ? "bg-indigo-600 text-white border-indigo-600" : "border-indigo-300 hover:bg-indigo-50 text-indigo-700"}`}
+            >
+              Add Class
+            </button>
+          </div>
+        </div>
+
+        {/* Calendar container must be relative for popovers */}
+        <div className={`relative ${wrapClass}`} style={{ width: "100%", height: calendarHeight }}>
+          <div ref={containerRef} className="absolute inset-0" />
+
+          {/* Event popover (click an event) */}
+          {ev && (
+            <div
+              ref={popRef}
+              className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+              style={(() => {
+                if (!detail || !containerRef.current) return { display: "none" } as React.CSSProperties;
+                const POP_W = 360, POP_H = 230, pad = 8;
+                const cw = containerRef.current.clientWidth;
+                const ch = containerRef.current.clientHeight;
+                let left = detail.x + 10;
+                let top = detail.y + 10;
+                if (left + POP_W + pad > cw) left = Math.max(pad, cw - POP_W - pad);
+                if (top + POP_H + pad > ch) top = Math.max(pad, ch - POP_H - pad);
+                return { left, top, width: POP_W } as React.CSSProperties;
+              })()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-semibold text-gray-900 leading-snug">{ev.title || "이벤트"}</div>
+                <button onClick={() => setDetail(null)} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
+              </div>
+
+              <div className="mt-2 space-y-1 text-gray-700">
+                <div><span className="text-gray-500">시작:</span> {startStr}</div>
+                <div><span className="text-gray-500">종료:</span> {endStr}</div>
+                {ev.raw?.room_name && <div><span className="text-gray-500">강의실:</span> {ev.raw.room_name}</div>}
+                {ev.raw?.student_name && <div><span className="text-gray-500">학생:</span> {ev.raw.student_name}</div>}
+                {ev.raw?.teacher_name && <div><span className="text-gray-500">선생님:</span> {ev.raw.teacher_name}</div>}
+              </div>
+
+              {/* Action buttons */}
+              <div className="mt-3 flex flex-col gap-2">
+                <button
+                  onClick={handleDeleteSingle}
+                  className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700"
+                  title="삭제"
+                >
+                  Delete (single)
+                </button>
+
+                <button
+                  onClick={() => openBulkDeletePanel(ev, { x: (detail?.x ?? 0), y: (detail?.y ?? 0) })}
+                  className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700"
+                  title="같은 학생 & 같은 요일 & 같은 시간/길이(이 날짜 포함 이후) 삭제"
+                >
+                  Delete future classes
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Add card */}
+          {addOpen && (
+            <div
+              ref={addRef}
+              className="absolute z-50 w-[320px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+              style={(() => {
+                if (!addAnchor || !containerRef.current) return { top: 12, right: 12 } as React.CSSProperties;
+                const POP_W = 320, POP_H = 220, pad = 8;
+                const cw = containerRef.current.clientWidth;
+                const ch = containerRef.current.clientHeight;
+                let left = addAnchor.x + 10;
+                let top = addAnchor.y + 10;
+                if (left + POP_W + pad > cw) left = Math.max(pad, cw - POP_W - pad);
+                if (top + POP_H + pad > ch) top = Math.max(pad, ch - POP_H - pad);
+                return { left, top, width: POP_W } as React.CSSProperties;
+              })()}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="font-semibold text-gray-900 leading-snug">새 수업 등록</div>
+                <button onClick={() => { setAddOpen(false); setAddAnchor(null); }} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="text-xs">
+                  <div className="text-gray-600 mb-1">Date</div>
                   <input
                     className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                    value={addForm.student_name}
-                    onChange={(e) => updateAdd({ student_name: e.target.value })}
-                    placeholder="홍길동"
+                    value={addForm.date}
+                    onChange={(e) => updateAdd({ date: e.target.value })}
+                    onBlur={(e) => { const dt = toDateYMD(e.target.value); if (dt) updateAdd({ date: ymdString(dt) }); }}
+                    placeholder="YYYY. MM. DD."
                   />
-                )}
-              </label>
+                </label>
+                <label className="text-xs">
+                  <div className="text-gray-600 mb-1">Room</div>
+                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.room_name} onChange={(e) => updateAdd({ room_name: e.target.value })} placeholder="101" />
+                </label>
+                <label className="text-xs">
+                  <div className="text-gray-600 mb-1">Time</div>
+                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.time} onChange={(e) => updateAdd({ time: e.target.value })} placeholder="18" />
+                </label>
+                <label className="text-xs">
+                  <div className="text-gray-600 mb-1">Duration</div>
+                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.duration} onChange={(e) => updateAdd({ duration: e.target.value })} placeholder="1" />
+                </label>
 
-              <label className="text-xs col-span-2">
-                <div className="text-gray-600 mb-1">Teacher</div>
-                <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.teacher_name} onChange={(e) => updateAdd({ teacher_name: e.target.value })} placeholder="김선생" />
-              </label>
-            </div>
+                <label className="text-xs col-span-2">
+                  <div className="text-gray-600 mb-1">Student</div>
+                  {studentOptions.length ? (
+                    <select
+                      className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                      value={addForm.student_name}
+                      onChange={(e) => updateAdd({ student_name: e.target.value })}
+                    >
+                      {studentOptions.map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                      value={addForm.student_name}
+                      onChange={(e) => updateAdd({ student_name: e.target.value })}
+                      placeholder="홍길동"
+                    />
+                  )}
+                </label>
 
-            <div className="mt-3 flex justify-between">
-              <button
-                type="button"
-                onClick={() => setRepeatMode((v) => !v)}
-                aria-pressed={repeatMode}
-                className={`px-3 py-1 text-xs rounded-md border ${
-                  repeatMode
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                }`}
-                title="매주 같은 시간/강의실 반복 등록 토글"
-              >
-                Repeat Class
-              </button>
+                <label className="text-xs col-span-2">
+                  <div className="text-gray-600 mb-1">Teacher</div>
+                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.teacher_name} onChange={(e) => updateAdd({ teacher_name: e.target.value })} placeholder="김선생" />
+                </label>
+              </div>
 
-              <button
-                onClick={async () => {
-                  if (submitting) return;
-                  setSubmitting(true);
-                  try {
-                    if (repeatMode) {
-                      const base = toDateYMD(addForm.date);
-                      const timeNum = Number(addForm.time);
-                      const durNum = Number(addForm.duration);
-                      if (!base) return alert("날짜 형식: YYYY. MM. DD");
-                      if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
-                      if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
-                      if (!addForm.room_name) return alert("Room is required");
-                      if (!addForm.student_name) return alert("Student is required");
+              <div className="mt-3 flex justify-between">
+                <button
+                  type="button"
+                  onClick={() => setRepeatMode((v) => !v)}
+                  aria-pressed={repeatMode}
+                  className={`px-3 py-1 text-xs rounded-md border ${
+                    repeatMode
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                  }`}
+                  title="매주 같은 시간/강의실 반복 등록 토글"
+                >
+                  Repeat Class
+                </button>
 
-                      const until = new Date(base);
-                      until.setFullYear(until.getFullYear() + 1);
+                <button
+                  onClick={async () => {
+                    if (submitting) return;
+                    setSubmitting(true);
+                    try {
+                      if (repeatMode) {
+                        const base = toDateYMD(addForm.date);
+                        const timeNum = Number(addForm.time);
+                        const durNum = Number(addForm.duration);
+                        if (!base) return alert("날짜 형식: YYYY. MM. DD");
+                        if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
+                        if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
+                        if (!addForm.room_name) return alert("Room is required");
+                        if (!addForm.student_name) return alert("Student is required");
 
-                      const createdEvents: EventObject[] = [];
+                        const until = new Date(base);
+                        until.setFullYear(until.getFullYear() + 1);
 
-                      // normalize to local midnight to avoid DST drift
-                      const baseLocal  = new Date(base.getFullYear(),  base.getMonth(),  base.getDate());
-                      const untilLocal = new Date(until.getFullYear(), until.getMonth(), until.getDate());
+                        const createdEvents: EventObject[] = [];
 
-                      for (let i = 0; ; i++) {
-                        const iter = new Date(baseLocal.getFullYear(), baseLocal.getMonth(), baseLocal.getDate() + i * 7);
-                        if (iter > untilLocal) break;
+                        // normalize to local midnight to avoid DST drift
+                        const baseLocal  = new Date(base.getFullYear(),  base.getMonth(),  base.getDate());
+                        const untilLocal = new Date(until.getFullYear(), until.getMonth(), until.getDate());
+
+                        for (let i = 0; ; i++) {
+                          const iter = new Date(baseLocal.getFullYear(), baseLocal.getMonth(), baseLocal.getDate() + i * 7);
+                          if (iter > untilLocal) break;
+
+                          const payload = {
+                            date: ymdString(iter),             // "YYYY. MM. DD."
+                            time: timeNum,
+                            duration: durNum,
+                            room_name: addForm.room_name,
+                            teacher_name: addForm.teacher_name ?? "",
+                            student_name: addForm.student_name,
+                            calendarId: "1",
+                          };
+
+                          const created = await saveCreate(payload);
+                          const id = String(created?._id ?? `${Date.now()}-${Math.random()}`);
+                          const start = new Date(iter.getFullYear(), iter.getMonth(), iter.getDate(), timeNum, 0, 0);
+                          const end = new Date(start.getTime() + durNum * 3600000);
+
+                          createdEvents.push({
+                            id,
+                            calendarId: "1",
+                            title: `${payload.room_name}호 ${payload.student_name}님`,
+                            category: "time",
+                            start,
+                            end,
+                            backgroundColor: teacherColorMap.get(payload.teacher_name)?.bg ?? "#EEF2FF",
+                            borderColor: teacherColorMap.get(payload.teacher_name)?.border ?? "#C7D2FE",
+                            dragBackgroundColor: teacherColorMap.get(payload.teacher_name)?.bg ?? "#E0E7FF",
+                            color: "#111827",
+                            raw: {
+                              schedule_id: id,
+                              room_name: payload.room_name,
+                              teacher_name: payload.teacher_name,
+                              student_name: payload.student_name,
+                            },
+                          });
+                        }
+
+                        calRef.current?.createEvents(createdEvents);
+                      } else {
+                        const dt = toDateYMD(addForm.date);
+                        const timeNum = Number(addForm.time);
+                        const durNum = Number(addForm.duration);
+                        if (!dt) return alert("날짜 형식: YYYY. MM. DD");
+                        if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
+                        if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
+                        if (!addForm.room_name) return alert("Room is required");
+                        if (!addForm.student_name) return alert("Student is required");
 
                         const payload = {
-                          date: ymdString(iter),             // "YYYY. MM. DD."
+                          date: addForm.date,
                           time: timeNum,
                           duration: durNum,
                           room_name: addForm.room_name,
@@ -912,172 +1057,128 @@ export default function TeacherToastUI({
                         };
 
                         const created = await saveCreate(payload);
-                        const id = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-                        const start = new Date(iter.getFullYear(), iter.getMonth(), iter.getDate(), timeNum, 0, 0);
+                        const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
+                        const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), timeNum, 0, 0);
                         const end = new Date(start.getTime() + durNum * 3600000);
 
-                        createdEvents.push({
-                          id,
+                        const color = teacherColorMap.get(payload.teacher_name);
+
+                        calRef.current?.createEvents([{
+                          id: newId,
                           calendarId: "1",
                           title: `${payload.room_name}호 ${payload.student_name}님`,
                           category: "time",
                           start,
                           end,
-                          backgroundColor: "#EEF2FF",
-                          borderColor: "#C7D2FE",
-                          dragBackgroundColor: "#E0E7FF",
+                          backgroundColor: color?.bg ?? "#EEF2FF",
+                          borderColor: color?.border ?? "#C7D2FE",
+                          dragBackgroundColor: color?.bg ?? "#E0E7FF",
                           color: "#111827",
                           raw: {
-                            schedule_id: id,
+                            schedule_id: newId,
                             room_name: payload.room_name,
                             teacher_name: payload.teacher_name,
                             student_name: payload.student_name,
                           },
-                        });
+                        }]);
                       }
 
-
-                      calRef.current?.createEvents(createdEvents);
-                    } else {
-                      const dt = toDateYMD(addForm.date);
-                      const timeNum = Number(addForm.time);
-                      const durNum = Number(addForm.duration);
-                      if (!dt) return alert("날짜 형식: YYYY. MM. DD");
-                      if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
-                      if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
-                      if (!addForm.room_name) return alert("Room is required");
-                      if (!addForm.student_name) return alert("Student is required");
-
-                      const payload = {
-                        date: addForm.date,
-                        time: timeNum,
-                        duration: durNum,
-                        room_name: addForm.room_name,
-                        teacher_name: addForm.teacher_name ?? "",
-                        student_name: addForm.student_name,
-                        calendarId: "1",
-                      };
-
-                      const created = await saveCreate(payload);
-                      const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-                      const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), timeNum, 0, 0);
-                      const end = new Date(start.getTime() + durNum * 3600000);
-
-                      calRef.current?.createEvents([{
-                        id: newId,
-                        calendarId: "1",
-                        title: `${payload.room_name}호 ${payload.student_name}님`,
-                        category: "time",
-                        start,
-                        end,
-                        backgroundColor: "#EEF2FF",
-                        borderColor: "#C7D2FE",
-                        dragBackgroundColor: "#E0E7FF",
-                        color: "#111827",
-                        raw: {
-                          schedule_id: newId,
-                          room_name: payload.room_name,
-                          teacher_name: payload.teacher_name,
-                          student_name: payload.student_name,
-                        },
-                      }]);
+                      setAddOpen(false);
+                      setAddAnchor(null);
+                      setRepeatMode(false);
+                    } catch (e: any) {
+                      alert(`생성 실패: ${e?.message ?? e}`);
+                    } finally {
+                      setSubmitting(false);
                     }
-
-                    setAddOpen(false);
-                    setAddAnchor(null);
-                    setRepeatMode(false);
-                  } catch (e: any) {
-                    alert(`생성 실패: ${e?.message ?? e}`);
-                  } finally {
-                    setSubmitting(false);
-                  }
-                }}
-                disabled={submitting}
-                className={`px-3 py-1 text-xs rounded-md ${submitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"} text-white disabled:opacity-60 inline-flex items-center`}
-              >
-                {submitting && (
-                  <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z" />
-                  </svg>
-                )}
-                {repeatMode ? "Add Multiple" : "Add"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Bulk action mini-panel */}
-        {bulkPanel && (
-          <div
-            ref={bulkRef}
-            className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
-            style={bulkPanelStyle}
-          >
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="font-semibold text-gray-900 leading-snug">
-                {bulkPanel.kind === "delete" ? "Delete future classes?" : "Update all future classes?"}
+                  }}
+                  disabled={submitting}
+                  className={`px-3 py-1 text-xs rounded-md ${submitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"} text-white disabled:opacity-60 inline-flex items-center`}
+                >
+                  {submitting && (
+                    <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z" />
+                    </svg>
+                  )}
+                  {repeatMode ? "Add Multiple" : "Add"}
+                </button>
               </div>
-              <button
-                onClick={() => (!bulkPanel.saving ? closeBulkPanel() : null)}
-                className={`text-gray-400 hover:text-gray-600 rounded-md px-2 ${bulkPanel.saving ? "opacity-40 cursor-not-allowed" : ""}`}
-                aria-label="Close"
-                title="닫기"
-                disabled={bulkPanel.saving}
-              >
-                ✕
-              </button>
             </div>
+          )}
 
-            {bulkPanel.kind === "delete" ? (
-              <>
-                <p className="text-gray-700 mb-3">
-                  같은 <b>학생</b> · 같은 <b>요일</b> · 같은 <b>시작시간(시 단위)/길이</b>를
-                  <b> 이 날짜 포함 이후</b> 모두 삭제합니다. 계속할까요?
-                </p>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => (!bulkPanel.saving ? closeBulkPanel() : null)}
-                    className="px-3 py-1 text-xs rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    disabled={bulkPanel.saving}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={bulkPanel.saving ? undefined : confirmDeleteMany}
-                    disabled={bulkPanel.saving}
-                    className={`px-3 py-1 text-xs rounded-md ${bulkPanel.saving ? "bg-rose-400" : "bg-rose-600 hover:bg-rose-700"} text-white`}
-                  >
-                    {bulkPanel.saving ? "Deleting..." : "Delete future"}
-                  </button>
+          {/* Bulk action mini-panel */}
+          {bulkPanel && (
+            <div
+              ref={bulkRef}
+              className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+              style={bulkPanelStyle}
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="font-semibold text-gray-900 leading-snug">
+                  {bulkPanel.kind === "delete" ? "Delete future classes?" : "Update all future classes?"}
                 </div>
-              </>
-            ) : (
-              <>
-                <p className="text-gray-700 mb-3">
-                  같은 <b>학생</b> · 같은 <b>요일</b> · <b>원래 시작시간(시 단위)/길이</b>에 해당하는 수업을
-                  <b> 이 날짜 포함 이후</b> 모두 현재 시간/길이로 업데이트할까요?
-                </p>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => (!bulkPanel.saving ? closeBulkPanel() : null)}
-                    className="px-3 py-1 text-xs rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    disabled={bulkPanel.saving}
-                  >
-                    Not now
-                  </button>
-                  <button
-                    onClick={bulkPanel.saving ? undefined : confirmUpdateFuture}
-                    disabled={bulkPanel.saving}
-                    className={`px-3 py-1 text-xs rounded-md ${bulkPanel.saving ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"} text-white`}
-                  >
-                    {bulkPanel.saving ? "Updating..." : "Update all future"}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                <button
+                  onClick={() => (!bulkPanel.saving ? closeBulkPanel() : null)}
+                  className={`text-gray-400 hover:text-gray-600 rounded-md px-2 ${bulkPanel.saving ? "opacity-40 cursor-not-allowed" : ""}`}
+                  aria-label="Close"
+                  title="닫기"
+                  disabled={bulkPanel.saving}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {bulkPanel.kind === "delete" ? (
+                <>
+                  <p className="text-gray-700 mb-3">
+                    같은 <b>학생</b> · 같은 <b>요일</b> · 같은 <b>시작시간(시 단위)/길이</b>를
+                    <b> 이 날짜 포함 이후</b> 모두 삭제합니다. 계속할까요?
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => (!bulkPanel.saving ? closeBulkPanel() : null)}
+                      className="px-3 py-1 text-xs rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      disabled={bulkPanel.saving}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={bulkPanel.saving ? undefined : confirmDeleteMany}
+                      disabled={bulkPanel.saving}
+                      className={`px-3 py-1 text-xs rounded-md ${bulkPanel.saving ? "bg-rose-400" : "bg-rose-600 hover:bg-rose-700"} text-white`}
+                    >
+                      {bulkPanel.saving ? "Deleting..." : "Delete future"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-700 mb-3">
+                    같은 <b>학생</b> · 같은 <b>요일</b> · <b>원래 시작시간(시 단위)/길이</b>에 해당하는 수업을
+                    <b> 이 날짜 포함 이후</b> 모두 현재 시간/길이로 업데이트할까요?
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => (!bulkPanel.saving ? closeBulkPanel() : null)}
+                      className="px-3 py-1 text-xs rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                      disabled={bulkPanel.saving}
+                    >
+                      Not now
+                    </button>
+                    <button
+                      onClick={bulkPanel.saving ? undefined : confirmUpdateFuture}
+                      disabled={bulkPanel.saving}
+                      className={`px-3 py-1 text-xs rounded-md ${bulkPanel.saving ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"} text-white`}
+                    >
+                      {bulkPanel.saving ? "Updating..." : "Update all future"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
