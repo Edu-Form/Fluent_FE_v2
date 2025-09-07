@@ -120,27 +120,27 @@ function shade(hex: string, p: number) {
 }
 
 /* ------------------------------ UI small chip ------------------------------ */
-const Chip = ({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={`px-3 py-1 rounded-full border text-xs transition-colors ${
-      active
-        ? "bg-slate-900 text-white border-slate-900"
-        : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-    }`}
-  >
-    {children}
-  </button>
-);
+// const Chip = ({
+//   active,
+//   onClick,
+//   children,
+// }: {
+//   active: boolean;
+//   onClick: () => void;
+//   children: React.ReactNode;
+// }) => (
+//   <button
+//     type="button"
+//     onClick={onClick}
+//     className={`px-3 py-1 rounded-full border text-xs transition-colors ${
+//       active
+//         ? "bg-slate-900 text-white border-slate-900"
+//         : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+//     }`}
+//   >
+//     {children}
+//   </button>
+// );
 
 export default function TeacherToastUI({
   data,
