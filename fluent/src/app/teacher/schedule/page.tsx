@@ -2,13 +2,13 @@
 
 import React, { useEffect, useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import ChatSchedulerPanel from "@/components/ChatSchedulerPanel";
 import TeacherToastUI from "@/components/ToastUI/teacher_toastui";
+import BillingPanel from "@/components/BillingPanel"; // 👈 NEW
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ScheduledRow = {
   _id?: string;
-  date: string;         // "YYYY. MM. DD" (no trailing dot in calendar keys)
+  date: string;         // "YYYY. MM. DD"
   time?: string;
   room_name?: string;
   duration?: string;
@@ -19,7 +19,6 @@ type ScheduledRow = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const normalizeDotDate = (raw: string | null | undefined) => {
   if (!raw) return "";
-  // Trim, remove trailing ".", collapse spaces => "YYYY. MM. DD"
   return raw.trim().replace(/\.$/, "").replace(/\s+/g, " ");
 };
 
@@ -28,19 +27,19 @@ function StudentCalendarWithChatInner() {
   const searchParams = useSearchParams();
   const studentName = searchParams.get("student_name") ?? "";
   const teacherName = searchParams.get("user") ?? ""; // from URL
+
   // Schedules (teacher planned)
   const [scheduleDates, setScheduleDates] = useState<string[]>([]);
   const [scheduledRows, setScheduledRows] = useState<ScheduledRow[]>([]);
   const [schedulesLoaded, setSchedulesLoaded] = useState(false);
 
-  // Quizlets/class-notes (actually happened)
+  // Class notes (quizlets: actually happened)
   const [quizletDates, setQuizletDates] = useState<string[]>([]);
   const [quizletsLoaded, setQuizletsLoaded] = useState(false);
 
   // ── Fetch schedules for the student ─────────────────────────────────────────
   useEffect(() => {
     if (!studentName) return;
-
     const fetchSchedules = async () => {
       try {
         const res = await fetch(
@@ -75,14 +74,12 @@ function StudentCalendarWithChatInner() {
         setSchedulesLoaded(true);
       }
     };
-
     fetchSchedules();
   }, [studentName]);
 
   // ── Fetch quizlet (class actually happened) dates ───────────────────────────
   useEffect(() => {
     if (!studentName) return;
-
     const fetchQuizlets = async () => {
       try {
         const res = await fetch(
@@ -105,23 +102,10 @@ function StudentCalendarWithChatInner() {
         setQuizletsLoaded(true);
       }
     };
-
     fetchQuizlets();
   }, [studentName]);
 
-  useEffect(() => {
-  const handler = () => {
-    refetchSchedules();   // will re-pull from /api/schedules/student/...
-  };
-  window.addEventListener("calendar:saved", handler);
-  return () => window.removeEventListener("calendar:saved", handler);
-}, [studentName]); // or [refetchSchedules] if you make it stable with useCallback
-
-
-  // ── Sets & comparisons ──────────────────────────────────────────────────────
-  const scheduleSet = useMemo(() => new Set(scheduleDates), [scheduleDates]);
-
-  // ✅ refresh only the calendar (schedules) after chat create/update/delete
+  // Refresh calendar after ToastUI save/update/delete (kept intact)
   const refetchSchedules = async () => {
     if (!studentName) return;
     try {
@@ -154,9 +138,17 @@ function StudentCalendarWithChatInner() {
     }
   };
 
+  useEffect(() => {
+    const handler = () => { refetchSchedules(); };
+    window.addEventListener("calendar:saved", handler);
+    return () => window.removeEventListener("calendar:saved", handler);
+  }, [studentName]);
+
+  const ready = schedulesLoaded && quizletsLoaded;
+
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Left: Calendar (2/3) */}
+      {/* Left: Calendar (2/3) – unchanged */}
       <div className="w-2/3 p-6 bg-white shadow-md flex flex-col">
         <TeacherToastUI
           data={scheduledRows.map((s) => ({
@@ -171,26 +163,17 @@ function StudentCalendarWithChatInner() {
           }))}
           variant="full"
           forceView="month"
-          studentOptions={[studentName]}             // 👈 single option
+          studentOptions={[studentName]}
           defaults={{ teacher_name: teacherName, student_name: studentName, room_name: "HF1", time: 18, duration: 1 }}
         />
       </div>
 
-
-      {/* Right: Chat UI (1/3) */}
-      <ChatSchedulerPanel
+      {/* Right: Billing (1/3) – replaces Chat UI */}
+      <BillingPanel
         studentName={studentName ?? ""}
         teacherName={teacherName || undefined}
-        unscheduledDates={useMemo(() => quizletDates.filter((d) => !scheduleSet.has(d)), [quizletDates, scheduleSet])}
-        scheduled={scheduledRows}
-        ready={schedulesLoaded && quizletsLoaded}
-        onApply={(items) => {
-          // optimistic add to calendar (dates only)
-          setScheduleDates((prev) => {
-            const add = items.map((i) => normalizeDotDate(i.date));
-            return Array.from(new Set([...prev, ...add]));
-          });
-        }}
+        quizletDates={quizletDates}
+        scheduledRows={scheduledRows}
         onRefreshCalendar={refetchSchedules}
       />
     </div>

@@ -46,7 +46,7 @@ const LoadingSpinner = () => (
 // QuizletCardProps 인터페이스 정의
 interface QuizletCardProps {
   _id: string;
-  date: string;
+  class_date: string;
   student_name: string;
   eng_quizlet: string[];
   kor_quizlet: string[];
@@ -586,7 +586,7 @@ const QuizletCardContent = ({
 
     // 상단에 제목 추가
     doc.setFontSize(16);
-    doc.text(`Quizlet for ${content.date}`, 10, 15);
+    doc.text(`Quizlet for ${content.class_date}`, 10, 15);
 
     doc.setFontSize(10);
     let y = 25; // 시작 Y 위치
@@ -622,7 +622,7 @@ const QuizletCardContent = ({
       }
     });
 
-    doc.save(`${content.date} ${content.student_name}'s Quizlet.pdf`);
+    doc.save(`${content.class_date} ${content.student_name}'s Quizlet.pdf`);
   };
 
   // TTS 함수
@@ -859,7 +859,7 @@ const QuizletCardContent = ({
     setIsDatePickerOpen(false);
   };
 
-  const currentDate = new Date(content.date);
+  const currentDate = new Date(content.class_date);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
   const day = currentDate.getDate();
@@ -951,7 +951,7 @@ const QuizletCardContent = ({
             >
               <FiCalendar className="mr-1" />
               <span className="truncate">
-                {isNaN(currentDate.getTime()) ? content.date : formattedDate}
+                {isNaN(currentDate.getTime()) ? content.class_date : formattedDate}
               </span>
             </span>
           )}
@@ -1397,9 +1397,9 @@ const QuizletCardContent = ({
                       onClick={() => handleDateSelect(idx)}
                       className="text-left flex-1 truncate"
                     >
-                      {isNaN(new Date(item.date).getTime())
-                        ? item.date
-                        : new Date(item.date).toLocaleDateString("ko-KR", {
+                      {isNaN(new Date(item.class_date).getTime())
+                        ? item.class_date
+                        : new Date(item.class_date).toLocaleDateString("ko-KR", {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
