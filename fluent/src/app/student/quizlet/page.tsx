@@ -56,7 +56,7 @@ const parseToSafariDate = (dateString: string): Date | null => {
 // QuizletCardProps 인터페이스 정의
 interface QuizletCardProps {
   _id: string;
-  date: string;
+  class_date: string;
   student_name: string;
   eng_quizlet: string[];
   kor_quizlet: string[];
@@ -88,7 +88,7 @@ const QuizletPageContent = () => {
   const [data, setData] = useState<QuizletCardProps[]>([]);
   const [currentCard, setCurrentCard] = useState<QuizletCardProps>({
     _id: "",
-    date: "",
+    class_date: "",
     student_name: "",
     eng_quizlet: [],
     kor_quizlet: [],
@@ -188,7 +188,7 @@ const QuizletPageContent = () => {
       const quizletData: QuizletCardProps[] = await response.json();
 
       const sortedData = [...quizletData].sort((a, b) => {
-        return b.date.localeCompare(a.date);
+        return b.class_date.localeCompare(a.class_date);
       });
 
       setData(sortedData);
@@ -206,8 +206,8 @@ const QuizletPageContent = () => {
     fetchQuizletData();
   }, [fetchQuizletData]);
 
-  const handleDateSelect = (date: string) => {
-    const selectedIndex = data.findIndex((item) => item.date === date);
+  const handleDateSelect = (classDate: string) => {
+    const selectedIndex = data.findIndex((item) => item.class_date === classDate);
     if (selectedIndex !== -1) {
       setCurrentIndex(selectedIndex);
       setCurrentCard(data[selectedIndex]);
@@ -227,7 +227,7 @@ const QuizletPageContent = () => {
   }
 
   // 헤더에 표시할 날짜 포맷팅
-  const rawDisplayDate = currentCard.date || "";
+  const rawDisplayDate = currentCard.class_date || "";
   let formattedHeaderDate = rawDisplayDate || "날짜 정보 없음";
 
   // 사파리 호환 날짜 포맷팅
@@ -310,7 +310,7 @@ const QuizletPageContent = () => {
                       <div className="space-y-2">
                         {data.map((item, idx) => {
                           // 사파리 호환 날짜 표시
-                          const displayDateForItem = item.date;
+                          const displayDateForItem = item.class_date;
                           let formattedDate = displayDateForItem;
 
                           // 디버깅 로그 추가
@@ -335,7 +335,7 @@ const QuizletPageContent = () => {
                           return (
                             <button
                               key={item._id}
-                              onClick={() => handleDateSelect(item.date)}
+                              onClick={() => handleDateSelect(item.class_date)}
                               className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
                                 idx === currentIndex
                                   ? "bg-blue-500 text-white shadow-md transform scale-[1.02]"

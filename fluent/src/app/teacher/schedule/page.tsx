@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import TeacherToastUI from "@/components/ToastUI/teacher_toastui";
 import BillingPanel from "@/components/BillingPanel"; // 👈 NEW
@@ -29,13 +29,13 @@ function StudentCalendarWithChatInner() {
   const teacherName = searchParams.get("user") ?? ""; // from URL
 
   // Schedules (teacher planned)
-  const [scheduleDates, setScheduleDates] = useState<string[]>([]);
+  const [, setScheduleDates] = useState<string[]>([]);
   const [scheduledRows, setScheduledRows] = useState<ScheduledRow[]>([]);
-  const [schedulesLoaded, setSchedulesLoaded] = useState(false);
+  const [, setSchedulesLoaded] = useState(false);
 
   // Class notes (quizlets: actually happened)
   const [quizletDates, setQuizletDates] = useState<string[]>([]);
-  const [quizletsLoaded, setQuizletsLoaded] = useState(false);
+  const [, setQuizletsLoaded] = useState(false);
 
   // ── Fetch schedules for the student ─────────────────────────────────────────
   useEffect(() => {
@@ -144,7 +144,7 @@ function StudentCalendarWithChatInner() {
     return () => window.removeEventListener("calendar:saved", handler);
   }, [studentName]);
 
-  const ready = schedulesLoaded && quizletsLoaded;
+  // const ready = schedulesLoaded && quizletsLoaded;
 
   return (
     <div className="flex h-screen bg-gray-100">
