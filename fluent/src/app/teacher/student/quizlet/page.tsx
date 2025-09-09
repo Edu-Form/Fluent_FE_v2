@@ -27,7 +27,7 @@ const LottieAnimation = dynamic(
 
 interface QuizletCardProps {
   _id: string;
-  date: string;
+  class_date: string;
   student_name: string;
   eng_quizlet: string[];
   kor_quizlet: string[];
@@ -117,7 +117,7 @@ const QuizletPageContent = () => {
   const createEmptyCard = () => {
     return {
       _id: "empty",
-      date: new Date().toISOString(),
+      class_date: new Date().toISOString(),
       student_name: student_name || "",
       eng_quizlet: [],
       kor_quizlet: [],
