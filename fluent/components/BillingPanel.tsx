@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 /* ------------------------------ Types ------------------------------ */
 type ScheduledRow = {
@@ -38,6 +38,12 @@ function ymdString(d: Date) {
 }
 function sameYearMonth(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+function monthKo(d: Date) {
+  return `${d.getMonth() + 1}월`;
+}
+function prevMonthAnchorOf(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1);
 }
 
 /* ------------------------------ Component ------------------------------ */
@@ -80,6 +86,43 @@ export default function BillingPanel({
   const [fee, setFee] = useState<number>(50000);            // ₩/class
   const [remainingCredits, setRemainingCredits] = useState<number>(0);
   const [rows, setRows] = useState<BillingRow[]>([]);       // generated/edited lines
+
+  // --- NEW: Student meta (quizlet_date, diary_date) via /api/student/:name ---
+  const studentCacheRef = useRef<Map<string, any>>(new Map());
+  const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
+  const [studentMetaLoading, setStudentMetaLoading] = useState(false);
+
+  // turn [{ "2025. 09. 15.": {quizlet_date, diary_date}}, ...] into a map
+  function buildClassHistoryMap(class_history: any[]): Record<string, { quizlet_date?: string; diary_date?: string }> {
+    const map: Record<string, { quizlet_date?: string; diary_date?: string }> = {};
+    (class_history || []).forEach((entry: any) => {
+      const [k, v] = Object.entries(entry || {})[0] || [];
+      if (k && v && typeof v === "object") map[String(k)] = v as any;
+    });
+    return map;
+  }
+
+  useEffect(() => {
+    if (!studentName) { setStudentMeta(null); return; }
+    const cached = studentCacheRef.current.get(studentName);
+    if (cached) {
+      setStudentMeta(buildClassHistoryMap(cached.class_history || []));
+      return;
+    }
+    setStudentMetaLoading(true);
+    fetch(`/api/student/${encodeURIComponent(studentName)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(doc => {
+        if (doc) {
+          studentCacheRef.current.set(studentName, doc);
+          setStudentMeta(buildClassHistoryMap(doc.class_history || []));
+        } else {
+          setStudentMeta(null);
+        }
+      })
+      .catch(() => setStudentMeta(null))
+      .finally(() => setStudentMetaLoading(false));
+  }, [studentName]);
 
   // Schedule dates in the selected month, normalized to dotted format with trailing "."
   const scheduleDatesThisMonth = useMemo(() => {
@@ -181,6 +224,110 @@ export default function BillingPanel({
   const billableClasses = Math.max(0, totalClasses - creditApplied);
   const amountDue = billableClasses * (Number.isFinite(fee) ? fee : 0);
 
+  /* -------------------- Text message (auto template) -------------------- */
+  const currentMonthKo = monthKo(monthAnchor); // e.g., "9월"
+  const prevAnchor = prevMonthAnchorOf(monthAnchor);
+  const prevMonthKo = monthKo(prevAnchor);
+  const scheduleCountThisMonth = scheduleDatesThisMonth.length;
+
+  // 지난달 수업일(클래스 노트 기준) → "(5)(7)(12)..." 형태
+  const prevMonthNoteDaysStr = useMemo(() => {
+    const days = (quizletDates || [])
+      .map((d) => toDateYMD(d))
+      .filter((dt): dt is Date => !!dt && sameYearMonth(dt, prevAnchor))
+      .map((dt) => dt.getDate())
+      .sort((a, b) => a - b);
+
+    // 유니크 처리
+    const uniq: number[] = [];
+    for (const n of days) {
+      if (uniq[uniq.length - 1] !== n) uniq.push(n);
+    }
+    return uniq.length ? " " + uniq.map((n) => `(${n})`).join("") : "";
+  }, [quizletDates, prevAnchor]);
+
+  const prevMonthNoteCount = useMemo(() => {
+    const count = (quizletDates || [])
+      .map((d) => toDateYMD(d))
+      .filter((dt): dt is Date => !!dt && sameYearMonth(dt, prevAnchor)).length;
+    return count;
+  }, [quizletDates, prevAnchor]);
+
+  const displayName = useMemo(() => {
+    if (!studentName) return "";
+    return studentName.endsWith("님") ? studentName : `${studentName}님`;
+  }, [studentName]);
+
+  const dueDay = 7; // 고정: 매월 7일
+  const feeStr = Number.isFinite(fee) ? fee.toLocaleString("ko-KR") : "0";
+  const amountStr = amountDue.toLocaleString("ko-KR");
+
+  const messageText = useMemo(() => {
+    return (
+`${displayName}, 안녕하세요:)
+${currentMonthKo} 수업료 청구 드립니다.
+
+${currentMonthKo}은 ${scheduleCountThisMonth}회치 수업료 청구드립니다.
+- 잔여 수업 : ${remainingCredits}회
+- ${currentMonthKo} 예상 수업 : ${scheduleCountThisMonth}회
+- 회당 : ${feeStr}원
+= 총 : ${amountStr}원
++ ${currentMonthKo} ${dueDay}일까지는 꼭 결제 부탁드립니다.
+
+[참고 정보]
+- ${prevMonthKo} 보유 수업 : ${prevMonthNoteCount}회
+- ${prevMonthKo} 수업일:${prevMonthNoteDaysStr}
+(총 ${prevMonthNoteCount} 회)
+
+문의 사항이 있다면 여기 톡방으로 문의 주세요.
+
+[결제 방법]
+1. 카드 현장결제 : 결제 가능 날짜와 시간을 여기 톡방에 말씀해주시면 됩니다. 현장 결제를 하신분에 한해서 리뷰이벤트가 참여 가능합니다!
+
+2. 계좌이체로 : KB국민은행 69760201254532 정현수 
+
+3. 네이버 : https://smartstore.naver.com/davidsenglishconversation/category/ALL?cp=1 
+* 결제 후 스크린 캡쳐를 여기 톡방으로 보내주시면 됩니다.
+
+[혜택 및 문의]
+1. 장기 결제시 할인 혜택 : 결제한 달에 못다한 수업 횟수 만큼 다음달로 자동 이월됩니다.
+
+2. 금액 또는 수업 일정에 대한 오류가 있으신 분들은 담당 선생님과 직접 논의하셔서 청구 문자를 재전송 받으시면 됩니다.
+
+3. 현금 영수증을 원하시는 분들은 결제금액과 전화번호를 여기 톡방에 입력해 주시면 됩니다.
+
+🎁리뷰 이벤트🎁
+리뷰를 작성하시면 리뷰당 5,000원 수업 할인을 제공해 드리고 있습니다.
+ - 숨고: 숨고를 통해 학원에 등록을 하셨을 시 참여 가능합니다.
+- 네이버 지도, 카카오 지도: 현장 결제 후 전자 영수증을 인증하여 리뷰를 작성하시면 됩니다.
+
+같은 리뷰를 복사 붙여넣기 하셔도 되니 많이 참여 부탁드리겠습니다! 리뷰에 담당 선생님 이름이 들어가면 더 좋아요!
+
+네이버, 카카오 지도 리뷰는 현장 담당자에게 인증 받으시고 숨고 리뷰 작성 후 스크린샷을 여기 톡방에 올려주시면 인증이 됩니다.`
+    );
+  }, [
+    displayName,
+    currentMonthKo,
+    prevMonthKo,
+    scheduleCountThisMonth,
+    remainingCredits,
+    feeStr,
+    amountStr,
+    prevMonthNoteCount,
+    prevMonthNoteDaysStr,
+  ]);
+
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(messageText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      alert("클립보드 복사에 실패했습니다.");
+    }
+  };
+
   /* ---- Confirm/save (payload only; wire your API later) ---- */
   const handleConfirm = async () => {
     const payload = {
@@ -196,14 +343,9 @@ export default function BillingPanel({
         billable_classes: billableClasses,
         amount_due: amountDue,
       },
+      // (선택) 저장 시 문자 템플릿도 함께 보관하고 싶다면:
+      message_text: messageText,
     };
-
-    // TODO: Replace with your billing save endpoint when ready, e.g.:
-    // await fetch("/api/billing/save", {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify(payload),
-    // });
 
     console.log("[BillingPanel] Prepared billing payload:", payload);
     alert("Billing payload prepared. (Open the console to inspect.)\nWire your billing API in handleConfirm().");
@@ -268,11 +410,12 @@ export default function BillingPanel({
         </div>
       </div>
 
-      {/* ── Part 2: Table (Note dates vs Schedule dates) ───────────────────── */}
+      {/* ── Part 2: Table (Note dates vs Schedule dates + Meta) ─────────────── */}
       <div className="flex-1 p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-2">
           <div className="font-semibold text-gray-800">This month’s classes</div>
           <div className="flex items-center gap-2">
+            {studentMetaLoading && <span className="text-xs text-gray-500">Loading class details…</span>}
             <button onClick={addRow} className="text-xs px-3 py-1 rounded-md border border-slate-300 hover:bg-slate-50">
               Add row
             </button>
@@ -286,13 +429,16 @@ export default function BillingPanel({
                 <th className="px-3 py-2 w-10">#</th>
                 <th className="px-3 py-2">Class note date</th>
                 <th className="px-3 py-2">Schedule date</th>
+                {/* NEW columns */}
+                <th className="px-3 py-2">Quizlet Date</th>
+                <th className="px-3 py-2">Diary Date</th>
                 <th className="px-3 py-2 w-28">Actions</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-gray-500">
+                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
                     No rows. Click <b>Generate</b> to pull this month’s class notes.
                   </td>
                 </tr>
@@ -304,6 +450,13 @@ export default function BillingPanel({
                     return dt ? ymdString(dt) : r.noteDate;
                   })();
                   const hasScheduleThatDay = scheduleSetThisMonth.has(normalizedNote);
+
+                  // Look up class-history meta based on SCHEDULE date when present (falls back to note date)
+                  const metaKey = (() => {
+                    const dt = toDateYMD(r.schedDate || r.noteDate);
+                    return dt ? ymdString(dt) : "";
+                  })();
+                  const meta = metaKey && studentMeta ? studentMeta[metaKey] : undefined;
 
                   return (
                     <tr key={r.id} className="border-b last:border-b-0">
@@ -343,6 +496,10 @@ export default function BillingPanel({
                         </datalist>
                       </td>
 
+                      {/* NEW: Quizlet / Diary dates for the (sched) date’s event data */}
+                      <td className="px-3 py-2">{meta?.quizlet_date ?? "—"}</td>
+                      <td className="px-3 py-2">{meta?.diary_date ?? "—"}</td>
+
                       {/* Actions: show Match ONLY if no schedule exists for that note date */}
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
@@ -372,23 +529,52 @@ export default function BillingPanel({
           </table>
         </div>
 
-        {/* Quick totals */}
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-slate-50 border p-3">
+        {/* Totals — one line (removed Billable Classes card) */}
+        <div className="mt-4">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl bg-slate-50 border p-3">
             <div className="text-xs text-gray-500">Total classes</div>
-            <div className="text-lg font-semibold">{totalClasses}</div>
-          </div>
-          <div className="rounded-xl bg-slate-50 border p-3">
+            <div className="font-semibold">{totalClasses}</div>
+            <span className="text-slate-300">•</span>
             <div className="text-xs text-gray-500">Credits applied</div>
-            <div className="text-lg font-semibold">{creditApplied}</div>
-          </div>
-          <div className="rounded-xl bg-slate-50 border p-3">
-            <div className="text-xs text-gray-500">Billable classes</div>
-            <div className="text-lg font-semibold">{billableClasses}</div>
-          </div>
-          <div className="rounded-xl bg-slate-50 border p-3">
+            <div className="font-semibold">{creditApplied}</div>
+            <span className="text-slate-300">•</span>
             <div className="text-xs text-gray-500">Amount due (₩)</div>
-            <div className="text-lg font-semibold">{amountDue.toLocaleString("ko-KR")}</div>
+            <div className="font-semibold">{amountDue.toLocaleString("ko-KR")}</div>
+          </div>
+        </div>
+
+        {/* ── Part 2.5: Text message panel ─────────────────────────────── */}
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-semibold text-gray-800">Text Message</div>
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={handleCopy}
+              className="absolute right-2 top-2 text-xs px-2 py-1 rounded-md border border-slate-300 hover:bg-slate-50"
+              title="문자 내용 복사"
+            >
+              Copy
+            </button>
+            {copied && (
+              <span className="absolute right-2 top-10 text-xs text-emerald-600">Copied!</span>
+            )}
+            <textarea
+              readOnly
+              value={messageText}
+              className="
+                w-full
+                min-h-[24rem]
+                h-[60vh] md:h-[65vh] lg:h-[70vh] xl:h-[75vh]
+                border rounded-xl p-4
+                bg-white
+                text-base leading-7
+                whitespace-pre-wrap
+                resize-none
+              "
+            />
+
           </div>
         </div>
       </div>

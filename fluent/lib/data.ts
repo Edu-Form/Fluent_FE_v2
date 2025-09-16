@@ -9,6 +9,162 @@ export function serialize_document(document: any) {
   return document;
 }
 
+// lib/data.ts (top, near imports)
+const toDotDate = (raw?: string | null) => {
+  if (!raw) return "";
+  let s = String(raw).trim();
+
+  // Strip trailing dots and normalize separators
+  s = s.replace(/\.+$/, "");
+
+  // Accept "YYYY. M. D", "YYYY-M-D", "YYYY/M/D", "YYYYMMDD"
+  const m =
+    s.match(/^(\d{4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})$/) ||
+    s.match(/^(\d{4})(\d{2})(\d{2})$/) ||
+    s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})$/);
+
+  if (!m) {
+    // Not a date (e.g., "N/A") — return as-is
+    return s;
+  }
+
+  const y = m[1];
+  const mo = String(m[2]).padStart(2, "0");
+  const d  = String(m[3]).padStart(2, "0");
+
+  // ✅ Always returns with trailing dot
+  return `${y}. ${mo}. ${d}.`;
+};
+
+const normalizeName = (raw: string) =>
+  raw.trim().replace(/\s+/g, " ");
+
+export async function saveTeacherStatus(
+  studentName: string,
+  classNoteDateRaw: string | null | undefined,
+  quizletDateRaw?: string | null,
+  diaryDateRaw?: string | null,
+  phoneNumber?: string | null // optional: helps match the right doc
+): Promise<{ status: number; message: string; updated?: any }> {
+  try {
+    const name = normalizeName(studentName || "");
+    const classNoteDate = toDotDate(classNoteDateRaw);
+    if (!name || !classNoteDate) {
+      return { status: 200, message: "Skipped: missing student or class_note date" };
+    }
+    const quizlet_date = quizletDateRaw ? toDotDate(quizletDateRaw) : "N/A";
+    const diary_date   = diaryDateRaw   ? toDotDate(diaryDateRaw)   : "N/A";
+
+    const client = await clientPromise;
+    const db = client.db("school_management");       // ensure this matches your real DB
+    const collection = db.collection("students");    // ensure this matches your real collection
+
+    // 1) Find existing student (NO upsert). Try by normalized name; fallback by phone.
+    const filter: any = { name: normalizeName(name) };
+    if (phoneNumber) {
+      filter.$or = [{ name: normalizeName(name) }, { phoneNumber }];
+    }
+
+    // Use case-insensitive collation to be safer with name case
+    const existing = await collection.findOne(filter, {
+      projection: { _id: 1, name: 1, phoneNumber: 1, class_history: 1 },
+      collation: { locale: "en", strength: 2 },
+    });
+
+    if (!existing) {
+      console.warn("[saveTeacherStatus] Student not found — skipped write:", { name, phoneNumber });
+      return { status: 404, message: "Student not found (skipped write)" };
+    }
+
+    // 2) Prepare updated history
+    const history: Array<Record<string, { quizlet_date: string; diary_date: string }>> =
+      Array.isArray(existing.class_history) ? [...existing.class_history] : [];
+
+    const key = classNoteDate;
+    const idx = history.findIndex((item) => item && Object.prototype.hasOwnProperty.call(item, key));
+    const payload = { quizlet_date, diary_date };
+
+    if (idx >= 0) {
+      history[idx][key] = payload;
+    } else {
+      history.push({ [key]: payload });
+    }
+
+    // 3) Update by _id ONLY (prevents creating a new student)
+    const res = await collection.findOneAndUpdate(
+      { _id: existing._id },
+      { $set: { class_history: history, updatedAt: new Date() } },
+      { returnDocument: "after" }
+    );
+
+    return { status: 200, message: "class_history saved", updated: res?.value ?? res };
+  } catch (error) {
+    console.error("saveTeacherStatus error:", error);
+    return { status: 500, message: "Internal Server Error" };
+  }
+}
+
+
+/** Get all teachers (latest first). */
+export async function getTeachers() {
+  const client = await clientPromise;
+  const database = client.db("school_management");
+  const col = database.collection("teachers");
+
+  const docs = await col.find({}).sort({ createdAt: -1 }).toArray();
+
+  return docs.map((doc) => ({
+    ...doc,
+    _id: doc._id.toString(),
+    phoneNumber: doc.phoneNumber ?? "",
+    experience: doc.experience ?? "",
+  }));
+}
+
+/** Create a new teacher. */
+export async function addTeacher(teacher: any) {
+  const client = await clientPromise;
+  const database = client.db("school_management");
+  const col = database.collection("teachers");
+
+  const payload = {
+    name: teacher?.name || "",
+    phoneNumber: teacher?.phoneNumber || "",
+    experience: teacher?.experience || "",
+    createdAt: teacher?.createdAt || new Date(),
+  };
+
+  const result = await col.insertOne(payload);
+  return { ...payload, _id: result.insertedId.toString() };
+}
+
+/** Delete a teacher by exact name. */
+export async function removeTeacher(name: string) {
+  const client = await clientPromise;
+  const database = client.db("school_management");
+  const col = database.collection("teachers");
+
+  const trimmed = String(name ?? "").trim();
+  if (!trimmed) return { deletedCount: 0 };
+
+  const result = await col.deleteOne({ name: trimmed });
+  return { deletedCount: result.deletedCount ?? 0 };
+}
+
+/** Fetch a single student profile by exact name match. */
+export async function getStudentByName(student_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const student = await db.collection("students").findOne({ name: student_name });
+    if (!student) return null;
+    return serialize_document(student);
+  } catch (err) {
+    console.error("getStudentByName error:", err);
+    return null;
+  }
+}
+
 export async function getStudentQuizletData(student_name: string) {
   try {
     const client = await clientPromise;

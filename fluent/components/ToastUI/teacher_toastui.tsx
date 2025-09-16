@@ -73,30 +73,12 @@ function getDurationHours(start: Date, end: Date) {
 }
 
 /* ----------------------------- Color utilities ----------------------------- */
-// Replace your existing PASTEL_PALETTE with this:
 const PASTEL_PALETTE = [
-  "#FBCFE8", // pink-200
-  "#FECDD3", // rose-200
-  "#F5D0FE", // fuchsia-200
-  "#E9D5FF", // purple-200
-  "#DDD6FE", // violet-200
-  "#C7D2FE", // indigo-200
-  "#BFDBFE", // blue-200
-  "#BAE6FD", // sky-200
-  "#A5F3FC", // cyan-200
-  "#99F6E4", // teal-200
-  "#A7F3D0", // emerald-200
-  "#BBF7D0", // green-200
-  "#D9F99D", // lime-200
-  "#FEF08A", // yellow-200
-  "#FDE68A", // amber-200
-  "#FED7AA", // orange-200
-  "#FECACA", // red-200
-  "#E7E5E4", // stone-200
-  "#E5E7EB", // gray-200
-  "#E2E8F0", // slate-200
+  "#FBCFE8", "#FECDD3", "#F5D0FE", "#E9D5FF", "#DDD6FE",
+  "#C7D2FE", "#BFDBFE", "#BAE6FD", "#A5F3FC", "#99F6E4",
+  "#A7F3D0", "#BBF7D0", "#D9F99D", "#FEF08A", "#FDE68A",
+  "#FED7AA", "#FECACA", "#E7E5E4", "#E5E7EB", "#E2E8F0",
 ];
-
 
 function hashIdx(name: string, mod: number) {
   let h = 0;
@@ -104,7 +86,6 @@ function hashIdx(name: string, mod: number) {
   return Math.abs(h) % Math.max(1, mod);
 }
 function shade(hex: string, p: number) {
-  // p in [-100..100], negative = darker
   const n = Math.max(-100, Math.min(100, p));
   const amt = (n / 100) * 255;
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
@@ -119,29 +100,6 @@ function shade(hex: string, p: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-/* ------------------------------ UI small chip ------------------------------ */
-// const Chip = ({
-//   active,
-//   onClick,
-//   children,
-// }: {
-//   active: boolean;
-//   onClick: () => void;
-//   children: React.ReactNode;
-// }) => (
-//   <button
-//     type="button"
-//     onClick={onClick}
-//     className={`px-3 py-1 rounded-full border text-xs transition-colors ${
-//       active
-//         ? "bg-slate-900 text-white border-slate-900"
-//         : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-//     }`}
-//   >
-//     {children}
-//   </button>
-// );
-
 export default function TeacherToastUI({
   data,
   variant = "compact",
@@ -153,6 +111,22 @@ export default function TeacherToastUI({
   allowedTeachers,
   teacherColors,
 }: Props) {
+
+  // --- NEW: local cache + small helper ---
+  const studentCacheRef = useRef<Map<string, any>>(new Map());
+  const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
+  const [studentMetaLoading, setStudentMetaLoading] = useState(false);
+
+  // turn [{ "2025. 09. 15.": {quizlet_date, diary_date}}, ...] into a map
+  function buildClassHistoryMap(class_history: any[]): Record<string, { quizlet_date?: string; diary_date?: string }> {
+    const map: Record<string, { quizlet_date?: string; diary_date?: string }> = {};
+    (class_history || []).forEach((entry: any) => {
+      const [k, v] = Object.entries(entry || {})[0] || [];
+      if (k && v && typeof v === "object") map[String(k)] = v as any;
+    });
+    return map;
+  }
+
   const containerRef = useRef<HTMLDivElement>(null);
   const calRef = useRef<InstanceType<CalendarCtor> | null>(null);
 
@@ -169,7 +143,7 @@ export default function TeacherToastUI({
   const [repeatMode, setRepeatMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [addForm, setAddForm] = useState({
-    date: ymdString(new Date()),  // now has trailing "."
+    date: ymdString(new Date()),
     room_name: defaults?.room_name ?? "101",
     time: String(defaults?.time ?? 18),
     duration: String(defaults?.duration ?? 1),
@@ -205,17 +179,64 @@ export default function TeacherToastUI({
     return map;
   }, [uniqueTeachers.join("|"), teacherColors ? JSON.stringify(teacherColors) : ""]);
 
-  // Selected filters (default: all)
+  // Selected filters + init guard
   const [teacherFilter, setTeacherFilter] = useState<Set<string>>(new Set());
+  const initialized = useRef(false);
+
+  // Sync teacherFilter to uniqueTeachers:
+  //  - First time: select all
+  //  - Later: keep intersection (preserve empty if user cleared)
   useEffect(() => {
     setTeacherFilter((prev) => {
-      if (prev.size === 0) return new Set(uniqueTeachers);
-      // keep intersection; if becomes empty (teacher list changed), revert to all
+      if (!initialized.current) {
+        initialized.current = true;
+        return new Set(uniqueTeachers);
+      }
       const next = new Set<string>();
       uniqueTeachers.forEach((t) => { if (prev.has(t)) next.add(t); });
-      return next.size ? next : new Set(uniqueTeachers);
+      return next; // may be empty if user cleared
     });
   }, [uniqueTeachers.join("|")]);
+
+  // --- NEW: fetch per-clicked event, cached by student_name ---
+  useEffect(() => {
+    if (!detail?.event) { setStudentMeta(null); return; }
+
+    const student = detail.event.raw?.student_name?.trim();
+    if (!student) { setStudentMeta(null); return; }
+
+    const cached = studentCacheRef.current.get(student);
+    if (cached) {
+      setStudentMeta(buildClassHistoryMap(cached.class_history || []));
+      return;
+    }
+
+    setStudentMetaLoading(true);
+    fetch(`/api/student/${encodeURIComponent(student)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(doc => {
+        if (doc) {
+          studentCacheRef.current.set(student, doc);
+          setStudentMeta(buildClassHistoryMap(doc.class_history || []));
+        } else {
+          setStudentMeta(null);
+        }
+      })
+      .catch(() => setStudentMeta(null))
+      .finally(() => setStudentMetaLoading(false));
+  }, [detail?.event?.id]); // re-run when a different event is opened
+
+
+  // Emit selection changes to the admin page
+  useEffect(() => {
+    if (!initialized.current) return; // avoid flashing empty on mount
+    const selected = Array.from(teacherFilter);
+    try {
+      window.dispatchEvent(
+        new CustomEvent("teacherSidebar:change", { detail: { selected } })
+      );
+    } catch {}
+  }, [teacherFilter]);
 
   const toggleTeacher = (t: string) =>
     setTeacherFilter((prev) => {
@@ -224,8 +245,16 @@ export default function TeacherToastUI({
       else next.add(t);
       return next;
     });
+
   const selectAllTeachers = () => setTeacherFilter(new Set(uniqueTeachers));
-  const clearTeachers = () => setTeacherFilter(new Set());
+
+  const clearTeachers = () => {
+    setTeacherFilter(new Set());
+    try {
+      window.dispatchEvent(new Event("teacherSidebar:clear"));
+      // "change" will also fire via the effect above with selected: []
+    } catch {}
+  };
 
   /* ----------------------- Normalize incoming -> events ---------------------- */
   const eventsFromProps = useMemo(() => {
@@ -249,7 +278,6 @@ export default function TeacherToastUI({
           category: "time",
           start,
           end,
-          // Per-teacher color
           backgroundColor: color?.bg ?? "#EEF2FF",
           borderColor: color?.border ?? "#C7D2FE",
           dragBackgroundColor: color?.bg ?? "#E0E7FF",
@@ -299,15 +327,7 @@ export default function TeacherToastUI({
   const saveDelete = async (scheduleId: string) =>
     postJSON(`${saveEndpointBase}/${scheduleId}`, "DELETE");
 
-  /* -------------------------- Data-driven future match -----------------------
-     We use the *data prop* so we can touch future weeks not rendered in Toast UI.
-     Match rule (hour-based):
-       - same student
-       - same weekday
-       - start HOUR equals reference.hour (ignore minutes)
-       - duration equals reference.durationH
-       - date >= base date (inclusive)
-  ----------------------------------------------------------------------------- */
+  /* -------------------------- Data-driven future match ----------------------- */
   function collectFutureMatchesFromData(
     base: EventObject,
     reference: { hour: number; durationH: number }
@@ -461,7 +481,6 @@ export default function TeacherToastUI({
 .toastui-calendar-timegrid-now-indicator-arrow { border-bottom-color:#0ea5e9; }
 .toastui-calendar-timegrid-hour { color:#6b7280; font-size:10px; }
 .toastui-calendar-time-schedule { border:none !important; }
-/* IMPORTANT: don't hard-code colors so per-event colors show */
 .toastui-calendar-time-schedule-block { border-radius:12px !important; box-shadow:0 1px 2px rgba(16,24,40,.06); }
 .toastui-calendar-time-schedule .toastui-calendar-event-time-content { background:transparent !important; }
 .tuic-event-sm{ display:flex; flex-direction:column; gap:2px; line-height:1.15; }
@@ -483,20 +502,14 @@ export default function TeacherToastUI({
 /* ====== COMPACT VARIANT ====== */
 .tuic-compact .toastui-calendar-dayname { font-size:12px; }
 .tuic-compact .toastui-calendar-timegrid-hour { font-size:9px; }
-
-/* Make hour rows slim in compact: full hour = 16px, half-hour = 8px */
 .tuic-compact .toastui-calendar-timegrid-gridline { height:16px !important; }
 .tuic-compact .toastui-calendar-timegrid-half-hour { height:8px !important; }
-
-/* Tighten event padding/fonts in compact */
 .tuic-compact .toastui-calendar-time-schedule-block { border-radius:10px !important; }
 .tuic-compact .tuic-event-sm .tuic-line1{ font-size:10px; }
 .tuic-compact .tuic-event-sm .tuic-line2{ font-size:9px; }
-
-/* Slightly tighter content box in compact */
 .tuic-compact .toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 0px; padding-bottom: 0px; }
 
-/* ====== FULL VARIANT (default comfortable) ====== */
+/* ====== FULL VARIANT ====== */
 .tuic-full .toastui-calendar-timegrid-gridline { height:auto !important; }
 .tuic-full .toastui-calendar-timegrid-half-hour { height:auto !important; }
 .tuic-full .toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 1px; padding-bottom: 1px; }
@@ -533,14 +546,12 @@ export default function TeacherToastUI({
           setAddOpen(false);
         };
 
-        // Save single event after drag/resize, then offer "update future (matching OLD hour/duration)"
         const handleBeforeUpdate = async ({ event, changes }: { event: EventObject; changes: Partial<EventObject> }) => {
           const oldStart = new Date(event.start as any);
           const oldEnd = new Date(event.end as any);
           const oldRef = { hour: oldStart.getHours(), durationH: getDurationHours(oldStart, oldEnd) };
 
           setDetail((d) => (d?.event?.id === event.id ? null : d));
-
           calRef.current?.updateEvent(event.id as string, event.calendarId as string, changes);
 
           try {
@@ -673,12 +684,12 @@ export default function TeacherToastUI({
     setBulkPanel((p) => (p ? { ...p, saving: true } : p));
     try {
       const base = bulkPanel.baseEvent;
-      const refWindow = bulkPanel.reference; // current hour/dur
+      const refWindow = bulkPanel.reference;
       const matches = collectFutureMatchesFromData(base, refWindow);
 
       for (const { scheduleId } of matches) {
         try { await saveDelete(scheduleId); } catch {}
-        calRef.current?.deleteEvent?.(scheduleId, "1"); // if visible, remove it
+        calRef.current?.deleteEvent?.(scheduleId, "1");
       }
 
       setBulkPanel(null);
@@ -695,15 +706,12 @@ export default function TeacherToastUI({
     setBulkPanel((p) => (p ? { ...p, saving: true } : p));
     try {
       const base = bulkPanel.baseEvent;
-
-      // new time/duration to apply
       const baseStart = new Date(base.start as any);
       const baseEnd = new Date(base.end as any);
       const newHour = baseStart.getHours();
       const newDurHrs = getDurationHours(baseStart, baseEnd);
 
-      // old window to find
-      const matches = collectFutureMatchesFromData(base, bulkPanel.reference);
+      const matches = collectFutureMatchesFromData(base, bulkPanel.reference!);
 
       for (const { scheduleId, date } of matches) {
         const newStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), newHour, 0, 0);
@@ -722,13 +730,6 @@ export default function TeacherToastUI({
   };
 
   /* ------------------------- Positioning of popovers ------------------------- */
-  const ev = detail?.event;
-  const startStr = ev ? new Date(ev.start as any).toLocaleString() : "";
-  const endStr = ev ? new Date(ev.end as any).toLocaleString() : "";
-
-  // Height: compact = denser viewport by default
-  const calendarHeight = variant === "compact" ? "65vh" : "78vh";
-  const wrapClass = variant === "compact" ? "tuic-compact" : "tuic-full";
 
   return (
     <div className={`w-full ${enableTeacherSidebar ? "flex gap-4" : ""}`}>
@@ -746,25 +747,58 @@ export default function TeacherToastUI({
             {uniqueTeachers.map((t) => {
               const c = teacherColorMap.get(t);
               const active = teacherFilter.has(t);
+              const inputId = `teacher-${t.replace(/[^a-z0-9_-]+/gi, "-")}`;
               return (
-                <label key={t} className={`flex items-center gap-2 text-sm rounded-lg px-2 py-1 cursor-pointer ${active ? "bg-slate-50" : ""}`}>
-                  <input
-                    type="checkbox"
-                    checked={active}
-                    onChange={() => toggleTeacher(t)}
-                    className="accent-slate-700"
-                  />
-                  <span className="inline-flex items-center gap-2">
-                    <span className="w-3.5 h-3.5 rounded" style={{ backgroundColor: c?.bg, border: `1px solid ${c?.border}` }} />
-                    <span className="text-gray-800">{t}</span>
-                  </span>
-                </label>
+                <div
+                  key={t}
+                  className={`group flex items-center justify-between gap-2 text-sm rounded-lg px-2 py-1 ${active ? "bg-slate-50" : ""}`}
+                >
+                  {/* checkbox + label (toggles filter) */}
+                  <label htmlFor={inputId} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      id={inputId}
+                      type="checkbox"
+                      checked={active}
+                      onChange={() => toggleTeacher(t)}
+                      className="accent-slate-700"
+                    />
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className="w-3.5 h-3.5 rounded"
+                        style={{ backgroundColor: c?.bg, border: `1px solid ${c?.border}` }}
+                      />
+                      <span className="text-gray-800">{t}</span>
+                    </span>
+                  </label>
+
+                  {/* delete button (does NOT toggle the checkbox) */}
+                  <button
+                    type="button"
+                    title={`Delete ${t}`}
+                    aria-label={`Delete ${t}`}
+                    className="opacity-60 group-hover:opacity-100 shrink-0 rounded p-1 text-gray-500 hover:text-rose-600 hover:bg-rose-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      window.dispatchEvent(
+                        new CustomEvent("teacherSidebar:delete", { detail: { name: t } })
+                      );
+                    }}
+                  >
+                    {/* simple trash icon */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2h-1v12a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V7H4V5h4V4a1 1 0 0 1 1-1zm8 4H7v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7zM9 9h2v8H9V9zm4 0h2v8h-2V9zM9 5h6v0H9z" />
+                    </svg>
+                  </button>
+                </div>
               );
             })}
+
             {uniqueTeachers.length === 0 && (
               <div className="text-xs text-gray-500">No teachers in current data.</div>
             )}
           </div>
+
         </aside>
       )}
 
@@ -829,11 +863,11 @@ export default function TeacherToastUI({
         </div>
 
         {/* Calendar container must be relative for popovers */}
-        <div className={`relative ${wrapClass}`} style={{ width: "100%", height: calendarHeight }}>
+        <div className={`relative ${variant === "compact" ? "tuic-compact" : "tuic-full"}`} style={{ width: "100%", height: variant === "compact" ? "65vh" : "78vh" }}>
           <div ref={containerRef} className="absolute inset-0" />
 
           {/* Event popover (click an event) */}
-          {ev && (
+          {detail?.event && (
             <div
               ref={popRef}
               className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
@@ -850,19 +884,36 @@ export default function TeacherToastUI({
               })()}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="font-semibold text-gray-900 leading-snug">{ev.title || "이벤트"}</div>
+                <div className="font-semibold text-gray-900 leading-snug">{detail.event.title || "이벤트"}</div>
                 <button onClick={() => setDetail(null)} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
               </div>
 
               <div className="mt-2 space-y-1 text-gray-700">
-                <div><span className="text-gray-500">시작:</span> {startStr}</div>
-                <div><span className="text-gray-500">종료:</span> {endStr}</div>
-                {ev.raw?.room_name && <div><span className="text-gray-500">강의실:</span> {ev.raw.room_name}</div>}
-                {ev.raw?.student_name && <div><span className="text-gray-500">학생:</span> {ev.raw.student_name}</div>}
-                {ev.raw?.teacher_name && <div><span className="text-gray-500">선생님:</span> {ev.raw.teacher_name}</div>}
+                <div><span className="text-gray-500">시작:</span> {new Date(detail.event.start as any).toLocaleString()}</div>
+                <div><span className="text-gray-500">종료:</span> {new Date(detail.event.end as any).toLocaleString()}</div>
+                {detail.event.raw?.room_name && <div><span className="text-gray-500">강의실:</span> {detail.event.raw.room_name}</div>}
+                {detail.event.raw?.student_name && <div><span className="text-gray-500">학생:</span> {detail.event.raw.student_name}</div>}
+                {detail.event.raw?.teacher_name && <div><span className="text-gray-500">선생님:</span> {detail.event.raw.teacher_name}</div>}
+              
+                {/* --- NEW: quizlet_date + diary_date for THIS event's date --- */}
+                {(() => {
+                  const dateKey = ymdString(toLocalDateOnly(new Date(detail.event.start as any))); // e.g. "2025. 09. 15."
+                  const meta = studentMeta?.[dateKey];
+                  return (
+                    <div className="pt-2 mt-1 border-t border-gray-200">
+                      {studentMetaLoading ? (
+                        <div className="text-xs text-gray-500">Loading…</div>
+                      ) : (
+                        <>
+                          <div><span className="text-gray-500">Quizlet:</span> {meta?.quizlet_date ?? "—"}</div>
+                          <div><span className="text-gray-500">Diary:</span> {meta?.diary_date ?? "—"}</div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
-              {/* Action buttons */}
               <div className="mt-3 flex flex-col gap-2">
                 <button
                   onClick={handleDeleteSingle}
@@ -873,7 +924,7 @@ export default function TeacherToastUI({
                 </button>
 
                 <button
-                  onClick={() => openBulkDeletePanel(ev, { x: (detail?.x ?? 0), y: (detail?.y ?? 0) })}
+                  onClick={() => openBulkDeletePanel(detail.event, { x: (detail?.x ?? 0), y: (detail?.y ?? 0) })}
                   className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700"
                   title="같은 학생 & 같은 요일 & 같은 시간/길이(이 날짜 포함 이후) 삭제"
                 >
@@ -992,7 +1043,6 @@ export default function TeacherToastUI({
 
                         const createdEvents: EventObject[] = [];
 
-                        // normalize to local midnight to avoid DST drift
                         const baseLocal  = new Date(base.getFullYear(),  base.getMonth(),  base.getDate());
                         const untilLocal = new Date(until.getFullYear(), until.getMonth(), until.getDate());
 
@@ -1001,7 +1051,7 @@ export default function TeacherToastUI({
                           if (iter > untilLocal) break;
 
                           const payload = {
-                            date: ymdString(iter),             // "YYYY. MM. DD."
+                            date: ymdString(iter),
                             time: timeNum,
                             duration: durNum,
                             room_name: addForm.room_name,
