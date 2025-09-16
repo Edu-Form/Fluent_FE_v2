@@ -226,32 +226,25 @@ export default function BillingPanel({
 
   /* -------------------- Text message (auto template) -------------------- */
   const currentMonthKo = monthKo(monthAnchor); // e.g., "9월"
-  const prevAnchor = prevMonthAnchorOf(monthAnchor);
-  const prevMonthKo = monthKo(prevAnchor);
+  const { prevMonthKo, prevMonthDaysStr, prevMonthCount } = useMemo(() => {
+    const pa = prevMonthAnchorOf(monthAnchor); // previous month of the selected month
+    const uniqDays = new Set<number>();
+
+    (quizletDates || []).forEach((d) => {
+      const dt = toDateYMD(d);
+      if (dt && sameYearMonth(dt, pa)) {
+        uniqDays.add(dt.getDate());
+      }
+    });
+
+    const daysArr = Array.from(uniqDays).sort((a, b) => a - b);
+    return {
+      prevMonthKo: monthKo(pa),
+      prevMonthDaysStr: daysArr.length ? " " + daysArr.map((n) => `(${n})`).join("") : "",
+      prevMonthCount: daysArr.length, // count matches the displayed unique days
+    };
+  }, [quizletDates, monthAnchor]);
   const scheduleCountThisMonth = scheduleDatesThisMonth.length;
-
-  // 지난달 수업일(클래스 노트 기준) → "(5)(7)(12)..." 형태
-  const prevMonthNoteDaysStr = useMemo(() => {
-    const days = (quizletDates || [])
-      .map((d) => toDateYMD(d))
-      .filter((dt): dt is Date => !!dt && sameYearMonth(dt, prevAnchor))
-      .map((dt) => dt.getDate())
-      .sort((a, b) => a - b);
-
-    // 유니크 처리
-    const uniq: number[] = [];
-    for (const n of days) {
-      if (uniq[uniq.length - 1] !== n) uniq.push(n);
-    }
-    return uniq.length ? " " + uniq.map((n) => `(${n})`).join("") : "";
-  }, [quizletDates, prevAnchor]);
-
-  const prevMonthNoteCount = useMemo(() => {
-    const count = (quizletDates || [])
-      .map((d) => toDateYMD(d))
-      .filter((dt): dt is Date => !!dt && sameYearMonth(dt, prevAnchor)).length;
-    return count;
-  }, [quizletDates, prevAnchor]);
 
   const displayName = useMemo(() => {
     if (!studentName) return "";
@@ -275,9 +268,9 @@ ${currentMonthKo}은 ${scheduleCountThisMonth}회치 수업료 청구드립니�
 + ${currentMonthKo} ${dueDay}일까지는 꼭 결제 부탁드립니다.
 
 [참고 정보]
-- ${prevMonthKo} 보유 수업 : ${prevMonthNoteCount}회
-- ${prevMonthKo} 수업일:${prevMonthNoteDaysStr}
-(총 ${prevMonthNoteCount} 회)
+- ${prevMonthKo} 보유 수업 : ${prevMonthCount}회
+- ${prevMonthKo} 수업일:${prevMonthDaysStr}
+(총 ${prevMonthCount} 회)
 
 문의 사항이 있다면 여기 톡방으로 문의 주세요.
 
@@ -298,23 +291,23 @@ ${currentMonthKo}은 ${scheduleCountThisMonth}회치 수업료 청구드립니�
 
 🎁리뷰 이벤트🎁
 리뷰를 작성하시면 리뷰당 5,000원 수업 할인을 제공해 드리고 있습니다.
- - 숨고: 숨고를 통해 학원에 등록을 하셨을 시 참여 가능합니다.
+- 숨고: 숨고를 통해 학원에 등록을 하셨을 시 참여 가능합니다.
 - 네이버 지도, 카카오 지도: 현장 결제 후 전자 영수증을 인증하여 리뷰를 작성하시면 됩니다.
 
 같은 리뷰를 복사 붙여넣기 하셔도 되니 많이 참여 부탁드리겠습니다! 리뷰에 담당 선생님 이름이 들어가면 더 좋아요!
 
 네이버, 카카오 지도 리뷰는 현장 담당자에게 인증 받으시고 숨고 리뷰 작성 후 스크린샷을 여기 톡방에 올려주시면 인증이 됩니다.`
-    );
+  );
   }, [
     displayName,
     currentMonthKo,
-    prevMonthKo,
     scheduleCountThisMonth,
     remainingCredits,
     feeStr,
     amountStr,
-    prevMonthNoteCount,
-    prevMonthNoteDaysStr,
+    prevMonthKo,
+    prevMonthDaysStr,
+    prevMonthCount,
   ]);
 
   const [copied, setCopied] = useState(false);
