@@ -4,6 +4,7 @@
 // import Navigation from "@/components/navigation";
 import "./globals.css";
 import { usePathname } from "next/navigation";
+import Script from "next/script";
 
 export default function RootLayout({
   children,
@@ -15,14 +16,17 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <body className="flex flex-col  bg-[#F6F7FB]">
-        {isTeacherPath ? (
-          <div>{children}</div>
-        ) : (
-          <div className="flex flex-col">
+      <body>
+        <Script src="https://js.tosspayments.com/v1" strategy="beforeInteractive" />
+        <div className="flex flex-col  bg-[#F6F7FB]">
+          {isTeacherPath ? (
             <div>{children}</div>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col">
+              <div>{children}</div>
+            </div>
+          )}
+        </div>
       </body>
     </html>
   );

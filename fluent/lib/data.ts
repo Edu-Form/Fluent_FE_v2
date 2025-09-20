@@ -1060,3 +1060,52 @@ export async function getTempDiary(student_name: string) {
     throw new Error("Failed to fetch temp diary");
   }
 }
+
+export async function updatePaymentStatus(orderId: string, payment: any) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const result = await db.collection("students").updateOne(
+      { orderId },
+      {
+        $set: {
+          paymentId: payment.paymentKey,
+          paymentStatus: payment.status === 'DONE' ? 'COMPLETED' : 'FAILED',
+          paymentHistory: `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount}`,
+        },
+      }
+    );
+    return result;
+  } catch (error) {
+    console.error("Error updating payment status:", error);
+    throw new Error("Database error");
+  }
+}
+
+/**
+ * Saves the initial state of a payment transaction before the user is
+ * sent to Toss Payments. This marks the transaction as 'PENDING'.
+ * @param student_name The name of the student making the payment.
+ * @param orderId The unique order ID for this transaction.
+ * @param amount The amount of the payment.
+ */
+export async function saveInitialPayment(student_name: string, orderId: string, amount: number) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    // Updates the 'students' collection with the pending transaction details.
+    const result = await db.collection("students").updateOne(
+      { name: student_name },
+      {
+        $set: {
+          orderId,
+          paymentStatus: 'PENDING',
+        },
+      }
+    );
+    return result;
+  } catch (error) {
+    console.error("Error saving initial payment:", error);
+    throw new Error("Database error");
+  }
+}

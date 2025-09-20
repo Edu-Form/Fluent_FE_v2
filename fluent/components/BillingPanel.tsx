@@ -86,6 +86,8 @@ export default function BillingPanel({
   const [fee, setFee] = useState<number>(50000);            // ₩/class
   const [remainingCredits, setRemainingCredits] = useState<number>(0);
   const [rows, setRows] = useState<BillingRow[]>([]);       // generated/edited lines
+  const [paymentLink, setPaymentLink] = useState("");
+  const [paymentLinkLoading, setPaymentLinkLoading] = useState(false);
 
   // --- NEW: Student meta (quizlet_date, diary_date) via /api/student/:name ---
   const studentCacheRef = useRef<Map<string, any>>(new Map());
@@ -224,6 +226,41 @@ export default function BillingPanel({
   const billableClasses = Math.max(0, totalClasses - creditApplied);
   const amountDue = billableClasses * (Number.isFinite(fee) ? fee : 0);
 
+  useEffect(() => {
+    if (!studentName || amountDue <= 0) {
+      setPaymentLink("");
+      return;
+    }
+
+    const generateLink = async () => {
+      setPaymentLinkLoading(true);
+      setPaymentLink("");
+      try {
+        const response = await fetch("/api/payment/link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentName, amount: amountDue }),
+        });
+
+        if (!response.ok) {
+          console.error("Failed to generate payment link.", await response.text());
+          return;
+        }
+
+        const data = await response.json();
+        if (data.paymentLink) {
+          setPaymentLink(data.paymentLink);
+        }
+      } catch (error: any) {
+        console.error("Error generating payment link:", error);
+      } finally {
+        setPaymentLinkLoading(false);
+      }
+    };
+
+    generateLink();
+  }, [amountDue, studentName]);
+
   /* -------------------- Text message (auto template) -------------------- */
   const currentMonthKo = monthKo(monthAnchor); // e.g., "9월"
   const { prevMonthKo, prevMonthDaysStr, prevMonthCount } = useMemo(() => {
@@ -280,7 +317,9 @@ ${currentMonthKo}은 ${scheduleCountThisMonth}회치 수업료 청구드립니�
 2. 계좌이체로 : KB국민은행 69760201254532 정현수 
 
 3. 네이버 : https://smartstore.naver.com/davidsenglishconversation/category/ALL?cp=1 
-* 결제 후 스크린 캡쳐를 여기 톡방으로 보내주시면 됩니다.
+* 결제 후 스크린 캡쳐를 여기 톡방으로 보내주시면 됩니다.${paymentLink ? `
+
+4. Toss 간편결제 : ${paymentLink}` : ''}
 
 [혜택 및 문의]
 1. 장기 결제시 할인 혜택 : 결제한 달에 못다한 수업 횟수 만큼 다음달로 자동 이월됩니다.
@@ -308,6 +347,7 @@ ${currentMonthKo}은 ${scheduleCountThisMonth}회치 수업료 청구드립니�
     prevMonthKo,
     prevMonthDaysStr,
     prevMonthCount,
+    paymentLink,
   ]);
 
   const [copied, setCopied] = useState(false);
@@ -392,13 +432,15 @@ ${currentMonthKo}은 ${scheduleCountThisMonth}회치 수업료 청구드립니�
           </label>
 
           <div className="flex items-end">
-            <button
-              onClick={generateDraft}
-              className="w-full rounded-lg bg-indigo-600 text-white py-2 hover:bg-indigo-700"
-              title="Generate a billing draft from this month's class notes"
-            >
-              Generate
-            </button>
+            <div className="w-full grid grid-cols-1 gap-2">
+              <button
+                onClick={generateDraft}
+                className="w-full rounded-lg bg-indigo-600 text-white py-2 hover:bg-indigo-700"
+                title="Generate a billing draft from this month's class notes"
+              >
+                Generate
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -553,9 +595,7 @@ ${currentMonthKo}은 ${scheduleCountThisMonth}회치 수업료 청구드립니�
             {copied && (
               <span className="absolute right-2 top-10 text-xs text-emerald-600">Copied!</span>
             )}
-            <textarea
-              readOnly
-              value={messageText}
+            <div
               className="
                 w-full
                 min-h-[24rem]
@@ -564,9 +604,25 @@ ${currentMonthKo}은 ${scheduleCountThisMonth}회치 수업료 청구드립니�
                 bg-white
                 text-base leading-7
                 whitespace-pre-wrap
-                resize-none
               "
-            />
+            >
+              {paymentLink ? (
+                <>
+                  {messageText.split(paymentLink)[0]}
+                  <a
+                    href={paymentLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    {paymentLink}
+                  </a>
+                  {messageText.split(paymentLink)[1]}
+                </>
+              ) : (
+                messageText
+              )}
+            </div>
 
           </div>
         </div>

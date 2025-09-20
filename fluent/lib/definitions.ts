@@ -45,6 +45,9 @@ export type Student = {
   createdAt: string
   credits: number
   paymentHistory: string
+  paymentId?: string;
+  orderId?: string;
+  paymentStatus?: 'PENDING' | 'COMPLETED' | 'FAILED';
 }
 
 export type Teacher = {
