@@ -15,8 +15,8 @@ interface ToastEventInput {
   calendarId?: string;
   room_name: string;
   date: string | undefined; // "YYYY. MM. DD"
-  time: number;             // hour 0-23
-  duration: number;         // hours
+  time: number;             // hour 0-23, supports .5
+  duration: number;         // hours, supports .5
   teacher_name: string;
   student_name: string;
 }
@@ -36,8 +36,8 @@ interface Props {
     teacher_name?: string;
     student_name?: string;
     room_name?: string;
-    time?: number;       // 0-23
-    duration?: number;   // hours
+    time?: number;       // 0-23 (can be .5)
+    duration?: number;   // hours (can be .5)
   };
   studentOptions?: string[];
 
@@ -310,7 +310,10 @@ export default function TeacherToastUI({
         const base = toDateYMD(e.date);
         if (!base) return null;
 
-        const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), e.time, 0, 0);
+        // support .5 hour time & duration
+        const startHour = Math.floor(e.time);
+        const startMin = Math.round((e.time - startHour) * 60);
+        const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), startHour, startMin, 0);
         const end = new Date(start.getTime() + e.duration * 3600000);
 
         const tName = e.teacher_name?.trim() ?? "";
@@ -606,8 +609,8 @@ export default function TeacherToastUI({
             await saveUpdateById(
               String(after.raw?.schedule_id || after.id),
               ymdString(start),
-              start.getHours() + start.getMinutes() / 60, // 👈 send 9.5, 13.0, etc.
-              getDurationHours(start, end)
+              start.getHours() + start.getMinutes() / 60, // 👈 supports 30-min steps (e.g., 9.5)
+              getDurationHours(start, end)                 // 👈 rounds to nearest 30 min (min 0.5)
             );
           } catch (e: any) {
             alert(`저장 실패: ${e?.message ?? e}`);
@@ -638,8 +641,8 @@ export default function TeacherToastUI({
           setAddForm((p) => ({
             ...p,
             date: ymdString(s),
-            time: String(s.getHours() + s.getMinutes() / 60),
-            duration: String(hours),
+            time: String(s.getHours() + s.getMinutes() / 60), // 👈 e.g., "9.5"
+            duration: String(hours),                           // 👈 e.g., "1.5"
           }));
 
           try { calRef.current?.clearGridSelections?.(); } catch {}
@@ -754,13 +757,15 @@ export default function TeacherToastUI({
       const base = bulkPanel.baseEvent;
       const baseStart = new Date(base.start as any);
       const baseEnd = new Date(base.end as any);
-      const newHour = baseStart.getHours();
-      const newDurHrs = getDurationHours(baseStart, baseEnd);
+      const newHour = baseStart.getHours() + baseStart.getMinutes() / 60; // 👈 keep .5 hour
+      const newDurHrs = getDurationHours(baseStart, baseEnd);             // 👈 round to .5
 
       const matches = collectFutureMatchesFromData(base, bulkPanel.reference!);
 
       for (const { scheduleId, date } of matches) {
-        const newStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), newHour, 0, 0);
+        const intH = Math.floor(newHour);
+        const intM = Math.round((newHour - intH) * 60);
+        const newStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), intH, intM, 0);
         const newEnd = new Date(newStart.getTime() + newDurHrs * 3600000);
 
         await saveUpdateById(scheduleId, ymdString(newStart), newHour, newDurHrs);
@@ -1027,11 +1032,11 @@ export default function TeacherToastUI({
                 </label>
                 <label className="text-xs">
                   <div className="text-gray-600 mb-1">Time</div>
-                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.time} onChange={(e) => updateAdd({ time: e.target.value })} placeholder="18" />
+                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.time} onChange={(e) => updateAdd({ time: e.target.value })} placeholder="18 or 18.5" />
                 </label>
                 <label className="text-xs">
                   <div className="text-gray-600 mb-1">Duration</div>
-                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.duration} onChange={(e) => updateAdd({ duration: e.target.value })} placeholder="1" />
+                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.duration} onChange={(e) => updateAdd({ duration: e.target.value })} placeholder="1 or 1.5" />
                 </label>
 
                 <label className="text-xs col-span-2">
@@ -1069,40 +1074,41 @@ export default function TeacherToastUI({
                   )}
                 </label>
 
-                <label className="text-xs col-span-2">
-                  <div className="text-gray-600 mb-1">Teacher</div>
-                  {teacherOptions.length > 0 ? (
-                    <div className="relative">
-                      <select
-                        className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                        value={addForm.teacher_name}
-                        onChange={(e) => updateAdd({ teacher_name: e.target.value })}
-                      >
-                        {teacherOptions.map((name) => (
-                          <option key={name} value={name}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                      {/* chevron */}
-                      <svg
-                        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <input
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+
+              <label className="text-xs col-span-2">
+                <div className="text-gray-600 mb-1">Teacher</div>
+                {teacherOptions.length > 0 ? (
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       value={addForm.teacher_name}
                       onChange={(e) => updateAdd({ teacher_name: e.target.value })}
-                      placeholder="Loading teachers..."
-                    />
-                  )}
-                </label>
+                    >
+                      {teacherOptions.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    {/* chevron */}
+                    <svg
+                      className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
+                    </svg>
+                  </div>
+                ) : (
+                  <input
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    value={addForm.teacher_name}
+                    onChange={(e) => updateAdd({ teacher_name: e.target.value })}
+                    placeholder="Loading teachers..."
+                  />
+                )}
+              </label>
 
 
               </div>
