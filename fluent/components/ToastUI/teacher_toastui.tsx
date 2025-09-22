@@ -68,9 +68,12 @@ function ymdString(d: Date) {
 function toLocalDateOnly(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
+// AFTER — rounds to nearest 30 min, min 30 min
 function getDurationHours(start: Date, end: Date) {
-  return Math.max(1, Math.round((end.getTime() - start.getTime()) / 3600000));
+  const mins = Math.max(30, Math.round((end.getTime() - start.getTime()) / 60000));
+  return Math.round(mins / 30) / 2; // 0.5, 1.0, 1.5, ...
 }
+
 
 /* ----------------------------- Color utilities ----------------------------- */
 const PASTEL_PALETTE = [
@@ -583,8 +586,9 @@ export default function TeacherToastUI({
           const y = (nativeEvent?.clientY ?? rect.top) - rect.top;
 
           const s = new Date(start);
-          const e = end ? new Date(end) : new Date(s.getTime() + 60 * 60 * 1000);
-          const hours = Math.max(1, Math.ceil((e.getTime() - s.getTime()) / 3600000));
+          const e = end ? new Date(end) : new Date(s.getTime() + 30 * 60 * 1000);
+          const mins = Math.max(30, Math.round((e.getTime() - s.getTime()) / 60000));
+          const hours = Math.round(mins / 30) / 2;
 
           setAddOpen(true);
           setRepeatMode(false);
@@ -592,7 +596,7 @@ export default function TeacherToastUI({
           setAddForm((p) => ({
             ...p,
             date: ymdString(s),
-            time: String(s.getHours()),
+            time: String(s.getHours() + s.getMinutes() / 60),
             duration: String(hours),
           }));
 
@@ -1028,32 +1032,59 @@ export default function TeacherToastUI({
                     if (submitting) return;
                     setSubmitting(true);
                     try {
+                      // Parse inputs
+                      const dt = toDateYMD(addForm.date);
+                      const timeNum = Number(addForm.time);
+                      const durNum = Number(addForm.duration);
+
+                      if (!dt) return alert("날짜 형식: YYYY. MM. DD");
+
+                      // Allow 30-minute steps (0.5)
+                      const isHalfStep = (n: number) =>
+                        Number.isFinite(n) && Math.abs(n * 2 - Math.round(n * 2)) < 1e-9;
+
+                      if (!isHalfStep(timeNum) || timeNum < 0 || timeNum > 23.5) {
+                        return alert("Time must be 0, 0.5, …, 23.5");
+                      }
+                      if (!isHalfStep(durNum) || durNum <= 0) {
+                        return alert("Duration must be 0.5, 1.0, 1.5, …");
+                      }
+
+                      // Required fields
+                      if (!addForm.room_name) return alert("Room is required");
+                      if (!addForm.student_name) return alert("Student is required");
+
+                      // Convert fractional hour to h:m
+                      const h = Math.floor(timeNum);
+                      const m = Math.round((timeNum - h) * 60);
+
                       if (repeatMode) {
+                        // --- REPEAT (weekly for 1 year) ---
                         const base = toDateYMD(addForm.date);
-                        const timeNum = Number(addForm.time);
-                        const durNum = Number(addForm.duration);
                         if (!base) return alert("날짜 형식: YYYY. MM. DD");
-                        if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
-                        if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
-                        if (!addForm.room_name) return alert("Room is required");
-                        if (!addForm.student_name) return alert("Student is required");
 
                         const until = new Date(base);
                         until.setFullYear(until.getFullYear() + 1);
 
-                        const createdEvents: EventObject[] = [];
-
-                        const baseLocal  = new Date(base.getFullYear(),  base.getMonth(),  base.getDate());
+                        const createdEvents: any[] = [];
+                        const baseLocal = new Date(base.getFullYear(), base.getMonth(), base.getDate());
                         const untilLocal = new Date(until.getFullYear(), until.getMonth(), until.getDate());
 
                         for (let i = 0; ; i++) {
-                          const iter = new Date(baseLocal.getFullYear(), baseLocal.getMonth(), baseLocal.getDate() + i * 7);
+                          const iter = new Date(
+                            baseLocal.getFullYear(),
+                            baseLocal.getMonth(),
+                            baseLocal.getDate() + i * 7
+                          );
                           if (iter > untilLocal) break;
+
+                          const start = new Date(iter.getFullYear(), iter.getMonth(), iter.getDate(), h, m, 0);
+                          const end = new Date(start.getTime() + durNum * 60 * 60 * 1000);
 
                           const payload = {
                             date: ymdString(iter),
-                            time: timeNum,
-                            duration: durNum,
+                            time: timeNum,         // can be 9.5
+                            duration: durNum,      // can be 0.5, 1.5, ...
                             room_name: addForm.room_name,
                             teacher_name: addForm.teacher_name ?? "",
                             student_name: addForm.student_name,
@@ -1062,8 +1093,7 @@ export default function TeacherToastUI({
 
                           const created = await saveCreate(payload);
                           const id = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-                          const start = new Date(iter.getFullYear(), iter.getMonth(), iter.getDate(), timeNum, 0, 0);
-                          const end = new Date(start.getTime() + durNum * 3600000);
+                          const color = teacherColorMap.get(payload.teacher_name);
 
                           createdEvents.push({
                             id,
@@ -1072,9 +1102,9 @@ export default function TeacherToastUI({
                             category: "time",
                             start,
                             end,
-                            backgroundColor: teacherColorMap.get(payload.teacher_name)?.bg ?? "#EEF2FF",
-                            borderColor: teacherColorMap.get(payload.teacher_name)?.border ?? "#C7D2FE",
-                            dragBackgroundColor: teacherColorMap.get(payload.teacher_name)?.bg ?? "#E0E7FF",
+                            backgroundColor: color?.bg ?? "#EEF2FF",
+                            borderColor: color?.border ?? "#C7D2FE",
+                            dragBackgroundColor: color?.bg ?? "#E0E7FF",
                             color: "#111827",
                             raw: {
                               schedule_id: id,
@@ -1087,19 +1117,14 @@ export default function TeacherToastUI({
 
                         calRef.current?.createEvents(createdEvents);
                       } else {
-                        const dt = toDateYMD(addForm.date);
-                        const timeNum = Number(addForm.time);
-                        const durNum = Number(addForm.duration);
-                        if (!dt) return alert("날짜 형식: YYYY. MM. DD");
-                        if (!Number.isFinite(timeNum) || timeNum < 0 || timeNum > 23) return alert("Time: 0–23");
-                        if (!Number.isFinite(durNum) || durNum <= 0) return alert("Duration: 1+");
-                        if (!addForm.room_name) return alert("Room is required");
-                        if (!addForm.student_name) return alert("Student is required");
+                        // --- SINGLE ADD ---
+                        const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), h, m, 0);
+                        const end = new Date(start.getTime() + durNum * 60 * 60 * 1000);
 
                         const payload = {
                           date: addForm.date,
-                          time: timeNum,
-                          duration: durNum,
+                          time: timeNum,          // may be 9.5
+                          duration: durNum,       // may be 0.5, 1.5, ...
                           room_name: addForm.room_name,
                           teacher_name: addForm.teacher_name ?? "",
                           student_name: addForm.student_name,
@@ -1108,29 +1133,28 @@ export default function TeacherToastUI({
 
                         const created = await saveCreate(payload);
                         const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-                        const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), timeNum, 0, 0);
-                        const end = new Date(start.getTime() + durNum * 3600000);
-
                         const color = teacherColorMap.get(payload.teacher_name);
 
-                        calRef.current?.createEvents([{
-                          id: newId,
-                          calendarId: "1",
-                          title: `${payload.room_name}호 ${payload.student_name}님`,
-                          category: "time",
-                          start,
-                          end,
-                          backgroundColor: color?.bg ?? "#EEF2FF",
-                          borderColor: color?.border ?? "#C7D2FE",
-                          dragBackgroundColor: color?.bg ?? "#E0E7FF",
-                          color: "#111827",
-                          raw: {
-                            schedule_id: newId,
-                            room_name: payload.room_name,
-                            teacher_name: payload.teacher_name,
-                            student_name: payload.student_name,
+                        calRef.current?.createEvents([
+                          {
+                            id: newId,
+                            calendarId: "1",
+                            title: `${payload.room_name}호 ${payload.student_name}님`,
+                            category: "time",
+                            start,
+                            end,
+                            backgroundColor: color?.bg ?? "#EEF2FF",
+                            borderColor: color?.border ?? "#C7D2FE",
+                            dragBackgroundColor: color?.bg ?? "#E0E7FF",
+                            color: "#111827",
+                            raw: {
+                              schedule_id: newId,
+                              room_name: payload.room_name,
+                              teacher_name: payload.teacher_name,
+                              student_name: payload.student_name,
+                            },
                           },
-                        }]);
+                        ]);
                       }
 
                       setAddOpen(false);
@@ -1143,16 +1167,31 @@ export default function TeacherToastUI({
                     }
                   }}
                   disabled={submitting}
-                  className={`px-3 py-1 text-xs rounded-md ${submitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"} text-white disabled:opacity-60 inline-flex items-center`}
+                  className={`px-3 py-1 text-xs rounded-md ${
+                    submitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
+                  } text-white disabled:opacity-60 inline-flex items-center`}
                 >
                   {submitting && (
                     <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z" />
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z"
+                      />
                     </svg>
                   )}
                   {repeatMode ? "Add Multiple" : "Add"}
                 </button>
+
               </div>
             </div>
           )}

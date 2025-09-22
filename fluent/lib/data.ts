@@ -39,6 +39,136 @@ const toDotDate = (raw?: string | null) => {
 const normalizeName = (raw: string) =>
   raw.trim().replace(/\s+/g, " ");
 
+/** Incoming payload shape from the client */
+export interface ScheduleInput {
+  date: string;           // "YYYY. MM. DD." (local date string)
+  time: number;           // supports halves (e.g., 9.5 for 09:30)
+  duration: number;       // supports halves (e.g., 1.5 for 1h30m)
+  room_name: string;
+  teacher_name?: string;
+  student_name: string;
+  calendarId?: string;
+}
+
+/** Saved document shape (what we insert into MongoDB) */
+export interface ScheduleDoc {
+  _id?: ObjectId | string;
+  date: string;
+  time: number;
+  duration: number;
+  startMinutes: number;
+  durationMinutes: number;
+  startISO: string;
+  endISO: string;
+  room_name: string;
+  teacher_name: string;
+  student_name: string;
+  calendarId: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/* ------------------------ helpers (keep in /lib) ------------------------ */
+function parseYMD(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const m = String(dateStr).trim().match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?$/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const dt = new Date(y, mo - 1, d); // local midnight
+  return Number.isFinite(dt.getTime()) ? dt : null;
+}
+
+function isHalfStep(n: number): boolean {
+  return Number.isFinite(n) && Math.abs(n * 2 - Math.round(n * 2)) < 1e-9;
+}
+
+/**
+ * Normalize & validate the schedule payload. Converts fractional hours to minutes,
+ * computes concrete start/end ISO datetimes, and returns a ready-to-insert doc.
+ */
+function normalizeSchedule(input: ScheduleInput): ScheduleDoc {
+  const {
+    date,
+    time,
+    duration,
+    room_name,
+    teacher_name = "",
+    student_name,
+    calendarId = "1",
+  } = input || ({} as ScheduleInput);
+
+  if (!date) throw new Error("date required");
+  if (!room_name) throw new Error("room_name required");
+  if (!student_name) throw new Error("student_name required");
+
+  const dt = parseYMD(date);
+  if (!dt) throw new Error("Invalid date format. Use 'YYYY. MM. DD.'");
+
+  const timeNum = Number(time);
+  const durNum = Number(duration);
+
+  if (!isHalfStep(timeNum) || timeNum < 0 || timeNum > 23.5) {
+    throw new Error("time must be 0, 0.5, …, 23.5");
+  }
+  if (!isHalfStep(durNum) || durNum <= 0) {
+    throw new Error("duration must be 0.5, 1.0, 1.5, …");
+  }
+
+  const startMinutes = Math.round(timeNum * 60);   // e.g., 9.5 -> 570
+  const durationMinutes = Math.round(durNum * 60); // e.g., 1.5 -> 90
+
+  const h = Math.floor(startMinutes / 60);
+  const m = startMinutes % 60;
+
+  const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), h, m, 0);
+  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+  return {
+    date,
+    time: timeNum,
+    duration: durNum,
+    startMinutes,
+    durationMinutes,
+    startISO: start.toISOString(),
+    endISO: end.toISOString(),
+    room_name,
+    teacher_name,
+    student_name,
+    calendarId,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+/** Build normalized time fields from date/time/duration (supports half-hours). */
+function buildTimeFields(date: string, time: number, duration: number) {
+  const dt = parseYMD(date);
+  if (!dt) throw new Error("Invalid date format. Use 'YYYY. MM. DD.'");
+  if (!isHalfStep(time) || time < 0 || time > 23.5) {
+    throw new Error("time must be 0, 0.5, …, 23.5");
+  }
+  if (!isHalfStep(duration) || duration <= 0) {
+    throw new Error("duration must be 0.5, 1.0, 1.5, …");
+  }
+
+  const startMinutes = Math.round(time * 60);
+  const durationMinutes = Math.round(duration * 60);
+  const h = Math.floor(startMinutes / 60);
+  const m = startMinutes % 60;
+
+  const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), h, m, 0);
+  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+  return {
+    date,
+    time,
+    duration,
+    startMinutes,
+    durationMinutes,
+    startISO: start.toISOString(),
+    endISO: end.toISOString(),
+  };
+}
+
 export async function saveTeacherStatus(
   studentName: string,
   classNoteDateRaw: string | null | undefined,
@@ -435,16 +565,15 @@ export async function deductCredit(student_name: string, date: string) {
   }
 }
 
-export async function saveScheduleData(schedule: any) {
-  try {
-    const client = await clientPromise;
-    const db = client.db("school_management");
-    const result = await db.collection("schedules").insertOne(schedule);
-    return result.insertedId.toString();
-  } catch (error) {
-    console.error("Error saving schedule:", error);
-    throw new Error("Database error");
-  }
+export async function saveScheduleData(input: ScheduleInput) {
+  const doc = normalizeSchedule(input);
+
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  const res = await db.collection<ScheduleDoc>("schedules").insertOne(doc);
+
+  // return inserted doc with _id as string (useful for the client)
+  return { _id: String(res.insertedId), ...doc };
 }
 
 export async function saveProgressData(progress: {
@@ -600,30 +729,58 @@ export async function updateScheduleData(
   patch: Partial<{
     date: string;
     room_name: string;
-    time: string;
-    duration: string;
+    time: number;       // ← number, supports halves
+    duration: number;   // ← number, supports halves
     teacher_name: string;
     student_name: string;
   }>
 ): Promise<{ status: number; message: string; updated?: any }> {
   try {
     const client = await clientPromise;
-    const db = client.db("school_management");   // 👈 your DB name
+    const db = client.db("school_management");
     const collection = db.collection("schedules");
-
     const _id = new ObjectId(id);
 
-    const result = await collection.findOneAndUpdate(
-      { _id },
-      { $set: patch },
-      { returnDocument: "after" } // returns the updated doc
-    );
+    // Load current doc so we can recompute derived fields for partial patches
+    const curr = await collection.findOne({ _id });
+    if (!curr) return { status: 404, message: "Schedule not found" };
 
-    if (!result) {
-      return { status: 404, message: "Schedule not found" };
+    const next: Record<string, any> = {};
+
+    // Copy over simple fields if provided
+    for (const k of ["room_name", "teacher_name", "student_name"] as const) {
+      if (patch[k] !== undefined) next[k] = patch[k];
     }
 
-    return { status: 200, message: "Schedule updated successfully", updated: result };
+    // If any of date/time/duration are provided, recompute normalized fields
+    const hasDate = patch.date !== undefined;
+    const hasTime = patch.time !== undefined;
+    const hasDur  = patch.duration !== undefined;
+
+    if (hasDate || hasTime || hasDur) {
+      const date = hasDate ? patch.date! : curr.date;
+      const time = hasTime ? Number(patch.time) : Number(curr.time);
+      const duration = hasDur ? Number(patch.duration) : Number(curr.duration);
+
+      const normalized = buildTimeFields(date, time, duration);
+      Object.assign(next, normalized);
+    }
+
+    if (Object.keys(next).length === 0) {
+      return { status: 400, message: "No valid fields to update" };
+    }
+
+    await collection.updateOne(
+      { _id },
+      { $set: { ...next, updatedAt: new Date().toISOString() } }
+    );
+
+    const updated = await collection.findOne({ _id });
+    return {
+      status: 200,
+      message: "Schedule updated successfully",
+      updated: updated ? serialize_document(updated) : undefined,
+    };
   } catch (error) {
     console.error("Error updating schedule:", error);
     return { status: 500, message: "Internal Server Error" };
@@ -636,34 +793,19 @@ export async function deleteScheduleData(
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
-    const objectId = new ObjectId(schedule_id);
+    const _id = new ObjectId(schedule_id);
 
-    // Optional: Check if the schedule exists first
-    const existingSchedule = await db
-      .collection("schedules")
-      .find({ _id: objectId })
-      .toArray();
-
-    console.log("Existing schedule:", existingSchedule);
-
-    if (existingSchedule.length === 0) {
-      return {
-        status: 404,
-        message: `Schedule with ID ${schedule_id} doesn't exist`,
-      };
+    const res = await db.collection("schedules").deleteOne({ _id });
+    if (res.deletedCount === 0) {
+      return { status: 404, message: `Schedule with ID ${schedule_id} doesn't exist` };
     }
-
-    await db.collection("schedules").deleteOne({ _id: objectId });
-
-    return {
-      status: 200,
-      message: `Schedule with ID ${schedule_id} deleted successfully`,
-    };
+    return { status: 200, message: `Schedule with ID ${schedule_id} deleted successfully` };
   } catch (error) {
-    console.error("Error in deleteScheduleById:", error);
+    console.error("Error deleting schedule:", error);
     return { status: 500, message: "Database error" };
   }
 }
+
 
 export async function getTodayScheduleData(date: string, user: string) {
   try {

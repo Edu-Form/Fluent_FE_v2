@@ -1,23 +1,16 @@
 import { NextResponse } from "next/server";
-import { saveScheduleData} from "@/lib/data";
-// import { deductCredit } from "@/lib/data";
+import { saveScheduleData } from "@/lib/data";
 
 export async function POST(request: Request) {
   try {
-    const scheduleData = await request.json();
-    console.log(scheduleData.student_name)
-    
-    if (!scheduleData) {
-      return NextResponse.json({ error: "No data provided" }, { status: 400 });
-    }
-
-    // const credit = await deductCredit(scheduleData.student_name, scheduleData.date);
-    const result = await saveScheduleData(scheduleData);
-
-    return NextResponse.json({ message: "Data saved successfully", result}, { status: 200 });
-  } catch (error) {
+    const payload = await request.json();
+    const saved = await saveScheduleData(payload);
+    // return the saved doc (includes _id)
+    return NextResponse.json(saved, { status: 200 });
+  } catch (error: any) {
     console.error("Error saving data:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    const msg = error?.message || "Internal Server Error";
+    const code = msg?.toLowerCase().includes("required") || msg?.toLowerCase().includes("invalid") ? 400 : 500;
+    return NextResponse.json({ error: msg }, { status: code });
   }
 }
-
