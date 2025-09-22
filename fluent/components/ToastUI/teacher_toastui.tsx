@@ -453,7 +453,7 @@ export default function TeacherToastUI({
             eventView: ["time"],
             showNowIndicator: true,
             hourStart: variant === "compact" ? 8 : 7,
-            hourEnd:   variant === "compact" ? 22 : 23,
+            hourEnd:   24,
             workweek: false,
           },
           month: {
@@ -610,7 +610,7 @@ export default function TeacherToastUI({
       cal.setOptions({
         week: {
           hourStart: variant === "compact" ? 8 : 7,
-          hourEnd:   variant === "compact" ? 22 : 23,
+          hourEnd:   24,
         },
       });
       setCurrentDate(cal.getDate() ?? new Date());
