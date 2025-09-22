@@ -308,7 +308,7 @@ export default function BillingPanel({
   /* -------------------- Text message (auto template) -------------------- */
   const currentMonthKo = monthKo(monthAnchor); // e.g., "9월"
 
-  const { prevMonthKo, prevMonthDaysStr, prevMonthCount } = useMemo(() => {
+  const {} = useMemo(() => {
     const pa = prevMonthAnchorOf(monthAnchor); // previous month of the selected month
     const uniqDays = new Set<number>();
 
@@ -490,7 +490,7 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
           </label>
 
           <label className="text-sm">
-            <div className="text-gray-600 mb-1">This Month's Credits (Scheduled)</div>
+            <div className="text-gray-600 mb-1">This Month Credits (Scheduled)</div>
             <input
               type="number"
               className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
