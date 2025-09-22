@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       try {
         const errorJson = JSON.parse(errorBody);
         return NextResponse.json({ message: errorJson.message || 'Failed to create payment link' }, { status: response.status });
-      } catch (e) {
+      } catch {
         return NextResponse.json({ message: 'Failed to create payment link and received non-JSON error response from Toss.', details: errorBody }, { status: response.status });
       }
     }

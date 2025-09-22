@@ -34,9 +34,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Optional: Verify webhook signature
-function verifySignature(body: any, signature: string | null): boolean {
-  // Implement signature verification using Toss Payments secret key
-  // This is recommended for production security
-  return true; // Placeholder - implement proper verification
-}
+// // Optional: Verify webhook signature
+// function verifySignature(body: any, signature: string | null): boolean {
+//   // Implement signature verification using Toss Payments secret key
+//   // This is recommended for production security
+//   return true; // Placeholder - implement proper verification
+// }

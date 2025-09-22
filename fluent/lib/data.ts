@@ -1091,6 +1091,7 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
  */
 export async function saveInitialPayment(student_name: string, orderId: string, amount: number) {
   try {
+    
     const client = await clientPromise;
     const db = client.db("school_management");
     // Updates the 'students' collection with the pending transaction details.
@@ -1105,7 +1106,7 @@ export async function saveInitialPayment(student_name: string, orderId: string, 
     );
     return result;
   } catch (error) {
-    console.error("Error saving initial payment:", error);
+    console.error("Error saving initial payment:", error, amount);
     throw new Error("Database error");
   }
 }

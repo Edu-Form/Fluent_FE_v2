@@ -87,7 +87,7 @@ export default function BillingPanel({
   const [remainingCredits, setRemainingCredits] = useState<number>(0);
   const [rows, setRows] = useState<BillingRow[]>([]);       // generated/edited lines
   const [paymentLink, setPaymentLink] = useState("");
-  const [paymentLinkLoading, setPaymentLinkLoading] = useState(false);
+  const [, setPaymentLinkLoading] = useState(false);
 
   // --- NEW: Student meta (quizlet_date, diary_date) via /api/student/:name ---
   const studentCacheRef = useRef<Map<string, any>>(new Map());
