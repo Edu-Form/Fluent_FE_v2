@@ -119,6 +119,9 @@ export default function TeacherToastUI({
   const studentCacheRef = useRef<Map<string, any>>(new Map());
   const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
   const [studentMetaLoading, setStudentMetaLoading] = useState(false);
+  // ↓ Add this
+  const [teacherOptions, setTeacherOptions] = useState<string[]>([]);
+
 
   // turn [{ "2025. 09. 15.": {quizlet_date, diary_date}}, ...] into a map
   function buildClassHistoryMap(class_history: any[]): Record<string, { quizlet_date?: string; diary_date?: string }> {
@@ -228,6 +231,45 @@ export default function TeacherToastUI({
       .catch(() => setStudentMeta(null))
       .finally(() => setStudentMetaLoading(false));
   }, [detail?.event?.id]); // re-run when a different event is opened
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const res = await fetch("/api/teacher", { cache: "no-store" });
+        if (!res.ok) throw new Error("Failed to fetch teachers");
+
+        const payload = await res.json();
+
+        // Accept a few shapes:
+        // - [ { name: "..." }, ... ]
+        // - { data: [ { name: "..." }, ... ] }
+        // - { teachers: [ { name: "..." }, ... ] }
+        // - single object { name: "..." }
+        const list =
+          Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.teachers)
+            ? payload.teachers
+            : payload && typeof payload === "object"
+            ? [payload]
+            : [];
+
+        const names = list.map((t: any) => t?.name).filter(Boolean);
+        setTeacherOptions(names);
+
+        // set a default in the add form if empty
+        setAddForm((p) =>
+          !p.teacher_name && names.length ? { ...p, teacher_name: names[0] } : p
+        );
+      } catch (err) {
+        console.error("Error fetching teachers:", err);
+        setTeacherOptions([]); // force fallback input
+      }
+    };
+    fetchTeachers();
+  }, []);
 
 
   // Emit selection changes to the admin page
@@ -564,7 +606,7 @@ export default function TeacherToastUI({
             await saveUpdateById(
               String(after.raw?.schedule_id || after.id),
               ymdString(start),
-              start.getHours(),
+              start.getHours() + start.getMinutes() / 60, // 👈 send 9.5, 13.0, etc.
               getDurationHours(start, end)
             );
           } catch (e: any) {
@@ -846,23 +888,31 @@ export default function TeacherToastUI({
             </a>
 
             {/* Add Calendar button */}
-            <button
-              onClick={() =>
-                setAddOpen((v) => {
-                  const next = !v;
-                  if (!next) setRepeatMode(false);
-                  if (next && !addForm.student_name && studentOptions.length > 0) {
-                    setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
-                  }
-                  setAddAnchor(null);
-                  return next;
-                })
-              }
-              title="새 수업 등록"
-              className={`text-xs px-3 py-1 rounded-full border ${addOpen ? "bg-indigo-600 text-white border-indigo-600" : "border-indigo-300 hover:bg-indigo-50 text-indigo-700"}`}
-            >
-              Add Class
-            </button>
+          <button
+            onClick={() =>
+              setAddOpen((v) => {
+                const next = !v;
+                if (!next) setRepeatMode(false);
+
+                // Default student (existing)
+                if (next && !addForm.student_name && studentOptions.length > 0) {
+                  setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
+                }
+                // ↓ New: default teacher if available
+                if (next && !addForm.teacher_name && teacherOptions.length > 0) {
+                  setAddForm((p) => ({ ...p, teacher_name: teacherOptions[0] }));
+                }
+
+                setAddAnchor(null);
+                return next;
+              })
+            }
+            title="새 수업 등록"
+            className={`text-xs px-3 py-1 rounded-full border ${addOpen ? "bg-indigo-600 text-white border-indigo-600" : "border-indigo-300 hover:bg-indigo-50 text-indigo-700"}`}
+          >
+            Add Class
+          </button>
+
           </div>
         </div>
 
@@ -987,18 +1037,31 @@ export default function TeacherToastUI({
                 <label className="text-xs col-span-2">
                   <div className="text-gray-600 mb-1">Student</div>
                   {studentOptions.length ? (
-                    <select
-                      className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                      value={addForm.student_name}
-                      onChange={(e) => updateAdd({ student_name: e.target.value })}
-                    >
-                      {studentOptions.map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        value={addForm.student_name}
+                        onChange={(e) => updateAdd({ student_name: e.target.value })}
+                      >
+                        {studentOptions.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                      {/* chevron */}
+                      <svg
+                        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
+                      </svg>
+                    </div>
                   ) : (
                     <input
-                      className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       value={addForm.student_name}
                       onChange={(e) => updateAdd({ student_name: e.target.value })}
                       placeholder="홍길동"
@@ -1008,8 +1071,40 @@ export default function TeacherToastUI({
 
                 <label className="text-xs col-span-2">
                   <div className="text-gray-600 mb-1">Teacher</div>
-                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.teacher_name} onChange={(e) => updateAdd({ teacher_name: e.target.value })} placeholder="김선생" />
+                  {teacherOptions.length > 0 ? (
+                    <div className="relative">
+                      <select
+                        className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        value={addForm.teacher_name}
+                        onChange={(e) => updateAdd({ teacher_name: e.target.value })}
+                      >
+                        {teacherOptions.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                      {/* chevron */}
+                      <svg
+                        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <input
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      value={addForm.teacher_name}
+                      onChange={(e) => updateAdd({ teacher_name: e.target.value })}
+                      placeholder="Loading teachers..."
+                    />
+                  )}
                 </label>
+
+
               </div>
 
               <div className="mt-3 flex justify-between">
