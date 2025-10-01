@@ -391,6 +391,21 @@ export async function getStudentListData(teacherName: string) {
   }
 }
 
+export async function getStudents() {
+  try {
+    const client = await clientPromise;
+    const database = client.db("school_management");
+    const students = database.collection("students");
+
+    const result = await students.find({}).toArray();
+
+    return result
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    return null;
+  }
+}
+
 export async function getAllBillingData() {
   const client = await clientPromise;
   const db = client.db("school_management");
