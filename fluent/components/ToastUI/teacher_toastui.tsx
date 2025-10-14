@@ -878,7 +878,7 @@ export default function TeacherToastUI({
                 title="Open Full Calendar"
                 className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
               >
-                Full Calendar
+                Admin Billing
             </a>
             <a
               href="/teacher/schedule/admin/"

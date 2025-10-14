@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 /* ------------------------------ Types ------------------------------ */
 type ScheduledRow = {
   _id?: string;
-  date: string;        // "YYYY. MM. DD" or "YYYY. MM. DD."
+  date: string;
   time?: string;
   room_name?: string;
   duration?: string;
@@ -14,9 +14,9 @@ type ScheduledRow = {
 };
 
 type BillingRow = {
-  id: string;          // local row id
-  noteDate: string;    // class-note date (editable)  -> "YYYY. MM. DD."
-  schedDate: string;   // schedule date (editable)    -> "YYYY. MM. DD."
+  id: string;
+  noteDate: string;
+  schedDate: string;
 };
 
 type NextBillingRow = { id: string; schedDate: string };
@@ -26,16 +26,15 @@ function toDateYMD(str?: string | null) {
   if (!str) return null;
   const s = String(str).trim();
   const m =
-    s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?$/) || // 2025. 9. 9 or 2025. 09. 09.
-    s.match(/^(\d{4})[-\/]\s*(\d{1,2})[-\/]\s*(\d{1,2})\.?$/) || // 2025-9-9, 2025/09/09
-    s.match(/^(\d{4})(\d{2})(\d{2})$/); // 20250909
+    s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?$/) ||
+    s.match(/^(\d{4})[-\/]\s*(\d{1,2})[-\/]\s*(\d{1,2})\.?$/) ||
+    s.match(/^(\d{4})(\d{2})(\d{2})$/);
   if (!m) return null;
   const y = +m[1], mo = +m[2], d = +m[3];
   const dt = new Date(y, mo - 1, d);
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
 function ymdString(d: Date) {
-  // Always return with a TRAILING DOT
   return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(d.getDate()).padStart(2, "0")}.`;
 }
 function sameYearMonth(a: Date, b: Date) {
@@ -49,20 +48,22 @@ function prevMonthAnchorOf(d: Date) {
 }
 
 /* ------------------------------ Component ------------------------------ */
+/**
+ * NOTE: Added optional prop `studentId` so we can build the admin-confirm link with an `id=...` query param.
+ */
 export default function BillingPanel({
   studentName,
+  studentId,
   teacherName,
-  quizletDates,               // class-note dates (strings)
-  scheduledRows,              // calendar schedules
-  onRefreshCalendar,          // optional calendar refresh hook
-  // Schedules API to create a class when matching a note without a schedule
+  quizletDates,
+  scheduledRows,
+  onRefreshCalendar,
   saveEndpointBase = "/api/schedules",
-  // If true, “Match” will CREATE a schedule when missing
   autoCreateScheduleOnMatch = true,
-  // Defaults for new schedule created by Match
   defaultsForNewSchedule = { room_name: "HF1", time: 18, duration: 1 },
 }: {
   studentName: string;
+  studentId?: string;
   teacherName?: string;
   quizletDates: string[];
   scheduledRows: ScheduledRow[];
@@ -85,19 +86,17 @@ export default function BillingPanel({
   };
 
   /* ---- Part 1: Header inputs (fee, carry-in credit, generate) ---- */
-  const [fee, setFee] = useState<number>(50000);            // ₩/class
-  const [carryInCredit, setCarryInCredit] = useState<number>(0); // prepaid classes for THIS month (input)
-  const [rows, setRows] = useState<BillingRow[]>([]);       // this month's actual classes (from notes)
-  const [nextRows, setNextRows] = useState<NextBillingRow[]>([]); // next month's planned schedules
+  const [fee, setFee] = useState<number>(50000);
+  const [carryInCredit, setCarryInCredit] = useState<number>(0);
+  const [rows, setRows] = useState<BillingRow[]>([]);
+  const [nextRows, setNextRows] = useState<NextBillingRow[]>([]);
   const [paymentLink, setPaymentLink] = useState("");
   const [, setPaymentLinkLoading] = useState(false);
 
-  // --- Student meta (quizlet_date, diary_date) via /api/student/:name ---
   const studentCacheRef = useRef<Map<string, any>>(new Map());
   const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
   const [studentMetaLoading, setStudentMetaLoading] = useState(false);
 
-  // turn [{ "2025. 09. 15.": {quizlet_date, diary_date}}, ...] into a map
   function buildClassHistoryMap(class_history: any[]): Record<string, { quizlet_date?: string; diary_date?: string }> {
     const map: Record<string, { quizlet_date?: string; diary_date?: string }> = {};
     (class_history || []).forEach((entry: any) => {
@@ -138,15 +137,9 @@ export default function BillingPanel({
       .sort((a, b) => a.localeCompare(b));
   }, [scheduledRows, monthAnchor]);
 
-  const scheduleSetThisMonth = useMemo(
-    () => new Set(scheduleDatesThisMonth),
-    [scheduleDatesThisMonth]
-  );
+  const scheduleSetThisMonth = useMemo(() => new Set(scheduleDatesThisMonth), [scheduleDatesThisMonth]);
 
-  const nextMonthAnchor = useMemo(
-    () => new Date(monthAnchor.getFullYear(), monthAnchor.getMonth() + 1, 1),
-    [monthAnchor]
-  );
+  const nextMonthAnchor = useMemo(() => new Date(monthAnchor.getFullYear(), monthAnchor.getMonth() + 1, 1), [monthAnchor]);
 
   const nextMonthScheduleDates = useMemo(() => {
     return (scheduledRows || [])
@@ -158,7 +151,6 @@ export default function BillingPanel({
 
   /* ---- Generate (fills both sections) ---- */
   const generateDraft = () => {
-    // This month (from class notes)
     const base: BillingRow[] = [];
     const seen = new Set<string>();
 
@@ -181,7 +173,6 @@ export default function BillingPanel({
     }
     setRows(base);
 
-    // Next month (from schedules only)
     const uniqNext: string[] = [];
     const seenNext = new Set<string>();
     for (const d of nextMonthScheduleDates) {
@@ -190,43 +181,27 @@ export default function BillingPanel({
         uniqNext.push(d);
       }
     }
-    setNextRows(
-      uniqNext.map((d) => ({
-        id: `${d}-${Math.random().toString(36).slice(2, 8)}`,
-        schedDate: d,
-      }))
-    );
+    setNextRows(uniqNext.map((d) => ({ id: `${d}-${Math.random().toString(36).slice(2, 8)}`, schedDate: d })));
   };
 
   /* ---- Editing helpers ---- */
-  const updateRow = (id: string, patch: Partial<BillingRow>) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-  const addRow = () =>
-    setRows((prev) => [
-      ...prev,
-      { id: `row-${Date.now().toString(36)}`, noteDate: ymdString(new Date()), schedDate: "" },
-    ]);
+  const updateRow = (id: string, patch: Partial<BillingRow>) => setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  const addRow = () => setRows((prev) => [...prev, { id: `row-${Date.now().toString(36)}`, noteDate: ymdString(new Date()), schedDate: "" }]);
   const removeRow = (id: string) => setRows((prev) => prev.filter((r) => r.id !== id));
 
-  const updateNextRow = (id: string, schedDate: string) =>
-    setNextRows((prev) => prev.map((r) => (r.id === id ? { ...r, schedDate } : r)));
-  const removeNextRow = (id: string) =>
-    setNextRows((prev) => prev.filter((r) => r.id !== id));
+  const updateNextRow = (id: string, schedDate: string) => setNextRows((prev) => prev.map((r) => (r.id === id ? { ...r, schedDate } : r)));
+  const removeNextRow = (id: string) => setNextRows((prev) => prev.filter((r) => r.id !== id));
 
-  // Create a schedule for noteDate (if missing) OR simply link the schedDate if it already exists
   const matchOrCreateRow = async (row: BillingRow) => {
     const dt = toDateYMD(row.noteDate);
     if (!dt) return alert("Invalid date. Use YYYY. MM. DD.");
+    const normalized = ymdString(dt);
 
-    const normalized = ymdString(dt); // with trailing dot
-
-    // If a schedule for that day already exists, just fill it (UI hides Match in that case anyway)
     if (scheduleSetThisMonth.has(normalized)) {
       updateRow(row.id, { schedDate: normalized });
       return;
     }
 
-    // Otherwise, optionally create a schedule on that day
     if (!autoCreateScheduleOnMatch) {
       updateRow(row.id, { schedDate: normalized });
       return;
@@ -258,13 +233,10 @@ export default function BillingPanel({
   };
 
   /* ---- Settlement math (final per your rules) ---- */
-  // INPUT: carryInCredit (prepaid for THIS month)
-  const thisMonthActual = rows.length;                 // actual (class notes)
-  const carryAfterSettlement = carryInCredit - thisMonthActual; // can be positive/negative
-
-  // Next month
+  const thisMonthActual = rows.length;
+  const carryAfterSettlement = carryInCredit - thisMonthActual;
   const nextMonthPlanned = nextMonthScheduleDates.length;
-  const totalCreditsAvailable = Math.max(0, carryAfterSettlement); // only leftover from THIS month applies
+  const totalCreditsAvailable = Math.max(0, carryAfterSettlement);
   const nextToPayClasses = nextMonthPlanned - carryAfterSettlement;
   const creditsAfterPayment = Math.max(0, totalCreditsAvailable - nextMonthPlanned);
   const amountDueNext = nextToPayClasses * (Number.isFinite(fee) ? fee : 0);
@@ -306,10 +278,10 @@ export default function BillingPanel({
   }, [amountDueNext, studentName]);
 
   /* -------------------- Text message (auto template) -------------------- */
-  const currentMonthKo = monthKo(monthAnchor); // e.g., "9월"
+  const currentMonthKo = monthKo(monthAnchor);
 
   const {} = useMemo(() => {
-    const pa = prevMonthAnchorOf(monthAnchor); // previous month of the selected month
+    const pa = prevMonthAnchorOf(monthAnchor);
     const uniqDays = new Set<number>();
 
     (quizletDates || []).forEach((d) => {
@@ -323,7 +295,7 @@ export default function BillingPanel({
     return {
       prevMonthKo: monthKo(pa),
       prevMonthDaysStr: daysArr.length ? " " + daysArr.map((n) => `(${n})`).join("") : "",
-      prevMonthCount: daysArr.length, // count matches the displayed unique days
+      prevMonthCount: daysArr.length,
     };
   }, [quizletDates, monthAnchor]);
 
@@ -332,7 +304,7 @@ export default function BillingPanel({
     return studentName.endsWith("님") ? studentName : `${studentName}님`;
   }, [studentName]);
 
-  const dueDay = 7; // 고정: 매월 7일
+  const dueDay = 7;
   const feeStr = Number.isFinite(fee) ? fee.toLocaleString("ko-KR") : "0";
   const amountStr = amountDueNext.toLocaleString("ko-KR");
 
@@ -346,7 +318,6 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
 [이번달 정산]
 - 이번달 선결제(예정/스케줄): ${carryInCredit}회
 - 이번달 실제 수업(노트 기준): ${thisMonthActual}회
-= 정산 후 보유 수업(이번달 기준): ${carryAfterSettlement}회
 
 [다음달 결제 안내]
 - 다음달(${nextMonthLabel}) 예정 수업: ${nextMonthPlanned}회
@@ -382,9 +353,7 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
 - 숨고: 숨고를 통해 학원에 등록을 하셨을 시 참여 가능합니다.
 - 네이버 지도, 카카오 지도: 현장 결제 후 전자 영수증을 인증하여 리뷰를 작성하시면 됩니다.
 
-같은 리뷰를 복사 붙여넣기 하셔도 되니 많이 참여 부탁드리겠습니다! 리뷰에 담당 선생님 이름이 들어가면 더 좋아요!
-
-네이버, 카카오 지도 리뷰는 현장 담당자에게 인증 받으시고 숨고 리뷰 작성 후 스크린샷을 여기 톡방에 올려주시면 인증이 됩니다.`
+같은 리뷰를 복사 붙여넣기 하셔도 되니 많이 참여 부탁드리겠습니다! 리뷰에 담당 선생님 이름이 들어가면 더 좋아요!`
     );
   }, [
     displayName,
@@ -414,52 +383,62 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
     }
   };
 
-  /* ---- Confirm/save (payload only; wire your API later) ---- */
+  /* ---- New: POST to /api/billing/check2 (admin confirm) ---- */
+  const [saving, setSaving] = useState(false);
   const handleConfirm = async () => {
+    if (saving) return;
     const payload = {
       student_name: studentName,
       teacher_name: teacherName ?? "",
       month: { year: monthAnchor.getFullYear(), month: monthAnchor.getMonth() + 1 },
 
-      fee,
+      // This-month lines (UI)
+      this_month_lines: rows.map((r) => ({ note_date: r.noteDate, schedule_date: r.schedDate })),
 
-      // This-month summary (audit)
-      this_month: {
-        carry_in_credit: carryInCredit,               // prepaid this month (INPUT)
-        actual_classes: thisMonthActual,              // from notes
-        carry_after_settlement: carryAfterSettlement, // carryInCredit - actual
-        lines: rows.map((r) => ({ note_date: r.noteDate, schedule_date: r.schedDate })),
-      },
+      // Next-month plan lines
+      next_month_lines: nextRows.map((r) => ({ schedule_date: r.schedDate })),
 
-      // Next-month plan & charges
-      next_month: {
-        year: nextMonthAnchor.getFullYear(),
-        month: nextMonthAnchor.getMonth() + 1,
-        planned_schedules: nextMonthPlanned,
-        credits_available_from_settlement: totalCreditsAvailable, // max(0, carryAfterSettlement)
-        to_pay_classes: nextToPayClasses,
-        credits_after_payment: creditsAfterPayment,
-        lines: nextRows.map((r) => ({ schedule_date: r.schedDate })),
-      },
-
-      // Billing money
-      amount_due: amountDueNext,
-
-      // (optional) store the message text
-      message_text: messageText,
+      final_save: true,
+      meta: { via: "admin-check2-ui" },
+      savedBy: "admin-ui",
     };
 
-    console.log("[BillingPanel] Prepared billing payload:", payload);
-    alert("Billing payload prepared. (Open the console to inspect.)\nWire your billing API in handleConfirm().");
+    try {
+      setSaving(true);
+      const res = await fetch("/api/billing/check2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        alert("Save failed: " + text);
+        return;
+      }
+
+      const json = await res.json().catch(() => null);
+      console.log("check2 response:", json);
+      alert("2차 관리자 확인 저장 완료.");
+      try { await onRefreshCalendar?.(); } catch {}
+    } catch (err) {
+      console.error("handleConfirm(check2) error:", err);
+      alert("Save failed (network).");
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* ----------------------------- Render ----------------------------- */
+  // build admin-confirm link
+  const adminConfirmHref = `/schedule/admin-confirm?user=${encodeURIComponent(teacherName || "")}&type=teacher&student_name=${encodeURIComponent(studentName || "")}&id=${encodeURIComponent(studentId ?? "")}`;
+
   return (
     <div className="w-1/3 bg-gray-50 flex flex-col border-l">
-      {/* ── Part 1: Header (Student, Fee, Carry-in, Generate) ───────── */}
+      {/* ── Part 1: Header (Student, Generate) ───────── */}
       <div className="p-4 border-b bg-white">
         <div className="flex items-center justify-between">
-          <div className="font-semibold text-gray-900">Billing</div>
+          <div className="font-semibold text-gray-900">관리자 2차 확인</div>
           <div className="flex items-center gap-2">
             <button onClick={goPrevMonth} className="px-2 py-1 border rounded-lg text-sm hover:bg-slate-50">←</button>
             <div className="text-sm font-medium">{monthLabel}</div>
@@ -469,42 +448,48 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
         </div>
 
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="text-sm">
-            <div className="text-gray-600 mb-1">Student</div>
-            <input
-              className="w-full border rounded-lg px-2 py-1.5 bg-gray-50 text-black"
-              value={studentName}
-              readOnly
-            />
-          </label>
+          <div>
+            <label className="text-sm block">
+              <div className="text-gray-600 mb-1">Student</div>
+              <input
+                className="w-full border rounded-lg px-2 py-1.5 bg-gray-50 text-black"
+                value={studentName}
+                readOnly
+              />
+            </label>
 
-          <label className="text-sm">
-            <div className="text-gray-600 mb-1">Fee (₩ / class)</div>
-            <input
-              type="number"
-              className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-              value={fee}
-              onChange={(e) => setFee(Number(e.target.value || 0))}
-              placeholder="50000"
-            />
-          </label>
+            <label className="text-sm mt-3 block">
+              <div className="text-gray-600 mb-1">This Month Credits (Scheduled)</div>
+              <input
+                type="number"
+                className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                value={carryInCredit}
+                onChange={(e) => setCarryInCredit(Number(e.target.value || 0))}
+                placeholder="e.g. 6"
+              />
+            </label>
+          </div>
 
-          <label className="text-sm">
-            <div className="text-gray-600 mb-1">This Month Credits (Scheduled)</div>
-            <input
-              type="number"
-              className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-              value={carryInCredit}
-              onChange={(e) => setCarryInCredit(Number(e.target.value || 0))}
-              placeholder="e.g. 6"
-            />
-          </label>
+          <div>
+            <label className="text-sm">
+              <div className="text-gray-600 mb-1">Fee (₩ / class)</div>
+              <input
+                type="number"
+                className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                value={fee}
+                onChange={(e) => setFee(Number(e.target.value || 0))}
+                placeholder="50000"
+              />
+            </label>
 
-          <div className="flex items-end">
-            <div className="w-full grid grid-cols-1 gap-2">
+
+          </div>
+
+          <div className="col-span-2">
+            <div className="flex items-end justify-end">
               <button
                 onClick={generateDraft}
-                className="w-full rounded-lg bg-indigo-600 text-white py-2 hover:bg-indigo-700"
+                className="w-full md:w-40 rounded-lg bg-indigo-600 text-white py-2 hover:bg-indigo-700"
                 title="Generate a billing draft from this month's class notes and next month's schedules"
               >
                 Generate
@@ -514,120 +499,160 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
         </div>
       </div>
 
-      {/* ── Part 2: This month’s classes (Actuals) ─────────────────────────── */}
+      {/* ── SCROLL AREA: Settlement Summary first, then This month's classes, then Next month's scheduled classes ── */}
       <div className="flex-1 p-4 overflow-y-auto">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-semibold text-gray-800">This month’s classes</div>
-          <div className="flex items-center gap-2">
-            {studentMetaLoading && <span className="text-xs text-gray-500">Loading class details…</span>}
-            <button onClick={addRow} className="text-xs px-3 py-1 rounded-md border border-slate-300 hover:bg-slate-50">
-              Add row
-            </button>
+        {/* ── Settlement Summary (Korean labels) ───────────────────────────────────── */}
+        <div className="mb-6">
+          <div className="bg-white border rounded-xl overflow-hidden">
+            <div className="px-4 py-3 border-b font-semibold text-gray-800">
+              정산 요약
+            </div>
+            <table className="w-full text-sm">
+              <tbody className="[&>tr>*]:px-4 [&>tr>*]:py-2">
+                <tr className="border-b">
+                  <td className="text-gray-500 w-1/2">이번달 선결제(예정/스케줄)</td>
+                  <td className="font-semibold text-right">{carryInCredit}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="text-gray-500">이번달 실제 수업 (노트 기준)</td>
+                  <td className="font-semibold text-right">{thisMonthActual}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="text-gray-500">다음달 예정 수업 (스케줄)</td>
+                  <td className="font-semibold text-right">{nextMonthPlanned}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="text-gray-500">다음달 차감 가능 수업</td>
+                  <td className="font-semibold text-right">{totalCreditsAvailable}</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="text-gray-500">결제 대상 수업</td>
+                  <td className="font-semibold text-right">{nextToPayClasses}</td>
+                </tr>
+                <tr>
+                  <td className="text-gray-500">결제 금액 (₩)</td>
+                  <td className="font-semibold text-right">{amountDueNext.toLocaleString("ko-KR")}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
-              <tr className="text-left text-gray-600">
-                <th className="px-3 py-2 w-10">#</th>
-                <th className="px-3 py-2">Class note date</th>
-                <th className="px-3 py-2">Schedule date</th>
-                <th className="px-3 py-2">Quizlet Date</th>
-                <th className="px-3 py-2">Diary Date</th>
-                <th className="px-3 py-2 w-28">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
-                    No rows. Click <b>Generate</b> to pull this month’s class notes.
-                  </td>
+        {/* ── Part 2: This month’s classes (Actuals) ─────────────────────────── */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-semibold text-gray-800">This month’s classes</div>
+            <div className="flex items-center gap-2">
+              {studentMetaLoading && <span className="text-xs text-gray-500">Loading class details…</span>}
+              <button onClick={addRow} className="text-xs px-3 py-1 rounded-md border border-slate-300 hover:bg-slate-50">
+                Add row
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white border rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b">
+                <tr className="text-left text-gray-600">
+                  <th className="px-3 py-2 w-10">#</th>
+                  <th className="px-3 py-2">Class note date</th>
+                  <th className="px-3 py-2">Schedule date</th>
+                  <th className="px-3 py-2">Quizlet Date</th>
+                  <th className="px-3 py-2">Diary Date</th>
+                  <th className="px-3 py-2 w-28">Actions</th>
                 </tr>
-              ) : (
-                rows.map((r, i) => {
-                  const normalizedNote = (() => {
-                    const dt = toDateYMD(r.noteDate);
-                    return dt ? ymdString(dt) : r.noteDate;
-                  })();
-                  const hasScheduleThatDay = scheduleSetThisMonth.has(normalizedNote);
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+                      No rows. Click <b>Generate</b> to pull this month’s class notes.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r, i) => {
+                    const normalizedNote = (() => {
+                      const dt = toDateYMD(r.noteDate);
+                      return dt ? ymdString(dt) : r.noteDate;
+                    })();
+                    const hasScheduleThatDay = scheduleSetThisMonth.has(normalizedNote);
 
-                  const metaKey = (() => {
-                    const dt = toDateYMD(r.schedDate || r.noteDate);
-                    return dt ? ymdString(dt) : "";
-                  })();
-                  const meta = metaKey && studentMeta ? studentMeta[metaKey] : undefined;
+                    const metaKey = (() => {
+                      const dt = toDateYMD(r.schedDate || r.noteDate);
+                      return dt ? ymdString(dt) : "";
+                    })();
+                    const meta = metaKey && studentMeta ? studentMeta[metaKey] : undefined;
 
-                  return (
-                    <tr key={r.id} className="border-b last:border-b-0">
-                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
+                    return (
+                      <tr key={r.id} className="border-b last:border-b-0">
+                        <td className="px-3 py-2 text-gray-500">{i + 1}</td>
 
-                      <td className="px-3 py-2">
-                        <input
-                          className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                          value={r.noteDate}
-                          onChange={(e) => updateRow(r.id, { noteDate: e.target.value })}
-                          onBlur={(e) => {
-                            const dt = toDateYMD(e.target.value);
-                            if (dt) updateRow(r.id, { noteDate: ymdString(dt) });
-                          }}
-                          placeholder="YYYY. MM. DD."
-                        />
-                      </td>
+                        <td className="px-3 py-2">
+                          <input
+                            className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                            value={r.noteDate}
+                            onChange={(e) => updateRow(r.id, { noteDate: e.target.value })}
+                            onBlur={(e) => {
+                              const dt = toDateYMD(e.target.value);
+                              if (dt) updateRow(r.id, { noteDate: ymdString(dt) });
+                            }}
+                            placeholder="YYYY. MM. DD."
+                          />
+                        </td>
 
-                      <td className="px-3 py-2">
-                        <input
-                          list={`sched-options-${i}`}
-                          className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                          value={r.schedDate}
-                          onChange={(e) => updateRow(r.id, { schedDate: e.target.value })}
-                          onBlur={(e) => {
-                            const dt = toDateYMD(e.target.value);
-                            if (dt) updateRow(r.id, { schedDate: ymdString(dt) });
-                          }}
-                          placeholder="YYYY. MM. DD."
-                        />
-                        <datalist id={`sched-options-${i}`}>
-                          {scheduleDatesThisMonth.map((d) => (
-                            <option key={d} value={d} />
-                          ))}
-                        </datalist>
-                      </td>
+                        <td className="px-3 py-2">
+                          <input
+                            list={`sched-options-${i}`}
+                            className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                            value={r.schedDate}
+                            onChange={(e) => updateRow(r.id, { schedDate: e.target.value })}
+                            onBlur={(e) => {
+                              const dt = toDateYMD(e.target.value);
+                              if (dt) updateRow(r.id, { schedDate: ymdString(dt) });
+                            }}
+                            placeholder="YYYY. MM. DD."
+                          />
+                          <datalist id={`sched-options-${i}`}>
+                            {scheduleDatesThisMonth.map((d) => (
+                              <option key={d} value={d} />
+                            ))}
+                          </datalist>
+                        </td>
 
-                      <td className="px-3 py-2">{meta?.quizlet_date ?? "—"}</td>
-                      <td className="px-3 py-2">{meta?.diary_date ?? "—"}</td>
+                        <td className="px-3 py-2">{meta?.quizlet_date ?? "—"}</td>
+                        <td className="px-3 py-2">{meta?.diary_date ?? "—"}</td>
 
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          {!hasScheduleThatDay && (
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            {!hasScheduleThatDay && (
+                              <button
+                                onClick={() => matchOrCreateRow(r)}
+                                className="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50"
+                                title="Create a schedule on this day and link it"
+                              >
+                                Match
+                              </button>
+                            )}
                             <button
-                              onClick={() => matchOrCreateRow(r)}
-                              className="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50"
-                              title="Create a schedule on this day and link it"
+                              onClick={() => removeRow(r.id)}
+                              className="text-xs px-2 py-1 rounded border border-rose-300 text-rose-700 hover:bg-rose-50"
+                              title="Remove row"
                             >
-                              Match
+                              Delete
                             </button>
-                          )}
-                          <button
-                            onClick={() => removeRow(r.id)}
-                            className="text-xs px-2 py-1 rounded border border-rose-300 text-rose-700 hover:bg-rose-50"
-                            title="Remove row"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* ── Part 2b: Next month’s scheduled classes (schedule date only) ───────── */}
-        <div className="mt-8">
+        <div>
           <div className="flex items-center justify-between mb-2">
             <div className="font-semibold text-gray-800">
               Next month’s scheduled classes
@@ -684,102 +709,11 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
               </tbody>
             </table>
 
-            {/* Datalist to help pick from next month’s scheduled days */}
             <datalist id="next-sched-options">
               {nextMonthScheduleDates.map((d) => (
                 <option key={d} value={d} />
               ))}
             </datalist>
-          </div>
-        </div>
-
-        {/* ── Settlement Summary (compact) ───────────────────────────────────── */}
-        <div className="mt-6">
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b font-semibold text-gray-800">
-              Settlement Summary
-            </div>
-            <table className="w-full text-sm">
-              <tbody className="[&>tr>*]:px-4 [&>tr>*]:py-2">
-                <tr className="border-b">
-                  <td className="text-gray-500 w-1/2">Carry-in credit (THIS month prepaid)</td>
-                  <td className="font-semibold text-right">{carryInCredit}</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="text-gray-500">This month – Actual (notes)</td>
-                  <td className="font-semibold text-right">{thisMonthActual}</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="text-gray-500">Carry after settlement</td>
-                  <td className="font-semibold text-right">{carryAfterSettlement}</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="text-gray-500">Next month – Planned (schedules)</td>
-                  <td className="font-semibold text-right">{nextMonthPlanned}</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="text-gray-500">Credits applicable to next month</td>
-                  <td className="font-semibold text-right">{totalCreditsAvailable}</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="text-gray-500">To pay (classes)</td>
-                  <td className="font-semibold text-right">{nextToPayClasses}</td>
-                </tr>
-                <tr>
-                  <td className="text-gray-500">Amount due (₩)</td>
-                  <td className="font-semibold text-right">{amountDueNext.toLocaleString("ko-KR")}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* ── Part 2.5: Text message panel ─────────────────────────────── */}
-        <div className="mt-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="font-semibold text-gray-800">Text Message</div>
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={handleCopy}
-              className="absolute right-2 top-2 text-xs px-2 py-1 rounded-md border border-slate-300 hover:bg-slate-50"
-              title="문자 내용 복사"
-            >
-              Copy
-            </button>
-            {copied && (
-              <span className="absolute right-2 top-10 text-xs text-emerald-600">Copied!</span>
-            )}
-            <div
-              className="
-                w-full
-                min-h-[24rem]
-                h-[60vh] md:h-[65vh] lg:h-[70vh] xl:h-[75vh]
-                border rounded-xl p-4
-                bg-white
-                text-base leading-7
-                whitespace-pre-wrap
-              "
-            >
-              {paymentLink ? (
-                <>
-                  {messageText.split(paymentLink)[0]}
-                  <a
-                    href={paymentLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    {paymentLink}
-                  </a>
-                  {messageText.split(paymentLink)[1]}
-                </>
-              ) : (
-                messageText
-              )}
-            </div>
-
           </div>
         </div>
       </div>
@@ -788,10 +722,11 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
       <div className="p-3 border-t bg-white">
         <button
           onClick={handleConfirm}
-          className="w-full rounded-lg bg-emerald-600 text-white py-2 hover:bg-emerald-700"
-          title="Save billing info (hook API here later)"
+          className="w-full rounded-lg bg-emerald-600 text-white py-2 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          title="2차 관리자 확인 및 저장"
+          disabled={saving}
         >
-          Confirm & Save
+          {saving ? "저장 중…" : "2차 관리자 확인 & Save"}
         </button>
       </div>
     </div>

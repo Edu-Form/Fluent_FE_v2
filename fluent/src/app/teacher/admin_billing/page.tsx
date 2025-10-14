@@ -65,7 +65,7 @@ export default function Page() {
   // changed Teacher label to Korean as requested
   const stageLabels: Record<string, string> = {
     teacher_confirmed: "선생님 일정 확인",
-    admin_confirmed: "Admin",
+    admin_confirmed: "관리자 2차 확인",
     message_sent: "Message",
     payment_confirmed: "Payment",
   };
@@ -106,7 +106,7 @@ export default function Page() {
             message_sent: "ready" as Status,
             payment_confirmed: false,
             // keep student_page_url; we also construct a teacher schedule link in the UI
-            student_page_url: `http://localhost:3000/teacher/schedule?user=${encodeURIComponent(teacherName)}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(String(sid))}`,
+            student_page_url: `/teacher/schedule?user=${encodeURIComponent(teacherName)}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(String(sid))}`,
             message_text: `${studentName}님, 안녕하세요:)\n${month}월 정산 및 다음달 안내 드립니다...`,
           } as StudentBillingRow;
         });
@@ -555,7 +555,7 @@ export default function Page() {
                                 {key === "teacher_confirmed" ? (
                                   <div>
                                     <a
-                                      href={`http://localhost:3000/teacher/schedule?user=${encodeURIComponent(r.teacher_name || "")}&type=teacher&student_name=${encodeURIComponent(r.student_name)}`}
+                                      href={`/teacher/schedule?user=${encodeURIComponent(r.teacher_name || "")}&type=teacher&student_name=${encodeURIComponent(r.student_name)}`}
                                       target="_blank"
                                       rel="noreferrer noopener"
                                       className={classNames("text-sm font-medium underline", boxMeta.textWhite ? "text-white/95" : "text-indigo-600")}
@@ -566,11 +566,26 @@ export default function Page() {
                                       선생님이 확인 버튼을 눌러야지 다음 단계로 이동 가능합니다.
                                     </div>
                                   </div>
+                                ) : key === "admin_confirmed" ? (
+                                  <div>
+                                    <a
+                                      href={`/teacher/schedule/admin-confirm?user=${encodeURIComponent(r.teacher_name || "")}&type=teacher&student_name=${encodeURIComponent(r.student_name)}&id=${encodeURIComponent(r.id)}`}
+                                      target="_blank"
+                                      rel="noreferrer noopener"
+                                      className={classNames("text-sm font-medium underline", boxMeta.textWhite ? "text-white/95" : "text-indigo-600")}
+                                    >
+                                      {`${r.student_name} 학생 2차 확인 링크`}
+                                    </a>
+                                    <div className={classNames("text-xs mt-2", boxMeta.textWhite ? "text-white/80" : "text-gray-500")}>
+                                      관리자가 2차로 확인하는 단계입니다. 
+                                    </div>
+                                  </div>
                                 ) : (
                                   stageText(r, key)
                                 )}
                               </div>
                             )}
+
                           </div>
                         </div>
                       );

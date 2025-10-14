@@ -1117,6 +1117,85 @@ export async function saveManyScheduleData(schedule: any) {
   }
 }
 
+export async function saveBillingCheck2(input: {
+  student_name: string;
+  teacher_name?: string;
+  yyyymm: string;
+  month?: any | null;
+  this_month_lines: any[];
+  next_month_lines: any[];
+  final_save?: boolean;
+  meta?: Record<string, any>;
+  savedBy?: string;
+}) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    // collection for admin check details. If you already have a table used by check1,
+    // you can insert into the same collection – change the name accordingly.
+    const coll = db.collection("billing_check2_details");
+
+    const now = new Date();
+    const doc = {
+      student_name: input.student_name,
+      teacher_name: input.teacher_name ?? "",
+      yyyymm: input.yyyymm,
+      month: input.month ?? null,
+      this_month_lines: Array.isArray(input.this_month_lines) ? input.this_month_lines : [],
+      next_month_lines: Array.isArray(input.next_month_lines) ? input.next_month_lines : [],
+      final_save: !!input.final_save,
+      meta: input.meta ?? {},
+      savedBy: input.savedBy ?? "ui",
+      createdAt: now,
+      savedAt: now,
+    };
+
+    const res = await coll.insertOne(doc);
+    const inserted = await coll.findOne({ _id: res.insertedId });
+    // return sanitized doc
+    if (!inserted) return null;
+    return { ...inserted, _id: String(inserted._id) };
+  } catch (err) {
+    console.error("saveBillingCheck2 error:", err);
+    throw err;
+  }
+}
+
+/** Append/upsert the status document in the billing collection (step = AdminConfirm)
+ *  This mirrors saveBillingStatusCheck1 behavior: upsert by { yyyymm, step } and $addToSet student_names.
+ */
+export async function saveBillingStatusCheck2(input: {
+  yyyymm: string;
+  step: string; // expected "AdminConfirm"
+  student_name: string;
+  savedBy?: string;
+  meta?: Record<string, any>;
+}) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("billing"); // status documents collection (same one you query from front-end)
+
+    const now = new Date();
+
+    // Use $addToSet + $each so student is deduped
+    const filter = { yyyymm: input.yyyymm, step: input.step };
+    const update: any = {
+      $addToSet: { student_names: { $each: [String(input.student_name)] } },
+      $set: { savedAt: now, savedBy: input.savedBy ?? "ui", meta: input.meta ?? {} },
+      $setOnInsert: { createdAt: now, type: `${String(input.step).toLowerCase()}_status` },
+    };
+
+    const res = await coll.findOneAndUpdate(filter, update, { upsert: true, returnDocument: "after" as any });
+    // Convert _id to string for JSON-serializable response
+    return { ...res, _id: String(res?._id) };
+  } catch (err) {
+    console.error("saveBillingStatusCheck2 error:", err);
+    throw err;
+  }
+}
+
 export async function getUserData(
   username: string
 ): Promise<Student | Teacher | null> {
