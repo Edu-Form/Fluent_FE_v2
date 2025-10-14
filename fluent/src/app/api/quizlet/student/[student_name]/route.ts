@@ -11,7 +11,6 @@ export async function GET(request: Request) {
     }
     // Call the function from data.ts to get the student's diary data
     const quizlets = await getStudentQuizletData(student_name);
-    console.log(quizlets);
     if (!quizlets) {
       return NextResponse.json({ error: "Quizlets not found" }, { status: 404 });
     }

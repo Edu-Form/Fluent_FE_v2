@@ -68,6 +68,21 @@ export interface ScheduleDoc {
   updatedAt?: string;
 }
 
+/** Billing detail shape returned by confirmed_class_dates */
+export type BillingEntry = {
+  _id?: string;
+  savedAt: string;
+  savedBy: string;
+  locked: boolean;
+  student_name: string;
+  teacher_name?: string;
+  yyyymm: string;
+  month?: any | null;
+  this_month_lines: Array<{ note_date?: string; schedule_date?: string }>;
+  next_month_lines: Array<{ schedule_date?: string }>;
+  meta?: Record<string, any>;
+};
+
 /* ------------------------ helpers (keep in /lib) ------------------------ */
 function parseYMD(dateStr: string): Date | null {
   if (!dateStr) return null;
@@ -281,6 +296,192 @@ export async function removeTeacher(name: string) {
   return { deletedCount: result.deletedCount ?? 0 };
 }
 
+/** Return a saved billing entry for student_name + yyyymm or null */
+export async function getBillingCheck1(student_name: string, yyyymm: string): Promise<BillingEntry | null> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("confirmed_class_dates");
+
+    const doc = await coll.findOne({ student_name, yyyymm });
+    if (!doc) return null;
+    return serialize_document(doc) as BillingEntry;
+  } catch (err) {
+    console.error("getBillingCheck1 error:", err);
+    return null;
+  }
+}
+
+/** Save (create/overwrite) billing entry for student+yyyymm (confirmed_class_dates).
+ *  Returns the saved entry (serialized).
+ */
+export async function saveBillingCheck1(payload: {
+  student_name: string;
+  teacher_name?: string;
+  yyyymm: string;
+  month?: any | null;
+  this_month_lines?: Array<{ note_date?: string; schedule_date?: string }>;
+  next_month_lines?: Array<{ schedule_date?: string }>;
+  final_save?: boolean;
+  meta?: Record<string, any>;
+  savedBy?: string;
+}): Promise<BillingEntry> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("confirmed_class_dates");
+
+    const filter = { student_name: payload.student_name, yyyymm: payload.yyyymm };
+
+    const updateDoc = {
+      $set: {
+        savedAt: new Date().toISOString(),
+        savedBy: payload.savedBy ?? "ui",
+        locked: !!payload.final_save,
+        student_name: payload.student_name,
+        teacher_name: payload.teacher_name ?? "",
+        yyyymm: payload.yyyymm,
+        month: payload.month ?? null,
+        this_month_lines: Array.isArray(payload.this_month_lines) ? payload.this_month_lines : [],
+        next_month_lines: Array.isArray(payload.next_month_lines) ? payload.next_month_lines : [],
+        meta: payload.meta ?? {},
+      },
+    };
+
+    const res = await coll.findOneAndUpdate(filter, updateDoc, {
+      upsert: true,
+      returnDocument: "after",
+    });
+
+    // res.value may be null in some environments; fallback to findOne
+    let saved = res?.value;
+    if (!saved) {
+      saved = await coll.findOne(filter);
+      if (!saved) throw new Error("Failed to save confirmed_class_dates entry");
+    }
+
+    return serialize_document(saved) as BillingEntry;
+  } catch (err) {
+    console.error("saveBillingCheck1 error:", err);
+    throw err;
+  }
+}
+
+/* -----------------------------
+   Status helpers (billing collection)
+   ----------------------------- */
+
+export type BillingStatusEntry = {
+  _id?: string;
+  type: "check1_status";
+  yyyymm: string;
+  step: string; // e.g. TeacherConfirm | AdminConfirm | MessageConfirm | PaymentConfirm
+  student_names: string[];
+  savedAt: string;
+  savedBy?: string;
+  meta?: Record<string, any>;
+};
+
+// REPLACE this function in app/api/billing/check1/data.ts
+export async function saveBillingStatusCheck1(params: {
+  yyyymm: string;
+  step: string;
+  student_name: string;
+  savedBy?: string;
+  meta?: Record<string, any>;
+}): Promise<BillingStatusEntry> {
+  const { yyyymm, step, student_name, savedBy, meta } = params;
+  if (!yyyymm || !step || !student_name) {
+    throw new Error("yyyymm, step and student_name are required");
+  }
+
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("billing");
+
+    const filter = { yyyymm, step };
+    const now = new Date().toISOString();
+
+    console.debug("[saveBillingStatusCheck1] start", { filter, student_name, savedBy });
+
+    // 1) try to find existing doc
+    const existing = await coll.findOne(filter);
+    if (existing) {
+      console.debug("[saveBillingStatusCheck1] found existing doc:", existing._id ?? "(no _id)");
+      // explicit update: add student if missing
+      const updateRes = await coll.updateOne(filter, {
+        $addToSet: { student_names: student_name },
+        $set: { savedAt: now, savedBy: savedBy ?? "ui", meta: meta ?? {} },
+      });
+      console.debug("[saveBillingStatusCheck1] updateOne result:", {
+        matchedCount: updateRes.matchedCount,
+        modifiedCount: updateRes.modifiedCount,
+      });
+    } else {
+      // 2) not found → insert new document explicitly
+      const doc = {
+        type: "check1_status",
+        yyyymm,
+        step,
+        student_names: [student_name],
+        createdAt: now,
+        savedAt: now,
+        savedBy: savedBy ?? "ui",
+        meta: meta ?? {},
+      };
+      const insertRes = await coll.insertOne(doc);
+      console.debug("[saveBillingStatusCheck1] inserted doc id:", insertRes.insertedId?.toString?.());
+    }
+
+    // 3) read back and return
+    const saved = await coll.findOne(filter);
+    if (!saved) {
+      console.error("[saveBillingStatusCheck1] ERROR: could not read back saved doc", { filter });
+      throw new Error("Failed to read back billing status entry after save");
+    }
+
+    console.debug("[saveBillingStatusCheck1] final saved doc:", saved);
+    return serialize_document(saved) as BillingStatusEntry;
+  } catch (err) {
+    console.error("saveBillingStatusCheck1 error:", err);
+    throw err;
+  }
+}
+
+
+/** Optional helper: read status doc for a yyyymm + step */
+export async function getBillingStatus(yyyymm: string, step: string): Promise<BillingStatusEntry | null> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("billing");
+    const doc = await coll.findOne({ type: "check1_status", yyyymm, step });
+    if (!doc) return null;
+    return serialize_document(doc) as BillingStatusEntry;
+  } catch (err) {
+    console.error("getBillingStatus error:", err);
+    return null;
+  }
+}
+
+export async function getBillingStatusForMonth(yyyymm: string): Promise<any[]> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("billing");
+
+    const cursor = coll.find({ yyyymm });
+    const list = await cursor.toArray();
+
+    // serialize each doc for safe JSON transport
+    return (list || []).map((d) => serialize_document(d));
+  } catch (err) {
+    console.error("getBillingStatusForMonth error:", err);
+    return [];
+  }
+}
+
 /** Fetch a single student profile by exact name match. */
 export async function getStudentByName(student_name: string) {
   try {
@@ -405,6 +606,37 @@ export async function getStudents() {
     return null;
   }
 }
+
+export async function getStudents_Billing() {
+  try {
+    const client = await clientPromise;
+    const database = client.db("school_management");
+    const students = database.collection("students");
+
+    // Only return students where `teacher` contains at least one non-whitespace character.
+    // Sort so results are grouped by teacher, then by student name, then newest first.
+    const cursor = students.find(
+      { teacher: { $type: "string", $regex: /\S/ } },
+      { projection: {} }
+    ).sort({ teacher: 1, name: 1, createdAt: -1 });
+
+    const result = await cursor.toArray();
+
+    // Normalize fields (convert ObjectId to string, provide defaults)
+    return result.map((doc) => ({
+      ...doc,
+      _id: doc._id.toString(),
+      teacher: typeof doc.teacher === "string" ? doc.teacher.trim() : doc.teacher,
+      phoneNumber: doc.phoneNumber ?? "",
+      name: doc.name ?? "",
+      createdAt: doc.createdAt ?? null,
+    }));
+  } catch (error) {
+    console.error("Error fetching students:", error);
+    return null;
+  }
+}
+
 
 export async function getAllBillingData() {
   const client = await clientPromise;
