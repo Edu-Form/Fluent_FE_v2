@@ -41,12 +41,6 @@ function ymdString(d: Date) {
 function sameYearMonth(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
-function monthKo(d: Date) {
-  return `${d.getMonth() + 1}월`;
-}
-function prevMonthAnchorOf(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth() - 1, 1);
-}
 
 /* ------------------------------ Component ------------------------------ */
 export default function BillingPanel({

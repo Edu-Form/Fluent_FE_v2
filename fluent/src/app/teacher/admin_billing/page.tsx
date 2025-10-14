@@ -42,14 +42,6 @@ function StatusChip({ kind, label }: { kind: "ready" | "done" | "payment"; label
   return <span className={classNames(base, tone)}>{label}</span>;
 }
 
-/** Step name -> stage field mapping */
-const STEP_TO_FIELD: Record<string, keyof StudentBillingRow> = {
-  TeacherConfirm: "teacher_confirmed",
-  AdminConfirm: "admin_confirmed",
-  MessageConfirm: "message_sent",
-  PaymentConfirm: "payment_confirmed",
-} as any;
-
 export default function Page() {
   const [monthAnchor, setMonthAnchor] = useState<Date>(() => {
     const now = new Date();
