@@ -517,7 +517,6 @@ export default function Page() {
                   {/* middle: 4 accordion columns (one per stage) */}
                   <div className="flex-1 flex gap-0">
                     {stageKeys.map((key, idx) => {
-                      const stageIndex = idx + 1; // midBoxes index
                       const boxMeta = midBoxes[idx];
                       const isExpanded = expandedStage[r.id] === key;
                       const label = stageLabels[key];

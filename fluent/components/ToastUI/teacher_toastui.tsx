@@ -870,8 +870,16 @@ export default function TeacherToastUI({
               <button onClick={toMonth} className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${viewName === "month" ? "bg-slate-900 text-white" : ""}`}>Month</button>
             </div>
           )}
-
           <div className="ml-auto flex items-center gap-2">
+            <a
+                href="/teacher/admin_billing/"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open Full Calendar"
+                className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+              >
+                Full Calendar
+            </a>
             <a
               href="/teacher/schedule/admin/"
               target="_blank"
