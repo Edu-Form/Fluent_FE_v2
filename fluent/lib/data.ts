@@ -1127,13 +1127,19 @@ export async function saveBillingCheck2(input: {
   final_save?: boolean;
   meta?: Record<string, any>;
   savedBy?: string;
+
+  // NEW: Settlement summary fields
+  carry_in_credit?: number;
+  this_month_actual?: number;
+  next_month_planned?: number;
+  total_credits_available?: number;
+  next_to_pay_classes?: number;
+  fee_per_class?: number;
+  amount_due_next?: number;
 }) {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
-
-    // collection for admin check details. If you already have a table used by check1,
-    // you can insert into the same collection – change the name accordingly.
     const coll = db.collection("billing_check2_details");
 
     const now = new Date();
@@ -1142,25 +1148,34 @@ export async function saveBillingCheck2(input: {
       teacher_name: input.teacher_name ?? "",
       yyyymm: input.yyyymm,
       month: input.month ?? null,
-      this_month_lines: Array.isArray(input.this_month_lines) ? input.this_month_lines : [],
-      next_month_lines: Array.isArray(input.next_month_lines) ? input.next_month_lines : [],
+      this_month_lines: input.this_month_lines ?? [],
+      next_month_lines: input.next_month_lines ?? [],
       final_save: !!input.final_save,
       meta: input.meta ?? {},
       savedBy: input.savedBy ?? "ui",
+
+      // NEW summary fields
+      carry_in_credit: Number(input.carry_in_credit ?? 0),
+      this_month_actual: Number(input.this_month_actual ?? 0),
+      next_month_planned: Number(input.next_month_planned ?? 0),
+      total_credits_available: Number(input.total_credits_available ?? 0),
+      next_to_pay_classes: Number(input.next_to_pay_classes ?? 0),
+      fee_per_class: Number(input.fee_per_class ?? 0),
+      amount_due_next: Number(input.amount_due_next ?? 0),
+
       createdAt: now,
       savedAt: now,
     };
 
     const res = await coll.insertOne(doc);
     const inserted = await coll.findOne({ _id: res.insertedId });
-    // return sanitized doc
-    if (!inserted) return null;
-    return { ...inserted, _id: String(inserted._id) };
+    return inserted ? { ...inserted, _id: String(inserted._id) } : null;
   } catch (err) {
     console.error("saveBillingCheck2 error:", err);
     throw err;
   }
 }
+
 
 /** Append/upsert the status document in the billing collection (step = AdminConfirm)
  *  This mirrors saveBillingStatusCheck1 behavior: upsert by { yyyymm, step } and $addToSet student_names.
@@ -1192,6 +1207,32 @@ export async function saveBillingStatusCheck2(input: {
     return { ...res, _id: String(res?._id) };
   } catch (err) {
     console.error("saveBillingStatusCheck2 error:", err);
+    throw err;
+  }
+}
+
+export async function getBillingCheck2(query: {
+  student_name: string;
+  yyyymm: string;
+}) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("billing_check2_details");
+
+    const doc = await coll.findOne(
+      {
+        student_name: query.student_name,
+        yyyymm: query.yyyymm,
+      },
+      { sort: { savedAt: -1 } } // latest record first if duplicates exist
+    );
+
+    if (!doc) return null;
+    // convert _id for JSON serialization
+    return { ...doc, _id: String(doc._id) };
+  } catch (err) {
+    console.error("getBillingCheck2 error:", err);
     throw err;
   }
 }

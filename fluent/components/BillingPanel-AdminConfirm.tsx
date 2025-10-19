@@ -248,33 +248,33 @@ export default function BillingPanel({
       return;
     }
 
-    const generateLink = async () => {
-      setPaymentLinkLoading(true);
-      setPaymentLink("");
-      try {
-        const response = await fetch("/api/payment/link", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentName, amount: amountDueNext }),
-        });
+    // const generateLink = async () => {
+    //   setPaymentLinkLoading(true);
+    //   setPaymentLink("");
+    //   try {
+    //     const response = await fetch("/api/payment/link", {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify({ studentName, amount: amountDueNext }),
+    //     });
 
-        if (!response.ok) {
-          console.error("Failed to generate payment link.", await response.text());
-          return;
-        }
+    //     if (!response.ok) {
+    //       console.error("Failed to generate payment link.", await response.text());
+    //       return;
+    //     }
 
-        const data = await response.json();
-        if (data.paymentLink) {
-          setPaymentLink(data.paymentLink);
-        }
-      } catch (error: any) {
-        console.error("Error generating payment link:", error);
-      } finally {
-        setPaymentLinkLoading(false);
-      }
-    };
+    //     const data = await response.json();
+    //     if (data.paymentLink) {
+    //       setPaymentLink(data.paymentLink);
+    //     }
+    //   } catch (error: any) {
+    //     console.error("Error generating payment link:", error);
+    //   } finally {
+    //     setPaymentLinkLoading(false);
+    //   }
+    // };
 
-    generateLink();
+    // generateLink();
   }, [amountDueNext, studentName]);
 
   /* -------------------- Text message (auto template) -------------------- */
@@ -392,16 +392,24 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
       teacher_name: teacherName ?? "",
       month: { year: monthAnchor.getFullYear(), month: monthAnchor.getMonth() + 1 },
 
-      // This-month lines (UI)
+      // Lines
       this_month_lines: rows.map((r) => ({ note_date: r.noteDate, schedule_date: r.schedDate })),
-
-      // Next-month plan lines
       next_month_lines: nextRows.map((r) => ({ schedule_date: r.schedDate })),
+
+      // Summary fields (정산 요약)
+      carry_in_credit: carryInCredit,          // 이번달 선결제(예정/스케줄)
+      this_month_actual: thisMonthActual,      // 이번달 실제 수업 (노트 기준)
+      next_month_planned: nextMonthPlanned,    // 다음달 예정 수업 (스케줄)
+      total_credits_available: totalCreditsAvailable,  // 다음달 차감 가능 수업
+      next_to_pay_classes: nextToPayClasses,   // 결제 대상 수업
+      fee_per_class: fee,                      // 회당 금액
+      amount_due_next: amountDueNext,          // 결제 금액 (₩)
 
       final_save: true,
       meta: { via: "admin-check2-ui" },
       savedBy: "admin-ui",
     };
+
 
     try {
       setSaving(true);
@@ -447,49 +455,52 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm block">
-              <div className="text-gray-600 mb-1">Student</div>
-              <input
-                className="w-full border rounded-lg px-2 py-1.5 bg-gray-50 text-black"
-                value={studentName}
-                readOnly
-              />
-            </label>
+        <div className="mt-3 space-y-3">
+          {/* Student field (full width) */}
+          <label className="text-sm block">
+            <div className="text-gray-600 mb-1">Student</div>
+            <input
+              className="w-full border rounded-lg px-2 py-1.5 bg-gray-50 text-black"
+              value={studentName}
+              readOnly
+            />
+          </label>
 
-            <label className="text-sm mt-3 block">
-              <div className="text-gray-600 mb-1">This Month Credits (Scheduled)</div>
-              <input
-                type="number"
-                className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                value={carryInCredit}
-                onChange={(e) => setCarryInCredit(Number(e.target.value || 0))}
-                placeholder="e.g. 6"
-              />
-            </label>
-          </div>
+          {/* Row: Credits + Fee + Generate */}
+          <div className="flex flex-col sm:flex-row sm:items-end sm:gap-3">
+            {/* Credits */}
+            <div className="flex-1">
+              <label className="text-sm block">
+                <div className="text-gray-600 mb-1">선결제 Credit</div>
+                <input
+                  type="number"
+                  className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                  value={carryInCredit}
+                  onChange={(e) => setCarryInCredit(Number(e.target.value || 0))}
+                  placeholder="e.g. 6"
+                />
+              </label>
+            </div>
 
-          <div>
-            <label className="text-sm">
-              <div className="text-gray-600 mb-1">Fee (₩ / class)</div>
-              <input
-                type="number"
-                className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                value={fee}
-                onChange={(e) => setFee(Number(e.target.value || 0))}
-                placeholder="50000"
-              />
-            </label>
+            {/* Fee */}
+            <div className="flex-1">
+              <label className="text-sm block">
+                <div className="text-gray-600 mb-1">Fee (₩ / class)</div>
+                <input
+                  type="number"
+                  className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                  value={fee}
+                  onChange={(e) => setFee(Number(e.target.value || 0))}
+                  placeholder="50000"
+                />
+              </label>
+            </div>
 
-
-          </div>
-
-          <div className="col-span-2">
-            <div className="flex items-end justify-end">
+            {/* Generate button */}
+            <div className="mt-3 sm:mt-0 sm:w-auto">
               <button
                 onClick={generateDraft}
-                className="w-full md:w-40 rounded-lg bg-indigo-600 text-white py-2 hover:bg-indigo-700"
+                className="w-full sm:w-32 rounded-lg bg-indigo-600 text-white py-2 hover:bg-indigo-700"
                 title="Generate a billing draft from this month's class notes and next month's schedules"
               >
                 Generate
@@ -497,6 +508,7 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
             </div>
           </div>
         </div>
+
       </div>
 
       {/* ── SCROLL AREA: Settlement Summary first, then This month's classes, then Next month's scheduled classes ── */}

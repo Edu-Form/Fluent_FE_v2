@@ -66,9 +66,10 @@ export default function Page() {
   const stageLabels: Record<string, string> = {
     teacher_confirmed: "선생님 일정 확인",
     admin_confirmed: "관리자 2차 확인",
-    message_sent: "Message",
+    message_sent: "결제페이지 확인",
     payment_confirmed: "Payment",
   };
+
 
   // helper: returns first not-done stage key or null
   function firstNotDoneStage(r: StudentBillingRow): string | null {
@@ -549,35 +550,89 @@ export default function Page() {
 
                               <div className={classNames("text-xs", indicatorColor)}>{isExpanded ? "▴" : "▾"}</div>
                             </div>
-
                             {isExpanded && (
-                              <div className={classNames("mt-3 text-sm", boxMeta.textWhite ? "text-white/95" : "text-gray-700")}>
+                              <div
+                                className={classNames(
+                                  "mt-3 text-sm",
+                                  boxMeta.textWhite ? "text-white/95" : "text-gray-700"
+                                )}
+                              >
                                 {key === "teacher_confirmed" ? (
                                   <div>
                                     <a
-                                      href={`/teacher/schedule?user=${encodeURIComponent(r.teacher_name || "")}&type=teacher&student_name=${encodeURIComponent(r.student_name)}`}
+                                      href={`/teacher/schedule?user=${encodeURIComponent(
+                                        r.teacher_name || ""
+                                      )}&type=teacher&student_name=${encodeURIComponent(
+                                        r.student_name
+                                      )}`}
                                       target="_blank"
                                       rel="noreferrer noopener"
-                                      className={classNames("text-sm font-medium underline", boxMeta.textWhite ? "text-white/95" : "text-indigo-600")}
+                                      className={classNames(
+                                        "text-sm font-medium underline",
+                                        boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
+                                      )}
                                     >
                                       {`${r.student_name} 학생 1차 확인 링크`}
                                     </a>
-                                    <div className={classNames("text-xs mt-2", boxMeta.textWhite ? "text-white/80" : "text-gray-500")}>
+                                    <div
+                                      className={classNames(
+                                        "text-xs mt-2",
+                                        boxMeta.textWhite ? "text-white/80" : "text-gray-500"
+                                      )}
+                                    >
                                       선생님이 확인 버튼을 눌러야지 다음 단계로 이동 가능합니다.
                                     </div>
                                   </div>
                                 ) : key === "admin_confirmed" ? (
                                   <div>
                                     <a
-                                      href={`/teacher/schedule/admin-confirm?user=${encodeURIComponent(r.teacher_name || "")}&type=teacher&student_name=${encodeURIComponent(r.student_name)}&id=${encodeURIComponent(r.id)}`}
+                                      href={`/teacher/schedule/admin-confirm?user=${encodeURIComponent(
+                                        r.teacher_name || ""
+                                      )}&type=teacher&student_name=${encodeURIComponent(
+                                        r.student_name
+                                      )}&id=${encodeURIComponent(r.id)}`}
                                       target="_blank"
                                       rel="noreferrer noopener"
-                                      className={classNames("text-sm font-medium underline", boxMeta.textWhite ? "text-white/95" : "text-indigo-600")}
+                                      className={classNames(
+                                        "text-sm font-medium underline",
+                                        boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
+                                      )}
                                     >
                                       {`${r.student_name} 학생 2차 확인 링크`}
                                     </a>
-                                    <div className={classNames("text-xs mt-2", boxMeta.textWhite ? "text-white/80" : "text-gray-500")}>
-                                      관리자가 2차로 확인하는 단계입니다. 
+                                    <div
+                                      className={classNames(
+                                        "text-xs mt-2",
+                                        boxMeta.textWhite ? "text-white/80" : "text-gray-500"
+                                      )}
+                                    >
+                                      관리자가 2차로 확인하는 단계입니다.
+                                    </div>
+                                  </div>
+                                ) : key === "message_sent" ? (
+                                  <div>
+                                    <a
+                                      href={`/teacher/payment?user=${encodeURIComponent(
+                                        r.teacher_name || ""
+                                      )}&type=teacher&student_name=${encodeURIComponent(
+                                        r.student_name
+                                      )}&id=${encodeURIComponent(r.id)}&date=${encodeURIComponent(yyyymm)}`}
+                                      target="_blank"
+                                      rel="noreferrer noopener"
+                                      className={classNames(
+                                        "text-sm font-medium underline",
+                                        boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
+                                      )}
+                                    >
+                                      {`${r.student_name} 학생 결제 링크 확인`}
+                                    </a>
+                                    <div
+                                      className={classNames(
+                                        "text-xs mt-2",
+                                        boxMeta.textWhite ? "text-white/80" : "text-gray-500"
+                                      )}
+                                    >
+                                      학생에게 링크를 보낸 후에, “발송 완료” 버튼을 눌러주세요. 추후 자동화될 예정입니다.
                                     </div>
                                   </div>
                                 ) : (
@@ -585,7 +640,6 @@ export default function Page() {
                                 )}
                               </div>
                             )}
-
                           </div>
                         </div>
                       );
