@@ -413,8 +413,7 @@ export default function Page() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Admin – Monthly Billing</h1>
-          <p className="text-sm text-gray-500">Track billing flow and confirmations for all students</p>
+          <h1 className="text-2xl font-bold">관리자 - 학생 결제 관리</h1>
         </div>
 
         <div className="flex items-center gap-3">
