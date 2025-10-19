@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "student_name required" }, { status: 400 });
     }
 
-    let yyyymm =
+    const yyyymm =
       typeof body.yyyymm === "string" && body.yyyymm
         ? body.yyyymm
         : makeYYYYMMFromMonth(body.month) ??

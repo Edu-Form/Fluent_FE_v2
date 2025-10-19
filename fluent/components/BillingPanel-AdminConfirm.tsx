@@ -53,7 +53,6 @@ function prevMonthAnchorOf(d: Date) {
  */
 export default function BillingPanel({
   studentName,
-  studentId,
   teacherName,
   quizletDates,
   scheduledRows,
@@ -90,8 +89,7 @@ export default function BillingPanel({
   const [carryInCredit, setCarryInCredit] = useState<number>(0);
   const [rows, setRows] = useState<BillingRow[]>([]);
   const [nextRows, setNextRows] = useState<NextBillingRow[]>([]);
-  const [paymentLink, setPaymentLink] = useState("");
-  const [, setPaymentLinkLoading] = useState(false);
+  const [, setPaymentLink] = useState("");
 
   const studentCacheRef = useRef<Map<string, any>>(new Map());
   const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
@@ -238,7 +236,6 @@ export default function BillingPanel({
   const nextMonthPlanned = nextMonthScheduleDates.length;
   const totalCreditsAvailable = Math.max(0, carryAfterSettlement);
   const nextToPayClasses = nextMonthPlanned - carryAfterSettlement;
-  const creditsAfterPayment = Math.max(0, totalCreditsAvailable - nextMonthPlanned);
   const amountDueNext = nextToPayClasses * (Number.isFinite(fee) ? fee : 0);
 
   /* ---- Payment link for NEXT month amount ---- */
@@ -277,9 +274,6 @@ export default function BillingPanel({
     // generateLink();
   }, [amountDueNext, studentName]);
 
-  /* -------------------- Text message (auto template) -------------------- */
-  const currentMonthKo = monthKo(monthAnchor);
-
   const {} = useMemo(() => {
     const pa = prevMonthAnchorOf(monthAnchor);
     const uniqDays = new Set<number>();
@@ -298,90 +292,6 @@ export default function BillingPanel({
       prevMonthCount: daysArr.length,
     };
   }, [quizletDates, monthAnchor]);
-
-  const displayName = useMemo(() => {
-    if (!studentName) return "";
-    return studentName.endsWith("님") ? studentName : `${studentName}님`;
-  }, [studentName]);
-
-  const dueDay = 7;
-  const feeStr = Number.isFinite(fee) ? fee.toLocaleString("ko-KR") : "0";
-  const amountStr = amountDueNext.toLocaleString("ko-KR");
-
-  const messageText = useMemo(() => {
-    const nextMonthLabel = `${nextMonthAnchor.getFullYear()}. ${String(nextMonthAnchor.getMonth() + 1).padStart(2, "0")}`;
-
-    return (
-`${displayName}, 안녕하세요:)
-${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
-
-[이번달 정산]
-- 이번달 선결제(예정/스케줄): ${carryInCredit}회
-- 이번달 실제 수업(노트 기준): ${thisMonthActual}회
-
-[다음달 결제 안내]
-- 다음달(${nextMonthLabel}) 예정 수업: ${nextMonthPlanned}회
-- 차감 적용(이번달 정산분): ${totalCreditsAvailable}회
-= 결제 대상 수업: ${nextToPayClasses}회
-- 회당: ${feeStr}원
-= 결제 금액: ${amountStr}원
-+ ${currentMonthKo} ${dueDay}일까지 결제 부탁드립니다.
-
-(결제 후 예상 보유 수업: ${creditsAfterPayment}회)
-
-문의 사항이 있다면 여기 톡방으로 문의 주세요.
-
-[결제 방법]
-1. 카드 현장결제 : 결제 가능 날짜와 시간을 여기 톡방에 말씀해주시면 됩니다. 현장 결제를 하신분에 한해서 리뷰이벤트가 참여 가능합니다!
-
-2. 계좌이체로 : KB국민은행 69760201254532 정현수 
-
-3. 네이버 : https://smartstore.naver.com/davidsenglishconversation/category/ALL?cp=1 
-* 결제 후 스크린 캡쳐를 여기 톡방으로 보내주시면 됩니다.${paymentLink ? `
-
-4. Toss 간편결제 : ${paymentLink}` : ''}
-
-[혜택 및 문의]
-1. 장기 결제시 할인 혜택 : 결제한 달에 못다한 수업 횟수 만큼 다음달로 자동 이월됩니다.
-
-2. 금액 또는 수업 일정에 대한 오류가 있으신 분들은 담당 선생님과 직접 논의하셔서 청구 문자를 재전송 받으시면 됩니다.
-
-3. 현금 영수증을 원하시는 분들은 결제금액과 전화번호를 여기 톡방에 입력해 주시면 됩니다.
-
-🎁리뷰 이벤트🎁
-리뷰를 작성하시면 리뷰당 5,000원 수업 할인을 제공해 드리고 있습니다.
-- 숨고: 숨고를 통해 학원에 등록을 하셨을 시 참여 가능합니다.
-- 네이버 지도, 카카오 지도: 현장 결제 후 전자 영수증을 인증하여 리뷰를 작성하시면 됩니다.
-
-같은 리뷰를 복사 붙여넣기 하셔도 되니 많이 참여 부탁드리겠습니다! 리뷰에 담당 선생님 이름이 들어가면 더 좋아요!`
-    );
-  }, [
-    displayName,
-    currentMonthKo,
-    feeStr,
-    amountStr,
-    dueDay,
-    carryInCredit,
-    thisMonthActual,
-    carryAfterSettlement,
-    nextMonthPlanned,
-    totalCreditsAvailable,
-    nextToPayClasses,
-    creditsAfterPayment,
-    paymentLink,
-    nextMonthAnchor,
-  ]);
-
-  const [copied, setCopied] = useState(false);
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(messageText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
-    } catch {
-      alert("클립보드 복사에 실패했습니다.");
-    }
-  };
 
   /* ---- New: POST to /api/billing/check2 (admin confirm) ---- */
   const [saving, setSaving] = useState(false);
@@ -436,10 +346,6 @@ ${currentMonthKo} 정산 및 다음달 수업료 안내 드립니다.
       setSaving(false);
     }
   };
-
-  /* ----------------------------- Render ----------------------------- */
-  // build admin-confirm link
-  const adminConfirmHref = `/schedule/admin-confirm?user=${encodeURIComponent(teacherName || "")}&type=teacher&student_name=${encodeURIComponent(studentName || "")}&id=${encodeURIComponent(studentId ?? "")}`;
 
   return (
     <div className="w-1/3 bg-gray-50 flex flex-col border-l">
