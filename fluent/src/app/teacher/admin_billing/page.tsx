@@ -322,7 +322,7 @@ export default function Page() {
     return () => {
       cancelled = true;
     };
-  }, [yyyymm]);
+  }, [yyyymm])
 
 // REPLACE your existing effect block with this:
   useEffect(() => {
