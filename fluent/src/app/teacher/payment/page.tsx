@@ -57,7 +57,7 @@ function PaymentInner() {
   const bankAccount = "69760201254532";
   const bankHolder = "정현수";
   const bizName = "데이빗의 영어회화";
-  const bizNumber = "000-00-00000";
+  const bizNumber = "416-33-62140";
   const bizAddress = "서울특별시 마포구 포은로 14, 3층";
   const bizPhone = "010-2713-7397";
   const bizOwner = "정현수";
@@ -233,7 +233,6 @@ function PaymentInner() {
             <div>전화번호: {bizPhone}</div>
             <div>주소: {bizAddress}</div>
             <div>사업자등록번호: {bizNumber}</div>
-            <div>서비스 제공기간: {servicePeriod}</div>
           </div>
         </div>
       </div>
