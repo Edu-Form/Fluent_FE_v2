@@ -23,6 +23,7 @@ interface ToastEventInput {
 
 interface Props {
   data: ToastEventInput[];
+  quizletDates?: string[];
 
   // visuals
   variant?: Variant;
@@ -105,6 +106,7 @@ function shade(hex: string, p: number) {
 
 export default function TeacherToastUI({
   data,
+  quizletDates,
   variant = "compact",
   saveEndpointBase = "/api/schedules",
   forceView,
@@ -302,45 +304,76 @@ export default function TeacherToastUI({
   };
 
   /* ----------------------- Normalize incoming -> events ---------------------- */
-  const eventsFromProps = useMemo(() => {
-    return (data || [])
-      .map((e) => {
-        const eventId = e._id || e.id;
-        if (!e.date || Number.isNaN(e.time) || Number.isNaN(e.duration)) return null;
-        const base = toDateYMD(e.date);
-        if (!base) return null;
+const eventsFromProps = useMemo(() => {
+  const scheduleDates = new Set(
+    (data || [])
+      .map((e) => e.date?.trim())
+      .filter(Boolean)
+  );
 
-        // support .5 hour time & duration
-        const startHour = Math.floor(e.time);
-        const startMin = Math.round((e.time - startHour) * 60);
-        const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), startHour, startMin, 0);
-        const end = new Date(start.getTime() + e.duration * 3600000);
+  const events: EventObject[] = [];
 
-        const tName = e.teacher_name?.trim() ?? "";
-        const color = teacherColorMap.get(tName);
+  // 1️⃣ Normal schedules
+  for (const e of data || []) {
+    if (!e.date || Number.isNaN(e.time) || Number.isNaN(e.duration)) continue;
+    const base = toDateYMD(e.date);
+    if (!base) continue;
 
-        const evt: EventObject = {
-          id: String(eventId ?? (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`)),
-          calendarId: e.calendarId ?? "1",
-          title: `${e.room_name}호 ${e.student_name}님`,
+    const startHour = Math.floor(e.time);
+    const startMin = Math.round((e.time - startHour) * 60);
+    const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), startHour, startMin, 0);
+    const end = new Date(start.getTime() + e.duration * 3600000);
+
+    const tName = e.teacher_name?.trim() ?? "";
+    const color = teacherColorMap.get(tName);
+
+    events.push({
+      id: e._id || e.id || `${Date.now()}-${Math.random()}`,
+      calendarId: e.calendarId ?? "1",
+      title: `${e.room_name}호 ${e.student_name}님`,
+      category: "time",
+      start,
+      end,
+      backgroundColor: color?.bg ?? "#EEF2FF",
+      borderColor: color?.border ?? "#C7D2FE",
+      dragBackgroundColor: color?.bg ?? "#E0E7FF",
+      color: "#111827",
+      raw: e,
+    });
+  }
+
+  // 2️⃣ Missing-schedule warning events
+  if (quizletDates?.length) {
+    for (const d of quizletDates) {
+      const dateNorm = String(d).trim();
+      if (!scheduleDates.has(dateNorm)) {
+        const base = toDateYMD(dateNorm);
+        if (!base) continue;
+
+        // Make a small red marker event
+        const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0);
+        const end = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 30, 0);
+
+        events.push({
+          id: `missing-${dateNorm}`,
+          calendarId: "missing",
+          title: "⚠️ Class note, no schedule",
           category: "time",
           start,
           end,
-          backgroundColor: color?.bg ?? "#EEF2FF",
-          borderColor: color?.border ?? "#C7D2FE",
-          dragBackgroundColor: color?.bg ?? "#E0E7FF",
-          color: "#111827",
-          raw: {
-            schedule_id: eventId,
-            room_name: e.room_name,
-            teacher_name: tName,
-            student_name: e.student_name,
-          },
-        };
-        return evt;
-      })
-      .filter(Boolean) as EventObject[];
-  }, [data, teacherColorMap]);
+          backgroundColor: "#FECACA", // light red
+          borderColor: "#DC2626",     // dark red border
+          color: "#7F1D1D",
+          isReadOnly: true,
+          raw: { note_only: true },
+        });
+      }
+    }
+  }
+
+  return events;
+}, [data, teacherColorMap, quizletDates]);
+
 
   /* ------------------------------- Apply filters ---------------------------- */
   const filteredEvents = useMemo(() => {

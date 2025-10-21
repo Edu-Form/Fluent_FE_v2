@@ -165,6 +165,7 @@ function StudentCalendarWithChatInner() {
           forceView="month"
           studentOptions={[studentName]}
           defaults={{ teacher_name: teacherName, student_name: studentName, room_name: "HF1", time: 18, duration: 1 }}
+          quizletDates={quizletDates} 
         />
       </div>
 
