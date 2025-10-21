@@ -233,6 +233,7 @@ function PaymentInner() {
             <div>전화번호: {bizPhone}</div>
             <div>주소: {bizAddress}</div>
             <div>사업자등록번호: {bizNumber}</div>
+            <div>통신판매업신고번호: 2025-서울마포-1975</div>
           </div>
         </div>
       </div>
