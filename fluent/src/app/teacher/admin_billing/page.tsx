@@ -52,7 +52,6 @@ export default function Page() {
   const [rows, setRows] = useState<StudentBillingRow[]>([]);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [loadingIds, setLoadingIds] = useState<Record<string, boolean>>({});
   const [expandedStage, setExpandedStage] = useState<Record<string, string | null>>({}); // per-row expanded stage
 
   // store status docs for the month
@@ -222,62 +221,6 @@ export default function Page() {
         return r.payment_confirmed ? "Payment has been confirmed" : "Payment not confirmed";
       default:
         return "";
-    }
-  }
-
-  async function toggleField(id: string, field: "teacher_confirmed" | "admin_confirmed" | "message_sent" | "payment_confirmed") {
-    setLoadingIds((s) => ({ ...s, [id]: true }));
-
-    setRows((prev) => {
-      const next = prev.map((r) => {
-        if (r.id !== id) return r;
-        const newValue =
-          field === "payment_confirmed"
-            ? !r.payment_confirmed
-            : r[field] === "done"
-            ? "ready"
-            : "done";
-        return {
-          ...r,
-          [field]: newValue,
-        };
-      });
-
-      const updated = next.find((rr) => rr.id === id)!;
-      const nextStage = firstNotDoneStage(updated);
-      setExpandedStage((s) => ({ ...s, [id]: nextStage }));
-
-      return next;
-    });
-
-    try {
-      await fetch(`/api/billing/update`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, field }),
-      });
-    } catch (e) {
-      // Keep local optimistic UI (do not clobber with a global /studentList refetch).
-      // Log the error so we can investigate; optionally show a toast in the future.
-      console.error("Failed update for", id, field, e);
-    } finally {
-      setLoadingIds((s) => ({ ...s, [id]: false }));
-    }
-  }
-
-  async function bulkConfirmPayment() {
-    const ids = Object.keys(selected).filter((k) => selected[k]);
-    if (ids.length === 0) return;
-    setRows((prev) => prev.map((r) => (ids.includes(r.id) ? { ...r, payment_confirmed: true } : r)));
-    try {
-      await fetch(`/api/billing/bulk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, action: "confirm_payment" }),
-      });
-      setSelected({});
-    } catch (e) {
-      console.error(e);
     }
   }
 
@@ -681,10 +624,7 @@ export default function Page() {
                                                     } else {
                                                       span.textContent = "복사됨";
                                                       span.style.opacity = "1";
-                                                    }
-                                                    setTimeout(() => {
-                                                      span && span.remove();
-                                                    }, 1200);
+                                                    };
                                                   })
                                                   .catch((err) => {
                                                     console.error("복사 실패", err);
@@ -699,10 +639,7 @@ export default function Page() {
                                                     } else {
                                                       span.textContent = "복사 실패";
                                                       span.style.opacity = "1";
-                                                    }
-                                                    setTimeout(() => {
-                                                      span && span.remove();
-                                                    }, 1200);
+                                                    };
                                                   });
                                               } catch (ex) {
                                                 console.error("copy error", ex);
