@@ -73,7 +73,6 @@ function PaymentInner() {
     ["이번달 선결제(예정/스케줄)", billing?.carry_in_credit ?? 0],
     ["이번달 실제 수업 (노트 기준)", billing?.this_month_actual ?? 0],
     ["다음달 예정 수업 (스케줄)", billing?.next_month_planned ?? 0],
-    ["다음달 차감 가능 수업", billing?.total_credits_available ?? 0],
     ["결제 대상 수업", billing?.next_to_pay_classes ?? 0],
     ["회당 수업료 (₩)", currencyKRW(feePerClass)],
     ["결제 금액 (₩)", currencyKRW(totalAmount)],
@@ -110,8 +109,7 @@ function PaymentInner() {
                 {bizName} 수업료 – {monthLabel}
               </div>
               <div className="mt-1 text-sm text-gray-500">
-                담당 선생님: {billing.teacher_name || params.teacher || "—"} /
-                서비스 제공기간: {servicePeriod}
+                담당 선생님: {billing.teacher_name || params.teacher || "—"}
               </div>
             </div>
             <div className="text-xl font-bold text-indigo-700">

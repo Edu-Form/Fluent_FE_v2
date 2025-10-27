@@ -32,7 +32,7 @@ function nextMonth(d: Date) {
 }
 
 function StatusChip({ kind, label }: { kind: "ready" | "done" | "payment"; label: string }) {
-  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium";
+  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
   const tone =
     kind === "done"
       ? "bg-indigo-100 text-indigo-800 border border-indigo-200"
@@ -69,7 +69,6 @@ export default function Page() {
     message_sent: "결제페이지 확인",
     payment_confirmed: "Payment",
   };
-
 
   // helper: returns first not-done stage key or null
   function firstNotDoneStage(r: StudentBillingRow): string | null {
@@ -324,7 +323,6 @@ export default function Page() {
     };
   }, [yyyymm])
 
-// REPLACE your existing effect block with this:
   useEffect(() => {
     // only run when we actually have status docs AND when rows are loaded
     if (!statusDocs || statusDocs.length === 0) return;
@@ -409,18 +407,18 @@ export default function Page() {
   }, [statusDocs, rows.length]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-4">
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">관리자 - 학생 결제 관리</h1>
+          <h1 className="text-xl font-semibold">관리자 - 학생 결제 관리</h1>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <button onClick={() => setMonthAnchor((d) => prevMonth(d))} className="px-3 py-2 border rounded-lg text-sm hover:bg-slate-50">←</button>
-            <div className="text-sm font-medium w-[8.5rem] text-center bg-white border rounded-md px-3 py-2">{monthLabel}</div>
-            <button onClick={() => setMonthAnchor((d) => nextMonth(d))} className="px-3 py-2 border rounded-lg text-sm hover:bg-slate-50">→</button>
+            <button onClick={() => setMonthAnchor((d) => prevMonth(d))} className="px-2 py-1 border rounded-lg text-sm hover:bg-slate-50">←</button>
+            <div className="text-sm font-medium w-[7.5rem] text-center bg-white border rounded-md px-2 py-1">{monthLabel}</div>
+            <button onClick={() => setMonthAnchor((d) => nextMonth(d))} className="px-2 py-1 border rounded-lg text-sm hover:bg-slate-50">→</button>
           </div>
 
           {/* removed duplicate <input type="month"> to keep single month control */}
@@ -428,27 +426,19 @@ export default function Page() {
       </div>
 
       {/* Controls */}
-      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3 w-full md:max-w-xl">
+      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-2 w-full md:max-w-xl">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search student or teacher"
-            className="w-full border rounded-lg px-4 py-2 bg-white shadow-sm"
+            className="w-full border rounded-lg px-3 py-2 bg-white shadow-sm text-sm"
           />
-          <button onClick={() => { setQuery(""); }} className="px-3 py-2 border rounded-lg text-sm">Clear</button>
+          <button onClick={() => { setQuery(""); }} className="px-2 py-1 border rounded-lg text-sm">Clear</button>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button
-            onClick={bulkConfirmPayment}
-            className="px-3 py-2 bg-indigo-600 text-white rounded-md text-sm shadow-sm hover:bg-indigo-700 disabled:opacity-50"
-            disabled={Object.values(selected).every((v) => !v)}
-          >
-            Bulk confirm payment
-          </button>
-
-          <div className="hidden md:flex items-center gap-3 text-xs text-gray-600">
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 text-xs text-gray-600">
             <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-rose-500" /> Pending</div>
             <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-amber-500" /> In progress</div>
             <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-emerald-500" /> Complete</div>
@@ -457,9 +447,9 @@ export default function Page() {
       </div>
 
       {/* List */}
-      <div className="space-y-4">
+      <div className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl border bg-white p-6 text-center text-gray-500">No students for this month.</div>
+          <div className="rounded-2xl border bg-white p-4 text-center text-gray-500">No students for this month.</div>
         ) : (
           filtered.map((r) => {
             const doneCount = doneCountFor(r);
@@ -472,12 +462,12 @@ export default function Page() {
             const leftTextClass = leftBox.textWhite ? "text-white" : "text-gray-900";
 
             return (
-              <div key={r.id} className="relative rounded-2xl border shadow-sm overflow-hidden">
+              <div key={r.id} className="relative rounded-lg border shadow-sm overflow-hidden">
                 {/* absolute background boxes: left student box + 4 stage boxes + right Open area */}
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="flex h-full">
                     {/* left student box (index 0) */}
-                    <div style={{ width: 320, ...leftBox.style }} />
+                    <div style={{ width: 240, ...leftBox.style }} />
 
                     {/* four stage boxes indexes 1..4 */}
                     <div className="flex-1 flex">
@@ -487,14 +477,14 @@ export default function Page() {
                     </div>
 
                     {/* right: area for Open button */}
-                    <div style={{ width: 96 }} className="bg-white" />
+                    <div style={{ width: 84 }} className="bg-white" />
                   </div>
                 </div>
 
                 {/* Foreground content */}
-                <div className="relative z-10 flex items-center px-4 py-4 md:px-6">
+                <div className="relative z-10 flex items-center px-3 py-2 md:px-4">
                   {/* left: checkbox + names (names always visible) */}
-                  <div className="flex items-start gap-3" style={{ minWidth: 320 }}>
+                  <div className="flex items-start gap-3" style={{ minWidth: 240 }}>
                     <div className="pt-1">
                       <input
                         type="checkbox"
@@ -506,11 +496,11 @@ export default function Page() {
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <div className={classNames("text-sm font-semibold truncate", leftTextClass)}>{r.student_name}</div>
+                        <div className={classNames("text-sm font-medium truncate", leftTextClass)}>{r.student_name}</div>
                         <div className={classNames("text-xs", leftTextClass === "text-white" ? "text-white/80" : "text-gray-400")}>·</div>
                         <div className={classNames("text-xs truncate", leftTextClass)}>{r.teacher_name || "—"}</div>
                       </div>
-                      <div className={classNames("text-[11px] mt-1", leftTextClass === "text-white" ? "text-white/90" : "text-gray-500")}>Status: {doneCount}/4</div>
+                      <div className={classNames("text-[10px] mt-1", leftTextClass === "text-white" ? "text-white/90" : "text-gray-500")}>Status: {doneCount}/4</div>
                     </div>
                   </div>
 
@@ -533,10 +523,10 @@ export default function Page() {
                       return (
                         <div key={key} className="flex-1 flex flex-col border-l border-white/40">
                           {/* click disabled here: removed role/onClick and cursor-pointer */}
-                          <div className="p-4">
+                          <div className="p-2">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <div className={classNames("text-sm font-medium", stageTextColor)}>{label}</div>
+                                <div className={classNames("text-xs font-medium", stageTextColor)}>{label}</div>
                                 <StatusChip
                                   kind={chipKind as any}
                                   label={
@@ -547,12 +537,12 @@ export default function Page() {
                                 />
                               </div>
 
-                              <div className={classNames("text-xs", indicatorColor)}>{isExpanded ? "▴" : "▾"}</div>
+                              <div className={classNames("text-[11px]", indicatorColor)}>{isExpanded ? "▴" : "▾"}</div>
                             </div>
                             {isExpanded && (
                               <div
                                 className={classNames(
-                                  "mt-3 text-sm",
+                                  "mt-2 text-xs",
                                   boxMeta.textWhite ? "text-white/95" : "text-gray-700"
                                 )}
                               >
@@ -567,7 +557,7 @@ export default function Page() {
                                       target="_blank"
                                       rel="noreferrer noopener"
                                       className={classNames(
-                                        "text-sm font-medium underline",
+                                        "text-xs font-medium underline",
                                         boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
                                       )}
                                     >
@@ -575,7 +565,7 @@ export default function Page() {
                                     </a>
                                     <div
                                       className={classNames(
-                                        "text-xs mt-2",
+                                        "text-[10px] mt-1",
                                         boxMeta.textWhite ? "text-white/80" : "text-gray-500"
                                       )}
                                     >
@@ -593,7 +583,7 @@ export default function Page() {
                                       target="_blank"
                                       rel="noreferrer noopener"
                                       className={classNames(
-                                        "text-sm font-medium underline",
+                                        "text-xs font-medium underline",
                                         boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
                                       )}
                                     >
@@ -601,40 +591,143 @@ export default function Page() {
                                     </a>
                                     <div
                                       className={classNames(
-                                        "text-xs mt-2",
+                                        "text-[10px] mt-1",
                                         boxMeta.textWhite ? "text-white/80" : "text-gray-500"
                                       )}
                                     >
                                       관리자가 2차로 확인하는 단계입니다.
                                     </div>
                                   </div>
-                                ) : key === "message_sent" ? (
-                                  <div>
-                                    <a
-                                      href={`/teacher/payment?user=${encodeURIComponent(
-                                        r.teacher_name || ""
-                                      )}&type=teacher&student_name=${encodeURIComponent(
-                                        r.student_name
-                                      )}&id=${encodeURIComponent(r.id)}&date=${encodeURIComponent(yyyymm)}`}
-                                      target="_blank"
-                                      rel="noreferrer noopener"
-                                      className={classNames(
-                                        "text-sm font-medium underline",
-                                        boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
-                                      )}
-                                    >
-                                      {`${r.student_name} 학생 결제 링크 확인`}
-                                    </a>
-                                    <div
-                                      className={classNames(
-                                        "text-xs mt-2",
-                                        boxMeta.textWhite ? "text-white/80" : "text-gray-500"
-                                      )}
-                                    >
-                                      학생에게 링크를 보낸 후에, “발송 완료” 버튼을 눌러주세요. 추후 자동화될 예정입니다.
+                                  ) : key === "message_sent" ? (
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <a
+                                          href={`/teacher/payment?user=${encodeURIComponent(r.teacher_name || "")}&type=teacher&student_name=${encodeURIComponent(
+                                            r.student_name
+                                          )}&id=${encodeURIComponent(r.id)}&date=${encodeURIComponent(yyyymm)}`}
+                                          target="_blank"
+                                          rel="noreferrer noopener"
+                                          className={classNames(
+                                            "text-xs font-medium underline",
+                                            boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
+                                          )}
+                                        >
+                                          {`${r.student_name} 학생 결제 링크 확인`}
+                                        </a>
+
+                                        <div className="copy-wrapper inline-flex items-center">
+                                          <button
+                                            type="button"
+                                            aria-label="메시지 복사"
+                                            title="메시지 복사"
+                                            onClick={(e) => {
+                                              try {
+                                                // capture button immediately (avoid React pooling issues)
+                                                const btn = (e.currentTarget as HTMLElement) || (e.target as HTMLElement);
+
+                                                const studentName = String(r.student_name ?? "").trim();
+                                                const teacherName = String(r.teacher_name ?? "").trim();
+                                                const path = `https://fluent-five.vercel.app/teacher/payment?user=${encodeURIComponent(
+                                                  teacherName
+                                                )}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(
+                                                  r.id
+                                                )}&date=${encodeURIComponent(yyyymm)}`;
+
+                                                const url = path;
+
+                                                // Build message with array.join to avoid accidental indentation
+                                                const messageLines = [
+                                                  `${studentName}님, 안녕하세요:)`,
+                                                  `${month}월 수업료 청구 드립니다.`,
+                                                  `결제 가능한 링크를 첨부드립니다.`,
+                                                  "",
+                                                  url,
+                                                  "",
+                                                  `문의 사항이 있다면 여기 톡방으로 문의 주세요.`,
+                                                  `감사합니다.`
+                                                ];
+                                                const message = messageLines.join("\n");
+
+                                                const copyPromise =
+                                                  navigator.clipboard && navigator.clipboard.writeText
+                                                    ? navigator.clipboard.writeText(message)
+                                                    : new Promise<void>((res, rej) => {
+                                                        const ta = document.createElement("textarea");
+                                                        ta.value = message;
+                                                        ta.style.position = "fixed";
+                                                        ta.style.left = "-9999px";
+                                                        document.body.appendChild(ta);
+                                                        ta.select();
+                                                        try {
+                                                          document.execCommand("copy");
+                                                          document.body.removeChild(ta);
+                                                          res();
+                                                        } catch (err) {
+                                                          document.body.removeChild(ta);
+                                                          rej(err);
+                                                        }
+                                                      });
+
+                                                copyPromise
+                                                  .then(() => {
+                                                    const wrapper = btn.closest(".copy-wrapper") as HTMLElement | null;
+                                                    const host = wrapper ?? btn.parentElement ?? document.body;
+                                                    let span = host.querySelector(".billing-copy-feedback") as HTMLSpanElement | null;
+                                                    if (!span) {
+                                                      span = document.createElement("span");
+                                                      span.className = "billing-copy-feedback text-xs font-medium text-emerald-600 ml-2";
+                                                      span.textContent = "복사됨";
+                                                      host.appendChild(span);
+                                                    } else {
+                                                      span.textContent = "복사됨";
+                                                      span.style.opacity = "1";
+                                                    }
+                                                    setTimeout(() => {
+                                                      span && span.remove();
+                                                    }, 1200);
+                                                  })
+                                                  .catch((err) => {
+                                                    console.error("복사 실패", err);
+                                                    const wrapper = btn.closest(".copy-wrapper") as HTMLElement | null;
+                                                    const host = wrapper ?? btn.parentElement ?? document.body;
+                                                    let span = host.querySelector(".billing-copy-feedback") as HTMLSpanElement | null;
+                                                    if (!span) {
+                                                      span = document.createElement("span");
+                                                      span.className = "billing-copy-feedback text-xs font-medium text-rose-500 ml-2";
+                                                      span.textContent = "복사 실패";
+                                                      host.appendChild(span);
+                                                    } else {
+                                                      span.textContent = "복사 실패";
+                                                      span.style.opacity = "1";
+                                                    }
+                                                    setTimeout(() => {
+                                                      span && span.remove();
+                                                    }, 1200);
+                                                  });
+                                              } catch (ex) {
+                                                console.error("copy error", ex);
+                                              }
+                                            }}
+                                            className="inline-flex items-center justify-center p-1 rounded-md hover:bg-slate-100 border border-transparent"
+                                          >
+                                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                              <rect x="3" y="3" width="13" height="13" rx="2" ry="2"></rect>
+                                            </svg>
+                                          </button>
+                                        </div>
+                                      </div>
+
+                                      <div
+                                        className={classNames(
+                                          "text-[10px] mt-1",
+                                          boxMeta.textWhite ? "text-white/80" : "text-gray-500"
+                                        )}
+                                      >
+                                        학생에게 링크를 보낸 후에, “발송 완료” 버튼을 눌러주세요. 추후 자동화될 예정입니다.
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : (
+                                  ) : (
                                   stageText(r, key)
                                 )}
                               </div>
@@ -643,54 +736,6 @@ export default function Page() {
                         </div>
                       );
                     })}
-                  </div>
-
-                  {/* right: Open button + action buttons */}
-                  <div className="ml-4 flex-shrink-0" style={{ width: 96 }}>
-                    <a
-                      href={r.student_page_url}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="block w-full text-center text-sm px-3 py-2 border rounded-md text-gray-700 bg-white hover:bg-slate-50"
-                    >
-                      Open
-                    </a>
-
-                    <div className="mt-2 flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => toggleField(r.id, "teacher_confirmed")}
-                          disabled={!!loadingIds[r.id]}
-                          className="px-2 py-1 text-xs rounded-md border hover:bg-slate-50 w-full"
-                        >
-                          {r.teacher_confirmed === "done" ? "Undo" : "Mark"}
-                        </button>
-                        <button
-                          onClick={() => toggleField(r.id, "admin_confirmed")}
-                          disabled={!!loadingIds[r.id]}
-                          className="px-2 py-1 text-xs rounded-md border hover:bg-slate-50 w-full"
-                        >
-                          {r.admin_confirmed === "done" ? "Undo" : "Mark"}
-                        </button>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => toggleField(r.id, "message_sent")}
-                          disabled={!!loadingIds[r.id]}
-                          className="px-2 py-1 text-xs rounded-md border hover:bg-slate-50 w-full"
-                        >
-                          {r.message_sent === "done" ? "Undo" : "Send"}
-                        </button>
-                        <button
-                          onClick={() => toggleField(r.id, "payment_confirmed")}
-                          disabled={!!loadingIds[r.id]}
-                          className={classNames("px-2 py-1 text-xs rounded-md border w-full", r.payment_confirmed ? "bg-emerald-50 text-emerald-700" : "hover:bg-slate-50")}
-                        >
-                          {r.payment_confirmed ? "Paid" : "Confirm"}
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
