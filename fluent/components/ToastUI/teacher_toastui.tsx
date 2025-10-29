@@ -23,7 +23,7 @@ interface ToastEventInput {
 
 interface Props {
   data: ToastEventInput[];
-  quizletDates?: string[];
+  quizletDates?: string[] | Record<string, string[]>; // 👈 support both
 
   // visuals
   variant?: Variant;
@@ -342,34 +342,38 @@ const eventsFromProps = useMemo(() => {
     });
   }
 
-  // 2️⃣ Missing-schedule warning events
-  if (quizletDates?.length) {
-    for (const d of quizletDates) {
-      const dateNorm = String(d).trim();
-      if (!scheduleDates.has(dateNorm)) {
-        const base = toDateYMD(dateNorm);
-        if (!base) continue;
-
-        // Make a small red marker event
-        const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0);
-        const end = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 30, 0);
-
-        events.push({
-          id: `missing-${dateNorm}`,
-          calendarId: "missing",
-          title: "⚠️ Class note, no schedule",
-          category: "time",
-          start,
-          end,
-          backgroundColor: "#FECACA", // light red
-          borderColor: "#DC2626",     // dark red border
-          color: "#7F1D1D",
-          isReadOnly: true,
-          raw: { note_only: true },
-        });
+  if (quizletDates && typeof quizletDates === "object") {
+    // quizletDates is a map { studentName: [date1, date2, ...] }
+    for (const [student, dates] of Object.entries(quizletDates)) {
+      for (const d of dates) {
+        const dateNorm = String(d).trim();
+        // find if this student already has a schedule for that date
+        const hasSchedule = (data || []).some(
+          (s) => s.student_name === student && String(s.date).trim() === dateNorm
+        );
+        if (!hasSchedule) {
+          const base = toDateYMD(dateNorm);
+          if (!base) continue;
+          const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0);
+          const end = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 30, 0);
+          events.push({
+            id: `missing-${student}-${dateNorm}`,
+            calendarId: "missing",
+            title: `⚠️ ${student}: Class note, no schedule`,
+            category: "time",
+            start,
+            end,
+            backgroundColor: "#FECACA",
+            borderColor: "#DC2626",
+            color: "#7F1D1D",
+            isReadOnly: true,
+            raw: { note_only: true, student_name: student },
+          });
+        }
       }
     }
   }
+
 
   return events;
 }, [data, teacherColorMap, quizletDates]);

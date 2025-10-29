@@ -123,8 +123,6 @@ const HomePageContent = () => {
     }
   };
 
-
-
   useEffect(() => {
     if (!user) return;
     fetchSchedules();
@@ -194,15 +192,15 @@ const HomePageContent = () => {
     ].reduce((a, b) => a + b, 0);
   };
 
-  const [quizletDates, setQuizletDates] = useState<string[]>([]);
+  const [quizletMap, setQuizletMap] = useState<Record<string, string[]>>({});
+
 
   const fetchQuizlets = async () => {
     if (!user || !allStudents?.length) return;
 
     try {
-      const allQuizlets: string[] = [];
+      const result: Record<string, string[]> = {};
 
-      // fetch quizlet dates for every student this teacher manages
       await Promise.all(
         allStudents.map(async (s: any) => {
           const studentName = s.name;
@@ -216,15 +214,16 @@ const HomePageContent = () => {
             .map((q: any) => String(q?.class_date || q?.date || "").trim())
             .filter(Boolean);
 
-          allQuizlets.push(...dates);
+          result[studentName] = dates;
         })
       );
 
-      setQuizletDates(allQuizlets);
+      setQuizletMap(result);
     } catch (err) {
       console.error("Error fetching quizlets:", err);
     }
   };
+
 
 
 
@@ -319,7 +318,7 @@ const HomePageContent = () => {
             <Suspense fallback={<SkeletonLoader />}>
               <Teacher_toastUI
                 data={classes}
-                quizletDates={quizletDates}
+                quizletDates={quizletMap}
                 studentOptions={allStudents.map((s: any) => s.name)}
                 defaults={{ teacher_name: user || "", room_name: "HF1", time: 18, duration: 1 }}
                 variant="compact"
