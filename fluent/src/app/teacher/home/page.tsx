@@ -497,7 +497,6 @@ const HomePageContent = () => {
                       const diaryGreen = isBetweenInclusive(diaryDate, classNoteDate, prevClassNoteDate); // Rule 3
 
                       const classNoteOk = !!student.class_note;
-                      const quizletOk = !!student.quizlet_date;
                       const diaryOk = !!student.diary_date && diaryGreen;
                       const scheduleOk = !!student.schedule_date;
 
