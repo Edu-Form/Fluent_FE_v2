@@ -533,20 +533,39 @@ const HomePageContent = () => {
                           </td>
 
                           {/* Quizlet */}
-                          <td className={`px-3 py-3 text-center align-middle border border-l-0 border-gray-100 ${cellBg}`}>
+                          <td
+                            className={`px-3 py-3 text-center align-middle border border-l-0 border-gray-100 ${cellBg}`}
+                          >
                             <Link
                               href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
-                              target="_blank" rel="noopener noreferrer"
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="hover:opacity-90"
                               title="Open Quizlet"
                             >
                               <CellWrap>
-                                <Pill ok={quizletOk}>
-                                  {quizletOk ? "Done" : "Missing"}
-                                </Pill>
-                                {student.class_note && (
-                                  <span className="text-[11px] text-gray-500">{student.class_note}</span>
-                                )}
+                                {(() => {
+                                  const quizletDate = toDate(student.quizlet_date);
+                                  const classNoteDate = toDate(student.class_note);
+                                  const isBefore =
+                                    quizletDate && classNoteDate && quizletDate < classNoteDate;
+                                  const ok = !!student.quizlet_date && !isBefore;
+
+                                  return (
+                                    <>
+                                      <Pill ok={ok}>{ok ? "Done" : "Missing"}</Pill>
+                                      {student.quizlet_date && (
+                                        <span
+                                          className={`text-[11px] ${
+                                            isBefore ? "text-red-500 font-medium" : "text-gray-500"
+                                          }`}
+                                        >
+                                          {student.quizlet_date}
+                                        </span>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </CellWrap>
                             </Link>
                           </td>
