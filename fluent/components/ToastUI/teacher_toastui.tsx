@@ -745,6 +745,87 @@ const eventsFromProps = useMemo(() => {
   const toWeek  = () => { calRef.current?.changeView("week");  setViewName("week");  };
   const toMonth = () => { calRef.current?.changeView("month"); setViewName("month"); };
 
+  const handleCheckSchedule = async () => {
+    try {
+      // Extract current student name from props (passed down from schedule.tsx)
+      const studentName = studentOptions?.[0];
+      if (!studentName) return alert("No student selected.");
+
+      // Month filter setup
+      const now = new Date();
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const today = toLocalDateOnly(now);
+
+      // 1️⃣ Fetch both schedule + quizlet data for this student
+      const [scheduleRes, quizletRes] = await Promise.all([
+        fetch(`/api/schedules/student/${encodeURIComponent(studentName)}`, { cache: "no-store" }),
+        fetch(`/api/quizlet/student/${encodeURIComponent(studentName)}`, { cache: "no-store" }),
+      ]);
+
+      if (!scheduleRes.ok || !quizletRes.ok) throw new Error("Failed to fetch schedule or quizlet data");
+
+      const schedules = await scheduleRes.json();
+      const quizlets = await quizletRes.json();
+
+      // Helper to normalize date strings
+      const toKey = (d: string) => {
+        const dt = toDateYMD(d);
+        if (!dt) return null;
+        return ymdString(dt);
+      };
+      const isThisMonthBeforeToday = (d: Date) => d >= firstOfMonth && d < today;
+
+      // 2️⃣ Filter only valid items (this month before today)
+      const validSchedules = (schedules || []).filter((s: any) => {
+        const dt = toDateYMD(s.date);
+        return dt && isThisMonthBeforeToday(dt);
+      });
+      const validQuizlets = (quizlets || []).filter((q: any) => {
+        const dt = toDateYMD(q.class_date || q.date);
+        return dt && isThisMonthBeforeToday(dt);
+      });
+
+      // 3️⃣ Build lookup sets for quick comparison
+      const scheduleDates = new Set(validSchedules.map((s: any) => toKey(s.date)).filter(Boolean));
+      const quizletDates = new Set(validQuizlets.map((q: any) => toKey(q.class_date || q.date)).filter(Boolean));
+
+      // 4️⃣ Delete schedules without matching quizlet date
+      for (const s of validSchedules) {
+        const key = toKey(s.date);
+        if (key && !quizletDates.has(key)) {
+          console.log("🗑️ Deleting unmatched schedule:", key);
+          await saveDelete(String(s._id || s.id));
+        }
+      }
+
+      // 5️⃣ Add schedule if quizlet exists but no schedule
+      for (const q of validQuizlets) {
+        const key = toKey(q.class_date || q.date);
+        if (key && !scheduleDates.has(key)) {
+          console.log("➕ Adding missing schedule:", key);
+          await saveCreate({
+            date: key,
+            time: 18, // default time, can be adjusted
+            duration: 1,
+            room_name: "101",
+            teacher_name: q.teacher_name || "Unknown",
+            student_name: studentName,
+            calendarId: "1",
+          });
+        }
+      }
+
+      alert("✅ Schedule check complete (this month, before today)");
+      window.dispatchEvent(new CustomEvent("calendar:saved"));
+    } catch (err: any) {
+      console.error(err);
+      alert(`❌ Schedule check failed: ${err.message || err}`);
+    }
+  };
+
+
+
+
   /* ------------------------ Single delete (clicked event) -------------------- */
   const handleDeleteSingle = async () => {
     if (!detail?.event) return;
@@ -904,6 +985,13 @@ const eventsFromProps = useMemo(() => {
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={handleCheckSchedule}
+              className="text-xs px-3 py-1 rounded-full border border-emerald-300 hover:bg-emerald-50 text-emerald-700"
+            >
+              Check Schedule
+            </button>
+
             <a
                 href="/teacher/admin_billing/"
                 target="_blank"
