@@ -123,12 +123,20 @@ const HomePageContent = () => {
     }
   };
 
-  // Initial load
+
+
   useEffect(() => {
     if (!user) return;
     fetchSchedules();
     fetchStudents();
   }, [user, URL, ALL_STUDENTS_URL]);
+
+  useEffect(() => {
+    if (allStudents.length > 0) {
+      fetchQuizlets();
+    }
+  }, [allStudents]);
+
 
   // Listen for calendar mutations (POST/PATCH/DELETE) from toastui
   useEffect(() => {
@@ -185,6 +193,40 @@ const HomePageContent = () => {
       student.diary_edit ? 1 : 0,
     ].reduce((a, b) => a + b, 0);
   };
+
+  const [quizletDates, setQuizletDates] = useState<string[]>([]);
+
+  const fetchQuizlets = async () => {
+    if (!user || !allStudents?.length) return;
+
+    try {
+      const allQuizlets: string[] = [];
+
+      // fetch quizlet dates for every student this teacher manages
+      await Promise.all(
+        allStudents.map(async (s: any) => {
+          const studentName = s.name;
+          if (!studentName) return;
+
+          const res = await fetch(`/api/quizlet/student/${encodeURIComponent(studentName)}`, { cache: "no-store" });
+          if (!res.ok) return;
+
+          const data = await res.json();
+          const dates = (Array.isArray(data) ? data : [])
+            .map((q: any) => String(q?.class_date || q?.date || "").trim())
+            .filter(Boolean);
+
+          allQuizlets.push(...dates);
+        })
+      );
+
+      setQuizletDates(allQuizlets);
+    } catch (err) {
+      console.error("Error fetching quizlets:", err);
+    }
+  };
+
+
 
   return (
     <div className="flex flex-col md:flex-row w-full h-screen bg-gray-50">
@@ -277,6 +319,7 @@ const HomePageContent = () => {
             <Suspense fallback={<SkeletonLoader />}>
               <Teacher_toastUI
                 data={classes}
+                quizletDates={quizletDates}
                 studentOptions={allStudents.map((s: any) => s.name)}
                 defaults={{ teacher_name: user || "", room_name: "HF1", time: 18, duration: 1 }}
                 variant="compact"
