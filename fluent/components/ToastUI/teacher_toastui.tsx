@@ -305,11 +305,6 @@ export default function TeacherToastUI({
 
   /* ----------------------- Normalize incoming -> events ---------------------- */
 const eventsFromProps = useMemo(() => {
-  const scheduleDates = new Set(
-    (data || [])
-      .map((e) => e.date?.trim())
-      .filter(Boolean)
-  );
 
   const events: EventObject[] = [];
 
