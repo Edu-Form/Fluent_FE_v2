@@ -133,6 +133,7 @@ const ClassPageContent: React.FC = () => {
   // Page lock & call-to-action state
   const [isEditable, setIsEditable] = useState(false);       // blocks all inputs & editor
   const [awaitingAction, setAwaitingAction] = useState(true); // controls blinking on initial load
+  const [recentClassnote, setRecentClassnote] = useState<any>(null);
 
 
   useEffect(() => {
@@ -166,50 +167,126 @@ const ClassPageContent: React.FC = () => {
     }
   }, [next_class_date]);
 
-const handleEndClassClick = async () => {
-  if (!homework.trim()) {
-    alert("Homework field is required.");
-    return;
-  }
-  if (!original_text || original_text.trim().length === 0) {
-    alert("Please write class notes.");
-    return;
-  }
-  if (!class_date || class_date.trim() === "") {
-    alert("Please select a class date.");
-    return;
-  }
-  if (!original_text.includes("<mark>")) {
-    alert("Please highlight at least one Quizlet expression.");
-    return;
-  }
+  const handleEndClassClick = async () => {
 
-  setTranslating(true);
-  try {
-    const response = await fetch("/api/quizlet/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ original_text }),
-    });
+    // compute group names locally (avoids block-scope ordering issues)
+    const groupNames = (Array.isArray(selectedGroupStudents) && selectedGroupStudents.length > 0)
+      ? [student_name, ...selectedGroupStudents]
+      : [student_name];
 
-    if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.error || "Translation failed");
+    // same validations
+    if (!homework.trim()) {
+      alert("Homework field is required.");
+      return;
+    }
+    if (!original_text || original_text.trim().length === 0) {
+      alert("Please write class notes.");
+      return;
+    }
+    if (!class_date || class_date.trim() === "") {
+      alert("Please select a class date.");
+      return;
+    }
+    if (!original_text.includes("<mark>")) {
+      alert("Please highlight at least one Quizlet expression.");
+      return;
     }
 
-    const { eng_quizlet, kor_quizlet } = await response.json();
-    const merged = eng_quizlet.map((eng: string, i: number) => ({
-      eng,
-      kor: kor_quizlet[i] || "",
-    }));
-    setQuizletLines(merged);
-    setTranslationModalOpen(true); // ✅ open modal (same behavior as before)
-  } catch (err) {
-    alert(err instanceof Error ? err.message : "Unknown error during translation.");
-  } finally {
-    setTranslating(false);
-  }
-};
+    // 1) Save classnotes first
+    try {
+      const classnotesPayload = {
+        quizletData: {
+          student_names: groupNames,
+          class_date,
+          date,
+          original_text,
+        },
+        homework,
+        nextClass,
+
+        // timing/meta
+        started_at: startTime ? new Date(startTime).toISOString() : null,
+        ended_at: new Date().toISOString(),
+        duration_ms: startTime ? Date.now() - startTime : null,
+        quizlet_saved: false,       // at End Class time, quizlet not yet saved
+        teacher_name: user || "",
+        type: type || "",
+      };
+
+      const classnotesRes = await fetch("/api/classnote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(classnotesPayload),
+      });
+
+      // Only continue if not 404 (and preferably OK)
+      if (classnotesRes.status === 404) {
+        alert("Classnotes endpoint returned 404. Aborting translation.");
+        return;
+      }
+      if (!classnotesRes.ok) {
+        const err = await classnotesRes.json().catch(() => ({}));
+        alert(err?.error || "Failed to save classnotes.");
+        return;
+      } 
+      
+      // ✅ new try starts cleanly here
+      try {
+        const json = await classnotesRes.json();
+        const saved =
+          json?.results?.[0]?.result ||
+          json?.results?.[0] ||
+          json;
+
+        if (saved && typeof saved === "object") {
+          setRecentClassnote(saved);
+        } else {
+          setRecentClassnote({
+            student_name: groupNames[0] || student_name,
+            class_date,
+            date,
+            started_at: startTime ? new Date(startTime).toISOString() : null,
+            ended_at: new Date().toISOString(),
+          });
+        }
+      } catch (e) {
+        console.warn("Could not parse /api/classnote response for modal metadata:", e);
+      }
+    } catch (err) {
+      console.error("Classnotes save failed:", err);
+      alert("Failed to save classnotes.");
+      return;
+    }
+
+
+    // 2) Translate (unchanged)
+    setTranslating(true);
+    try {
+      const response = await fetch("/api/quizlet/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ original_text }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Translation failed");
+      }
+
+      const { eng_quizlet, kor_quizlet } = await response.json();
+      const merged = eng_quizlet.map((eng: string, i: number) => ({
+        eng,
+        kor: kor_quizlet[i] || "",
+      }));
+
+      setQuizletLines(merged);
+      setTranslationModalOpen(true); // open review modal
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unknown error during translation.");
+    } finally {
+      setTranslating(false);
+    }
+  };
 
 
   const notesTemplate1 = `
@@ -1609,6 +1686,7 @@ const handleEndClassClick = async () => {
     },
   });
 
+
   const CustomHighlight = Highlight.extend({
     addKeyboardShortcuts() {
       return {
@@ -1724,6 +1802,73 @@ const handleEndClassClick = async () => {
       saveTempClassNote(html);
     },
   });
+
+  // [ADD] Fetch recent classnote and auto-translate if quizlet_saved === false
+  useEffect(() => {
+    const initFromRecent = async () => {
+      if (!student_name || !editor) return;
+
+      try {
+        const res = await fetch(
+          `/api/classnote/recent?student_name=${encodeURIComponent(student_name)}`,
+          { cache: "no-store" }
+        );
+
+        if (res.status === 404) {
+          // No previous classnote; nothing to show in modal until user ends class
+          setRecentClassnote(null);
+          return;
+        }
+        if (!res.ok) {
+          console.error("Failed to fetch recent classnote");
+          return;
+        }
+
+        const recent = await res.json(); // includes student_name, date, class_date, started_at, ended_at, quizlet_saved, original_text...
+        setRecentClassnote(recent);      // <-- SAVE IT
+
+        // Load its content into the editor so teacher resumes where they left off
+        if (recent?.original_text) {
+          setOriginal_text(recent.original_text);
+          editor.commands.setContent(recent.original_text);
+        }
+
+        // If quizlet not saved, auto-translate and open modal
+        if (recent?.quizlet_saved === false && recent?.original_text) {
+          setTranslating(true);
+          try {
+            const response = await fetch("/api/quizlet/translate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ original_text: recent.original_text }),
+            });
+
+            if (!response.ok) {
+              const data = await response.json().catch(() => ({}));
+              throw new Error(data?.error || "Translation failed");
+            }
+
+            const { eng_quizlet, kor_quizlet } = await response.json();
+            const merged = eng_quizlet.map((eng: string, i: number) => ({
+              eng,
+              kor: kor_quizlet[i] || "",
+            }));
+            setQuizletLines(merged);
+            setTranslationModalOpen(true);
+          } catch (err) {
+            alert(err instanceof Error ? err.message : "Unknown error during translation.");
+          } finally {
+            setTranslating(false);
+          }
+        }
+      } catch (err) {
+        console.error("recent classnote init error:", err);
+      }
+    };
+
+    initFromRecent();
+  }, [student_name, editor]);
+
 
   useEffect(() => {
     if (editor) editor.setEditable(isEditable);
@@ -2751,6 +2896,38 @@ const handleEndClassClick = async () => {
             <p className="text-sm text-[#4E5968] mb-4 p-4 bg-[#F8F9FA] rounded-2xl border border-[#F2F4F6] leading-relaxed">
               Please revise any awkward translations before saving.
             </p>
+            {/* 🧩 Class info block */}
+            {recentClassnote && (
+              <div className="mb-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E8EB] p-4 text-sm text-[#4E5968]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <span className="font-semibold text-[#191F28]">Student:</span>{" "}
+                    {recentClassnote.student_name || student_name}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[#191F28]">Class Date:</span>{" "}
+                    {recentClassnote.class_date || recentClassnote.date || class_date}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[#191F28]">Start:</span>{" "}
+                    {recentClassnote.started_at
+                      ? new Date(recentClassnote.started_at).toLocaleTimeString("ko-KR", {
+                          timeZone: "Asia/Seoul",
+                        })
+                      : "-"}
+                  </div>
+                  <div>
+                    <span className="font-semibold text-[#191F28]">End:</span>{" "}
+                    {recentClassnote.ended_at
+                      ? new Date(recentClassnote.ended_at).toLocaleTimeString("ko-KR", {
+                          timeZone: "Asia/Seoul",
+                        })
+                      : "-"}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="overflow-hidden rounded-2xl border border-[#F2F4F6]">
               <table className="w-full text-sm border-collapse bg-white">
                 <thead>

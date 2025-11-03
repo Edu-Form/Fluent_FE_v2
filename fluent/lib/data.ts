@@ -97,6 +97,13 @@ function isHalfStep(n: number): boolean {
   return Number.isFinite(n) && Math.abs(n * 2 - Math.round(n * 2)) < 1e-9;
 }
 
+function toKoreanISOString(date: Date): string {
+  // Convert UTC → KST (+9 hours)
+  const krDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return krDate.toISOString().replace("Z", "+09:00");
+}
+
+
 /**
  * Normalize & validate the schedule payload. Converts fractional hours to minutes,
  * computes concrete start/end ISO datetimes, and returns a ready-to-insert doc.
@@ -1619,3 +1626,202 @@ export async function saveInitialPayment(student_name: string, orderId: string, 
     throw new Error("Database error");
   }
 }
+
+// lib/data.ts (append near other save* functions)
+export async function saveClassnotesNew(input: {
+  student_name: string;
+  class_date: string;         // "YYYY. MM. DD."
+  date: string;               // "YYYY. MM. DD."
+  original_text: string;      // TipTap HTML
+  homework?: string;
+  nextClass?: string;
+  started_at?: Date | null;   // when class started
+  ended_at?: Date | null;     // when end button clicked (not after saving quizlet)
+  duration_ms?: number | null;
+  quizlet_saved?: boolean;    // false at first; can be flipped later
+  teacher_name?: string;      // optional
+  type?: string;              // optional: beginner/intermediate/business
+}) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    // Upsert key: one doc per student per saved date
+    const filter = {
+      student_name: input.student_name,
+      date: input.date,
+    };
+
+    const now = new Date();
+    const update: any = {
+      $set: {
+        student_name: input.student_name,
+        class_date: input.class_date,
+        date: input.date,
+        original_text: input.original_text,
+        homework: input.homework ?? "",
+        nextClass: input.nextClass ?? "",
+        started_at: input.started_at ? toKoreanISOString(new Date(input.started_at)) : null,
+        ended_at: input.ended_at ? toKoreanISOString(new Date(input.ended_at)) : null,
+        duration_ms: Number.isFinite(input.duration_ms as any)
+          ? Number(input.duration_ms)
+          : null,
+        quizlet_saved: !!input.quizlet_saved,
+        teacher_name: input.teacher_name ?? "",
+        type: input.type ?? "",
+        updatedAt: toKoreanISOString(now),
+      },
+      $setOnInsert: { createdAt: toKoreanISOString(now) },
+    };
+
+    const res = await coll.findOneAndUpdate(filter, update, {
+      upsert: true,
+      returnDocument: "after",
+    });
+
+    // Return a serializable object
+    const saved = res?.value || (await coll.findOne(filter));
+    if (!saved) throw new Error("Failed to save classnotes");
+    return { ...saved, _id: String(saved._id) };
+  } catch (error) {
+    console.error("saveClassnotesNew error:", error);
+    throw new Error("Database error");
+  }
+}
+
+// lib/data.ts
+export async function setClassnotesQuizletSaved(
+  student_name: string,
+  date?: string // "YYYY. MM. DD." preferred; if missing, fall back to latest
+): Promise<{ matched: number; modified: number; target?: any }> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    let target: any = null;
+
+    if (date) {
+      // Try exact match first
+      target = await coll.findOne({ student_name, date });
+      if (!target) {
+        // Fallback to latest by date if exact not found
+        target = await coll
+          .find({ student_name })
+          .sort({ date: -1, createdAt: -1 })
+          .limit(1)
+          .next();
+      }
+    } else {
+      // No date provided → latest by date
+      target = await coll
+        .find({ student_name })
+        .sort({ date: -1, createdAt: -1 })
+        .limit(1)
+        .next();
+    }
+
+    if (!target?._id) {
+      return { matched: 0, modified: 0 };
+    }
+
+    const res = await coll.updateOne(
+      { _id: target._id },
+      { $set: { quizlet_saved: true, updatedAt: new Date() } }
+    );
+
+    return {
+      matched: res.matchedCount ?? 0,
+      modified: res.modifiedCount ?? 0,
+      target: { _id: String(target._id), student_name: target.student_name, date: target.date },
+    };
+  } catch (err) {
+    console.error("setClassnotesQuizletSaved error:", err);
+    return { matched: 0, modified: 0 };
+  }
+}
+
+export async function getRecentClassnote(student_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    // latest by `date` (string "YYYY. MM. DD.") then fallback createdAt
+    const doc = await coll
+      .find({ student_name })
+      .sort({ date: -1, createdAt: -1 })
+      .limit(1)
+      .next();
+
+    if (!doc) return null;
+    return serialize_document(doc);
+  } catch (error) {
+    console.error("getRecentClassnote error:", error);
+    return null;
+  }
+}
+
+// lib/data.ts
+export async function setClassnoteQuizletSavedById(id: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+    const _id = new ObjectId(id);
+
+    const res = await coll.updateOne(
+      { _id },
+      { $set: { quizlet_saved: true, updatedAt: new Date() } }
+    );
+
+    return { matched: res.matchedCount ?? 0, modified: res.modifiedCount ?? 0 };
+  } catch (err) {
+    console.error("setClassnoteQuizletSavedById error:", err);
+    return { matched: 0, modified: 0 };
+  }
+}
+
+// lib/data.ts (append near other classnote helpers)
+function parseDotYMD(s: string) {
+  const m = String(s || "").trim().match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?$/);
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const dt = new Date(y, mo - 1, d);
+  return Number.isFinite(dt.getTime()) ? dt : null;
+}
+
+/**
+ * Get classnotes in [from, to] (inclusive) for specific students.
+ * NOTE: date is stored as "YYYY. MM. DD." string, so we filter by that
+ * and also add a createdAt fallback window just in case.
+ */
+export async function getClassnotesInRange(
+  student_names: string[],
+  fromDot: string, // "YYYY. MM. DD."
+  toDot: string    // "YYYY. MM. DD."
+) {
+  const fromD = parseDotYMD(fromDot);
+  const toD   = parseDotYMD(toDot);
+  if (!fromD || !toD) return [];
+
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    // string comparison works because your date format is zero-padded
+    const cursor = coll.find({
+      student_name: { $in: student_names },
+      date: { $gte: fromDot, $lte: toDot }
+    }).sort({ date: 1, createdAt: -1 });
+
+    const list = await cursor.toArray();
+    return list.map(serialize_document);
+  } catch (err) {
+    console.error("getClassnotesInRange error:", err);
+    return [];
+  }
+}
+

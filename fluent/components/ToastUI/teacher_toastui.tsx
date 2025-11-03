@@ -50,6 +50,21 @@ interface Props {
   teacherColors?: Record<string, string>;
 }
 
+// teacher_toastui.tsx — add under existing helpers
+function dateKeyFromDate(d: Date) { // "YYYY. MM. DD."
+  return `${d.getFullYear()}. ${String(d.getMonth()+1).padStart(2,"0")}. ${String(d.getDate()).padStart(2,"0")}.`;
+}
+function kstTodayOnly() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+/** tolerance minutes for "time match" (e.g., 15) */
+const MATCH_TOL_MIN = 15;
+
+function minutesDiff(a: Date, b: Date) {
+  return Math.abs((a.getTime() - b.getTime()) / 60000);
+}
+
 /* ---------------------------- Date helpers (KST) ---------------------------- */
 function toDateYMD(str?: string | null) {
   if (!str) return null;
@@ -123,6 +138,10 @@ export default function TeacherToastUI({
   const [studentMetaLoading, setStudentMetaLoading] = useState(false);
   // ↓ Add this
   const [teacherOptions, setTeacherOptions] = useState<string[]>([]);
+  // class notes fetched for visible range
+  const [classnoteMap, setClassnoteMap] = useState<Map<string, any[]>>(new Map());
+  // key is `${student_name}::${dateDot}`
+
 
 
   // turn [{ "2025. 09. 15.": {quizlet_date, diary_date}}, ...] into a map
@@ -369,6 +388,94 @@ const eventsFromProps = useMemo(() => {
     }
   }
 
+  // === 🧩 Recolor / augment with classnotes ===
+  const today = kstTodayOnly();
+
+  // Build index of schedule events by (student,date)
+  const byStudentDate = new Map<string, EventObject[]>();
+  for (const ev of events) {
+    const student = ev?.raw?.student_name || "";
+    const dateKey = ymdString(toLocalDateOnly(new Date(ev.start)));
+    const k = `${student}::${dateKey}`;
+    if (!byStudentDate.has(k)) byStudentDate.set(k, []);
+    byStudentDate.get(k)!.push(ev);
+  }
+
+  // Recolor past & today
+  for (const [k, evList] of byStudentDate.entries()) {
+    const [, dateDot] = k.split("::");
+    const dt = toDateYMD(dateDot);
+    if (!dt) continue;
+    const dateOnly = toLocalDateOnly(dt);
+    if (dateOnly.getTime() > today.getTime()) continue;
+
+    const notes = classnoteMap.get(k) || [];
+    if (!notes.length) continue;
+
+    const note = notes.slice().sort((a,b) =>
+      new Date(b.updatedAt || b.createdAt || 0).getTime() -
+      new Date(a.updatedAt || a.createdAt || 0).getTime()
+    )[0];
+
+    const started = note?.started_at ? new Date(note.started_at) : null;
+    const ended   = note?.ended_at   ? new Date(note.ended_at)   : null;
+
+    for (const ev of evList) {
+      if (!started || !ended) {
+        ev.backgroundColor = "#FECACA";
+        ev.borderColor = "#DC2626";
+        ev.color = "#7F1D1D";
+        continue;
+      }
+
+      const schStart = new Date(ev.start);
+      const schEnd   = new Date(ev.end);
+      const startOK = minutesDiff(schStart, started) <= MATCH_TOL_MIN;
+      const endOK   = minutesDiff(schEnd, ended) <= MATCH_TOL_MIN;
+
+      if (startOK && endOK) {
+        ev.backgroundColor = "#D1FAE5";
+        ev.borderColor = "#10B981";
+        ev.color = "#064E3B";
+      } else {
+        ev.backgroundColor = "#FECACA";
+        ev.borderColor = "#DC2626";
+        ev.color = "#7F1D1D";
+      }
+    }
+  }
+
+  // Add note-only events
+  for (const [k, notes] of classnoteMap.entries()) {
+    const [student, dateDot] = k.split("::");
+    const dt = toDateYMD(dateDot);
+    if (!dt) continue;
+    const dateOnly = toLocalDateOnly(dt);
+    if (dateOnly.getTime() > today.getTime()) continue;
+
+    const hasSchedule = byStudentDate.has(k);
+    if (hasSchedule) continue;
+
+    const note = notes[0];
+    const s = note?.started_at ? new Date(note.started_at)
+      : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 0, 0);
+    const e = note?.ended_at ? new Date(note.ended_at)
+      : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 30, 0);
+
+    events.push({
+      id: `note-only-${student}-${dateDot}-${Math.random().toString(36).slice(2)}`,
+      calendarId: "classnote",
+      title: `⚠️ ${student}: Class note (no schedule)`,
+      category: "time",
+      start: s,
+      end: e,
+      backgroundColor: "#FECACA",
+      borderColor: "#DC2626",
+      color: "#7F1D1D",
+      isReadOnly: true,
+      raw: { note_only: true, student_name: student, date: dateDot },
+    });
+  }
 
   return events;
 }, [data, teacherColorMap, quizletDates]);
@@ -710,6 +817,54 @@ const eventsFromProps = useMemo(() => {
       isMounted = false;
     };
   }, [filteredEvents, variant, forceView]);
+
+
+  // === 🧩 Fetch classnotes for current visible range ===
+  useEffect(() => {
+    const center = currentDate || new Date();
+    let rangeStart: Date;
+    let rangeEnd: Date;
+
+    if (viewName === "month") {
+      rangeStart = new Date(center.getFullYear(), center.getMonth(), 1);
+      rangeEnd   = new Date(center.getFullYear(), center.getMonth() + 1, 0);
+    } else {
+      const d = new Date(center);
+      const dow = d.getDay();
+      rangeStart = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+      rangeEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (6 - dow));
+    }
+
+    const from = dateKeyFromDate(rangeStart);
+    const to   = dateKeyFromDate(rangeEnd);
+
+    const studentsSet = new Set<string>();
+    (data || []).forEach(row => {
+      const nm = row?.student_name?.trim();
+      if (nm) studentsSet.add(nm);
+    });
+    const students = Array.from(studentsSet);
+    if (!students.length) { setClassnoteMap(new Map()); return; }
+
+    const params = new URLSearchParams();
+    students.forEach(s => params.append("student_name", s));
+    params.set("from", from);
+    params.set("to", to);
+
+    fetch(`/api/classnote/search?${params.toString()}`, { cache: "no-store" })
+      .then(res => res.ok ? res.json() : null)
+      .then(json => {
+        const list = Array.isArray(json?.data) ? json.data : [];
+        const map = new Map<string, any[]>();
+        for (const note of list) {
+          const key = `${note.student_name}::${String(note.date).trim()}`;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key)!.push(note);
+        }
+        setClassnoteMap(map);
+      })
+      .catch(() => setClassnoteMap(new Map()));
+  }, [currentDate?.getTime?.(), viewName, data]);
 
   // Close popovers on outside click / ESC
   useEffect(() => {
