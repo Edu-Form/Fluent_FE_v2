@@ -23,7 +23,9 @@ interface ToastEventInput {
 
 interface Props {
   data: ToastEventInput[];
-  quizletDates?: string[] | Record<string, string[]>; // 👈 support both
+  quizletDates?: string[] | Record<string, string[]>;
+  height?: string | number;
+  fitViewportOffset?: number;
 
   // visuals
   variant?: Variant;
@@ -50,7 +52,7 @@ interface Props {
   teacherColors?: Record<string, string>;
 }
 
-// teacher_toastui.tsx — add under existing helpers
+/* ---------------------------- Date helpers (KST-like local) ---------------------------- */
 function dateKeyFromDate(d: Date) { // "YYYY. MM. DD."
   return `${d.getFullYear()}. ${String(d.getMonth()+1).padStart(2,"0")}. ${String(d.getDate()).padStart(2,"0")}.`;
 }
@@ -65,7 +67,6 @@ function minutesDiff(a: Date, b: Date) {
   return Math.abs((a.getTime() - b.getTime()) / 60000);
 }
 
-/* ---------------------------- Date helpers (KST) ---------------------------- */
 function toDateYMD(str?: string | null) {
   if (!str) return null;
   const s = String(str).trim();
@@ -89,6 +90,18 @@ function getDurationHours(start: Date, end: Date) {
   const mins = Math.max(30, Math.round((end.getTime() - start.getTime()) / 60000));
   return Math.round(mins / 30) / 2; // 0.5, 1.0, 1.5, ...
 }
+
+// Replace previous link builders
+function buildQuizletUrl(student: string) {
+  return `/teacher/student/quizlet?student_name=${encodeURIComponent(student)}`;
+}
+
+function buildDiaryUrl(student: string) {
+  return `/teacher/student/diary?student_name=${encodeURIComponent(student)}`;
+}
+
+
+
 
 
 /* ----------------------------- Color utilities ----------------------------- */
@@ -121,7 +134,7 @@ function shade(hex: string, p: number) {
 
 export default function TeacherToastUI({
   data,
-  quizletDates,
+
   variant = "compact",
   saveEndpointBase = "/api/schedules",
   forceView,
@@ -132,19 +145,17 @@ export default function TeacherToastUI({
   teacherColors,
 }: Props) {
 
-  // --- NEW: local cache + small helper ---
+  // --- per-student cache for class_history (for popover meta)
   const studentCacheRef = useRef<Map<string, any>>(new Map());
   const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
-  const [studentMetaLoading, setStudentMetaLoading] = useState(false);
-  // ↓ Add this
+  const [, setStudentMetaLoading] = useState(false);
+  // teacher list for Add form
   const [teacherOptions, setTeacherOptions] = useState<string[]>([]);
-  // class notes fetched for visible range
+
+  // class notes fetched for visible range; key: `${student_name}::${dateDot}`
   const [classnoteMap, setClassnoteMap] = useState<Map<string, any[]>>(new Map());
-  // key is `${student_name}::${dateDot}`
 
-
-
-  // turn [{ "2025. 09. 15.": {quizlet_date, diary_date}}, ...] into a map
+  // helpers
   function buildClassHistoryMap(class_history: any[]): Record<string, { quizlet_date?: string; diary_date?: string }> {
     const map: Record<string, { quizlet_date?: string; diary_date?: string }> = {};
     (class_history || []).forEach((entry: any) => {
@@ -154,21 +165,29 @@ export default function TeacherToastUI({
     return map;
   }
 
+  // calendar refs
   const containerRef = useRef<HTMLDivElement>(null);
   const calRef = useRef<InstanceType<CalendarCtor> | null>(null);
 
-  const [currentDate, setCurrentDate] = useState(() => new Date());
+  // remember where the user is (prevents snap-back)
+  const viewDateRef = useRef<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
+  function rememberAndSetDate(d: Date) {
+    viewDateRef.current = d;
+    setCurrentDate(d);
+  }
+
   const [viewName, setViewName] = useState<"week" | "month">(forceView ?? "week");
 
-  // Clicked-event popover
+  // popovers
   const popRef = useRef<HTMLDivElement | null>(null);
   const [detail, setDetail] = useState<{ event: EventObject | null; x: number; y: number } | null>(null);
 
-  // Add card popover
   const addRef = useRef<HTMLDivElement | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [repeatMode, setRepeatMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [addAnchor, setAddAnchor] = useState<null | { x: number; y: number }>(null);
   const [addForm, setAddForm] = useState({
     date: ymdString(new Date()),
     room_name: defaults?.room_name ?? "101",
@@ -178,7 +197,6 @@ export default function TeacherToastUI({
     teacher_name: defaults?.teacher_name ?? "",
   });
   const updateAdd = (patch: Partial<typeof addForm>) => setAddForm((p) => ({ ...p, ...patch }));
-  const [addAnchor, setAddAnchor] = useState<null | { x: number; y: number }>(null);
 
   useEffect(() => {
     if (addOpen && !addForm.student_name && studentOptions.length > 0) {
@@ -194,7 +212,6 @@ export default function TeacherToastUI({
     return Array.from(s).sort((a, b) => a.localeCompare(b, "en"));
   }, [data, allowedTeachers?.join("|")]);
 
-  // Build color map for teachers
   const teacherColorMap = useMemo(() => {
     const map = new Map<string, { bg: string; border: string }>();
     uniqueTeachers.forEach((t) => {
@@ -206,13 +223,8 @@ export default function TeacherToastUI({
     return map;
   }, [uniqueTeachers.join("|"), teacherColors ? JSON.stringify(teacherColors) : ""]);
 
-  // Selected filters + init guard
   const [teacherFilter, setTeacherFilter] = useState<Set<string>>(new Set());
   const initialized = useRef(false);
-
-  // Sync teacherFilter to uniqueTeachers:
-  //  - First time: select all
-  //  - Later: keep intersection (preserve empty if user cleared)
   useEffect(() => {
     setTeacherFilter((prev) => {
       if (!initialized.current) {
@@ -221,11 +233,60 @@ export default function TeacherToastUI({
       }
       const next = new Set<string>();
       uniqueTeachers.forEach((t) => { if (prev.has(t)) next.add(t); });
-      return next; // may be empty if user cleared
+      return next;
     });
   }, [uniqueTeachers.join("|")]);
 
-  // --- NEW: fetch per-clicked event, cached by student_name ---
+  useEffect(() => {
+    if (!initialized.current) return;
+    const selected = Array.from(teacherFilter);
+    try {
+      window.dispatchEvent(new CustomEvent("teacherSidebar:change", { detail: { selected } }));
+    } catch {}
+  }, [teacherFilter]);
+
+  const toggleTeacher = (t: string) =>
+    setTeacherFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(t)) next.delete(t);
+      else next.add(t);
+      return next;
+    });
+  const selectAllTeachers = () => setTeacherFilter(new Set(uniqueTeachers));
+  const clearTeachers = () => {
+    setTeacherFilter(new Set());
+    try { window.dispatchEvent(new Event("teacherSidebar:clear")); } catch {}
+  };
+
+  // fetch teachers for Add form
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const res = await fetch("/api/teacher", { cache: "no-store" });
+        if (!res.ok) throw new Error("Failed to fetch teachers");
+        const payload = await res.json();
+        const list =
+          Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.teachers)
+            ? payload.teachers
+            : payload && typeof payload === "object"
+            ? [payload]
+            : [];
+        const names = list.map((t: any) => t?.name).filter(Boolean);
+        setTeacherOptions(names);
+        setAddForm((p) => (!p.teacher_name && names.length ? { ...p, teacher_name: names[0] } : p));
+      } catch (err) {
+        console.error("Error fetching teachers:", err);
+        setTeacherOptions([]);
+      }
+    };
+    fetchTeachers();
+  }, []);
+
+  // --- fetch meta for clicked student (quizlet/diary)
   useEffect(() => {
     if (!detail?.event) { setStudentMeta(null); return; }
 
@@ -251,235 +312,188 @@ export default function TeacherToastUI({
       })
       .catch(() => setStudentMeta(null))
       .finally(() => setStudentMetaLoading(false));
-  }, [detail?.event?.id]); // re-run when a different event is opened
+  }, [detail?.event?.id]);
 
-  useEffect(() => {
-    const fetchTeachers = async () => {
-      try {
-        const res = await fetch("/api/teacher", { cache: "no-store" });
-        if (!res.ok) throw new Error("Failed to fetch teachers");
-
-        const payload = await res.json();
-
-        // Accept a few shapes:
-        // - [ { name: "..." }, ... ]
-        // - { data: [ { name: "..." }, ... ] }
-        // - { teachers: [ { name: "..." }, ... ] }
-        // - single object { name: "..." }
-        const list =
-          Array.isArray(payload)
-            ? payload
-            : Array.isArray(payload?.data)
-            ? payload.data
-            : Array.isArray(payload?.teachers)
-            ? payload.teachers
-            : payload && typeof payload === "object"
-            ? [payload]
-            : [];
-
-        const names = list.map((t: any) => t?.name).filter(Boolean);
-        setTeacherOptions(names);
-
-        // set a default in the add form if empty
-        setAddForm((p) =>
-          !p.teacher_name && names.length ? { ...p, teacher_name: names[0] } : p
-        );
-      } catch (err) {
-        console.error("Error fetching teachers:", err);
-        setTeacherOptions([]); // force fallback input
-      }
-    };
-    fetchTeachers();
-  }, []);
-
-
-  // Emit selection changes to the admin page
-  useEffect(() => {
-    if (!initialized.current) return; // avoid flashing empty on mount
-    const selected = Array.from(teacherFilter);
-    try {
-      window.dispatchEvent(
-        new CustomEvent("teacherSidebar:change", { detail: { selected } })
-      );
-    } catch {}
-  }, [teacherFilter]);
-
-  const toggleTeacher = (t: string) =>
-    setTeacherFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(t)) next.delete(t);
-      else next.add(t);
-      return next;
-    });
-
-  const selectAllTeachers = () => setTeacherFilter(new Set(uniqueTeachers));
-
-  const clearTeachers = () => {
-    setTeacherFilter(new Set());
-    try {
-      window.dispatchEvent(new Event("teacherSidebar:clear"));
-      // "change" will also fire via the effect above with selected: []
-    } catch {}
-  };
+  // Build schedules index for past/today
+  type SchedRow = { start: Date; end: Date; room_name?: string; teacher_name?: string; raw: any };
+  const pastSchedulesIndex = useMemo(() => {
+    const idx = new Map<string, SchedRow[]>();
+    const today = kstTodayOnly();
+    for (const r of data || []) {
+      if (!r?.date || Number.isNaN(r.time) || Number.isNaN(r.duration)) continue;
+      const base = toDateYMD(r.date);
+      if (!base) continue;
+      const dateOnly = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+      if (dateOnly.getTime() > today.getTime()) continue; // keep only past or today
+      const h = Math.floor(r.time);
+      const m = Math.round((r.time - h) * 60);
+      const s = new Date(base.getFullYear(), base.getMonth(), base.getDate(), h, m, 0);
+      const e = new Date(s.getTime() + r.duration * 3600000);
+      const key = `${r.student_name}::${ymdString(base)}`;
+      if (!idx.has(key)) idx.set(key, []);
+      idx.get(key)!.push({ start: s, end: e, room_name: r.room_name, teacher_name: r.teacher_name, raw: r });
+    }
+    return idx;
+  }, [data]);
 
   /* ----------------------- Normalize incoming -> events ---------------------- */
-const eventsFromProps = useMemo(() => {
+  const eventsFromProps = useMemo(() => {
+    const events: EventObject[] = [];
 
-  const events: EventObject[] = [];
+    // 1) Normal schedules (render today + future)
+    for (const e of data || []) {
+      if (!e.date || Number.isNaN(e.time) || Number.isNaN(e.duration)) continue;
+      const base = toDateYMD(e.date);
+      if (!base) continue;
 
-  // 1️⃣ Normal schedules
-  for (const e of data || []) {
-    if (!e.date || Number.isNaN(e.time) || Number.isNaN(e.duration)) continue;
-    const base = toDateYMD(e.date);
-    if (!base) continue;
+      const today = kstTodayOnly();
+      const dateOnly = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+      if (dateOnly.getTime() < today.getTime()) continue; // skip only *before today*
 
-    const startHour = Math.floor(e.time);
-    const startMin = Math.round((e.time - startHour) * 60);
-    const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), startHour, startMin, 0);
-    const end = new Date(start.getTime() + e.duration * 3600000);
+      const startHour = Math.floor(e.time);
+      const startMin = Math.round((e.time - startHour) * 60);
+      const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), startHour, startMin, 0);
+      const end = new Date(start.getTime() + e.duration * 3600000);
 
-    const tName = e.teacher_name?.trim() ?? "";
-    const color = teacherColorMap.get(tName);
+      const tName = e.teacher_name?.trim() ?? "";
+      const color = teacherColorMap.get(tName);
 
-    events.push({
-      id: e._id || e.id || `${Date.now()}-${Math.random()}`,
-      calendarId: e.calendarId ?? "1",
-      title: `${e.room_name}호 ${e.student_name}님`,
-      category: "time",
-      start,
-      end,
-      backgroundColor: color?.bg ?? "#EEF2FF",
-      borderColor: color?.border ?? "#C7D2FE",
-      dragBackgroundColor: color?.bg ?? "#E0E7FF",
-      color: "#111827",
-      raw: e,
-    });
-  }
+      events.push({
+        id: e._id || e.id || `${Date.now()}-${Math.random()}`,
+        calendarId: e.calendarId ?? "1",
+        title: `${e.room_name}호 ${e.student_name}님`,
+        category: "time",
+        start,
+        end,
+        backgroundColor: color?.bg ?? "#EEF2FF",
+        borderColor: color?.border ?? "#C7D2FE",
+        dragBackgroundColor: color?.bg ?? "#E0E7FF",
+        color: "#111827",
+        raw: e,
+      });
+    }
 
-  if (quizletDates && typeof quizletDates === "object") {
-    // quizletDates is a map { studentName: [date1, date2, ...] }
-    for (const [student, dates] of Object.entries(quizletDates)) {
-      for (const d of dates) {
-        const dateNorm = String(d).trim();
-        // find if this student already has a schedule for that date
-        const hasSchedule = (data || []).some(
-          (s) => s.student_name === student && String(s.date).trim() === dateNorm
-        );
-        if (!hasSchedule) {
-          const base = toDateYMD(dateNorm);
-          if (!base) continue;
-          const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 0, 0);
-          const end = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 9, 30, 0);
-          events.push({
-            id: `missing-${student}-${dateNorm}`,
-            calendarId: "missing",
-            title: `⚠️ ${student}: Class note, no schedule`,
-            category: "time",
-            start,
-            end,
-            backgroundColor: "#FECACA",
-            borderColor: "#DC2626",
-            color: "#7F1D1D",
-            isReadOnly: true,
-            raw: { note_only: true, student_name: student },
-          });
+    // === Recolor past & today schedules when a classnote exists ===
+    const today = kstTodayOnly();
+
+    // Build index of schedule events by (student,date)
+    const byStudentDate = new Map<string, EventObject[]>();
+    for (const ev of events) {
+      const student = ev?.raw?.student_name || "";
+      const dateKey = ymdString(toLocalDateOnly(new Date(ev.start)));
+      const k = `${student}::${dateKey}`;
+      if (!byStudentDate.has(k)) byStudentDate.set(k, []);
+      byStudentDate.get(k)!.push(ev);
+    }
+
+    for (const [k, evList] of byStudentDate.entries()) {
+      const [, dateDot] = k.split("::");
+      const dt = toDateYMD(dateDot);
+      if (!dt) continue;
+      const dateOnly = toLocalDateOnly(dt);
+      if (dateOnly.getTime() > today.getTime()) continue;
+
+      const notes = classnoteMap.get(k) || [];
+      if (!notes.length) continue;
+
+      const note = notes.slice().sort((a,b) =>
+        new Date(b.updatedAt || b.createdAt || 0).getTime() -
+        new Date(a.updatedAt || a.createdAt || 0).getTime()
+      )[0];
+
+      const started = note?.started_at ? new Date(note.started_at) : null;
+      const ended   = note?.ended_at   ? new Date(note.ended_at)   : null;
+
+      for (const ev of evList) {
+        if (!started || !ended) {
+          ev.backgroundColor = "#FECACA";
+          ev.borderColor = "#DC2626";
+          ev.color = "#7F1D1D";
+          continue;
+        }
+
+        const schStart = new Date(ev.start);
+        const schEnd   = new Date(ev.end);
+        const startOK = minutesDiff(schStart, started) <= MATCH_TOL_MIN;
+        const endOK   = minutesDiff(schEnd, ended) <= MATCH_TOL_MIN;
+
+        if (startOK && endOK) {
+          ev.backgroundColor = "#D1FAE5";
+          ev.borderColor = "#10B981";
+          ev.color = "#064E3B";
+        } else {
+          ev.backgroundColor = "#FECACA";
+          ev.borderColor = "#DC2626";
+          ev.color = "#7F1D1D";
         }
       }
     }
-  }
 
-  // === 🧩 Recolor / augment with classnotes ===
-  const today = kstTodayOnly();
+    // 3) Add classnote-driven events for past/today ONLY (no duplicate if schedule already present)
+    for (const [k, notes] of classnoteMap.entries()) {
+      const [student, dateDot] = k.split("::");
+      const dt = toDateYMD(dateDot);
+      if (!dt) continue;
 
-  // Build index of schedule events by (student,date)
-  const byStudentDate = new Map<string, EventObject[]>();
-  for (const ev of events) {
-    const student = ev?.raw?.student_name || "";
-    const dateKey = ymdString(toLocalDateOnly(new Date(ev.start)));
-    const k = `${student}::${dateKey}`;
-    if (!byStudentDate.has(k)) byStudentDate.set(k, []);
-    byStudentDate.get(k)!.push(ev);
-  }
+      const todayOnly = kstTodayOnly();
+      const dateOnly = toLocalDateOnly(dt);
+      if (dateOnly.getTime() > todayOnly.getTime()) continue; // only past/today
 
-  // Recolor past & today
-  for (const [k, evList] of byStudentDate.entries()) {
-    const [, dateDot] = k.split("::");
-    const dt = toDateYMD(dateDot);
-    if (!dt) continue;
-    const dateOnly = toLocalDateOnly(dt);
-    if (dateOnly.getTime() > today.getTime()) continue;
+      // if a schedule already exists for (student, date), don't add note event (the schedule above was recolored)
+      if (byStudentDate.has(k)) continue;
 
-    const notes = classnoteMap.get(k) || [];
-    if (!notes.length) continue;
+      const note = notes.slice().sort((a,b) =>
+        new Date(b.updatedAt || b.createdAt || 0).getTime() -
+        new Date(a.updatedAt || a.createdAt || 0).getTime()
+      )[0];
 
-    const note = notes.slice().sort((a,b) =>
-      new Date(b.updatedAt || b.createdAt || 0).getTime() -
-      new Date(a.updatedAt || a.createdAt || 0).getTime()
-    )[0];
+      const roundToMin = (d: Date) => new Date(Math.round(d.getTime() / 60000) * 60000);
+      const started = note?.started_at ? roundToMin(new Date(note.started_at)) : null;
+      const ended   = note?.ended_at   ? roundToMin(new Date(note.ended_at))   : null;
 
-    const started = note?.started_at ? new Date(note.started_at) : null;
-    const ended   = note?.ended_at   ? new Date(note.ended_at)   : null;
+      // compare only with past/today schedules for matching
+      const candidates = pastSchedulesIndex.get(k) || [];
+      let matched: { start: Date; end: Date; room_name?: string; teacher_name?: string } | null = null;
 
-    for (const ev of evList) {
-      if (!started || !ended) {
-        ev.backgroundColor = "#FECACA";
-        ev.borderColor = "#DC2626";
-        ev.color = "#7F1D1D";
-        continue;
+      if (started && ended && candidates.length) {
+        for (const cand of candidates) {
+          const startOK = minutesDiff(cand.start, started) <= MATCH_TOL_MIN;
+          const endOK   = minutesDiff(cand.end,   ended)   <= MATCH_TOL_MIN;
+          if (startOK && endOK) { matched = cand; break; }
+        }
       }
 
-      const schStart = new Date(ev.start);
-      const schEnd   = new Date(ev.end);
-      const startOK = minutesDiff(schStart, started) <= MATCH_TOL_MIN;
-      const endOK   = minutesDiff(schEnd, ended) <= MATCH_TOL_MIN;
+      const s = matched ? matched.start : (started ?? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 0, 0));
+      const e = matched ? matched.end   : (ended   ?? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 30, 0));
 
-      if (startOK && endOK) {
-        ev.backgroundColor = "#D1FAE5";
-        ev.borderColor = "#10B981";
-        ev.color = "#064E3B";
-      } else {
-        ev.backgroundColor = "#FECACA";
-        ev.borderColor = "#DC2626";
-        ev.color = "#7F1D1D";
-      }
+      const isGreen = Boolean(matched);
+      const bg = isGreen ? "#D1FAE5" : "#FECACA";
+      const border = isGreen ? "#10B981" : "#DC2626";
+      const text = isGreen ? "#064E3B" : "#7F1D1D";
+
+      events.push({
+        id: `note-${student}-${dateDot}-${Math.random().toString(36).slice(2)}`,
+        calendarId: "classnote",
+        title: isGreen ? `📝 ${student}님 수업 확인` : `⚠️ ${student}: 수업 없음`,
+        category: "time",
+        start: s,
+        end: e,
+        backgroundColor: bg,
+        borderColor: border,
+        color: text,
+        isReadOnly: true,
+        raw: {
+          note_only: !matched,
+          student_name: student,
+          date: dateDot,
+          room_name: matched?.room_name,
+          teacher_name: matched?.teacher_name,
+        },
+      });
     }
-  }
 
-  // Add note-only events
-  for (const [k, notes] of classnoteMap.entries()) {
-    const [student, dateDot] = k.split("::");
-    const dt = toDateYMD(dateDot);
-    if (!dt) continue;
-    const dateOnly = toLocalDateOnly(dt);
-    if (dateOnly.getTime() > today.getTime()) continue;
-
-    const hasSchedule = byStudentDate.has(k);
-    if (hasSchedule) continue;
-
-    const note = notes[0];
-    const s = note?.started_at ? new Date(note.started_at)
-      : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 0, 0);
-    const e = note?.ended_at ? new Date(note.ended_at)
-      : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 30, 0);
-
-    events.push({
-      id: `note-only-${student}-${dateDot}-${Math.random().toString(36).slice(2)}`,
-      calendarId: "classnote",
-      title: `⚠️ ${student}: Class note (no schedule)`,
-      category: "time",
-      start: s,
-      end: e,
-      backgroundColor: "#FECACA",
-      borderColor: "#DC2626",
-      color: "#7F1D1D",
-      isReadOnly: true,
-      raw: { note_only: true, student_name: student, date: dateDot },
-    });
-  }
-
-  return events;
-}, [data, teacherColorMap, quizletDates]);
-
+    return events;
+  }, [data, teacherColorMap, classnoteMap, pastSchedulesIndex]);
 
   /* ------------------------------- Apply filters ---------------------------- */
   const filteredEvents = useMemo(() => {
@@ -544,7 +558,6 @@ const eventsFromProps = useMemo(() => {
     return matches;
   }
 
-  // Helper: update visible event if it's on the calendar right now
   function updateVisibleEventIfMounted(id: string, calendarId: string, newStart: Date, newEnd: Date) {
     try {
       const existing = calRef.current?.getEvent?.(id, calendarId);
@@ -554,7 +567,362 @@ const eventsFromProps = useMemo(() => {
     } catch {}
   }
 
-  /* --------------------------- Bulk action popovers --------------------------- */
+  /* ------------------------------- Init calendar (ONCE) ------------------------------ */
+  useEffect(() => {
+    let isMounted = true;
+
+    (async () => {
+      const mod = await import("@toast-ui/calendar");
+      if (!isMounted || !containerRef.current) return;
+
+      const Calendar: CalendarCtor = mod.default;
+      if (!calRef.current) {
+        calRef.current = new Calendar(containerRef.current, {
+          defaultView: forceView ?? "week",
+          useDetailPopup: false,
+          usageStatistics: false,
+          isReadOnly: false,
+          gridSelection: true,
+          template: {
+            time(ev: any) {
+              const student = ev?.raw?.student_name ?? "";
+              const room = ev?.raw?.room_name ?? "";
+              const s = new Date(ev.start);
+              const e = new Date(ev.end);
+              const hhmm = (d: Date) =>
+                `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+              const timeRange = `${hhmm(s)}–${hhmm(e)}`;
+              return `
+                <div class="tuic-event-sm">
+                  <div class="tuic-line1">${student} • ${room}</div>
+                  <div class="tuic-line2">${timeRange}</div>
+                </div>
+              `;
+            },
+            /** <-- this is the month cell schedule renderer */
+            monthGridSchedule(ev: any) {
+              const student = ev?.raw?.student_name ?? "";
+              const room = ev?.raw?.room_name ?? "";
+              const s = new Date(ev.start);
+              const e = new Date(ev.end);
+              const hhmm = (d: Date) => `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+              const timeRange = `${hhmm(s)}–${hhmm(e)}`;
+              return `
+                <div class="tuic-event-sm">
+                  <div class="tuic-line1">${student} • ${room}</div>
+                  <div class="tuic-line2">${timeRange}</div>
+                </div>
+              `;
+            },
+          },
+          week: {
+            startDayOfWeek: 0,
+            dayNames: ["일", "월", "화", "수", "목", "금", "토"],
+            taskView: false,
+            eventView: ["time"],
+            showNowIndicator: true,
+            hourStart: variant === "compact" ? 8 : 7,
+            hourEnd:   24,
+            workweek: false,
+          },
+          month: {
+            isAlways6Weeks: false,
+            visibleWeeksCount: 0,
+            startDayOfWeek: 0,
+            dayNames: ["일", "월", "화", "수", "목", "금", "토"],
+            narrowWeekend: false,
+            scheduleHeight: 28, 
+          },
+
+        });
+        // --- Theme & CSS (once) ---
+        const styleId = "tuic-modern-theme-unified";
+        if (!document.getElementById(styleId)) {
+          const el = document.createElement("style");
+          el.id = styleId;
+          el.textContent = `
+        /* Base look */
+        .toastui-calendar-layout { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans", "Malgun Gothic", sans-serif; }
+        .toastui-calendar-panel { background:#fff; border-radius:16px; overflow:hidden; }
+        .toastui-calendar-daygrid, .toastui-calendar-week { border-color:#eef1f4; }
+        .toastui-calendar-dayname { background:#f7f8fa; color:#4b5563; font-weight:600; border-bottom:1px solid #eef1f4; }
+        .toastui-calendar-today .toastui-calendar-dayname-date-area, .toastui-calendar-today .toastui-calendar-weekday-grid-line { background:#eef6ff; }
+        .toastui-calendar-timegrid-now-indicator { background:#0ea5e9; }
+        .toastui-calendar-timegrid-now-indicator-arrow { border-bottom-color:#0ea5e9; }
+        .toastui-calendar-timegrid-hour { color:#6b7280; font-size:10px; }
+        .toastui-calendar-time-schedule { border:none !important; }
+        .toastui-calendar-time-schedule-block { border-radius:12px !important; box-shadow:0 1px 2px rgba(16,24,40,.06); }
+        .toastui-calendar-time-schedule .toastui-calendar-event-time-content { background:transparent !important; }
+
+        /* === No vertical scroll: force grid to fill container height */
+        .toastui-calendar-panel.toastui-calendar-time { overflow-y: hidden !important; }
+        .toastui-calendar-timegrid,
+        .toastui-calendar-timegrid-container,
+        .toastui-calendar-timegrid-scrollarea,
+        .toastui-calendar-timegrid-hour-area,
+        .toastui-calendar-timegrid-schedules {
+          height: 100% !important;
+          min-height: 0 !important;
+          overflow-y: hidden !important;
+        }
+
+        /* ====== COMPACT VARIANT ====== */
+        .tuic-compact .toastui-calendar-dayname { font-size:12px; }
+        .tuic-compact .toastui-calendar-timegrid-hour { font-size:9px; }
+        .tuic-compact .toastui-calendar-timegrid-gridline { height:16px !important; }
+        .tuic-compact .toastui-calendar-timegrid-half-hour { height:8px !important; }
+        .tuic-compact .toastui-calendar-time-schedule-block { border-radius:10px !important; }
+        .tuic-compact .tuic-event-sm .tuic-line1{ font-size:10px; }
+        .tuic-compact .tuic-event-sm .tuic-line2{ font-size:9px; }
+        .tuic-compact .toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 0; padding-bottom: 0; }
+        /* Allow 2 lines in month cells for our custom template */
+        .toastui-calendar-month .tuic-event-sm { line-height: 1.15; }
+        .toastui-calendar-month .tuic-event-sm .tuic-line1 { 
+          font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .toastui-calendar-month .tuic-event-sm .tuic-line2 { 
+          margin-top: 2px; font-size: 10px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        /* In case the month view enforces single-line heights on events */
+        .toastui-calendar-month .toastui-calendar-weekday-schedule { height: auto !important; }
+        .toastui-calendar-month .toastui-calendar-event-time-content { white-space: normal !important; }
+
+        /* ====== FULL VARIANT ====== */
+        .tuic-full .toastui-calendar-timegrid-gridline { height:auto !important; }
+        .tuic-full .toastui-calendar-timegrid-half-hour { height:auto !important; }
+        .tuic-full .toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 1px; padding-bottom: 1px; }
+        
+        /* Make month schedules tall enough for two lines */
+        .toastui-calendar-month .toastui-calendar-weekday-schedule {
+          height: auto !important;
+          min-height: 28px;              /* match scheduleHeight or a bit less */
+          padding: 2px 4px;
+          box-sizing: border-box;
+        }
+
+        /* Our two-line template */
+        .toastui-calendar-month .tuic-event-sm { 
+          display: block; 
+          line-height: 1.15; 
+        }
+        .toastui-calendar-month .tuic-event-sm .tuic-line1 { 
+          font-size: 11px; 
+          white-space: nowrap; 
+          overflow: hidden; 
+          text-overflow: ellipsis; 
+        }
+        .toastui-calendar-month .tuic-event-sm .tuic-line2 { 
+          margin-top: 2px; 
+          font-size: 10px; 
+          opacity: .9; 
+          white-space: nowrap; 
+          overflow: hidden; 
+          text-overflow: ellipsis; 
+        }
+
+        /* Prevent internal wrappers from forcing single-line clips */
+        .toastui-calendar-month .toastui-calendar-event-time-content {
+          white-space: normal !important;
+        }
+
+        `;
+          document.head.appendChild(el);
+        }
+
+        // Theme (once)
+        calRef.current.setTheme({
+          common: {
+            backgroundColor: "#ffffff",
+            border: "1px solid #eef1f4",
+            gridSelection: { backgroundColor: "rgba(99,102,241,0.06)", border: "1px dashed #c7d2fe" },
+          },
+          week: {
+            dayName: { borderBottom: "1px solid #eef1f4", backgroundColor: "#f7f8fa", color: "#475569" },
+            nowIndicatorLabel: { color: "#0ea5e9", backgroundColor: "#0ea5e9" },
+            nowIndicatorPast: { border: "1px solid #0ea5e9" },
+            nowIndicatorBullet: { backgroundColor: "#0ea5e9" },
+          },
+          month: {
+            dayName: { borderBottom: "1px solid #eef1f4", backgroundColor: "#f7f8fa", color: "#475569" },
+          },
+          time: { fontSize: "12px", fontWeight: "500", color: "#1f2937", backgroundColor: "#eff6ff" },
+        });
+
+        // Handlers
+        const handleClick = (args: { event: EventObject; nativeEvent?: MouseEvent }) => {
+          const { event, nativeEvent } = args || {};
+          if (!event) return;
+          const rect = containerRef.current?.getBoundingClientRect();
+          const x = (nativeEvent?.clientX ?? 0) - (rect?.left ?? 0);
+          const y = (nativeEvent?.clientY ?? 0) - (rect?.top ?? 0);
+          setDetail({ event, x, y });
+          setAddOpen(false);
+        };
+
+        const handleBeforeUpdate = async ({ event, changes }: { event: EventObject; changes: Partial<EventObject> }) => {
+          const oldStart = new Date(event.start as any);
+          const oldEnd = new Date(event.end as any);
+          const oldRef = { hour: oldStart.getHours(), durationH: getDurationHours(oldStart, oldEnd) };
+
+          setDetail((d) => (d?.event?.id === event.id ? null : d));
+          calRef.current?.updateEvent(event.id as string, event.calendarId as string, changes);
+
+          try {
+            const after = { ...event, ...changes };
+            const start = new Date(after.start as any);
+            const end = new Date(after.end as any);
+            await saveUpdateById(
+              String(after.raw?.schedule_id || after.id),
+              ymdString(start),
+              start.getHours() + start.getMinutes() / 60,
+              getDurationHours(start, end)
+            );
+          } catch (e: any) {
+            alert(`저장 실패: ${e?.message ?? e}`);
+            return;
+          }
+
+          openBulkUpdatePanel({ ...event, ...changes }, oldRef, null);
+        };
+
+        const handleSelectDateTime = (args: any) => {
+          const { start, end, nativeEvent } = args || {};
+          if (!containerRef.current || !start) return;
+
+          setDetail(null);
+
+          const rect = containerRef.current.getBoundingClientRect();
+          const x = (nativeEvent?.clientX ?? rect.left) - rect.left;
+          const y = (nativeEvent?.clientY ?? rect.top) - rect.top;
+
+          const s = new Date(start);
+          const e = end ? new Date(end) : new Date(s.getTime() + 30 * 60 * 1000);
+          const mins = Math.max(30, Math.round((e.getTime() - s.getTime()) / 60000));
+          const hours = Math.round(mins / 30) / 2;
+
+          setAddOpen(true);
+          setRepeatMode(false);
+          setAddAnchor({ x, y });
+          setAddForm((p) => ({
+            ...p,
+            date: ymdString(s),
+            time: String(s.getHours() + s.getMinutes() / 60),
+            duration: String(hours),
+          }));
+
+          try { calRef.current?.clearGridSelections?.(); } catch {}
+        };
+
+        calRef.current.on("clickEvent", handleClick);
+        calRef.current.on("beforeUpdateEvent", handleBeforeUpdate);
+        calRef.current.on("selectDateTime", handleSelectDateTime);
+
+        // open where the user last was
+        calRef.current.setDate(viewDateRef.current);
+        setCurrentDate(viewDateRef.current);
+      }
+
+      // keep hour range in sync with variant
+      calRef.current!.setOptions({
+        week: {
+          hourStart: variant === "compact" ? 8 : 7,
+          hourEnd:   24,
+        },
+      });
+    })();
+
+    return () => {
+      isMounted = false;
+      // do NOT destroy on data changes; only if container truly unmounted
+      if (!containerRef.current && calRef.current) {
+        try { calRef.current.destroy(); } catch {}
+        calRef.current = null;
+      }
+    };
+  }, [variant, forceView]);
+
+  /* ----------------------- Only refresh events (no rebuild) ------------------ */
+  useEffect(() => {
+    const cal = calRef.current;
+    if (!cal) return;
+    const keep = viewDateRef.current || cal.getDate?.() || new Date();
+    cal.clear();
+    if (filteredEvents.length) cal.createEvents(filteredEvents);
+    cal.setDate(keep);
+  }, [filteredEvents]);
+
+  /* ------------------- Fetch classnotes for current visible range ------------ */
+  useEffect(() => {
+    const center = currentDate || new Date();
+    let rangeStart: Date;
+    let rangeEnd: Date;
+
+    if (viewName === "month") {
+      rangeStart = new Date(center.getFullYear(), center.getMonth(), 1);
+      rangeEnd   = new Date(center.getFullYear(), center.getMonth() + 1, 0);
+    } else {
+      const d = new Date(center);
+      const dow = d.getDay();
+      rangeStart = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+      rangeEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (6 - dow));
+    }
+
+    const from = dateKeyFromDate(rangeStart);
+    const to   = dateKeyFromDate(rangeEnd);
+
+    const studentsSet = new Set<string>();
+    (data || []).forEach(row => {
+      const nm = row?.student_name?.trim();
+      if (nm) studentsSet.add(nm);
+    });
+    const students = Array.from(studentsSet);
+    if (!students.length) { setClassnoteMap(new Map()); return; }
+
+    const params = new URLSearchParams();
+    students.forEach(s => params.append("student_name", s));
+    params.set("from", from);
+    params.set("to", to);
+
+    fetch(`/api/classnote/search?${params.toString()}`, { cache: "no-store" })
+      .then(res => res.ok ? res.json() : null)
+      .then(json => {
+        const list = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+        const map = new Map<string, any[]>();
+        for (const note of list) {
+          const normalizedDate = ymdString(toDateYMD(note.date)!);
+          const key = `${note.student_name}::${normalizedDate}`;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key)!.push(note);
+        }
+        setClassnoteMap(map);
+      })
+      .catch(() => setClassnoteMap(new Map()));
+  }, [currentDate?.getTime?.(), viewName, data]);
+
+  // Close popovers on outside click / ESC
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node | null;
+      if (popRef.current && !popRef.current.contains(t as Node)) setDetail(null);
+      if (addRef.current && !addRef.current.contains(t as Node)) { setAddOpen(false); setAddAnchor(null); }
+    };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDetail(null);
+        setAddOpen(false);
+        setAddAnchor(null);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, []);
+
+  /* ------------------------------ Bulk actions ------------------------------ */
   const bulkRef = useRef<HTMLDivElement | null>(null);
   const [bulkPanel, setBulkPanel] = useState<null | {
     kind: "delete" | "update";
@@ -600,387 +968,36 @@ const eventsFromProps = useMemo(() => {
     return { left, top, width: POP_W } as React.CSSProperties;
   })();
 
-  /* ------------------------------- Init calendar ------------------------------ */
-  useEffect(() => {
-    let isMounted = true;
-
-    (async () => {
-      const mod = await import("@toast-ui/calendar");
-      if (!isMounted || !containerRef.current) return;
-
-      const Calendar: CalendarCtor = mod.default;
-      if (!calRef.current) {
-        calRef.current = new Calendar(containerRef.current, {
-          defaultView: forceView ?? "week",
-          useDetailPopup: false,
-          usageStatistics: false,
-          isReadOnly: false,
-          gridSelection: true,
-          template: {
-            time(ev: any) {
-              const student = ev?.raw?.student_name ?? "";
-              const room = ev?.raw?.room_name ?? "";
-              const s = new Date(ev.start);
-              const e = new Date(ev.end);
-              const hhmm = (d: Date) =>
-                `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-              const timeRange = `${hhmm(s)}–${hhmm(e)}`;
-              return `
-                <div class="tuic-event-sm">
-                  <div class="tuic-line1">${student} • ${room}</div>
-                  <div class="tuic-line2">${timeRange}</div>
-                </div>
-              `;
-            },
-          },
-          week: {
-            startDayOfWeek: 0,
-            dayNames: ["일", "월", "화", "수", "목", "금", "토"],
-            taskView: false,
-            eventView: ["time"],
-            showNowIndicator: true,
-            hourStart: variant === "compact" ? 8 : 7,
-            hourEnd:   24,
-            workweek: false,
-          },
-          month: {
-            isAlways6Weeks: false,
-            visibleWeeksCount: 0,
-            startDayOfWeek: 0,
-            dayNames: ["일", "월", "화", "수", "목", "금", "토"],
-            narrowWeekend: false,
-          },
-        });
-
-        // --- Theme & CSS (once) ---
-        const styleId = "tuic-modern-theme-unified";
-        if (!document.getElementById(styleId)) {
-          const el = document.createElement("style");
-          el.id = styleId;
-          el.textContent = `
-/* Base look */
-.toastui-calendar-layout { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans", "Malgun Gothic", sans-serif; }
-.toastui-calendar-panel { background:#fff; border-radius:16px; overflow:hidden; }
-.toastui-calendar-daygrid, .toastui-calendar-week { border-color:#eef1f4; }
-.toastui-calendar-dayname { background:#f7f8fa; color:#4b5563; font-weight:600; border-bottom:1px solid #eef1f4; }
-.toastui-calendar-today .toastui-calendar-dayname-date-area, .toastui-calendar-today .toastui-calendar-weekday-grid-line { background:#eef6ff; }
-.toastui-calendar-timegrid-now-indicator { background:#0ea5e9; }
-.toastui-calendar-timegrid-now-indicator-arrow { border-bottom-color:#0ea5e9; }
-.toastui-calendar-timegrid-hour { color:#6b7280; font-size:10px; }
-.toastui-calendar-time-schedule { border:none !important; }
-.toastui-calendar-time-schedule-block { border-radius:12px !important; box-shadow:0 1px 2px rgba(16,24,40,.06); }
-.toastui-calendar-time-schedule .toastui-calendar-event-time-content { background:transparent !important; }
-.tuic-event-sm{ display:flex; flex-direction:column; gap:2px; line-height:1.15; }
-.tuic-event-sm .tuic-line1{ font-size:11px; font-weight:600; color:#111827; }
-.tuic-event-sm .tuic-line2{ font-size:10px; color:#4b5563; font-variant-numeric: tabular-nums; }
-
-/* No vertical scroll (both variants) */
-.toastui-calendar-panel.toastui-calendar-time { overflow-y: hidden !important; }
-.toastui-calendar-timegrid,
-.toastui-calendar-timegrid-container,
-.toastui-calendar-timegrid-scrollarea,
-.toastui-calendar-timegrid-hour-area,
-.toastui-calendar-timegrid-schedules {
-  height: 100% !important;
-  min-height: 0 !important;
-  overflow-y: hidden !important;
-}
-
-/* ====== COMPACT VARIANT ====== */
-.tuic-compact .toastui-calendar-dayname { font-size:12px; }
-.tuic-compact .toastui-calendar-timegrid-hour { font-size:9px; }
-.tuic-compact .toastui-calendar-timegrid-gridline { height:16px !important; }
-.tuic-compact .toastui-calendar-timegrid-half-hour { height:8px !important; }
-.tuic-compact .toastui-calendar-time-schedule-block { border-radius:10px !important; }
-.tuic-compact .tuic-event-sm .tuic-line1{ font-size:10px; }
-.tuic-compact .tuic-event-sm .tuic-line2{ font-size:9px; }
-.tuic-compact .toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 0px; padding-bottom: 0px; }
-
-/* ====== FULL VARIANT ====== */
-.tuic-full .toastui-calendar-timegrid-gridline { height:auto !important; }
-.tuic-full .toastui-calendar-timegrid-half-hour { height:auto !important; }
-.tuic-full .toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 1px; padding-bottom: 1px; }
-          `;
-          document.head.appendChild(el);
-        }
-
-        calRef.current.setTheme({
-          common: {
-            backgroundColor: "#ffffff",
-            border: "1px solid #eef1f4",
-            gridSelection: { backgroundColor: "rgba(99,102,241,0.06)", border: "1px dashed #c7d2fe" },
-          },
-          week: {
-            dayName: { borderBottom: "1px solid #eef1f4", backgroundColor: "#f7f8fa", color: "#475569" },
-            nowIndicatorLabel: { color: "#0ea5e9", backgroundColor: "#0ea5e9" },
-            nowIndicatorPast: { border: "1px solid #0ea5e9" },
-            nowIndicatorBullet: { backgroundColor: "#0ea5e9" },
-          },
-          month: {
-            dayName: { borderBottom: "1px solid #eef1f4", backgroundColor: "#f7f8fa", color: "#475569" },
-          },
-          time: { fontSize: "12px", fontWeight: "500", color: "#1f2937", backgroundColor: "#eff6ff" },
-        });
-
-        // --- Handlers ---
-        const handleClick = (args: { event: EventObject; nativeEvent?: MouseEvent }) => {
-          const { event, nativeEvent } = args || {};
-          if (!event) return;
-          const rect = containerRef.current?.getBoundingClientRect();
-          const x = (nativeEvent?.clientX ?? 0) - (rect?.left ?? 0);
-          const y = (nativeEvent?.clientY ?? 0) - (rect?.top ?? 0);
-          setDetail({ event, x, y });
-          setAddOpen(false);
-        };
-
-        const handleBeforeUpdate = async ({ event, changes }: { event: EventObject; changes: Partial<EventObject> }) => {
-          const oldStart = new Date(event.start as any);
-          const oldEnd = new Date(event.end as any);
-          const oldRef = { hour: oldStart.getHours(), durationH: getDurationHours(oldStart, oldEnd) };
-
-          setDetail((d) => (d?.event?.id === event.id ? null : d));
-          calRef.current?.updateEvent(event.id as string, event.calendarId as string, changes);
-
-          try {
-            const after = { ...event, ...changes };
-            const start = new Date(after.start as any);
-            const end = new Date(after.end as any);
-            await saveUpdateById(
-              String(after.raw?.schedule_id || after.id),
-              ymdString(start),
-              start.getHours() + start.getMinutes() / 60, // 👈 supports 30-min steps (e.g., 9.5)
-              getDurationHours(start, end)                 // 👈 rounds to nearest 30 min (min 0.5)
-            );
-          } catch (e: any) {
-            alert(`저장 실패: ${e?.message ?? e}`);
-            return;
-          }
-
-          openBulkUpdatePanel({ ...event, ...changes }, oldRef, null);
-        };
-
-        const handleSelectDateTime = (args: any) => {
-          const { start, end, nativeEvent } = args || {};
-          if (!containerRef.current || !start) return;
-
-          setDetail(null);
-
-          const rect = containerRef.current.getBoundingClientRect();
-          const x = (nativeEvent?.clientX ?? rect.left) - rect.left;
-          const y = (nativeEvent?.clientY ?? rect.top) - rect.top;
-
-          const s = new Date(start);
-          const e = end ? new Date(end) : new Date(s.getTime() + 30 * 60 * 1000);
-          const mins = Math.max(30, Math.round((e.getTime() - s.getTime()) / 60000));
-          const hours = Math.round(mins / 30) / 2;
-
-          setAddOpen(true);
-          setRepeatMode(false);
-          setAddAnchor({ x, y });
-          setAddForm((p) => ({
-            ...p,
-            date: ymdString(s),
-            time: String(s.getHours() + s.getMinutes() / 60), // 👈 e.g., "9.5"
-            duration: String(hours),                           // 👈 e.g., "1.5"
-          }));
-
-          try { calRef.current?.clearGridSelections?.(); } catch {}
-        };
-
-        calRef.current.on("clickEvent", handleClick);
-        calRef.current.on("beforeUpdateEvent", handleBeforeUpdate);
-        calRef.current.on("selectDateTime", handleSelectDateTime);
-      }
-
-      const cal = calRef.current!;
-      cal.clear();
-      if (filteredEvents.length) cal.createEvents(filteredEvents);
-      cal.setOptions({
-        week: {
-          hourStart: variant === "compact" ? 8 : 7,
-          hourEnd:   24,
-        },
-      });
-      setCurrentDate(cal.getDate() ?? new Date());
-    })();
-
-    return () => {
-      const cal = calRef.current;
-      if (!cal) return;
-      try {
-        cal.off("clickEvent");
-        cal.off("beforeUpdateEvent");
-        cal.off("selectDateTime");
-        cal.destroy();
-        calRef.current = null;
-      } catch {}
-      isMounted = false;
-    };
-  }, [filteredEvents, variant, forceView]);
-
-
-  // === 🧩 Fetch classnotes for current visible range ===
-  useEffect(() => {
-    const center = currentDate || new Date();
-    let rangeStart: Date;
-    let rangeEnd: Date;
-
-    if (viewName === "month") {
-      rangeStart = new Date(center.getFullYear(), center.getMonth(), 1);
-      rangeEnd   = new Date(center.getFullYear(), center.getMonth() + 1, 0);
-    } else {
-      const d = new Date(center);
-      const dow = d.getDay();
-      rangeStart = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
-      rangeEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (6 - dow));
-    }
-
-    const from = dateKeyFromDate(rangeStart);
-    const to   = dateKeyFromDate(rangeEnd);
-
-    const studentsSet = new Set<string>();
-    (data || []).forEach(row => {
-      const nm = row?.student_name?.trim();
-      if (nm) studentsSet.add(nm);
-    });
-    const students = Array.from(studentsSet);
-    if (!students.length) { setClassnoteMap(new Map()); return; }
-
-    const params = new URLSearchParams();
-    students.forEach(s => params.append("student_name", s));
-    params.set("from", from);
-    params.set("to", to);
-
-    fetch(`/api/classnote/search?${params.toString()}`, { cache: "no-store" })
-      .then(res => res.ok ? res.json() : null)
-      .then(json => {
-        const list = Array.isArray(json?.data) ? json.data : [];
-        const map = new Map<string, any[]>();
-        for (const note of list) {
-          const key = `${note.student_name}::${String(note.date).trim()}`;
-          if (!map.has(key)) map.set(key, []);
-          map.get(key)!.push(note);
-        }
-        setClassnoteMap(map);
-      })
-      .catch(() => setClassnoteMap(new Map()));
-  }, [currentDate?.getTime?.(), viewName, data]);
-
-  // Close popovers on outside click / ESC
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as Node | null;
-      if (popRef.current && !popRef.current.contains(t as Node)) setDetail(null);
-      if (addRef.current && !addRef.current.contains(t as Node)) { setAddOpen(false); setAddAnchor(null); }
-      if (bulkRef.current && !bulkRef.current.contains(t as Node)) {
-        if (!bulkPanel?.saving) setBulkPanel(null);
-      }
-    };
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setDetail(null);
-        if (!bulkPanel?.saving) setBulkPanel(null);
-        setAddOpen(false);
-        setAddAnchor(null);
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [bulkPanel?.saving]);
-
-  // Header controls
-  const goToday = () => { calRef.current?.today(); setCurrentDate(calRef.current?.getDate() ?? new Date()); };
-  const goPrev  = () => { calRef.current?.prev();  setCurrentDate(calRef.current?.getDate() ?? new Date()); };
-  const goNext  = () => { calRef.current?.next();  setCurrentDate(calRef.current?.getDate() ?? new Date()); };
-  const toWeek  = () => { calRef.current?.changeView("week");  setViewName("week");  };
-  const toMonth = () => { calRef.current?.changeView("month"); setViewName("month"); };
-
-  const handleCheckSchedule = async () => {
-    try {
-      // Extract current student name from props (passed down from schedule.tsx)
-      const studentName = studentOptions?.[0];
-      if (!studentName) return alert("No student selected.");
-
-      // Month filter setup
-      const now = new Date();
-      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const today = toLocalDateOnly(now);
-
-      // 1️⃣ Fetch both schedule + quizlet data for this student
-      const [scheduleRes, quizletRes] = await Promise.all([
-        fetch(`/api/schedules/student/${encodeURIComponent(studentName)}`, { cache: "no-store" }),
-        fetch(`/api/quizlet/student/${encodeURIComponent(studentName)}`, { cache: "no-store" }),
-      ]);
-
-      if (!scheduleRes.ok || !quizletRes.ok) throw new Error("Failed to fetch schedule or quizlet data");
-
-      const schedules = await scheduleRes.json();
-      const quizlets = await quizletRes.json();
-
-      // Helper to normalize date strings
-      const toKey = (d: string) => {
-        const dt = toDateYMD(d);
-        if (!dt) return null;
-        return ymdString(dt);
-      };
-      const isThisMonthBeforeToday = (d: Date) => d >= firstOfMonth && d < today;
-
-      // 2️⃣ Filter only valid items (this month before today)
-      const validSchedules = (schedules || []).filter((s: any) => {
-        const dt = toDateYMD(s.date);
-        return dt && isThisMonthBeforeToday(dt);
-      });
-      const validQuizlets = (quizlets || []).filter((q: any) => {
-        const dt = toDateYMD(q.class_date || q.date);
-        return dt && isThisMonthBeforeToday(dt);
-      });
-
-      // 3️⃣ Build lookup sets for quick comparison
-      const scheduleDates = new Set(validSchedules.map((s: any) => toKey(s.date)).filter(Boolean));
-      const quizletDates = new Set(validQuizlets.map((q: any) => toKey(q.class_date || q.date)).filter(Boolean));
-
-      // 4️⃣ Delete schedules without matching quizlet date
-      for (const s of validSchedules) {
-        const key = toKey(s.date);
-        if (key && !quizletDates.has(key)) {
-          console.log("🗑️ Deleting unmatched schedule:", key);
-          await saveDelete(String(s._id || s.id));
-        }
-      }
-
-      // 5️⃣ Add schedule if quizlet exists but no schedule
-      for (const q of validQuizlets) {
-        const key = toKey(q.class_date || q.date);
-        if (key && !scheduleDates.has(key)) {
-          console.log("➕ Adding missing schedule:", key);
-          await saveCreate({
-            date: key,
-            time: 18, // default time, can be adjusted
-            duration: 1,
-            room_name: "101",
-            teacher_name: q.teacher_name || "Unknown",
-            student_name: studentName,
-            calendarId: "1",
-          });
-        }
-      }
-
-      alert("✅ Schedule check complete (this month, before today)");
-      window.dispatchEvent(new CustomEvent("calendar:saved"));
-    } catch (err: any) {
-      console.error(err);
-      alert(`❌ Schedule check failed: ${err.message || err}`);
-    }
+  /* ------------------------------ Header actions ---------------------------- */
+  const goToday = () => {
+    calRef.current?.today();
+    const d = calRef.current?.getDate() ?? new Date();
+    rememberAndSetDate(d);
+  };
+  const goPrev  = () => {
+    calRef.current?.prev();
+    const d = calRef.current?.getDate() ?? new Date();
+    rememberAndSetDate(d);
+  };
+  const goNext  = () => {
+    calRef.current?.next();
+    const d = calRef.current?.getDate() ?? new Date();
+    rememberAndSetDate(d);
+  };
+  const toWeek  = () => {
+    calRef.current?.changeView("week");
+    setViewName("week");
+    const d = calRef.current?.getDate() ?? viewDateRef.current ?? new Date();
+    rememberAndSetDate(d);
+  };
+  const toMonth = () => {
+    calRef.current?.changeView("month");
+    setViewName("month");
+    const d = calRef.current?.getDate() ?? viewDateRef.current ?? new Date();
+    rememberAndSetDate(d);
   };
 
-
-
-
-  /* ------------------------ Single delete (clicked event) -------------------- */
+  /* --------------------------- Single delete (popover) ----------------------- */
   const handleDeleteSingle = async () => {
     if (!detail?.event) return;
     try {
@@ -992,6 +1009,37 @@ const eventsFromProps = useMemo(() => {
       setDetail(null);
     } catch (e: any) {
       alert(`삭제 실패: ${e?.message ?? e}`);
+    }
+  };
+
+  /* ---------------------- Update future after drag/resize -------------------- */
+  const confirmUpdateFuture = async () => {
+    if (!bulkPanel || bulkPanel.kind !== "update" || !bulkPanel.reference) return;
+    setBulkPanel((p) => (p ? { ...p, saving: true } : p));
+    try {
+      const base = bulkPanel.baseEvent;
+      const baseStart = new Date(base.start as any);
+      const baseEnd = new Date(base.end as any);
+      const newHour = baseStart.getHours() + baseStart.getMinutes() / 60;
+      const newDurHrs = getDurationHours(baseStart, baseEnd);
+
+      const matches = collectFutureMatchesFromData(base, bulkPanel.reference!);
+
+      for (const { scheduleId, date } of matches) {
+        const intH = Math.floor(newHour);
+        const intM = Math.round((newHour - intH) * 60);
+        const newStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), intH, intM, 0);
+        const newEnd = new Date(newStart.getTime() + newDurHrs * 3600000);
+
+        await saveUpdateById(scheduleId, ymdString(newStart), newHour, newDurHrs);
+        updateVisibleEventIfMounted(scheduleId, "1", newStart, newEnd);
+      }
+
+      setBulkPanel(null);
+      setDetail(null);
+    } catch (e: any) {
+      alert(`일괄 업데이트 실패: ${e?.message ?? e}`);
+      setBulkPanel((p) => (p ? { ...p, saving: false } : p));
     }
   };
 
@@ -1017,39 +1065,7 @@ const eventsFromProps = useMemo(() => {
     }
   };
 
-  /* ---------------------- Update future after drag/resize -------------------- */
-  const confirmUpdateFuture = async () => {
-    if (!bulkPanel || bulkPanel.kind !== "update" || !bulkPanel.reference) return;
-    setBulkPanel((p) => (p ? { ...p, saving: true } : p));
-    try {
-      const base = bulkPanel.baseEvent;
-      const baseStart = new Date(base.start as any);
-      const baseEnd = new Date(base.end as any);
-      const newHour = baseStart.getHours() + baseStart.getMinutes() / 60; // 👈 keep .5 hour
-      const newDurHrs = getDurationHours(baseStart, baseEnd);             // 👈 round to .5
-
-      const matches = collectFutureMatchesFromData(base, bulkPanel.reference!);
-
-      for (const { scheduleId, date } of matches) {
-        const intH = Math.floor(newHour);
-        const intM = Math.round((newHour - intH) * 60);
-        const newStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), intH, intM, 0);
-        const newEnd = new Date(newStart.getTime() + newDurHrs * 3600000);
-
-        await saveUpdateById(scheduleId, ymdString(newStart), newHour, newDurHrs);
-        updateVisibleEventIfMounted(scheduleId, "1", newStart, newEnd);
-      }
-
-      setBulkPanel(null);
-      setDetail(null);
-    } catch (e: any) {
-      alert(`일괄 업데이트 실패: ${e?.message ?? e}`);
-      setBulkPanel((p) => (p ? { ...p, saving: false } : p));
-    }
-  };
-
-  /* ------------------------- Positioning of popovers ------------------------- */
-
+  /* --------------------------------- Render --------------------------------- */
   return (
     <div className={`w-full ${enableTeacherSidebar ? "flex gap-4" : ""}`}>
       {/* LEFT: Teacher filter sidebar (admin only) */}
@@ -1072,7 +1088,6 @@ const eventsFromProps = useMemo(() => {
                   key={t}
                   className={`group flex items-center justify-between gap-2 text-sm rounded-lg px-2 py-1 ${active ? "bg-slate-50" : ""}`}
                 >
-                  {/* checkbox + label (toggles filter) */}
                   <label htmlFor={inputId} className="flex items-center gap-2 cursor-pointer">
                     <input
                       id={inputId}
@@ -1090,7 +1105,6 @@ const eventsFromProps = useMemo(() => {
                     </span>
                   </label>
 
-                  {/* delete button (does NOT toggle the checkbox) */}
                   <button
                     type="button"
                     title={`Delete ${t}`}
@@ -1104,7 +1118,6 @@ const eventsFromProps = useMemo(() => {
                       );
                     }}
                   >
-                    {/* simple trash icon */}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2h-1v12a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V7H4V5h4V4a1 1 0 0 1 1-1zm8 4H7v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7zM9 9h2v8H9V9zm4 0h2v8h-2V9zM9 5h6v0H9z" />
                     </svg>
@@ -1117,7 +1130,6 @@ const eventsFromProps = useMemo(() => {
               <div className="text-xs text-gray-500">No teachers in current data.</div>
             )}
           </div>
-
         </aside>
       )}
 
@@ -1138,22 +1150,16 @@ const eventsFromProps = useMemo(() => {
               <button onClick={toMonth} className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${viewName === "month" ? "bg-slate-900 text-white" : ""}`}>Month</button>
             </div>
           )}
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={handleCheckSchedule}
-              className="text-xs px-3 py-1 rounded-full border border-emerald-300 hover:bg-emerald-50 text-emerald-700"
-            >
-              Check Schedule
-            </button>
 
+          <div className="ml-auto flex items-center gap-2">
             <a
-                href="/teacher/admin_billing/"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Open Full Calendar"
-                className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
-              >
-                Admin Billing
+              href="/teacher/admin_billing/"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open Full Calendar"
+              className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+            >
+              Admin Billing
             </a>
             <a
               href="/teacher/schedule/admin/"
@@ -1164,7 +1170,6 @@ const eventsFromProps = useMemo(() => {
             >
               Full Calendar
             </a>
-
             <a
               href="https://fluent-erp-eight.vercel.app/student-registration"
               target="_blank"
@@ -1176,31 +1181,26 @@ const eventsFromProps = useMemo(() => {
             </a>
 
             {/* Add Calendar button */}
-          <button
-            onClick={() =>
-              setAddOpen((v) => {
-                const next = !v;
-                if (!next) setRepeatMode(false);
-
-                // Default student (existing)
-                if (next && !addForm.student_name && studentOptions.length > 0) {
-                  setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
-                }
-                // ↓ New: default teacher if available
-                if (next && !addForm.teacher_name && teacherOptions.length > 0) {
-                  setAddForm((p) => ({ ...p, teacher_name: teacherOptions[0] }));
-                }
-
-                setAddAnchor(null);
-                return next;
-              })
-            }
-            title="새 수업 등록"
-            className={`text-xs px-3 py-1 rounded-full border ${addOpen ? "bg-indigo-600 text-white border-indigo-600" : "border-indigo-300 hover:bg-indigo-50 text-indigo-700"}`}
-          >
-            Add Class
-          </button>
-
+            <button
+              onClick={() =>
+                setAddOpen((v) => {
+                  const next = !v;
+                  if (!next) setRepeatMode(false);
+                  if (next && !addForm.student_name && studentOptions.length > 0) {
+                    setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
+                  }
+                  if (next && !addForm.teacher_name && teacherOptions.length > 0) {
+                    setAddForm((p) => ({ ...p, teacher_name: teacherOptions[0] }));
+                  }
+                  setAddAnchor(null);
+                  return next;
+                })
+              }
+              title="새 수업 등록"
+              className={`text-xs px-3 py-1 rounded-full border ${addOpen ? "bg-indigo-600 text-white border-indigo-600" : "border-indigo-300 hover:bg-indigo-50 text-indigo-700"}`}
+            >
+              Add Class
+            </button>
           </div>
         </div>
 
@@ -1208,14 +1208,14 @@ const eventsFromProps = useMemo(() => {
         <div className={`relative ${variant === "compact" ? "tuic-compact" : "tuic-full"}`} style={{ width: "100%", height: variant === "compact" ? "65vh" : "78vh" }}>
           <div ref={containerRef} className="absolute inset-0" />
 
-          {/* Event popover (click an event) */}
+          {/* Event popover */}
           {detail?.event && (
             <div
               ref={popRef}
-              className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+              className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-[13px]"
               style={(() => {
                 if (!detail || !containerRef.current) return { display: "none" } as React.CSSProperties;
-                const POP_W = 360, POP_H = 230, pad = 8;
+                const POP_W = 280, POP_H = 190, pad = 6;
                 const cw = containerRef.current.clientWidth;
                 const ch = containerRef.current.clientHeight;
                 let left = detail.x + 10;
@@ -1225,54 +1225,107 @@ const eventsFromProps = useMemo(() => {
                 return { left, top, width: POP_W } as React.CSSProperties;
               })()}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="font-semibold text-gray-900 leading-snug">{detail.event.title || "이벤트"}</div>
-                <button onClick={() => setDetail(null)} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
-              </div>
 
-              <div className="mt-2 space-y-1 text-gray-700">
-                <div><span className="text-gray-500">시작:</span> {new Date(detail.event.start as any).toLocaleString()}</div>
-                <div><span className="text-gray-500">종료:</span> {new Date(detail.event.end as any).toLocaleString()}</div>
-                {detail.event.raw?.room_name && <div><span className="text-gray-500">강의실:</span> {detail.event.raw.room_name}</div>}
-                {detail.event.raw?.student_name && <div><span className="text-gray-500">학생:</span> {detail.event.raw.student_name}</div>}
-                {detail.event.raw?.teacher_name && <div><span className="text-gray-500">선생님:</span> {detail.event.raw.teacher_name}</div>}
-              
-                {/* --- NEW: quizlet_date + diary_date for THIS event's date --- */}
-                {(() => {
-                  const dateKey = ymdString(toLocalDateOnly(new Date(detail.event.start as any))); // e.g. "2025. 09. 15."
-                  const meta = studentMeta?.[dateKey];
-                  return (
-                    <div className="pt-2 mt-1 border-t border-gray-200">
-                      {studentMetaLoading ? (
-                        <div className="text-xs text-gray-500">Loading…</div>
-                      ) : (
-                        <>
-                          <div><span className="text-gray-500">Quizlet:</span> {meta?.quizlet_date ?? "—"}</div>
-                          <div><span className="text-gray-500">Diary:</span> {meta?.diary_date ?? "—"}</div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
+              {/* --- QUIZLET / DIARY BUTTON ROW (full-width, equal size) --- */}
+              {(() => {
+                const dateKey = ymdString(toLocalDateOnly(new Date(detail.event.start as any)));
+                const student = detail.event.raw?.student_name ?? "";
+                const meta = studentMeta?.[dateKey];
 
-              <div className="mt-3 flex flex-col gap-2">
+                const qDate = meta?.quizlet_date;
+                const dDate = meta?.diary_date;
+
+                const qLabel = qDate ? `Quizlet: ${qDate}` : "Quizlet: N/A";
+                const dLabel = dDate ? `Diary: ${dDate}` : "Diary: N/A";
+
+                const qHref = qDate ? buildQuizletUrl(student) : undefined;
+                const dHref = dDate ? buildDiaryUrl(student) : undefined;
+
+                return (
+                  <div className="mt-3 grid grid-cols-2 gap-2 min-w-0">
+                    {qHref ? (
+                      <a
+                        href={qHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open Quizlet"
+                        className="w-full h-9 inline-flex items-center justify-center rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 text-[10px] px-3 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                      >
+                        <span className="truncate">{qLabel}</span>
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="No Quizlet"
+                        className="w-full h-9 inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-slate-500 text-[10px] px-3 cursor-not-allowed"
+                      >
+                        <span className="truncate">{qLabel}</span>
+                      </button>
+                    )}
+
+                    {dHref ? (
+                      <a
+                        href={dHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open Diary"
+                        className="w-full h-9 inline-flex items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-[10px] px-3 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                      >
+                        <span className="truncate">{dLabel}</span>
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="No Diary"
+                        className="w-full h-9 inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-slate-500 text-[10px] px-3 cursor-not-allowed"
+                      >
+                        <span className="truncate">{dLabel}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+
+
+              {/* --- 2x2 ACTION GRID --- */}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {/* Paid Absence */}
+                <button
+                  className="h-20 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-sm"
+                  title="유급 결석 처리"
+                >
+                  Paid Absence
+                </button>
+
+                {/* Delete Single */}
                 <button
                   onClick={handleDeleteSingle}
-                  className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700"
-                  title="삭제"
+                  className="h-20 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm"
+                  title="이 수업만 삭제"
                 >
-                  Delete (single)
+                  Delete Single
                 </button>
 
+                {/* Delete Future Classes */}
                 <button
                   onClick={() => openBulkDeletePanel(detail.event, { x: (detail?.x ?? 0), y: (detail?.y ?? 0) })}
-                  className="px-3 py-1 text-xs rounded-md bg-rose-600 text-white hover:bg-rose-700"
-                  title="같은 학생 & 같은 요일 & 같은 시간/길이(이 날짜 포함 이후) 삭제"
+                  className="h-20 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium shadow-sm"
+                  title="이 학생의 이후 동일 패턴 수업 모두 삭제"
                 >
-                  Delete future classes
+                  Delete Future Classes
+                </button>
+
+                {/* Delete Explanation */}
+                <button
+                  className="h-20 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium shadow-sm"
+                  title="삭제 사유 기록"
+                >
+                  Delete Explanation
                 </button>
               </div>
+
             </div>
           )}
 
@@ -1337,7 +1390,6 @@ const eventsFromProps = useMemo(() => {
                           </option>
                         ))}
                       </select>
-                      {/* chevron */}
                       <svg
                         className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
                         viewBox="0 0 20 20"
@@ -1357,43 +1409,39 @@ const eventsFromProps = useMemo(() => {
                   )}
                 </label>
 
-
-              <label className="text-xs col-span-2">
-                <div className="text-gray-600 mb-1">Teacher</div>
-                {teacherOptions.length > 0 ? (
-                  <div className="relative">
-                    <select
-                      className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                <label className="text-xs col-span-2">
+                  <div className="text-gray-600 mb-1">Teacher</div>
+                  {teacherOptions.length > 0 ? (
+                    <div className="relative">
+                      <select
+                        className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                        value={addForm.teacher_name}
+                        onChange={(e) => updateAdd({ teacher_name: e.target.value })}
+                      >
+                        {teacherOptions.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                      <svg
+                        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <input
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       value={addForm.teacher_name}
                       onChange={(e) => updateAdd({ teacher_name: e.target.value })}
-                    >
-                      {teacherOptions.map((name) => (
-                        <option key={name} value={name}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
-                    {/* chevron */}
-                    <svg
-                      className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
-                    </svg>
-                  </div>
-                ) : (
-                  <input
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                    value={addForm.teacher_name}
-                    onChange={(e) => updateAdd({ teacher_name: e.target.value })}
-                    placeholder="Loading teachers..."
-                  />
-                )}
-              </label>
-
-
+                      placeholder="Loading teachers..."
+                    />
+                  )}
+                </label>
               </div>
 
               <div className="mt-3 flex justify-between">
@@ -1416,14 +1464,11 @@ const eventsFromProps = useMemo(() => {
                     if (submitting) return;
                     setSubmitting(true);
                     try {
-                      // Parse inputs
                       const dt = toDateYMD(addForm.date);
                       const timeNum = Number(addForm.time);
                       const durNum = Number(addForm.duration);
-
                       if (!dt) return alert("날짜 형식: YYYY. MM. DD");
 
-                      // Allow 30-minute steps (0.5)
                       const isHalfStep = (n: number) =>
                         Number.isFinite(n) && Math.abs(n * 2 - Math.round(n * 2)) < 1e-9;
 
@@ -1434,19 +1479,15 @@ const eventsFromProps = useMemo(() => {
                         return alert("Duration must be 0.5, 1.0, 1.5, …");
                       }
 
-                      // Required fields
                       if (!addForm.room_name) return alert("Room is required");
                       if (!addForm.student_name) return alert("Student is required");
 
-                      // Convert fractional hour to h:m
                       const h = Math.floor(timeNum);
                       const m = Math.round((timeNum - h) * 60);
 
                       if (repeatMode) {
-                        // --- REPEAT (weekly for 1 year) ---
                         const base = toDateYMD(addForm.date);
                         if (!base) return alert("날짜 형식: YYYY. MM. DD");
-
                         const until = new Date(base);
                         until.setFullYear(until.getFullYear() + 1);
 
@@ -1467,8 +1508,8 @@ const eventsFromProps = useMemo(() => {
 
                           const payload = {
                             date: ymdString(iter),
-                            time: timeNum,         // can be 9.5
-                            duration: durNum,      // can be 0.5, 1.5, ...
+                            time: timeNum,
+                            duration: durNum,
                             room_name: addForm.room_name,
                             teacher_name: addForm.teacher_name ?? "",
                             student_name: addForm.student_name,
@@ -1501,14 +1542,13 @@ const eventsFromProps = useMemo(() => {
 
                         calRef.current?.createEvents(createdEvents);
                       } else {
-                        // --- SINGLE ADD ---
                         const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), h, m, 0);
                         const end = new Date(start.getTime() + durNum * 60 * 60 * 1000);
 
                         const payload = {
                           date: addForm.date,
-                          time: timeNum,          // may be 9.5
-                          duration: durNum,       // may be 0.5, 1.5, ...
+                          time: timeNum,
+                          duration: durNum,
                           room_name: addForm.room_name,
                           teacher_name: addForm.teacher_name ?? "",
                           student_name: addForm.student_name,
@@ -1519,26 +1559,24 @@ const eventsFromProps = useMemo(() => {
                         const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
                         const color = teacherColorMap.get(payload.teacher_name);
 
-                        calRef.current?.createEvents([
-                          {
-                            id: newId,
-                            calendarId: "1",
-                            title: `${payload.room_name}호 ${payload.student_name}님`,
-                            category: "time",
-                            start,
-                            end,
-                            backgroundColor: color?.bg ?? "#EEF2FF",
-                            borderColor: color?.border ?? "#C7D2FE",
-                            dragBackgroundColor: color?.bg ?? "#E0E7FF",
-                            color: "#111827",
-                            raw: {
-                              schedule_id: newId,
-                              room_name: payload.room_name,
-                              teacher_name: payload.teacher_name,
-                              student_name: payload.student_name,
-                            },
+                        calRef.current?.createEvents([{
+                          id: newId,
+                          calendarId: "1",
+                          title: `${payload.room_name}호 ${payload.student_name}님`,
+                          category: "time",
+                          start,
+                          end,
+                          backgroundColor: color?.bg ?? "#EEF2FF",
+                          borderColor: color?.border ?? "#C7D2FE",
+                          dragBackgroundColor: color?.bg ?? "#E0E7FF",
+                          color: "#111827",
+                          raw: {
+                            schedule_id: newId,
+                            room_name: payload.room_name,
+                            teacher_name: payload.teacher_name,
+                            student_name: payload.student_name,
                           },
-                        ]);
+                        }]);
                       }
 
                       setAddOpen(false);
@@ -1557,25 +1595,12 @@ const eventsFromProps = useMemo(() => {
                 >
                   {submitting && (
                     <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z"
-                      />
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z" />
                     </svg>
                   )}
                   {repeatMode ? "Add Multiple" : "Add"}
                 </button>
-
               </div>
             </div>
           )}

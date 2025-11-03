@@ -1792,33 +1792,41 @@ function parseDotYMD(s: string) {
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
 
-/**
- * Get classnotes in [from, to] (inclusive) for specific students.
- * NOTE: date is stored as "YYYY. MM. DD." string, so we filter by that
- * and also add a createdAt fallback window just in case.
- */
 export async function getClassnotesInRange(
   student_names: string[],
-  fromDot: string, // "YYYY. MM. DD."
-  toDot: string    // "YYYY. MM. DD."
+  fromDot: string,
+  toDot: string
 ) {
   const fromD = parseDotYMD(fromDot);
-  const toD   = parseDotYMD(toDot);
+  const toD = parseDotYMD(toDot);
   if (!fromD || !toD) return [];
 
   try {
     const client = await clientPromise;
     const db = client.db("room_allocation_db");
-    const coll = db.collection("classnotes");
+    const coll = db.collection("classnotes"); // ✅ confirmed collection
 
-    // string comparison works because your date format is zero-padded
-    const cursor = coll.find({
-      student_name: { $in: student_names },
-      date: { $gte: fromDot, $lte: toDot }
-    }).sort({ date: 1, createdAt: -1 });
+    // Zero-padded date format allows lexical comparison
+    const cursor = coll
+      .find({
+        student_name: { $in: student_names },
+        date: { $gte: fromDot, $lte: toDot },
+      })
+      .sort({ date: 1, createdAt: -1 });
 
     const list = await cursor.toArray();
-    return list.map(serialize_document);
+
+    // ✅ Only keep essential calendar fields
+    return list.map(doc => ({
+      _id: doc._id,
+      student_name: doc.student_name,
+      teacher_name: doc.teacher_name,
+      date: doc.date,
+      started_at: doc.started_at,
+      ended_at: doc.ended_at,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    }));
   } catch (err) {
     console.error("getClassnotesInRange error:", err);
     return [];
