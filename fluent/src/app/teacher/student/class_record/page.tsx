@@ -68,6 +68,15 @@ const formatToSave = (date: string | undefined): string => {
   }
 };
 
+// ⏱️ mm:ss
+const formatElapsed = (ms: number): string => {
+  if (!Number.isFinite(ms) || ms < 0) return "00:00";
+  const s = Math.floor(ms / 1000);
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
+};
+
 // 퀴즐렛 페이지 내용 컴포넌트
 const ClassPageContent: React.FC = () => {
   const router = useRouter();
@@ -117,6 +126,26 @@ const ClassPageContent: React.FC = () => {
     [student_name]
   );
 
+  // ⏱️ class timer state
+  const [classStarted, setClassStarted] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  // Page lock & call-to-action state
+  const [isEditable, setIsEditable] = useState(false);       // blocks all inputs & editor
+  const [awaitingAction, setAwaitingAction] = useState(true); // controls blinking on initial load
+
+
+  useEffect(() => {
+    let t: number | null = null;
+    if (classStarted && startTime) {
+      t = window.setInterval(() => setElapsedMs(Date.now() - startTime), 1000);
+    }
+    return () => {
+      if (t) window.clearInterval(t);
+    };
+  }, [classStarted, startTime]);
+
+
   // 마운트 확인 및 초기 데이터 설정
   useEffect(() => {
     setIsMounted(true);
@@ -137,60 +166,51 @@ const ClassPageContent: React.FC = () => {
     }
   }, [next_class_date]);
 
-  const handleSaveClick = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleEndClassClick = async () => {
+  if (!homework.trim()) {
+    alert("Homework field is required.");
+    return;
+  }
+  if (!original_text || original_text.trim().length === 0) {
+    alert("Please write class notes.");
+    return;
+  }
+  if (!class_date || class_date.trim() === "") {
+    alert("Please select a class date.");
+    return;
+  }
+  if (!original_text.includes("<mark>")) {
+    alert("Please highlight at least one Quizlet expression.");
+    return;
+  }
 
-    if (!homework.trim()) {
-      alert("Homework field is required.");
-      return;
+  setTranslating(true);
+  try {
+    const response = await fetch("/api/quizlet/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ original_text }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || "Translation failed");
     }
 
-    if (!original_text || original_text.trim().length === 0) {
-      alert("Please write class notes.");
-      return;
-    }
+    const { eng_quizlet, kor_quizlet } = await response.json();
+    const merged = eng_quizlet.map((eng: string, i: number) => ({
+      eng,
+      kor: kor_quizlet[i] || "",
+    }));
+    setQuizletLines(merged);
+    setTranslationModalOpen(true); // ✅ open modal (same behavior as before)
+  } catch (err) {
+    alert(err instanceof Error ? err.message : "Unknown error during translation.");
+  } finally {
+    setTranslating(false);
+  }
+};
 
-    if (!class_date || class_date.trim() === "") {
-      alert("Please select a class date.");
-      return;
-    }
-
-    if (!original_text.includes("<mark>")) {
-      alert("Please highlight at least one Quizlet expression.");
-      return;
-    }
-
-    setTranslating(true);
-
-    try {
-      const response = await fetch("/api/quizlet/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ original_text }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Translation failed");
-      }
-
-      const { eng_quizlet, kor_quizlet } = await response.json();
-
-      const merged = eng_quizlet.map((eng: string, i: number) => ({
-        eng,
-        kor: kor_quizlet[i] || "",
-      }));
-
-      setQuizletLines(merged);
-      setTranslationModalOpen(true);
-    } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Unknown error during translation."
-      );
-    } finally {
-      setTranslating(false);
-    }
-  };
 
   const notesTemplate1 = `
   <h2>🗓️ Date:</h2>
@@ -1697,12 +1717,17 @@ const ClassPageContent: React.FC = () => {
   const editor = useEditor({
     extensions: [StarterKit, CustomHighlight, Underline, PersistentHeading],
     content: original_text,
+    editable: false, // 🔒 start locked
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
       setOriginal_text(html);
       saveTempClassNote(html);
     },
   });
+
+  useEffect(() => {
+    if (editor) editor.setEditable(isEditable);
+  }, [editor, isEditable]);
 
   useEffect(() => {
     const loadTempNote = async () => {
@@ -1837,6 +1862,13 @@ const ClassPageContent: React.FC = () => {
                 </span>
               </div>
             )}
+            {classStarted && (
+              <div className="px-3 py-1.5 bg-[#FFF3BF] rounded-full border border-[#FFE066]">
+                <span className="text-sm font-semibold text-[#E67700]">
+                  {formatElapsed(elapsedMs)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1859,7 +1891,7 @@ const ClassPageContent: React.FC = () => {
               onChange={(e) => setClassDate(formatToSave(e.target.value))}
               className="px-4 py-2.5 bg-white border border-[#E5E8EB] rounded-xl focus:border-[#3182F6] focus:ring-4 focus:ring-[#3182F6]/10 transition-all text-sm font-medium text-[#4E5968] w-40"
               required
-              disabled={loading}
+              disabled={loading || !isEditable}
             />
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
               <svg
@@ -1945,7 +1977,7 @@ const ClassPageContent: React.FC = () => {
       </header>
 
       <form
-        onSubmit={handleSaveClick}
+        onSubmit={(e) => e.preventDefault()}
         className="flex-grow flex flex-col overflow-hidden"
       >
         {/* 메인 컨텐츠 영역 */}
@@ -2241,7 +2273,7 @@ const ClassPageContent: React.FC = () => {
                                 type="button"
                                 key={idx}
                                 onClick={() => setOriginal_text(text)}
-                                disabled={loading}
+                                disabled={loading || !isEditable}
                                 className="w-full px-3 py-1.5 bg-[#89baff] text-white rounded-lg text-xs font-semibold hover:bg-[#1B64DA] transition-all disabled:opacity-50 shadow-sm"
                               >
                                 {getButtonText()}
@@ -2269,6 +2301,7 @@ const ClassPageContent: React.FC = () => {
                             className="w-full border border-[#F2F4F6] bg-white rounded-xl px-3 py-2 text-sm resize-none h-20 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all placeholder-[#8B95A1]"
                             placeholder="숙제 내용을 입력하세요..."
                             required
+                            disabled={!isEditable}
                           />
                         </div>
                         <div>
@@ -2302,6 +2335,7 @@ const ClassPageContent: React.FC = () => {
                             className="w-full border border-[#F2F4F6] bg-white rounded-xl px-3 py-2 text-sm resize-none h-20 focus:border-[#3182F6] focus:ring-2 focus:ring-[#3182F6]/10 transition-all placeholder-[#8B95A1]"
                             placeholder="다음 수업 계획을 입력하세요..."
                             required
+                            disabled={!isEditable}
                           />
                         </div>
                         <div>
@@ -2509,35 +2543,56 @@ const ClassPageContent: React.FC = () => {
           </div>
         </div>
 
-        {/* 하단 버튼 영역 - 토스 스타일 */}
         <div className="w-full bg-white border-t border-[#F2F4F6] py-6 px-6 flex gap-4">
-          <button
-            type="button"
-            onClick={() => {
-              const redirectUrl = `/teacher/home?user=${encodeURIComponent(
-                user
-              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-                user_id
-              )}`;
-              router.push(redirectUrl);
-            }}
-            className="flex-1 py-4 rounded-2xl text-[#8B95A1] text-sm font-bold border border-[#F2F4F6] hover:bg-[#F8F9FA] transition-all"
-            disabled={loading}
-          >
-            취소하기
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm ${
-              loading
-                ? "bg-[#DEE2E6] cursor-not-allowed"
-                : "bg-[#3182F6] hover:bg-[#1B64DA]"
-            }`}
-          >
-            저장하기
-          </button>
+          {/* ✅ 수업 수정하기 — hidden once class starts */}
+          {!classStarted && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditable(true);       // unlock editing
+                setAwaitingAction(false);  // stop blinking
+              }}
+              className={`flex-1 py-4 rounded-2xl text-sm font-bold border transition-all
+                ${awaitingAction ? "cta-blink" : ""}
+                text-[#8B95A1] border-[#F2F4F6] hover:bg-[#F8F9FA]`}
+              disabled={loading}
+            >
+              수업 수정하기
+            </button>
+          )}
+
+          {/* ✅ Right side: Start → End flow */}
+          {!classStarted ? (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setClassStarted(true);
+                setStartTime(Date.now());
+                setElapsedMs(0);
+                setIsEditable(true);
+                setAwaitingAction(false);
+              }}
+              className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
+                ${awaitingAction ? "cta-blink" : ""}
+                ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#3182F6] hover:bg-[#1B64DA]"}`}
+            >
+              수업 시작하기
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleEndClassClick} // existing save + modal logic
+              className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
+                ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#FF6B6B] hover:bg-[#FA5252]"}`} // 🔴 red color
+            >
+              수업 끝내기
+            </button>
+          )}
         </div>
+
+
       </form>
 
       {/* 모달들은 기존과 동일하게 유지하되 토스 스타일 적용 */}
@@ -2664,6 +2719,15 @@ const ClassPageContent: React.FC = () => {
           -webkit-box-orient: vertical;
           overflow: hidden;
         }
+        
+        @keyframes cta-blink {
+          0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(49,130,246,0); }
+          50%      { transform: scale(1.02); box-shadow: 0 0 0.75rem rgba(49,130,246,0.35); }
+        }
+        .cta-blink {
+          animation: cta-blink 1.2s ease-in-out infinite;
+        }
+
       `}</style>
 
       {translating && (
