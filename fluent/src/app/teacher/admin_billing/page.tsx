@@ -31,16 +31,6 @@ function nextMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth() + 1, 1);
 }
 
-function StatusChip({ kind, label }: { kind: "ready" | "done" | "payment"; label: string }) {
-  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
-  const tone =
-    kind === "done"
-      ? "bg-indigo-100 text-indigo-800 border border-indigo-200"
-      : kind === "payment"
-      ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-      : "bg-gray-100 text-gray-700 border border-gray-200";
-  return <span className={classNames(base, tone)}>{label}</span>;
-}
 
 export default function Page() {
   const [monthAnchor, setMonthAnchor] = useState<Date>(() => {
@@ -52,18 +42,10 @@ export default function Page() {
   const [rows, setRows] = useState<StudentBillingRow[]>([]);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [expandedStage, setExpandedStage] = useState<Record<string, string | null>>({}); // per-row expanded stage
+  const [, setExpandedStage] = useState<Record<string, string | null>>({}); // per-row expanded stage
 
   const year = monthAnchor.getFullYear();
   const month = monthAnchor.getMonth() + 1;
-
-  const stageKeys = ["teacher_confirmed", "admin_confirmed", "message_sent", "payment_confirmed"];
-  const stageLabels: Record<string, string> = {
-    teacher_confirmed: "선생님 일정 확인",
-    admin_confirmed: "관리자 2차 확인",
-    message_sent: "결제페이지 확인",
-    payment_confirmed: "Payment",
-  };
 
   function firstNotDoneStage(r: StudentBillingRow): string | null {
     if (r.teacher_confirmed !== "done") return "teacher_confirmed";
@@ -134,22 +116,6 @@ export default function Page() {
       (r.message_sent === "done" ? 1 : 0) +
       (r.payment_confirmed ? 1 : 0)
     );
-  }
-
-  function isBoxActive(index: number, doneCount: number) {
-    if (doneCount === 0) {
-      return index === 0;
-    }
-    if (doneCount === 1) {
-      return index <= 1;
-    }
-    if (doneCount === 2) {
-      return index <= 2;
-    }
-    if (doneCount === 3) {
-      return index <= 3;
-    }
-    return true;
   }
 
   function statusColorClasses(doneCount: number) {
