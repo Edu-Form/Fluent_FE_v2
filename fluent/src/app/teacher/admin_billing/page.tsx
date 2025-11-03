@@ -54,14 +54,10 @@ export default function Page() {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [expandedStage, setExpandedStage] = useState<Record<string, string | null>>({}); // per-row expanded stage
 
-  // store status docs for the month
-  const [statusDocs, setStatusDocs] = useState<any[]>([]);
-
   const year = monthAnchor.getFullYear();
   const month = monthAnchor.getMonth() + 1;
 
   const stageKeys = ["teacher_confirmed", "admin_confirmed", "message_sent", "payment_confirmed"];
-  // changed Teacher label to Korean as requested
   const stageLabels: Record<string, string> = {
     teacher_confirmed: "선생님 일정 확인",
     admin_confirmed: "관리자 2차 확인",
@@ -69,7 +65,6 @@ export default function Page() {
     payment_confirmed: "Payment",
   };
 
-  // helper: returns first not-done stage key or null
   function firstNotDoneStage(r: StudentBillingRow): string | null {
     if (r.teacher_confirmed !== "done") return "teacher_confirmed";
     if (r.admin_confirmed !== "done") return "admin_confirmed";
@@ -78,7 +73,6 @@ export default function Page() {
     return null;
   }
 
-  // load student list for this admin panel (unchanged logic, but now triggers status application after)
   useEffect(() => {
     fetch(`/api/studentList`)
       .then((r) => (r.ok ? r.json() : null))
@@ -104,13 +98,11 @@ export default function Page() {
             admin_confirmed: "ready" as Status,
             message_sent: "ready" as Status,
             payment_confirmed: false,
-            // keep student_page_url; we also construct a teacher schedule link in the UI
             student_page_url: `/teacher/schedule?user=${encodeURIComponent(teacherName)}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(String(sid))}`,
             message_text: `${studentName}님, 안녕하세요:)\n${month}월 정산 및 다음달 안내 드립니다...`,
           } as StudentBillingRow;
         });
 
-        // initial expanded: first not-done
         const initialExpanded: Record<string, string | null> = {};
         for (const r of mapped) {
           initialExpanded[r.id] = firstNotDoneStage(r);
@@ -123,8 +115,7 @@ export default function Page() {
         setRows([]);
         setExpandedStage({});
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month]); // re-run when monthAnchor changes
+  }, [year, month]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return rows;
@@ -136,7 +127,6 @@ export default function Page() {
     );
   }, [rows, query]);
 
-  // compute doneCount for a row
   function doneCountFor(r: StudentBillingRow) {
     return (
       (r.teacher_confirmed === "done" ? 1 : 0) +
@@ -146,211 +136,38 @@ export default function Page() {
     );
   }
 
-  // Determines visual "active" status for each box index given doneCount.
   function isBoxActive(index: number, doneCount: number) {
-    // index 0 = student-name box
-    // index 1..4 = stage boxes 1..4
     if (doneCount === 0) {
-      return index === 0; // only left student box red
+      return index === 0;
     }
     if (doneCount === 1) {
-      return index <= 1; // left + first stage purple
+      return index <= 1;
     }
     if (doneCount === 2) {
-      return index <= 2; // left + first two stages orange
+      return index <= 2;
     }
     if (doneCount === 3) {
-      return index <= 3; // left + first three stages yellow
+      return index <= 3;
     }
-    // doneCount === 4
-    return true; // all green
+    return true;
   }
 
-  // Replace the existing boxStyleFor(...) with this implementation
-  function boxStyleFor(index: number, doneCount: number): { style: React.CSSProperties; textWhite: boolean } {
-    const active = isBoxActive(index, doneCount);
-
-    // Flat, slightly transparent palettes (alpha tuned for subtlety)
-    const palettes = {
-      red: { fill: "rgba(255,77,77,0.12)", border: "rgba(255,77,77,0.18)" },
-      purple: { fill: "rgba(124,58,237,0.10)", border: "rgba(124,58,237,0.16)" },
-      orange: { fill: "rgba(251,146,60,0.10)", border: "rgba(251,146,60,0.16)" },
-      yellow: { fill: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.16)" },
-      green: { fill: "rgba(16,185,129,0.10)", border: "rgba(16,185,129,0.16)" },
-      muted: { fill: "transparent", border: "rgba(0,0,0,0.04)" },
-    };
-
-    // choose palette by doneCount
-    let chosen = palettes.muted;
-    if (active) {
-      if (doneCount === 0) chosen = palettes.red;
-      else if (doneCount === 1) chosen = palettes.purple;
-      else if (doneCount === 2) chosen = palettes.orange;
-      else if (doneCount === 3) chosen = palettes.yellow;
-      else chosen = palettes.green; // doneCount === 4
-    }
-
-    const style: React.CSSProperties = {
-      backgroundColor: chosen.fill,
-      borderLeft: "1px solid " + chosen.border, // subtle separators between boxes
-      borderRight: "1px solid " + chosen.border,
-      // keep container shadow subtle or remove; removing glossy inner shadow entirely:
-      boxShadow: undefined,
-      // keep visual smoothing
-      transition: "background-color 180ms ease, border-color 180ms ease",
-      // ensure text stays readable over translucent background
-      WebkitFontSmoothing: "antialiased",
-    };
-
-    // With flat translucent fills we use dark text for better legibility / modern look
-    const textWhite = false;
-
-    return { style, textWhite };
+  function statusColorClasses(doneCount: number) {
+    if (doneCount <= 0) return "bg-[rgba(255,77,77,0.12)] border-[rgba(255,77,77,0.18)]";
+    if (doneCount === 1) return "bg-[rgba(124,58,237,0.10)] border-[rgba(124,58,237,0.16)]";
+    if (doneCount === 2) return "bg-[rgba(251,146,60,0.10)] border-[rgba(251,146,60,0.16)]";
+    if (doneCount === 3) return "bg-[rgba(245,158,11,0.10)] border-[rgba(245,158,11,0.16)]";
+    return "bg-[rgba(16,185,129,0.10)] border-[rgba(16,185,129,0.16)]";
   }
 
-  // helper to display stage description
-  function stageText(r: StudentBillingRow, stage: string) {
-    switch (stage) {
-      case "teacher_confirmed":
-        return r.teacher_confirmed === "done" ? "Teacher confirmed" : "Teacher not confirmed";
-      case "admin_confirmed":
-        return r.admin_confirmed === "done" ? "Admin confirmed" : "Admin not confirmed";
-      case "message_sent":
-        return r.message_sent === "done" ? r.message_text || "Message has been sent" : r.message_text || "Message not sent";
-      case "payment_confirmed":
-        return r.payment_confirmed ? "Payment has been confirmed" : "Payment not confirmed";
-      default:
-        return "";
-    }
+  function uniqueTeachers(rows: StudentBillingRow[]) {
+    const set = new Set<string>();
+    for (const r of rows) if (r.teacher_name) set.add(r.teacher_name);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "en"));
   }
-
-  /* -------------------------
-     NEW: fetch month status docs
-     ------------------------- */
-
-  // build yyyymm string for API
-  const yyyymm = `${monthAnchor.getFullYear()}${String(monthAnchor.getMonth() + 1).padStart(2, "0")}`;
-
-  // fetch status docs for the selected month and store them
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/billing/status/${yyyymm}`, { cache: "no-store" });
-        if (!res.ok) {
-          // treat as no status docs
-          setStatusDocs([]);
-          return;
-        }
-        const json = await res.json();
-
-        // Accept many shapes: array, { found, data }, single doc
-        let docs: any[] = [];
-        if (Array.isArray(json)) docs = json;
-        else if (json && Array.isArray(json.data)) docs = json.data;
-        else if (json && json.found && json.data) docs = [json.data];
-        else if (json && json.data) docs = Array.isArray(json.data) ? json.data : [json.data];
-        else if (json && json.ok && json.docs) docs = Array.isArray(json.docs) ? json.docs : [];
-        else if (json && typeof json === "object" && json.step) docs = [json];
-        else docs = []; // fallback
-
-        if (!cancelled) setStatusDocs(docs);
-      } catch (e) {
-        console.error("Failed to fetch billing status docs:", e);
-        if (!cancelled) setStatusDocs([]);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [yyyymm])
-
-  useEffect(() => {
-    // only run when we actually have status docs AND when rows are loaded
-    if (!statusDocs || statusDocs.length === 0) return;
-    if (!rows || rows.length === 0) return;
-
-    // normalize helper
-    const normalizeName = (s: any) =>
-      String(s ?? "")
-        .trim()
-        .replace(/님$/, "")
-        .toLowerCase();
-
-    const STEP_NORMAL_MAP: Record<string, string> = {
-      teacherconfirm: "TeacherConfirm",
-      teacherconfirmed: "TeacherConfirm",
-      teacher_confirm: "TeacherConfirm",
-      teacher_confirmed: "TeacherConfirm",
-      adminconfirm: "AdminConfirm",
-      admin_confirm: "AdminConfirm",
-      admin_confirmed: "AdminConfirm",
-      adminconfirmed: "AdminConfirm",
-      messageconfirm: "MessageConfirm",
-      message_confirm: "MessageConfirm",
-      message_confirmed: "MessageConfirm",
-      messageconfirmed: "MessageConfirm",
-      paymentconfirm: "PaymentConfirm",
-      payment_confirm: "PaymentConfirm",
-      payment_confirmed: "PaymentConfirm",
-      paymentconfirmed: "PaymentConfirm",
-      check1_status: "TeacherConfirm",
-    };
-
-    // Build map: normalized studentName -> set of canonical steps
-    const studentToSteps = new Map<string, Set<string>>();
-    for (const doc of statusDocs) {
-      const rawStep = String(doc.step ?? doc.type ?? doc.typeName ?? "").trim();
-      const stepKey = rawStep.replace(/\s+/g, "").toLowerCase();
-      const canonical = STEP_NORMAL_MAP[stepKey] ?? rawStep;
-
-      const students: string[] = Array.isArray(doc.student_names) ? doc.student_names : [];
-      for (const s of students) {
-        const n = normalizeName(s);
-        if (!studentToSteps.has(n)) studentToSteps.set(n, new Set());
-        studentToSteps.get(n)!.add(canonical);
-      }
-    }
-
-    // Apply to the currently loaded rows (use the current rows array)
-    setRows((prevRows) => {
-      const nextRows = prevRows.map((r) => {
-        const rn = normalizeName(r.student_name);
-        const steps = studentToSteps.get(rn) ?? new Set<string>();
-
-        const newRow = { ...r };
-
-        if (steps.has("TeacherConfirm") || steps.has("teacherconfirm") || steps.has("TeacherConfirmed")) {
-          newRow.teacher_confirmed = "done";
-        }
-        if (steps.has("AdminConfirm") || steps.has("adminconfirm")) {
-          newRow.admin_confirmed = "done";
-        }
-        if (steps.has("MessageConfirm") || steps.has("messageconfirm")) {
-          newRow.message_sent = "done";
-        }
-        if (steps.has("PaymentConfirm") || steps.has("paymentconfirm")) {
-          newRow.payment_confirmed = true;
-        }
-
-        return newRow;
-      });
-
-      // update expandedStage once, based on newRows
-      const nextExpanded: Record<string, string | null> = {};
-      for (const nr of nextRows) {
-        nextExpanded[nr.id] = firstNotDoneStage(nr);
-      }
-      setExpandedStage(nextExpanded);
-
-      return nextRows;
-    });
-  // only re-run when statusDocs changes or when the number of rows changes (prevents infinite loop)
-  }, [statusDocs, rows.length]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-3 md:p-4">
       {/* Header */}
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
@@ -363,8 +180,6 @@ export default function Page() {
             <div className="text-sm font-medium w-[7.5rem] text-center bg-white border rounded-md px-2 py-1">{monthLabel}</div>
             <button onClick={() => setMonthAnchor((d) => nextMonth(d))} className="px-2 py-1 border rounded-lg text-sm hover:bg-slate-50">→</button>
           </div>
-
-          {/* removed duplicate <input type="month"> to keep single month control */}
         </div>
       </div>
 
@@ -379,307 +194,164 @@ export default function Page() {
           />
           <button onClick={() => { setQuery(""); }} className="px-2 py-1 border rounded-lg text-sm">Clear</button>
         </div>
-
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 text-xs text-gray-600">
-            <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-rose-500" /> Pending</div>
-            <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-amber-500" /> In progress</div>
-            <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full bg-emerald-500" /> Complete</div>
-          </div>
-        </div>
       </div>
 
-      {/* List */}
-      <div className="space-y-2">
-        {filtered.length === 0 ? (
-          <div className="rounded-2xl border bg-white p-4 text-center text-gray-500">No students for this month.</div>
-        ) : (
-          filtered.map((r) => {
-            const doneCount = doneCountFor(r);
+      {/* Matrix (Teachers on X, Students on Y) */}
+{filtered.length === 0 ? (
+  <div className="rounded-2xl border bg-white p-4 text-center text-gray-500">
+    No students for this month.
+  </div>
+) : (
+  (() => {
+    const teachers = uniqueTeachers(filtered);
 
-            // precompute styles for each box (index 0..4 where 0 is left name box)
-            const leftBox = boxStyleFor(0, doneCount);
-            const midBoxes = [1, 2, 3, 4].map((i) => boxStyleFor(i, doneCount));
+    // Group students by teacher (safe for undefined teacher_name)
+    const rowsByTeacher: Record<string, StudentBillingRow[]> = {};
+    filtered.forEach((r) => {
+      const teacherName = r.teacher_name ?? "Unknown";
+      (rowsByTeacher[teacherName] ??= []).push(r);
+    });
 
-            // left text classes: white when leftBox active, otherwise dark
-            const leftTextClass = leftBox.textWhite ? "text-white" : "text-gray-900";
+    return (
+      <div className="relative rounded-xl border bg-white">
+        {/* Only vertical scroll; keep header (X axis) & first column sticky */}
+        <div className="max-h-[75vh] overflow-y-auto overflow-x-hidden">
+          <table className="w-full table-fixed border-collapse">
+            <thead className="bg-white sticky top-0 z-20">
+              <tr>
+                {/* sticky first header cell (students label) */}
+                <th
+                  className="sticky left-0 z-30 bg-white border-b text-[11px] font-semibold text-gray-700 tracking-tight text-left px-2 py-1.5"
+                  style={{ minWidth: 160, maxWidth: 220 }}
+                >
+                  학생
+                </th>
 
-            return (
-              <div key={r.id} className="relative rounded-lg border shadow-sm overflow-hidden">
-                {/* absolute background boxes: left student box + 4 stage boxes + right Open area */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="flex h-full">
-                    {/* left student box (index 0) */}
-                    <div style={{ width: 240, ...leftBox.style }} />
+                {teachers.map((t) => (
+                  <th
+                    key={t}
+                    className="border-b text-[11px] font-semibold text-gray-700 tracking-tight px-2 py-1.5 text-center whitespace-nowrap"
+                  >
+                    {t}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-                    {/* four stage boxes indexes 1..4 */}
-                    <div className="flex-1 flex">
-                      {midBoxes.map((b, idx) => (
-                        <div key={idx} style={{ ...b.style }} className="flex-1 transition-colors duration-200" />
-                      ))}
-                    </div>
-
-                    {/* right: area for Open button */}
-                    <div style={{ width: 84 }} className="bg-white" />
-                  </div>
-                </div>
-
-                {/* Foreground content */}
-                <div className="relative z-10 flex items-center px-3 py-2 md:px-4">
-                  {/* left: checkbox + names (names always visible) */}
-                  <div className="flex items-start gap-3" style={{ minWidth: 240 }}>
-                    <div className="pt-1">
-                      <input
-                        type="checkbox"
-                        checked={!!selected[r.id]}
-                        onChange={(e) => setSelected((s) => ({ ...s, [r.id]: e.target.checked }))}
-                        className="h-4 w-4"
-                      />
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className={classNames("text-sm font-medium truncate", leftTextClass)}>{r.student_name}</div>
-                        <div className={classNames("text-xs", leftTextClass === "text-white" ? "text-white/80" : "text-gray-400")}>·</div>
-                        <div className={classNames("text-xs truncate", leftTextClass)}>{r.teacher_name || "—"}</div>
-                      </div>
-                      <div className={classNames("text-[10px] mt-1", leftTextClass === "text-white" ? "text-white/90" : "text-gray-500")}>Status: {doneCount}/4</div>
-                    </div>
-                  </div>
-
-                  {/* middle: 4 accordion columns (one per stage) */}
-                  <div className="flex-1 flex gap-0">
-                    {stageKeys.map((key, idx) => {
-                      const boxMeta = midBoxes[idx];
-                      const isExpanded = expandedStage[r.id] === key;
-                      const label = stageLabels[key];
-                      const chipKind =
-                        key === "payment_confirmed"
-                          ? (r.payment_confirmed ? "payment" : "ready")
-                          : (r as any)[key] === "done"
-                          ? "done"
-                          : "ready";
-
-                      const stageTextColor = boxMeta.textWhite ? "text-white" : "text-gray-900";
-                      const indicatorColor = boxMeta.textWhite ? "text-white/90" : "text-gray-600";
-
-                      return (
-                        <div key={key} className="flex-1 flex flex-col border-l border-white/40">
-                          {/* click disabled here: removed role/onClick and cursor-pointer */}
-                          <div className="p-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <div className={classNames("text-xs font-medium", stageTextColor)}>{label}</div>
-                                <StatusChip
-                                  kind={chipKind as any}
-                                  label={
-                                    key === "payment_confirmed"
-                                      ? r.payment_confirmed ? "Paid" : "Not paid"
-                                      : (r as any)[key] === "done" ? "Done" : "Ready"
-                                  }
-                                />
-                              </div>
-
-                              <div className={classNames("text-[11px]", indicatorColor)}>{isExpanded ? "▴" : "▾"}</div>
+            <tbody>
+              {Object.keys(rowsByTeacher).map((teacher) =>
+                rowsByTeacher[teacher].map((r, idx) => {
+                  const done = doneCountFor(r);
+                  const rowStripe = idx % 2 === 1 ? "bg-gray-50/40" : "bg-white";
+                  return (
+                    <tr key={r.id} className={rowStripe}>
+                      {/* sticky first column cell */}
+                      <td
+                        className={`sticky left-0 z-10 border-b px-2 py-1.5 ${rowStripe}`}
+                        style={{ minWidth: 160, maxWidth: 220 }}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={!!selected[r.id]}
+                              onChange={(e) =>
+                                setSelected((s) => ({ ...s, [r.id]: e.target.checked }))
+                              }
+                              className="h-3.5 w-3.5"
+                            />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-[12px] font-medium text-gray-900 truncate">
+                              {r.student_name}
                             </div>
-                            {isExpanded && (
-                              <div
-                                className={classNames(
-                                  "mt-2 text-xs",
-                                  boxMeta.textWhite ? "text-white/95" : "text-gray-700"
-                                )}
-                              >
-                                {key === "teacher_confirmed" ? (
-                                  <div>
-                                    <a
-                                      href={`/teacher/schedule?user=${encodeURIComponent(
-                                        r.teacher_name || ""
-                                      )}&type=teacher&student_name=${encodeURIComponent(
-                                        r.student_name
-                                      )}`}
-                                      target="_blank"
-                                      rel="noreferrer noopener"
-                                      className={classNames(
-                                        "text-xs font-medium underline",
-                                        boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
-                                      )}
-                                    >
-                                      {`${r.student_name} 학생 1차 확인 링크`}
-                                    </a>
-                                    <div
-                                      className={classNames(
-                                        "text-[10px] mt-1",
-                                        boxMeta.textWhite ? "text-white/80" : "text-gray-500"
-                                      )}
-                                    >
-                                      선생님이 확인 버튼을 눌러야지 다음 단계로 이동 가능합니다.
-                                    </div>
-                                  </div>
-                                ) : key === "admin_confirmed" ? (
-                                  <div>
-                                    <a
-                                      href={`/teacher/schedule/admin-confirm?user=${encodeURIComponent(
-                                        r.teacher_name || ""
-                                      )}&type=teacher&student_name=${encodeURIComponent(
-                                        r.student_name
-                                      )}&id=${encodeURIComponent(r.id)}`}
-                                      target="_blank"
-                                      rel="noreferrer noopener"
-                                      className={classNames(
-                                        "text-xs font-medium underline",
-                                        boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
-                                      )}
-                                    >
-                                      {`${r.student_name} 학생 2차 확인 링크`}
-                                    </a>
-                                    <div
-                                      className={classNames(
-                                        "text-[10px] mt-1",
-                                        boxMeta.textWhite ? "text-white/80" : "text-gray-500"
-                                      )}
-                                    >
-                                      관리자가 2차로 확인하는 단계입니다.
-                                    </div>
-                                  </div>
-                                  ) : key === "message_sent" ? (
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <a
-                                          href={`/teacher/payment?user=${encodeURIComponent(r.teacher_name || "")}&type=teacher&student_name=${encodeURIComponent(
-                                            r.student_name
-                                          )}&id=${encodeURIComponent(r.id)}&date=${encodeURIComponent(yyyymm)}`}
-                                          target="_blank"
-                                          rel="noreferrer noopener"
-                                          className={classNames(
-                                            "text-xs font-medium underline",
-                                            boxMeta.textWhite ? "text-white/95" : "text-indigo-600"
-                                          )}
-                                        >
-                                          {`${r.student_name} 학생 결제 링크 확인`}
-                                        </a>
-
-                                        <div className="copy-wrapper inline-flex items-center">
-                                          <button
-                                            type="button"
-                                            aria-label="메시지 복사"
-                                            title="메시지 복사"
-                                            onClick={(e) => {
-                                              try {
-                                                // capture button immediately (avoid React pooling issues)
-                                                const btn = (e.currentTarget as HTMLElement) || (e.target as HTMLElement);
-
-                                                const studentName = String(r.student_name ?? "").trim();
-                                                const teacherName = String(r.teacher_name ?? "").trim();
-                                                const path = `https://fluent-five.vercel.app/teacher/payment?user=${encodeURIComponent(
-                                                  teacherName
-                                                )}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(
-                                                  r.id
-                                                )}&date=${encodeURIComponent(yyyymm)}`;
-
-                                                const url = path;
-
-                                                // Build message with array.join to avoid accidental indentation
-                                                const messageLines = [
-                                                  `${studentName}님, 안녕하세요:)`,
-                                                  `${month}월 수업료 청구 드립니다.`,
-                                                  `결제 가능한 링크를 첨부드립니다.`,
-                                                  "",
-                                                  url,
-                                                  "",
-                                                  `문의 사항이 있다면 여기 톡방으로 문의 주세요.`,
-                                                  `감사합니다.`
-                                                ];
-                                                const message = messageLines.join("\n");
-
-                                                const copyPromise =
-                                                  navigator.clipboard && navigator.clipboard.writeText
-                                                    ? navigator.clipboard.writeText(message)
-                                                    : new Promise<void>((res, rej) => {
-                                                        const ta = document.createElement("textarea");
-                                                        ta.value = message;
-                                                        ta.style.position = "fixed";
-                                                        ta.style.left = "-9999px";
-                                                        document.body.appendChild(ta);
-                                                        ta.select();
-                                                        try {
-                                                          document.execCommand("copy");
-                                                          document.body.removeChild(ta);
-                                                          res();
-                                                        } catch (err) {
-                                                          document.body.removeChild(ta);
-                                                          rej(err);
-                                                        }
-                                                      });
-
-                                                copyPromise
-                                                  .then(() => {
-                                                    const wrapper = btn.closest(".copy-wrapper") as HTMLElement | null;
-                                                    const host = wrapper ?? btn.parentElement ?? document.body;
-                                                    let span = host.querySelector(".billing-copy-feedback") as HTMLSpanElement | null;
-                                                    if (!span) {
-                                                      span = document.createElement("span");
-                                                      span.className = "billing-copy-feedback text-xs font-medium text-emerald-600 ml-2";
-                                                      span.textContent = "복사됨";
-                                                      host.appendChild(span);
-                                                    } else {
-                                                      span.textContent = "복사됨";
-                                                      span.style.opacity = "1";
-                                                    };
-                                                  })
-                                                  .catch((err) => {
-                                                    console.error("복사 실패", err);
-                                                    const wrapper = btn.closest(".copy-wrapper") as HTMLElement | null;
-                                                    const host = wrapper ?? btn.parentElement ?? document.body;
-                                                    let span = host.querySelector(".billing-copy-feedback") as HTMLSpanElement | null;
-                                                    if (!span) {
-                                                      span = document.createElement("span");
-                                                      span.className = "billing-copy-feedback text-xs font-medium text-rose-500 ml-2";
-                                                      span.textContent = "복사 실패";
-                                                      host.appendChild(span);
-                                                    } else {
-                                                      span.textContent = "복사 실패";
-                                                      span.style.opacity = "1";
-                                                    };
-                                                  });
-                                              } catch (ex) {
-                                                console.error("copy error", ex);
-                                              }
-                                            }}
-                                            className="inline-flex items-center justify-center p-1 rounded-md hover:bg-slate-100 border border-transparent"
-                                          >
-                                            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                              <rect x="3" y="3" width="13" height="13" rx="2" ry="2"></rect>
-                                            </svg>
-                                          </button>
-                                        </div>
-                                      </div>
-
-                                      <div
-                                        className={classNames(
-                                          "text-[10px] mt-1",
-                                          boxMeta.textWhite ? "text-white/80" : "text-gray-500"
-                                        )}
-                                      >
-                                        학생에게 링크를 보낸 후에, “발송 완료” 버튼을 눌러주세요. 추후 자동화될 예정입니다.
-                                      </div>
-                                    </div>
-                                  ) : (
-                                  stageText(r, key)
-                                )}
-                              </div>
-                            )}
+                            <div className="text-[10px] text-gray-500">Status {done}/4</div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
+                      </td>
+
+                      {teachers.map((t) => {
+                        const isTheirTeacher = (r.teacher_name || "") === t;
+                        if (!isTheirTeacher) {
+                          return (
+                            <td
+                              key={t}
+                              className="border-b px-2 py-1.5 text-center text-[11px] text-gray-300"
+                            >
+                              —
+                            </td>
+                          );
+                        }
+
+                        const color = statusColorClasses(done);
+                        const chipTitle =
+                          done === 4
+                            ? "완료"
+                            : done === 3
+                            ? "거의 완료"
+                            : done === 2
+                            ? "진행 중"
+                            : done === 1
+                            ? "시작됨"
+                            : "대기";
+
+                        return (
+                          <td key={t} className="border-b px-2 py-1.5">
+                            <a
+                              href={r.student_page_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={`${r.student_name} · ${t} · ${chipTitle}`}
+                              className={classNames(
+                                "block w-full select-none rounded-md border text-center",
+                                "text-[11px] font-medium text-gray-800",
+                                "px-2 py-2 hover:opacity-95 active:opacity-90",
+                                color
+                              )}
+                            >
+                              <div className="flex items-center justify-center gap-1.5">
+                                <span
+                                  className={classNames(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    done >= 1 ? "bg-indigo-500" : "bg-gray-300"
+                                  )}
+                                />
+                                <span
+                                  className={classNames(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    done >= 2 ? "bg-amber-500" : "bg-gray-300"
+                                  )}
+                                />
+                                <span
+                                  className={classNames(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    done >= 3 ? "bg-yellow-500" : "bg-gray-300"
+                                  )}
+                                />
+                                <span
+                                  className={classNames(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    done >= 4 ? "bg-emerald-500" : "bg-gray-300"
+                                  )}
+                                />
+                                <span className="text-[10px] text-gray-600 ml-1">{done}/4</span>
+                              </div>
+                            </a>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+    );
+  })()
+)}
+
     </div>
   );
 }
