@@ -1218,6 +1218,51 @@ export async function saveBillingStatusCheck2(input: {
   }
 }
 
+/**
+ * Saves PaymentConfirm status to billing collection
+ * This marks a student's payment as confirmed for a specific month
+ */
+export async function savePaymentConfirmStatus(input: {
+  yyyymm: string;
+  student_name: string;
+  orderId?: string;
+  paymentKey?: string;
+  amount?: number;
+  savedBy?: string;
+  meta?: Record<string, any>;
+}) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("billing");
+
+    const now = new Date();
+    const step = "PaymentConfirm";
+
+    const filter = { yyyymm: input.yyyymm, step };
+    const update: any = {
+      $addToSet: { student_names: { $each: [String(input.student_name)] } },
+      $set: { 
+        savedAt: now, 
+        savedBy: input.savedBy ?? "payment-api", 
+        meta: { 
+          orderId: input.orderId,
+          paymentKey: input.paymentKey,
+          amount: input.amount,
+          ...input.meta ?? {} 
+        } 
+      },
+      $setOnInsert: { createdAt: now, type: "paymentconfirm_status" },
+    };
+
+    const res = await coll.findOneAndUpdate(filter, update, { upsert: true, returnDocument: "after" as any });
+    return { ...res, _id: String(res?._id) };
+  } catch (err) {
+    console.error("savePaymentConfirmStatus error:", err);
+    throw err;
+  }
+}
+
 export async function getBillingCheck2(query: {
   student_name: string;
   yyyymm: string;
@@ -1605,9 +1650,8 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
  * @param orderId The unique order ID for this transaction.
  * @param amount The amount of the payment.
  */
-export async function saveInitialPayment(student_name: string, orderId: string, amount: number) {
+export async function saveInitialPayment(student_name: string, orderId: string, amount: number, yyyymm?: string) {
   try {
-    
     const client = await clientPromise;
     const db = client.db("school_management");
     // Updates the 'students' collection with the pending transaction details.
@@ -1617,6 +1661,7 @@ export async function saveInitialPayment(student_name: string, orderId: string, 
         $set: {
           orderId,
           paymentStatus: 'PENDING',
+          paymentYyyymm: yyyymm, // Store yyyymm for later use in confirmation
         },
       }
     );
@@ -1833,3 +1878,24 @@ export async function getClassnotesInRange(
   }
 }
 
+/**
+ * Get student info by orderId to retrieve student_name and yyyymm
+ */
+export async function getStudentByOrderId(orderId: string): Promise<{ student_name?: string; yyyymm?: string } | null> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const student = await db.collection("students").findOne(
+      { orderId },
+      { projection: { name: 1, paymentYyyymm: 1 } }
+    );
+    if (!student) return null;
+    return {
+      student_name: student.name,
+      yyyymm: student.paymentYyyymm,
+    };
+  } catch (error) {
+    console.error("Error getting student by orderId:", error);
+    return null;
+  }
+}

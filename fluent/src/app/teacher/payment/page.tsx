@@ -3,6 +3,13 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, Suspense } from "react";
 
+// Declare TossPayments type for TypeScript
+declare global {
+  interface Window {
+    TossPayments: any;
+  }
+}
+
 function currencyKRW(n?: number) {
   if (!Number.isFinite(n || NaN)) return "-";
   return (n as number).toLocaleString("ko-KR");
@@ -21,6 +28,10 @@ function PaymentInner() {
   const [billing, setBilling] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
+  // Calculate totalAmount early so it's available in handlers
+  const totalAmount = billing?.amount_due_next ?? 0;
 
   const copy = async (text: string, tag?: string) => {
     try {
@@ -28,6 +39,81 @@ function PaymentInner() {
       setCopied(tag || "copied");
       setTimeout(() => setCopied(null), 1500);
     } catch {}
+  };
+
+  const handleTossPayment = async () => {
+    if (paymentLoading || !totalAmount || totalAmount <= 0) return;
+    
+    try {
+      setPaymentLoading(true);
+      
+      // Check if TossPayments is loaded
+      if (!window.TossPayments) {
+        throw new Error('TossPayments SDK가 로드되지 않았습니다. 페이지를 새로고침하고 다시 시도해주세요.');
+      }
+      
+      // Get client key from env or use test key
+      // NOTE: Make sure NEXT_PUBLIC_TOSS_CLIENT_KEY is set in .env.local
+      const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_ma60RZblrqBwzgJn9bBE8wzYWBn1';
+      
+      if (!process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY && clientKey === 'test_ck_ma60RZblrqBwzgJn9bBE8wzYWBn1') {
+        console.warn('Using default test client key. Set NEXT_PUBLIC_TOSS_CLIENT_KEY in .env.local for production.');
+      }
+      
+      // Initialize Toss Payments with client key
+      const tossPayments = window.TossPayments(clientKey);
+      
+      // Request payment details from our API
+      const initResponse = await fetch('/api/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_name: params.student,
+          amount: totalAmount,
+          yyyymm: params.yyyymm || billing?.yyyymm,
+        }),
+      });
+      
+      if (!initResponse.ok) {
+        const error = await initResponse.json();
+        throw new Error(error.message || '결제 정보를 불러오는 데 실패했습니다.');
+      }
+      
+      const { amount, orderId, orderName, customerName, successUrl, failUrl } = await initResponse.json();
+      
+      // Request payment - this should open a popup
+      // The requestPayment method doesn't resolve/reject - it redirects to success/fail URLs
+      // But if user cancels or there's an immediate error, it will throw
+      tossPayments.requestPayment('CARD', {
+        amount: amount,
+        orderId: orderId,
+        orderName: orderName,
+        customerName: customerName,
+        successUrl: successUrl,
+        failUrl: failUrl,
+      }).catch((error: any) => {
+        // Handle immediate errors (like user cancellation)
+        const errorMessage = error?.message || error?.toString() || '';
+        if (errorMessage.includes('취소') || errorMessage.includes('cancel')) {
+          // User cancelled - don't show error, just reset state
+          setPaymentLoading(false);
+          return;
+        }
+        // For other errors, show message
+        throw error;
+      });
+      
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      const errorMessage = error?.message || error?.toString() || '알 수 없는 오류';
+      
+      // Don't show alert for cancellations
+      if (!errorMessage.includes('취소') && !errorMessage.includes('cancel')) {
+        alert(`결제 중 오류가 발생했습니다: ${errorMessage}`);
+      }
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -66,7 +152,6 @@ function PaymentInner() {
   const monthLabel = billing?.yyyymm
     ? `${billing.yyyymm.slice(0, 4)}.${billing.yyyymm.slice(4)}`
     : "—";
-  const totalAmount = billing?.amount_due_next ?? 0;
   const feePerClass = billing?.fee_per_class ?? 0;
 
   const summaryRows = [
@@ -142,18 +227,11 @@ function PaymentInner() {
 
               {/* Toss button */}
               <button
-                onClick={() =>
-                  window.open(
-                    `https://pay.toss.im/your-business-link?amount=${totalAmount}&orderName=${encodeURIComponent(
-                      `${bizName} ${monthLabel}`
-                    )}&customerName=${encodeURIComponent(params.student)}`,
-                    "_blank",
-                    "noopener,noreferrer"
-                  )
-                }
-                className="w-full py-3 rounded-xl font-semibold border bg-indigo-600 text-white hover:bg-indigo-700"
+                onClick={handleTossPayment}
+                disabled={paymentLoading || !totalAmount || totalAmount <= 0}
+                className="w-full py-3 rounded-xl font-semibold border bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Toss 간편결제
+                {paymentLoading ? "결제 처리 중..." : "Toss 간편결제"}
               </button>
 
               {/* Bank transfer */}
