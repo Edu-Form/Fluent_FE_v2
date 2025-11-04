@@ -10,8 +10,6 @@ function FailContent() {
 
     useEffect(() => {
         const orderId = searchParams.get('orderId');
-        const message = searchParams.get('message') || searchParams.get('messageKey') || '결제가 취소되었습니다';
-        const code = searchParams.get('code') || searchParams.get('errorCode');
 
         const handleFailure = async () => {
             try {

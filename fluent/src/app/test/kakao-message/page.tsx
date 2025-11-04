@@ -43,7 +43,7 @@ export default function KakaoMessageTestPage() {
         setError(data.error || "메시지 전송에 실패했습니다.");
         setResult(null);
       }
-    } catch (err) {
+    } catch {
       setError("네트워크 오류가 발생했습니다.");
       setResult(null);
     } finally {

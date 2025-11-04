@@ -50,7 +50,7 @@ async function getKakaoAccessToken(): Promise<string | null> {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { userId, templateId, templateArgs, referenceType = 'USER' } = await req.json();
+    const { userId, templateId, templateArgs } = await req.json();
 
     // Validate required fields
     if (!userId || !templateId) {
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
 /**
  * Health check and configuration status
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const hasKeys = !!(KAKAO_REST_API_KEY && KAKAO_CHANNEL_SECRET && KAKAO_CHANNEL_ID);
     
