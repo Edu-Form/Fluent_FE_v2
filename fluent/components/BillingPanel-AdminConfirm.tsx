@@ -89,7 +89,7 @@ export default function BillingPanel({
   const [carryInCredit, setCarryInCredit] = useState<number>(0);
   const [rows, setRows] = useState<BillingRow[]>([]);
   const [nextRows, setNextRows] = useState<NextBillingRow[]>([]);
-  const [, setPaymentLink] = useState("");
+  const [paymentLinkLoading, setPaymentLinkLoading] = useState(false);
 
   const studentCacheRef = useRef<Map<string, any>>(new Map());
   const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
@@ -238,41 +238,61 @@ export default function BillingPanel({
   const nextToPayClasses = nextMonthPlanned - carryAfterSettlement;
   const amountDueNext = nextToPayClasses * (Number.isFinite(fee) ? fee : 0);
 
-  /* ---- Payment link for NEXT month amount ---- */
-  useEffect(() => {
+  /* ---- Payment initialization (prepare for Toss) ---- */
+  const [paymentReady, setPaymentReady] = useState(false);
+  const handleInitiatePayment = async () => {
     if (!studentName || amountDueNext <= 0) {
-      setPaymentLink("");
+      alert("결제 금액이 0원입니다.");
       return;
     }
 
-    // const generateLink = async () => {
-    //   setPaymentLinkLoading(true);
-    //   setPaymentLink("");
-    //   try {
-    //     const response = await fetch("/api/payment/link", {
-    //       method: "POST",
-    //       headers: { "Content-Type": "application/json" },
-    //       body: JSON.stringify({ studentName, amount: amountDueNext }),
-    //     });
+    setPaymentLinkLoading(true);
+    try {
+      const y = monthAnchor.getFullYear();
+      const m = String(monthAnchor.getMonth() + 1).padStart(2, "0");
+      const yyyymm = `${y}${m}`;
 
-    //     if (!response.ok) {
-    //       console.error("Failed to generate payment link.", await response.text());
-    //       return;
-    //     }
+      const response = await fetch("/api/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          student_name: studentName, 
+          amount: amountDueNext,
+          yyyymm: yyyymm
+        }),
+      });
 
-    //     const data = await response.json();
-    //     if (data.paymentLink) {
-    //       setPaymentLink(data.paymentLink);
-    //     }
-    //   } catch (error: any) {
-    //     console.error("Error generating payment link:", error);
-    //   } finally {
-    //     setPaymentLinkLoading(false);
-    //   }
-    // };
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to initiate payment.", errorText);
+        alert("결제 준비 실패: " + errorText);
+        return;
+      }
 
-    // generateLink();
-  }, [amountDueNext, studentName]);
+      const data = await response.json();
+      
+      // Load Toss Payments SDK
+      const { loadTossPayments } = await import('@tosspayments/payment-sdk');
+      const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || '');
+
+      // Request payment
+      await tossPayments.requestPayment('카드', {
+        amount: data.amount,
+        orderId: data.orderId,
+        orderName: data.orderName,
+        customerName: data.customerName,
+        successUrl: data.successUrl,
+        failUrl: data.failUrl,
+      });
+
+      setPaymentReady(true);
+    } catch (error: any) {
+      console.error("Error initiating payment:", error);
+      alert("결제 시작 실패: " + (error.message || "알 수 없는 오류"));
+    } finally {
+      setPaymentLinkLoading(false);
+    }
+  };
 
   const {} = useMemo(() => {
     const pa = prevMonthAnchorOf(monthAnchor);
@@ -453,6 +473,23 @@ export default function BillingPanel({
                 </tr>
               </tbody>
             </table>
+
+            {/* Payment Button Section */}
+            {amountDueNext > 0 && (
+              <div className="px-4 py-3 border-t bg-gradient-to-r from-emerald-50 to-teal-50">
+                <div className="text-sm font-medium text-gray-700 mb-2">결제</div>
+                <button
+                  onClick={handleInitiatePayment}
+                  disabled={paymentLinkLoading || paymentReady}
+                  className="w-full px-4 py-3 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {paymentLinkLoading ? "결제 준비 중..." : paymentReady ? "결제 완료" : `₩${amountDueNext.toLocaleString("ko-KR")} 결제하기`}
+                </button>
+                <div className="mt-2 text-xs text-gray-500 text-center">
+                  Toss Payments로 안전하게 결제됩니다
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

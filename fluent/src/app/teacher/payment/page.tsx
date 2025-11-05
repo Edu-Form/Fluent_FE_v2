@@ -3,13 +3,6 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, Suspense } from "react";
 
-// Declare TossPayments type for TypeScript
-declare global {
-  interface Window {
-    TossPayments: any;
-  }
-}
-
 function currencyKRW(n?: number) {
   if (!Number.isFinite(n || NaN)) return "-";
   return (n as number).toLocaleString("ko-KR");

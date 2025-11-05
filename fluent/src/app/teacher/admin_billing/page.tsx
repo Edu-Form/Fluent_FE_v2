@@ -56,35 +56,84 @@ export default function Page() {
   }
 
   useEffect(() => {
-    fetch(`/api/studentList`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((list: any[] | null) => {
+    const loadStudentsWithBillingStatus = async () => {
+      try {
+        // 1) Fetch student list
+        const studentsRes = await fetch(`/api/studentList`);
+        if (!studentsRes.ok) {
+          setRows([]);
+          setExpandedStage({});
+          return;
+        }
+        const list: any[] = await studentsRes.json();
         if (!Array.isArray(list)) {
           setRows([]);
           setExpandedStage({});
           return;
         }
 
-        const teacherFallback = "Unknown";
+        // 2) Fetch billing status for this month
+        const yyyymm = `${year}${String(month).padStart(2, "0")}`;
+        const billingRes = await fetch(`/api/billing/status/${yyyymm}`);
+        let billingDocs: any[] = [];
+        if (billingRes.ok) {
+          const billingData = await billingRes.json();
+          billingDocs = billingData?.docs || [];
+        }
 
+        // 3) Build lookup maps for each step
+        const teacherConfirmedStudents = new Set<string>();
+        const adminConfirmedStudents = new Set<string>();
+        const messageConfirmedStudents = new Set<string>();
+        const paymentConfirmedStudents = new Set<string>();
+
+        for (const doc of billingDocs) {
+          const studentNames = doc.student_names || [];
+          if (doc.step === "TeacherConfirm") {
+            studentNames.forEach((name: string) => teacherConfirmedStudents.add(name));
+          } else if (doc.step === "AdminConfirm") {
+            studentNames.forEach((name: string) => adminConfirmedStudents.add(name));
+          } else if (doc.step === "MessageConfirm") {
+            studentNames.forEach((name: string) => messageConfirmedStudents.add(name));
+          } else if (doc.step === "PaymentConfirm") {
+            studentNames.forEach((name: string) => paymentConfirmedStudents.add(name));
+          }
+        }
+
+        // 4) Map students with their billing status
+        const teacherFallback = "Unknown";
         const mapped = list.map((s: any, i: number) => {
           const studentName = s?.student_name || s?.name || `학생-${i + 1}`;
           const teacherName = s.teacher || teacherFallback;
           const sid = s?.id ?? s?._id ?? s?.phone ?? `${i}`;
 
+          const teacherConfirmed = teacherConfirmedStudents.has(studentName);
+          const adminConfirmed = adminConfirmedStudents.has(studentName);
+
+          // Determine which page to link to based on confirmation status
+          let pageUrl: string;
+          if (!teacherConfirmed) {
+            // Not yet teacher confirmed → go to teacher schedule page
+            pageUrl = `/teacher/schedule?user=${encodeURIComponent(teacherName)}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(String(sid))}`;
+          } else {
+            // Teacher confirmed → go to admin confirm page
+            pageUrl = `/teacher/schedule/admin-confirm?user=${encodeURIComponent(teacherName)}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(String(sid))}`;
+          }
+
           return {
             id: String(sid),
             student_name: studentName,
             teacher_name: teacherName,
-            teacher_confirmed: "ready" as Status,
-            admin_confirmed: "ready" as Status,
-            message_sent: "ready" as Status,
-            payment_confirmed: false,
-            student_page_url: `/teacher/schedule?user=${encodeURIComponent(teacherName)}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(String(sid))}`,
+            teacher_confirmed: teacherConfirmed ? "done" : "ready",
+            admin_confirmed: adminConfirmed ? "done" : "ready",
+            message_sent: messageConfirmedStudents.has(studentName) ? "done" : "ready",
+            payment_confirmed: paymentConfirmedStudents.has(studentName),
+            student_page_url: pageUrl,
             message_text: `${studentName}님, 안녕하세요:)\n${month}월 정산 및 다음달 안내 드립니다...`,
           } as StudentBillingRow;
         });
 
+        // 5) Set initial expanded state
         const initialExpanded: Record<string, string | null> = {};
         for (const r of mapped) {
           initialExpanded[r.id] = firstNotDoneStage(r);
@@ -92,11 +141,14 @@ export default function Page() {
 
         setRows(mapped);
         setExpandedStage(initialExpanded);
-      })
-      .catch(() => {
+      } catch (err) {
+        console.error("Error loading billing data:", err);
         setRows([]);
         setExpandedStage({});
-      });
+      }
+    };
+
+    loadStudentsWithBillingStatus();
   }, [year, month]);
 
   const filtered = useMemo(() => {
