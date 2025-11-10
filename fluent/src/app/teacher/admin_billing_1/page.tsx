@@ -61,10 +61,23 @@ type QuizletEntry = {
 type StudentRow = {
   student: StudentInfo;
   schedules: ScheduleEntry[];
+  nextSchedules: ScheduleEntry[];
   classnotes: ClassnoteEntry[];
   diaries: DiaryEntry[];
   quizlets: QuizletEntry[];
   totalHours: number;
+};
+
+type StudentFinancialSnapshot = {
+  id: string;
+  student: StudentInfo;
+  initialCredit: number;
+  hourlyRate: number;
+  classesCompleted: number;
+  nextMonthPlanned: number;
+  billableClasses: number;
+  balanceClasses: number;
+  revenue: number;
 };
 
 type DetailSection = "schedule" | "classnote" | "diary" | "quizlet";
@@ -224,6 +237,23 @@ function summarizeText(text: string | undefined, limit = 120) {
   return `${trimmed.slice(0, limit)}…`;
 }
 
+function firstNumberFromString(input?: string | null) {
+  if (!input) return null;
+  const match = String(input).replace(/,/g, "").match(/(\d+)(?:\.\d+)?/);
+  if (!match) return null;
+  const value = Number.parseFloat(match[1]);
+  return Number.isFinite(value) ? value : null;
+}
+
+function toNumber(value: any): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const parsed = Number.parseFloat(
+    String(value).replace(/[^\d.-]/g, "").replace(/--+/g, "-")
+  );
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export default function AdminBillingExcelPage() {
   const [teacherNames, setTeacherNames] = useState<string[]>([]);
   const [teacherStudents, setTeacherStudents] = useState<
@@ -231,8 +261,6 @@ export default function AdminBillingExcelPage() {
   >({});
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
-
-  const [hourlyRate, setHourlyRate] = useState<number>(DEFAULT_RATE);
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [initialError, setInitialError] = useState<string | null>(null);
@@ -244,6 +272,7 @@ export default function AdminBillingExcelPage() {
   const diaryCacheRef = useRef<Record<string, DiaryEntry[]>>({});
   const quizletCacheRef = useRef<Record<string, QuizletEntry[]>>({});
   const classnoteCacheRef = useRef<Record<string, ClassnoteEntry[]>>({});
+  const studentProfileCacheRef = useRef<Record<string, any>>({});
   const [cacheTick, setCacheTick] = useState(0);
 
   const [detailLoading, setDetailLoading] = useState(false);
@@ -253,6 +282,14 @@ export default function AdminBillingExcelPage() {
     student: string;
     section: DetailSection;
   } | null>(null);
+
+  const [studentConfigs, setStudentConfigs] = useState<
+    Record<string, { rate?: number; initialCredit?: number }>
+  >({});
+
+  useEffect(() => {
+    setStudentConfigs({});
+  }, [selectedTeacher]);
 
   useEffect(() => {
     let cancelled = false;
@@ -390,6 +427,33 @@ export default function AdminBillingExcelPage() {
     []
   );
 
+  const ensureStudentProfile = useCallback(async (studentName: string) => {
+    const key = String(studentName || "").trim();
+    if (!key) return null;
+    if (studentProfileCacheRef.current[key]) {
+      return studentProfileCacheRef.current[key];
+    }
+    try {
+      const res = await fetch(`/api/student/${encodeURIComponent(key)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        studentProfileCacheRef.current[key] = null;
+        setCacheTick((tick) => tick + 1);
+        return null;
+      }
+      const data = await res.json();
+      studentProfileCacheRef.current[key] = data;
+      setCacheTick((tick) => tick + 1);
+      return data;
+    } catch (err) {
+      console.warn("Failed to fetch student profile for", key, err);
+      studentProfileCacheRef.current[key] = null;
+      setCacheTick((tick) => tick + 1);
+      return null;
+    }
+  }, []);
+
   const ensureClassnotes = useCallback(
     async (teacherName: string, monthKey: string, students: StudentInfo[]) => {
       const cacheKey = `${teacherName}__${monthKey}`;
@@ -513,6 +577,9 @@ export default function AdminBillingExcelPage() {
       setDetailLoading(true);
       setDetailError(null);
       try {
+        await Promise.all(
+          students.map((student) => ensureStudentProfile(student.name))
+        );
         await ensureClassnotes(selectedTeacher, selectedMonth, students);
         await Promise.all(
           students.map((student) =>
@@ -551,6 +618,23 @@ export default function AdminBillingExcelPage() {
     return all.filter((entry) => matchesMonth(entry.date, selectedMonth));
   }, [selectedTeacher, selectedMonth, cacheTick]);
 
+  const nextMonthKey = useMemo(() => {
+    if (!selectedMonth) return "";
+    const [yearStr, monthStr] = selectedMonth.split("-");
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return "";
+    const base = new Date(year, month - 1, 1);
+    const next = new Date(base.getFullYear(), base.getMonth() + 1, 1);
+    return monthKeyFromDate(next);
+  }, [selectedMonth]);
+
+  const nextMonthSchedules = useMemo(() => {
+    if (!nextMonthKey) return [];
+    const all = schedulesByTeacher.current[selectedTeacher] ?? [];
+    return all.filter((entry) => matchesMonth(entry.date, nextMonthKey));
+  }, [selectedTeacher, nextMonthKey, cacheTick]);
+
   const monthClassnotesKey = `${selectedTeacher}__${selectedMonth}`;
   const monthClassnotes =
     classnoteCacheRef.current[monthClassnotesKey] ?? [];
@@ -563,6 +647,10 @@ export default function AdminBillingExcelPage() {
 
     return students.map((student) => {
       const schedules = monthSchedules.filter(
+        (entry) =>
+          String(entry.student_name || "").trim() === student.name.trim()
+      );
+      const nextSchedules = nextMonthSchedules.filter(
         (entry) =>
           String(entry.student_name || "").trim() === student.name.trim()
       );
@@ -586,6 +674,7 @@ export default function AdminBillingExcelPage() {
       return {
         student,
         schedules,
+        nextSchedules,
         classnotes,
         diaries,
         quizlets,
@@ -597,9 +686,77 @@ export default function AdminBillingExcelPage() {
     selectedMonth,
     teacherStudents,
     monthSchedules,
+    nextMonthSchedules,
     monthClassnotes,
     cacheTick,
   ]);
+
+  const studentFinancials = useMemo<StudentFinancialSnapshot[]>(() => {
+    return studentRows.map((row) => {
+      const profile =
+        studentProfileCacheRef.current[row.student.name] ?? ({} as any);
+      const profileCredit = toNumber(profile?.credits);
+      const profileRateCandidates = [
+        toNumber(profile?.feePerClass),
+        toNumber(profile?.fee_per_class),
+        toNumber(profile?.classFee),
+        toNumber(profile?.class_fee),
+        toNumber(profile?.tuition),
+        toNumber(profile?.tuitionPerClass),
+        toNumber(profile?.hourlyRate),
+        toNumber(profile?.hagwonRate),
+        toNumber(profile?.hagwon_rate),
+        firstNumberFromString(profile?.paymentNotes),
+      ].filter((value): value is number => Number.isFinite(value) && value > 0);
+      const defaultRate =
+        profileRateCandidates.length > 0
+          ? profileRateCandidates[0]
+          : DEFAULT_RATE;
+      const defaultCredit = Number.isFinite(profileCredit || null)
+        ? Number(profileCredit)
+        : 0;
+
+      const config = studentConfigs[row.student.id] ?? {};
+      const configRate =
+        typeof config.rate === "number" && Number.isFinite(config.rate)
+          ? config.rate
+          : null;
+      const configCredit =
+        typeof config.initialCredit === "number" &&
+        Number.isFinite(config.initialCredit)
+          ? config.initialCredit
+          : null;
+
+      const hourlyRate = configRate ?? defaultRate;
+      const initialCredit = configCredit ?? defaultCredit;
+      const classesCompleted = row.classnotes.length;
+      const nextMonthPlanned = row.nextSchedules.length;
+      const balanceClasses =
+        initialCredit - classesCompleted + nextMonthPlanned;
+      const billableClasses = Math.max(balanceClasses, 0);
+      const revenue = billableClasses * hourlyRate;
+
+      return {
+        id: row.student.id,
+        student: row.student,
+        initialCredit,
+        hourlyRate,
+        classesCompleted,
+        nextMonthPlanned,
+        billableClasses,
+        balanceClasses,
+        revenue,
+      };
+    });
+  }, [studentRows, studentConfigs, cacheTick]);
+
+  const financialById = useMemo(() => {
+    const map: Record<string, StudentFinancialSnapshot> = {};
+    studentFinancials.forEach((item) => {
+      map[item.id] = item;
+    });
+    return map;
+  }, [studentFinancials]);
 
   const summary = useMemo(() => {
     const totalClasses = monthSchedules.length;
@@ -607,15 +764,24 @@ export default function AdminBillingExcelPage() {
       (sum, entry) => sum + normalizeDuration(entry.duration),
       0
     );
+    const hagwonRevenue = studentFinancials.reduce(
+      (sum, item) => sum + item.revenue,
+      0
+    );
+    const billableClasses = studentFinancials.reduce(
+      (sum, item) => sum + item.billableClasses,
+      0
+    );
     return {
       totalClasses,
       totalHours,
-      estimatedPayment: totalHours * hourlyRate,
+      hagwonRevenue,
+      billableClasses,
       studentCount: (teacherStudents[selectedTeacher] ?? []).length,
     };
   }, [
     monthSchedules,
-    hourlyRate,
+    studentFinancials,
     teacherStudents,
     selectedTeacher,
   ]);
@@ -628,6 +794,33 @@ export default function AdminBillingExcelPage() {
       return { student: studentName, section };
     });
   };
+
+  const handleConfigChange = useCallback(
+    (
+      studentId: string,
+      patch: { rate?: number | null; initialCredit?: number | null }
+    ) => {
+      setStudentConfigs((prev) => {
+        const existing = prev[studentId] ?? {};
+        const next = { ...existing };
+        if (patch.rate !== undefined) {
+          next.rate =
+            patch.rate === null || !Number.isFinite(patch.rate)
+              ? 0
+              : Number(patch.rate);
+        }
+        if (patch.initialCredit !== undefined) {
+          next.initialCredit =
+            patch.initialCredit === null ||
+            !Number.isFinite(patch.initialCredit)
+              ? 0
+              : Number(patch.initialCredit);
+        }
+        return { ...prev, [studentId]: next };
+      });
+    },
+    []
+  );
 
   const renderScheduleDetails = (rows: ScheduleEntry[]) => {
     if (!rows.length) {
@@ -827,23 +1020,6 @@ export default function AdminBillingExcelPage() {
                 ))}
               </select>
             </label>
-
-            <label className="text-sm text-gray-700">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Hourly Rate (₩)
-              </span>
-              <input
-                type="number"
-                className="w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                value={hourlyRate}
-                min={0}
-                step={1000}
-                onChange={(e) => {
-                  const value = Number.parseInt(e.target.value, 10);
-                  setHourlyRate(Number.isFinite(value) ? value : 0);
-                }}
-              />
-            </label>
           </div>
         </header>
 
@@ -914,13 +1090,13 @@ export default function AdminBillingExcelPage() {
 
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Estimated Payment
+                  Hagwon Pays
                 </div>
                 <div className="mt-1 text-2xl font-semibold text-gray-900">
-                  {CURRENCY_FORMATTER.format(Math.round(summary.estimatedPayment))}
+                  {CURRENCY_FORMATTER.format(Math.round(summary.hagwonRevenue))}
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
-                  {`시급 ${CURRENCY_FORMATTER.format(hourlyRate)} 기준`}
+                  {summary.billableClasses.toFixed(2)} 개 수업 (선결제 차감 후)
                 </div>
               </div>
 
@@ -953,6 +1129,7 @@ export default function AdminBillingExcelPage() {
                       <th className="px-4 py-3">Class Notes</th>
                       <th className="px-4 py-3">Diary</th>
                       <th className="px-4 py-3">Quizlet</th>
+                  <th className="px-4 py-3">Hagwon Pay</th>
                       <th className="px-4 py-3">Actions</th>
                     </tr>
                   </thead>
@@ -960,16 +1137,30 @@ export default function AdminBillingExcelPage() {
                     {studentRows.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="px-4 py-10 text-center text-sm text-gray-500"
                         >
                           선택한 교사에게 할당된 학생이 없습니다.
                         </td>
                       </tr>
                     ) : (
-                      studentRows.map((row) => (
-                        <React.Fragment key={row.student.id}>
-                          <tr className="hover:bg-slate-50">
+                      studentRows.map((row) => {
+                        const financial = financialById[row.student.id];
+                        const hourlyRateValue =
+                          financial?.hourlyRate ?? DEFAULT_RATE;
+                        const initialCreditValue =
+                          financial?.initialCredit ?? 0;
+                        const balanceClassesValue =
+                          financial?.balanceClasses ?? 0;
+                        const billableClassesValue =
+                          financial?.billableClasses ?? Math.max(
+                            balanceClassesValue,
+                            0
+                          );
+                        const revenueValue = financial?.revenue ?? 0;
+                        return (
+                          <React.Fragment key={row.student.id}>
+                            <tr className="hover:bg-slate-50">
                             <td className="px-4 py-3">
                               <div className="font-medium text-gray-900">
                                 {row.student.name}
@@ -1005,6 +1196,74 @@ export default function AdminBillingExcelPage() {
                                 {row.quizlets.length}개
                               </span>
                             </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col gap-2">
+                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <label className="flex flex-col text-xs text-gray-500">
+                                      <span className="mb-1">Initial credit</span>
+                                      <input
+                                        type="number"
+                                        step="0.5"
+                                        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                                        value={initialCreditValue}
+                                        onChange={(e) => {
+                                          const parsed = Number.parseFloat(
+                                            e.target.value
+                                          );
+                                          handleConfigChange(row.student.id, {
+                                            initialCredit: Number.isFinite(
+                                              parsed
+                                            )
+                                              ? parsed
+                                              : 0,
+                                          });
+                                        }}
+                                      />
+                                    </label>
+                                    <label className="flex flex-col text-xs text-gray-500">
+                                      <span className="mb-1">Hourly rate (₩)</span>
+                                      <input
+                                        type="number"
+                                        step="1000"
+                                        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                                        value={hourlyRateValue}
+                                        onChange={(e) => {
+                                          const parsed = Number.parseFloat(
+                                            e.target.value
+                                          );
+                                          handleConfigChange(row.student.id, {
+                                            rate: Number.isFinite(parsed)
+                                              ? parsed
+                                              : 0,
+                                          });
+                                        }}
+                                      />
+                                    </label>
+                                  </div>
+                                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
+                                    <div className="flex items-center justify-between">
+                                      <span>Balance classes</span>
+                                      <span className="font-medium text-gray-900">
+                                        {balanceClassesValue.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between">
+                                      <span>Billable classes</span>
+                                      <span className="font-medium text-gray-900">
+                                        {billableClassesValue.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="mt-2 flex items-center justify-between text-gray-700">
+                                      <span>Hagwon pays</span>
+                                      <span className="text-sm font-semibold text-gray-900">
+                                        {CURRENCY_FORMATTER.format(
+                                          Math.round(revenueValue)
+                                        )}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-2">
                                 <button
@@ -1045,7 +1304,7 @@ export default function AdminBillingExcelPage() {
                           {expanded &&
                             expanded.student === row.student.name && (
                               <tr className="bg-slate-50">
-                                <td colSpan={6} className="px-4 py-4">
+                                <td colSpan={7} className="px-4 py-4">
                                   {detailLoading ? (
                                     <div className="text-sm text-gray-500">
                                       상세 데이터를 불러오는 중입니다…
@@ -1056,8 +1315,9 @@ export default function AdminBillingExcelPage() {
                                 </td>
                               </tr>
                             )}
-                        </React.Fragment>
-                      ))
+                          </React.Fragment>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
