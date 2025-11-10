@@ -355,9 +355,13 @@ export default function AdminBillingExcelPage() {
         if (!cancelled) {
           setTeacherNames(combinedTeachers);
           setTeacherStudents(studentMap);
-          if (!selectedTeacher && combinedTeachers.length > 0) {
-            setSelectedTeacher(combinedTeachers[0]);
-          }
+          setSelectedTeacher((prev) =>
+            prev && prev.length > 0
+              ? prev
+              : combinedTeachers.length > 0
+              ? combinedTeachers[0]
+              : ""
+          );
         }
       } catch (err) {
         if (!cancelled) {
@@ -608,6 +612,7 @@ export default function AdminBillingExcelPage() {
     selectedMonth,
     teacherStudents,
     ensureClassnotes,
+    ensureStudentProfile,
     ensureDiary,
     ensureQuizlet,
   ]);
@@ -707,7 +712,10 @@ export default function AdminBillingExcelPage() {
         toNumber(profile?.hagwonRate),
         toNumber(profile?.hagwon_rate),
         firstNumberFromString(profile?.paymentNotes),
-      ].filter((value): value is number => Number.isFinite(value) && value > 0);
+      ].filter(
+        (value): value is number =>
+          typeof value === "number" && Number.isFinite(value) && value > 0
+      );
       const defaultRate =
         profileRateCandidates.length > 0
           ? profileRateCandidates[0]
