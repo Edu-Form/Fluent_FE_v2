@@ -361,7 +361,7 @@ export default function TeacherToastUI({
       events.push({
         id: e._id || e.id || `${Date.now()}-${Math.random()}`,
         calendarId: e.calendarId ?? "1",
-        title: `${e.room_name}호 ${e.student_name}님`,
+        title: `${e.room_name ?? ""} ${e.student_name ?? ""}`,
         category: "time",
         start,
         end,
@@ -369,8 +369,12 @@ export default function TeacherToastUI({
         borderColor: color?.border ?? "#C7D2FE",
         dragBackgroundColor: color?.bg ?? "#E0E7FF",
         color: "#111827",
-        raw: e,
+        raw: {
+          ...e,
+          schedule_id: e._id || e.id, // ✅ always keep the real DB ID here
+        },
       });
+
     }
 
     // === Recolor past & today schedules when a classnote exists ===
@@ -394,15 +398,42 @@ export default function TeacherToastUI({
       if (dateOnly.getTime() > today.getTime()) continue;
 
       const notes = classnoteMap.get(k) || [];
-      if (!notes.length) continue;
 
-      const note = notes.slice().sort((a,b) =>
-        new Date(b.updatedAt || b.createdAt || 0).getTime() -
-        new Date(a.updatedAt || a.createdAt || 0).getTime()
-      )[0];
+      // 🆕 Fallback: if no classnote exists at all for this date → mark red and skip further processing
+      if (notes.length === 0) {
+        for (const ev of evList) {
+          ev.backgroundColor = "#FECACA";
+          ev.borderColor = "#DC2626";
+          ev.color = "#7F1D1D";
+        }
+        continue; // no notes, skip rest
+      }
+
+      const note = notes
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt || b.createdAt || 0).getTime() -
+            new Date(a.updatedAt || a.createdAt || 0).getTime()
+        )[0];
+
+        // ✅ Protector: if this note explicitly marked as "class time changed", force green
+        if (
+          typeof note?.reason === "string" &&
+          note.reason.toLowerCase().trim().includes("class time changed")
+        ) {
+          for (const ev of evList) {
+            ev.backgroundColor = "#D1FAE5"; // light green
+            ev.borderColor = "#10B981";     // green
+            ev.color = "#064E3B";           // dark green
+          }
+          continue; // ✅ skip rest of loop for this student/date
+        }
+
+
 
       const started = note?.started_at ? new Date(note.started_at) : null;
-      const ended   = note?.ended_at   ? new Date(note.ended_at)   : null;
+      const ended = note?.ended_at ? new Date(note.ended_at) : null;
 
       for (const ev of evList) {
         if (!started || !ended) {
@@ -413,21 +444,23 @@ export default function TeacherToastUI({
         }
 
         const schStart = new Date(ev.start);
-        const schEnd   = new Date(ev.end);
+        const schEnd = new Date(ev.end);
         const startOK = minutesDiff(schStart, started) <= MATCH_TOL_MIN;
-        const endOK   = minutesDiff(schEnd, ended) <= MATCH_TOL_MIN;
+        const endOK = minutesDiff(schEnd, ended) <= MATCH_TOL_MIN;
 
         if (startOK && endOK) {
           ev.backgroundColor = "#D1FAE5";
           ev.borderColor = "#10B981";
           ev.color = "#064E3B";
         } else {
-          ev.backgroundColor = "#FECACA";
-          ev.borderColor = "#DC2626";
-          ev.color = "#7F1D1D";
+          ev.backgroundColor = "#FEF3C7"; // light yellow
+          ev.borderColor = "#F59E0B";     // amber border
+          ev.color = "#78350F";           // dark amber text
         }
       }
     }
+
+
 
     // 3) Add classnote-driven events for past/today ONLY (no duplicate if schedule already present)
     for (const [k, notes] of classnoteMap.entries()) {
@@ -446,6 +479,35 @@ export default function TeacherToastUI({
         new Date(b.updatedAt || b.createdAt || 0).getTime() -
         new Date(a.updatedAt || a.createdAt || 0).getTime()
       )[0];
+
+      // ✅ protector for note-only events too
+      if (
+        typeof note?.reason === "string" &&
+        note.reason.toLowerCase().trim().includes("class time changed")
+      ) {
+        const s = note?.started_at ? new Date(note.started_at) : new Date(dt);
+        const e = note?.ended_at ? new Date(note.ended_at) : new Date(s.getTime() + 30 * 60 * 1000);
+
+        events.push({
+          id: `note-${student}-${dateDot}-${Math.random().toString(36).slice(2)}`,
+          calendarId: "classnote",
+          title: `🟢 ${student} (Time Changed)`,
+          category: "time",
+          start: s,
+          end: e,
+          backgroundColor: "#D1FAE5",
+          borderColor: "#10B981",
+          color: "#064E3B",
+          isReadOnly: true,
+          raw: {
+            note_only: true,
+            student_name: student,
+            date: dateDot,
+          },
+        });
+        continue; // ✅ skip rest of this loop
+      }
+
 
       const roundToMin = (d: Date) => new Date(Math.round(d.getTime() / 60000) * 60000);
       const started = note?.started_at ? roundToMin(new Date(note.started_at)) : null;
@@ -467,7 +529,7 @@ export default function TeacherToastUI({
       const e = matched ? matched.end   : (ended   ?? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 30, 0));
 
       const isGreen = Boolean(matched);
-      const bg = isGreen ? "#D1FAE5" : "#FECACA";
+      const bg = isGreen ? "#D1FAE5" : "#FEF3C7"; ;
       const border = isGreen ? "#10B981" : "#DC2626";
       const text = isGreen ? "#064E3B" : "#7F1D1D";
 
@@ -1209,125 +1271,171 @@ export default function TeacherToastUI({
           <div ref={containerRef} className="absolute inset-0" />
 
           {/* Event popover */}
-          {detail?.event && (
-            <div
-              ref={popRef}
-              className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-[13px]"
-              style={(() => {
-                if (!detail || !containerRef.current) return { display: "none" } as React.CSSProperties;
-                const POP_W = 280, POP_H = 190, pad = 6;
-                const cw = containerRef.current.clientWidth;
-                const ch = containerRef.current.clientHeight;
-                let left = detail.x + 10;
-                let top = detail.y + 10;
-                if (left + POP_W + pad > cw) left = Math.max(pad, cw - POP_W - pad);
-                if (top + POP_H + pad > ch) top = Math.max(pad, ch - POP_H - pad);
-                return { left, top, width: POP_W } as React.CSSProperties;
-              })()}
-            >
+{detail?.event && (() => {
+  const ev = detail.event;
+  const raw = ev.raw || {};
+  const student = raw.student_name ?? "";
+  const start = new Date(ev.start);
+  const end = new Date(ev.end);
+  const dateKey = `${start.getFullYear()}. ${String(start.getMonth() + 1).padStart(2, "0")}. ${String(start.getDate()).padStart(2, "0")}.`;
 
-              {/* --- QUIZLET / DIARY BUTTON ROW (full-width, equal size) --- */}
-              {(() => {
-                const dateKey = ymdString(toLocalDateOnly(new Date(detail.event.start as any)));
-                const student = detail.event.raw?.student_name ?? "";
-                const meta = studentMeta?.[dateKey];
+  const notes = classnoteMap.get(`${student}::${dateKey}`) || [];
+  const note = notes[0];
+  const hasNote = !!note;
+  const hasSchedule = !raw.note_only;
 
-                const qDate = meta?.quizlet_date;
-                const dDate = meta?.diary_date;
+  const started = note?.started_at ? new Date(note.started_at) : null;
+  const ended = note?.ended_at ? new Date(note.ended_at) : null;
 
-                const qLabel = qDate ? `Quizlet: ${qDate}` : "Quizlet: N/A";
-                const dLabel = dDate ? `Diary: ${dDate}` : "Diary: N/A";
+  const matchOK =
+    started && ended &&
+    Math.abs((started.getTime() - start.getTime()) / 60000) <= 15 &&
+    Math.abs((ended.getTime() - end.getTime()) / 60000) <= 15;
 
-                const qHref = qDate ? buildQuizletUrl(student) : undefined;
-                const dHref = dDate ? buildDiaryUrl(student) : undefined;
+  const timeFmt = (d: any) =>
+    d ? `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}` : "";
 
-                return (
-                  <div className="mt-3 grid grid-cols-2 gap-2 min-w-0">
-                    {qHref ? (
-                      <a
-                        href={qHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open Quizlet"
-                        className="w-full h-9 inline-flex items-center justify-center rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 text-[10px] px-3 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                      >
-                        <span className="truncate">{qLabel}</span>
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        title="No Quizlet"
-                        className="w-full h-9 inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-slate-500 text-[10px] px-3 cursor-not-allowed"
-                      >
-                        <span className="truncate">{qLabel}</span>
-                      </button>
-                    )}
+  let caseType = "none";
+  if (raw.note_only) caseType = "red_unscheduled";
+  else if (ev.backgroundColor === "#D1FAE5") caseType = "green";
+  else if (ev.backgroundColor === "#FECACA" && hasNote) caseType = "red_mismatch";
+  else if (ev.backgroundColor === "#FECACA" && !hasNote) caseType = "red_no_note";
 
-                    {dHref ? (
-                      <a
-                        href={dHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open Diary"
-                        className="w-full h-9 inline-flex items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 text-[10px] px-3 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-300"
-                      >
-                        <span className="truncate">{dLabel}</span>
-                      </a>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        title="No Diary"
-                        className="w-full h-9 inline-flex items-center justify-center rounded-lg border border-slate-300 bg-slate-50 text-slate-500 text-[10px] px-3 cursor-not-allowed"
-                      >
-                        <span className="truncate">{dLabel}</span>
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
+  else if (!hasNote && hasSchedule) caseType = "red_no_note";
+  else if (hasNote && hasSchedule && !matchOK) caseType = "red_mismatch";
+  else if (hasNote && !hasSchedule) caseType = "red_unscheduled";
+
+  return (
+    <div
+      ref={popRef}
+      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-[260px]"
+      style={{
+        left: `${detail.x + 12}px`,
+        top: `${detail.y + 12}px`,
+      }}
+    >
+    {caseType === "green" && (
+      <div className="space-y-2 text-sm text-gray-700">
+        <div className="font-semibold text-gray-900">📘 {dateKey}</div>
+        <div className="text-gray-600">{timeFmt(start)} – {timeFmt(end)}</div>
+        <div className="flex gap-2 mt-2">
+          <a
+            href={`/teacher/student/quizlet?student_name=${encodeURIComponent(student)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-md hover:bg-blue-100"
+          >
+            Quizlet
+          </a>
+          <a
+            href={`/teacher/student/diary?student_name=${encodeURIComponent(student)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded-md hover:bg-green-100"
+          >
+            Diary
+          </a>
+        </div>
+      </div>
+    )}
+
+    {/* === For red or yellow === */}
+    {(caseType === "red_no_note" ||
+      caseType === "red_mismatch" ||
+      caseType === "red_unscheduled") && (
+      <div className="space-y-3 text-sm text-gray-700">
+        <p className="text-center font-medium text-gray-900">
+          {caseType === "red_no_note"
+            ? "You didn’t have class today."
+            : caseType === "red_unscheduled"
+            ? `You had an unscheduled class at ${timeFmt(started)} – ${timeFmt(ended)}.`
+            : `You had class at ${timeFmt(started)} – ${timeFmt(ended)}.`}
+        </p>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-1 rounded-md hover:bg-yellow-100">
+            Paid Absence
+          </button>
+
+          <button
+            onClick={handleDeleteSingle}
+            className="text-xs bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 rounded-md hover:bg-rose-100"
+          >
+            Delete Single
+          </button>
+
+          <button
+            onClick={() => openBulkDeletePanel(ev)}
+            className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded-md hover:bg-red-100"
+          >
+            Delete Future Classes
+          </button>
+
+          <button
+            onClick={async () => {
+              try {
+                if (!started || !ended) {
+                  alert("No valid class note time found to sync.");
+                  return;
+                }
+
+                const studentName = student;
+                const teacherName = raw.teacher_name ?? "";
+                const roomName = raw.room_name || "101";
+                const date = ymdString(toLocalDateOnly(started));
+                let time = started.getHours() + started.getMinutes() / 60;
+                time = Math.round(time * 2) / 2;
+                const duration = 1;
+
+                const scheduleId = raw.schedule_id || raw._id || raw.id;
+
+                // ✅ Sync schedule time first
+                if (scheduleId) {
+                  await saveUpdateById(scheduleId, date, time, duration);
+                } else {
+                  await saveCreate({
+                    date,
+                    time,
+                    duration,
+                    room_name: roomName,
+                    teacher_name: teacherName,
+                    student_name: studentName,
+                    calendarId: "1",
+                  });
+                }
+
+                // ✅ Then mark the related class note with reason
+                const classnoteId = raw.classnote_id || note?._id;
+                if (classnoteId) {
+                  await fetch(`/api/classnote/${classnoteId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reason: "class time changed" }),
+                  });
+                }
+
+                alert("✅ Schedule synced and classnote updated.");
+                window.dispatchEvent(new CustomEvent("calendar:saved"));
+                setDetail(null);
+              } catch (err) {
+                console.error("Sync schedule error:", err);
+                alert("❌ Failed to sync schedule.");
+              }
+            }}
+            className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-md hover:bg-indigo-100"
+          >
+            Class Time Changed
+          </button>
+
+        </div>
+      </div>
+    )}
+
+    </div>
+  );
+})()}
 
 
-              {/* --- 2x2 ACTION GRID --- */}
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {/* Paid Absence */}
-                <button
-                  className="h-20 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-sm"
-                  title="유급 결석 처리"
-                >
-                  Paid Absence
-                </button>
-
-                {/* Delete Single */}
-                <button
-                  onClick={handleDeleteSingle}
-                  className="h-20 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium shadow-sm"
-                  title="이 수업만 삭제"
-                >
-                  Delete Single
-                </button>
-
-                {/* Delete Future Classes */}
-                <button
-                  onClick={() => openBulkDeletePanel(detail.event, { x: (detail?.x ?? 0), y: (detail?.y ?? 0) })}
-                  className="h-20 rounded-xl bg-red-500 hover:bg-red-600 text-white font-medium shadow-sm"
-                  title="이 학생의 이후 동일 패턴 수업 모두 삭제"
-                >
-                  Delete Future Classes
-                </button>
-
-                {/* Delete Explanation */}
-                <button
-                  className="h-20 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium shadow-sm"
-                  title="삭제 사유 기록"
-                >
-                  Delete Explanation
-                </button>
-              </div>
-
-            </div>
-          )}
 
           {/* Add card */}
           {addOpen && (

@@ -1012,13 +1012,21 @@ export async function updateScheduleData(
     const hasDur  = patch.duration !== undefined;
 
     if (hasDate || hasTime || hasDur) {
-      const date = hasDate ? patch.date! : curr.date;
+      const dateRaw = hasDate ? patch.date! : curr.date;
       const time = hasTime ? Number(patch.time) : Number(curr.time);
       const duration = hasDur ? Number(patch.duration) : Number(curr.duration);
 
-      const normalized = buildTimeFields(date, time, duration);
+      // --- Rebuild normalized fields
+      const normalized = buildTimeFields(dateRaw, time, duration);
+
+      // ✅ Ensure date is always "YYYY. MM. DD." format before saving
+      const dateObj = new Date(dateRaw);
+      const dotDate = `${dateObj.getFullYear()}. ${String(dateObj.getMonth() + 1).padStart(2, "0")}. ${String(dateObj.getDate()).padStart(2, "0")}.`;
+      normalized.date = dotDate;
+
       Object.assign(next, normalized);
     }
+
 
     if (Object.keys(next).length === 0) {
       return { status: 400, message: "No valid fields to update" };
@@ -1735,6 +1743,43 @@ export async function saveClassnotesNew(input: {
   }
 }
 
+export async function updateClassnoteData(
+  id: string,
+  patch: Partial<{ reason: string; comment: string; note: string }>
+): Promise<{ status: number; message: string }> {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    if (!id) return { status: 400, message: "Missing ID" };
+
+    const _id = new ObjectId(id);
+    const update: Record<string, any> = {};
+
+    if (patch.reason) update.reason = patch.reason;
+    if (patch.comment) update.comment = patch.comment;
+    if (patch.note) update.note = patch.note;
+
+    if (Object.keys(update).length === 0) {
+      return { status: 400, message: "No valid fields to update" };
+    }
+
+    const res = await coll.updateOne(
+      { _id },
+      { $set: { ...update, updatedAt: new Date().toISOString() } }
+    );
+
+    if (res.matchedCount === 0)
+      return { status: 404, message: "Classnote not found" };
+
+    return { status: 200, message: "Classnote updated successfully" };
+  } catch (error) {
+    console.error("updateClassnoteData error:", error);
+    return { status: 500, message: "Internal Server Error" };
+  }
+}
+
 // lib/data.ts
 export async function setClassnotesQuizletSaved(
   student_name: string,
@@ -1871,6 +1916,7 @@ export async function getClassnotesInRange(
       ended_at: doc.ended_at,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      reason: doc.reason ?? "", // ✅ include reason
     }));
   } catch (err) {
     console.error("getClassnotesInRange error:", err);
