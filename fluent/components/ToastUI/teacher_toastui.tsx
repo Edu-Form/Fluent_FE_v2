@@ -91,17 +91,6 @@ function getDurationHours(start: Date, end: Date) {
   return Math.round(mins / 30) / 2; // 0.5, 1.0, 1.5, ...
 }
 
-// Replace previous link builders
-function buildQuizletUrl(student: string) {
-  return `/teacher/student/quizlet?student_name=${encodeURIComponent(student)}`;
-}
-
-function buildDiaryUrl(student: string) {
-  return `/teacher/student/diary?student_name=${encodeURIComponent(student)}`;
-}
-
-
-
 
 
 /* ----------------------------- Color utilities ----------------------------- */
@@ -147,7 +136,7 @@ export default function TeacherToastUI({
 
   // --- per-student cache for class_history (for popover meta)
   const studentCacheRef = useRef<Map<string, any>>(new Map());
-  const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
+  const [, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
   const [, setStudentMetaLoading] = useState(false);
   // teacher list for Add form
   const [teacherOptions, setTeacherOptions] = useState<string[]>([]);
