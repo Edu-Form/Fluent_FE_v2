@@ -5,8 +5,8 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const studentsParam = url.searchParams.getAll("student_name");
-    const students = studentsParam
-      .flatMap(s => s.split(",").map(v => v.trim()).filter(Boolean));
+    const students = studentsParam.map(s => s.trim()).filter(Boolean);
+
 
     const from = url.searchParams.get("from");
     const to = url.searchParams.get("to");

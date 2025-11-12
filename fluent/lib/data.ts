@@ -819,15 +819,47 @@ export async function deductCredit(student_name: string, date: string) {
   }
 }
 
-export async function saveScheduleData(input: ScheduleInput) {
-  const doc = normalizeSchedule(input);
-
+export async function saveScheduleData(input: any): Promise<any> {
   const client = await clientPromise;
   const db = client.db("school_management");
-  const res = await db.collection<ScheduleDoc>("schedules").insertOne(doc);
+  const coll = db.collection("schedules");
 
-  // return inserted doc with _id as string (useful for the client)
-  return { _id: String(res.insertedId), ...doc };
+  const items = Array.isArray(input) ? input : [input];
+  const docs = items.map((i) => {
+    const doc = normalizeSchedule(i);
+    // 🧹 Remove _id if present (avoids TS + Mongo conflict)
+    delete (doc as any)._id;
+    return doc;
+  });
+
+  if (docs.length > 1) {
+    // ✅ Bulk insert for multiple schedules
+    const res = await coll.insertMany(docs as any, { ordered: false });
+    return { insertedCount: res.insertedCount };
+  } else {
+    // ✅ Single insert (keep old behavior)
+    const res = await coll.insertOne(docs[0] as any);
+    return { _id: String(res.insertedId), ...docs[0] };
+  }
+}
+
+
+// --- DELETE schedule(s) ---
+export async function deleteScheduleDataBulk(body: any) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  const coll = db.collection("schedules");
+
+  if (Array.isArray(body?.ids)) {
+    const objectIds = body.ids.map((id: string) => new ObjectId(id));
+    const result = await coll.deleteMany({ _id: { $in: objectIds } });
+    return { deletedCount: result.deletedCount };
+  }
+
+  const id = body?._id || body?.id;
+  if (!id) throw new Error("Missing id(s)");
+  const result = await coll.deleteOne({ _id: new ObjectId(id) });
+  return { deletedCount: result.deletedCount };
 }
 
 export async function saveProgressData(progress: {

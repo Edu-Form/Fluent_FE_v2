@@ -930,6 +930,9 @@ export default function TeacherToastUI({
     const students = Array.from(studentsSet);
     if (!students.length) { setClassnoteMap(new Map()); return; }
 
+    // ✅ PUT YOUR LOG RIGHT HERE
+    console.log("📘 Students used for classnote search:", students);
+
     const params = new URLSearchParams();
     students.forEach(s => params.append("student_name", s));
     params.set("from", from);
@@ -1103,9 +1106,17 @@ export default function TeacherToastUI({
       const refWindow = bulkPanel.reference;
       const matches = collectFutureMatchesFromData(base, refWindow);
 
-      for (const { scheduleId } of matches) {
-        try { await saveDelete(scheduleId); } catch {}
-        calRef.current?.deleteEvent?.(scheduleId, "1");
+      // ✅ Bulk delete via single API call
+      const ids = matches.map((m) => m.scheduleId);
+      await fetch("/api/schedules", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+
+      // Immediately reflect in UI
+      for (const id of ids) {
+        calRef.current?.deleteEvent?.(id, "1");
       }
 
       setBulkPanel(null);
@@ -1588,7 +1599,7 @@ export default function TeacherToastUI({
                         const until = new Date(base);
                         until.setFullYear(until.getFullYear() + 1);
 
-                        const createdEvents: any[] = [];
+                        const payloads: any[] = [];
                         const baseLocal = new Date(base.getFullYear(), base.getMonth(), base.getDate());
                         const untilLocal = new Date(until.getFullYear(), until.getMonth(), until.getDate());
 
@@ -1600,10 +1611,7 @@ export default function TeacherToastUI({
                           );
                           if (iter > untilLocal) break;
 
-                          const start = new Date(iter.getFullYear(), iter.getMonth(), iter.getDate(), h, m, 0);
-                          const end = new Date(start.getTime() + durNum * 60 * 60 * 1000);
-
-                          const payload = {
+                          payloads.push({
                             date: ymdString(iter),
                             time: timeNum,
                             duration: durNum,
@@ -1611,33 +1619,21 @@ export default function TeacherToastUI({
                             teacher_name: addForm.teacher_name ?? "",
                             student_name: addForm.student_name,
                             calendarId: "1",
-                          };
-
-                          const created = await saveCreate(payload);
-                          const id = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-                          const color = teacherColorMap.get(payload.teacher_name);
-
-                          createdEvents.push({
-                            id,
-                            calendarId: "1",
-                            title: `${payload.room_name}호 ${payload.student_name}님`,
-                            category: "time",
-                            start,
-                            end,
-                            backgroundColor: color?.bg ?? "#EEF2FF",
-                            borderColor: color?.border ?? "#C7D2FE",
-                            dragBackgroundColor: color?.bg ?? "#E0E7FF",
-                            color: "#111827",
-                            raw: {
-                              schedule_id: id,
-                              room_name: payload.room_name,
-                              teacher_name: payload.teacher_name,
-                              student_name: payload.student_name,
-                            },
                           });
                         }
 
-                        calRef.current?.createEvents(createdEvents);
+                        // ✅ Send all in one go
+                        const res = await fetch("/api/schedules", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(payloads),
+                        });
+
+                        if (!res.ok) throw new Error("Failed to create multiple schedules");
+                        const result = await res.json();
+
+                        // (Optional) just show confirmation
+                        alert(`✅ ${payloads.length} classes created successfully.`);
                       } else {
                         const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), h, m, 0);
                         const end = new Date(start.getTime() + durNum * 60 * 60 * 1000);
