@@ -335,10 +335,6 @@ export default function TeacherToastUI({
       const base = toDateYMD(e.date);
       if (!base) continue;
 
-      const today = kstTodayOnly();
-      const dateOnly = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-      // skip only *before today*
-
       const startHour = Math.floor(e.time);
       const startMin = Math.round((e.time - startHour) * 60);
       const start = new Date(base.getFullYear(), base.getMonth(), base.getDate(), startHour, startMin, 0);
@@ -1641,7 +1637,7 @@ export default function TeacherToastUI({
                         });
 
                         if (!res.ok) throw new Error("Failed to create multiple schedules");
-                        const result = await res.json();
+                        
 
                         // (Optional) just show confirmation
                         alert(`✅ ${payloads.length} classes created successfully.`);
