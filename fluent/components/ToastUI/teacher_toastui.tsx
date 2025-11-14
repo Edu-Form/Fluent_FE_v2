@@ -337,7 +337,7 @@ export default function TeacherToastUI({
 
       const today = kstTodayOnly();
       const dateOnly = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-      if (dateOnly.getTime() < today.getTime()) continue; // skip only *before today*
+      // skip only *before today*
 
       const startHour = Math.floor(e.time);
       const startMin = Math.round((e.time - startHour) * 60);
@@ -387,6 +387,17 @@ export default function TeacherToastUI({
       if (dateOnly.getTime() > today.getTime()) continue;
 
       const notes = classnoteMap.get(k) || [];
+
+      // 🆕 If no classnote AND this schedule is in the past → show schedule in RED
+      if (notes.length === 0 && dateOnly.getTime() < today.getTime()) {
+        for (const ev of evList) {
+          ev.backgroundColor = "#FECACA"; // red
+          ev.borderColor = "#DC2626";
+          ev.color = "#7F1D1D";
+        }
+        continue; // stop further processing
+      }
+
 
       // 🆕 Fallback: if no classnote exists at all for this date → mark red and skip further processing
       if (notes.length === 0) {
@@ -1346,7 +1357,7 @@ export default function TeacherToastUI({
       <div className="space-y-3 text-sm text-gray-700">
         <p className="text-center font-medium text-gray-900">
           {caseType === "red_no_note"
-            ? "You didn’t have class today."
+            ? "You had a scheduled class, but didn't have a class today."
             : caseType === "red_unscheduled"
             ? `You had an unscheduled class at ${timeFmt(started)} – ${timeFmt(ended)}.`
             : `You had class at ${timeFmt(started)} – ${timeFmt(ended)}.`}
