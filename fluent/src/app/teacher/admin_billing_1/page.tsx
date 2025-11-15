@@ -6,7 +6,9 @@ import React, {
   useMemo,
   useRef,
   useState,
+  Suspense,
 } from "react";
+import { useSearchParams } from "next/navigation";
 
 type StudentInfo = {
   id: string;
@@ -230,12 +232,6 @@ function matchesMonth(dateValue: string | number | null | undefined, key: string
   return monthKeyFromDate(dt) === key;
 }
 
-function summarizeText(text: string | undefined, limit = 120) {
-  if (!text) return "";
-  const trimmed = text.trim();
-  if (trimmed.length <= limit) return trimmed;
-  return `${trimmed.slice(0, limit)}…`;
-}
 
 function firstNumberFromString(input?: string | null) {
   if (!input) return null;
@@ -254,7 +250,22 @@ function toNumber(value: any): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export default function AdminBillingExcelPage() {
+const ALLOWED_ADMINS = ["David", "Phil", "김나연"];
+
+function AdminBillingExcelPageInner() {
+  const searchParams = useSearchParams();
+  const currentUser = (searchParams.get("user") || "").trim();
+  const isAdmin = ALLOWED_ADMINS.some(
+    (admin) => admin.trim().toLowerCase() === currentUser.toLowerCase()
+  );
+  
+  // Debug: Log admin status (remove in production if needed)
+  useEffect(() => {
+    if (currentUser) {
+      console.log("[Admin Billing] Current user:", currentUser, "isAdmin:", isAdmin);
+    }
+  }, [currentUser, isAdmin]);
+
   const [teacherNames, setTeacherNames] = useState<string[]>([]);
   const [teacherStudents, setTeacherStudents] = useState<
     Record<string, StudentInfo[]>
@@ -287,9 +298,104 @@ export default function AdminBillingExcelPage() {
     Record<string, { rate?: number; initialCredit?: number }>
   >({});
 
+  const [billingLinkLoading, setBillingLinkLoading] = useState<
+    Record<string, boolean>
+  >({});
+
   useEffect(() => {
     setStudentConfigs({});
   }, [selectedTeacher]);
+
+  const handleBillingProcess = useCallback(
+    async (student: StudentInfo, financial: StudentFinancialSnapshot) => {
+      const studentId = student.id;
+      setBillingLinkLoading((prev) => ({ ...prev, [studentId]: true }));
+
+      try {
+        const amount = Math.round(financial.revenue);
+        if (amount <= 0) {
+          alert("결제할 금액이 없습니다.");
+          setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
+          return;
+        }
+
+        const res = await fetch("/api/payment/link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            studentName: student.name,
+            amount,
+          }),
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}));
+          throw new Error(error.message || "Failed to create payment link");
+        }
+
+        const data = await res.json();
+        const paymentLink = data.paymentLink;
+
+        // Try to copy to clipboard
+        try {
+          await navigator.clipboard.writeText(paymentLink);
+          alert(`결제 링크가 클립보드에 복사되었습니다.\n${paymentLink}`);
+        } catch {
+          // Fallback: show link in prompt
+          prompt("결제 링크를 복사하세요:", paymentLink);
+        }
+
+        // Optional: Send via Kakao if enabled (can be disabled)
+        const sendKakao = window.confirm(
+          "카카오톡으로 결제 링크를 전송하시겠습니까?"
+        );
+        if (sendKakao && student.phoneNumber) {
+          try {
+            // Note: This requires Kakao API to be configured
+            // The API endpoint should handle the message sending
+            const kakaoRes = await fetch("/api/kakao-message", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: student.phoneNumber, // or student's Kakao user ID
+                templateId: "payment_link_template", // Replace with actual template ID
+                templateArgs: {
+                  studentName: student.name,
+                  amount: amount.toLocaleString("ko-KR"),
+                  paymentLink: paymentLink,
+                },
+              }),
+            });
+
+            if (kakaoRes.ok) {
+              alert("카카오톡 메시지가 전송되었습니다.");
+            } else {
+              console.warn("Kakao message failed, but payment link was copied");
+            }
+          } catch (kakaoErr) {
+            console.warn("Kakao message error:", kakaoErr);
+            // Don't fail the whole process if Kakao fails
+          }
+        }
+      } catch (err) {
+        console.error("Billing process error:", err);
+        alert(
+          `결제 링크 생성 실패: ${(err as Error)?.message || "Unknown error"}`
+        );
+      } finally {
+        setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
+      }
+    },
+    []
+  );
+
+  const handleCheckStudentSchedule = useCallback(
+    (student: StudentInfo) => {
+      const scheduleUrl = `/teacher/schedule?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}`;
+      window.open(scheduleUrl, "_blank");
+    },
+    [selectedTeacher]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -353,13 +459,22 @@ export default function AdminBillingExcelPage() {
         });
 
         if (!cancelled) {
-          setTeacherNames(combinedTeachers);
+          // Apply user restrictions
+          let filteredTeachers = combinedTeachers;
+          if (!isAdmin && currentUser) {
+            // Non-admin users can only see themselves
+            filteredTeachers = combinedTeachers.filter(
+              (t) => t === currentUser
+            );
+          }
+
+          setTeacherNames(filteredTeachers);
           setTeacherStudents(studentMap);
           setSelectedTeacher((prev) =>
-            prev && prev.length > 0
+            prev && prev.length > 0 && filteredTeachers.includes(prev)
               ? prev
-              : combinedTeachers.length > 0
-              ? combinedTeachers[0]
+              : filteredTeachers.length > 0
+              ? filteredTeachers[0]
               : ""
           );
         }
@@ -794,14 +909,6 @@ export default function AdminBillingExcelPage() {
     selectedTeacher,
   ]);
 
-  const handleExpand = (studentName: string, section: DetailSection) => {
-    setExpanded((prev) => {
-      if (prev && prev.student === studentName && prev.section === section) {
-        return null;
-      }
-      return { student: studentName, section };
-    });
-  };
 
   const handleConfigChange = useCallback(
     (
@@ -868,7 +975,14 @@ export default function AdminBillingExcelPage() {
     );
   };
 
-  const renderClassnoteDetails = (rows: ClassnoteEntry[]) => {
+  const formatDateForLink = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return "";
+    const dt = parseDateString(dateStr);
+    if (!dt) return String(dateStr ?? "");
+    return formatDotDate(dt);
+  };
+
+  const renderClassnoteDetails = (rows: ClassnoteEntry[], studentName: string) => {
     if (!rows.length) {
       return (
         <div className="text-sm text-gray-500">
@@ -877,24 +991,27 @@ export default function AdminBillingExcelPage() {
       );
     }
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {rows.map((item, idx) => {
-          const dateLabel =
-            parseDateString(item.date)?.toLocaleDateString("ko-KR") ??
-            String(item.date ?? "");
+          const dateStr = item.date ?? "";
+          const formattedDate = formatDateForLink(dateStr);
+          // Find the student info to get the student ID
+          const studentInfo = studentRows.find(r => r.student.name === studentName)?.student;
+          const classNoteUrl = `/teacher/student/class_record?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(studentInfo?.id || "")}${item._id ? `&class_note_id=${encodeURIComponent(item._id)}` : ""}`;
+          
           return (
             <div
               key={item._id ?? `${item.student_name}_classnote_${idx}`}
-              className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-3 py-2"
+              className="flex items-center gap-2"
             >
-              <div className="text-sm text-amber-800">
-                {dateLabel} · 작성됨
-              </div>
-              <div className="text-xs text-amber-600">
-                최근 업데이트:{" "}
-                {parseDateString(item.updatedAt)?.toLocaleString("ko-KR") ??
-                  "—"}
-              </div>
+              <a
+                href={classNoteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline"
+              >
+                {formattedDate || "—"}
+              </a>
             </div>
           );
         })}
@@ -902,7 +1019,7 @@ export default function AdminBillingExcelPage() {
     );
   };
 
-  const renderDiaryDetails = (rows: DiaryEntry[]) => {
+  const renderDiaryDetails = (rows: DiaryEntry[], studentName: string) => {
     if (!rows.length) {
       return (
         <div className="text-sm text-gray-500">
@@ -911,23 +1028,25 @@ export default function AdminBillingExcelPage() {
       );
     }
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {rows.map((item, idx) => {
-          const dateLabel =
-            parseDateString(item.class_date)?.toLocaleDateString("ko-KR") ??
-            String(item.class_date ?? item.date ?? "");
+          const dateStr = item.class_date ?? item.date ?? "";
+          const formattedDate = formatDateForLink(dateStr);
+          const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(studentName)}`;
+          
           return (
             <div
               key={item._id ?? `${item.student_name}_diary_${idx}`}
-              className="rounded-lg border border-sky-200 bg-sky-50 p-3"
+              className="flex items-center gap-2"
             >
-              <div className="text-sm font-medium text-sky-800">
-                {dateLabel}
-              </div>
-              <div className="mt-1 text-sm text-sky-700">
-                {summarizeText(item.diary_summary ?? item.original_text, 160) ||
-                  "내용 미리보기를 불러올 수 없습니다."}
-              </div>
+              <a
+                href={diaryUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
+              >
+                {formattedDate || "—"}
+              </a>
             </div>
           );
         })}
@@ -935,7 +1054,7 @@ export default function AdminBillingExcelPage() {
     );
   };
 
-  const renderQuizletDetails = (rows: QuizletEntry[]) => {
+  const renderQuizletDetails = (rows: QuizletEntry[], studentName: string) => {
     if (!rows.length) {
       return (
         <div className="text-sm text-gray-500">
@@ -944,28 +1063,25 @@ export default function AdminBillingExcelPage() {
       );
     }
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {rows.map((item, idx) => {
-          const dateLabel =
-            parseDateString(item.class_date)?.toLocaleDateString("ko-KR") ??
-            String(item.class_date ?? item.date ?? "");
+          const dateStr = item.class_date ?? item.date ?? "";
+          const formattedDate = formatDateForLink(dateStr);
+          const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(studentName)}`;
+          
           return (
             <div
               key={item._id ?? `${item.student_name}_quizlet_${idx}`}
-              className="rounded-lg border border-emerald-200 bg-emerald-50 p-3"
+              className="flex items-center gap-2"
             >
-              <div className="text-sm font-medium text-emerald-800">
-                {dateLabel}
-              </div>
-              <div className="mt-1 text-sm text-emerald-700">
-                {summarizeText(item.homework ?? item.original_text, 160) ||
-                  "Quizlet 요약을 찾을 수 없습니다."}
-              </div>
-              {item.nextClass && (
-                <div className="mt-1 text-xs text-emerald-600">
-                  Next class: {item.nextClass}
-                </div>
-              )}
+              <a
+                href={quizletUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
+              >
+                {formattedDate || "—"}
+              </a>
             </div>
           );
         })}
@@ -981,11 +1097,11 @@ export default function AdminBillingExcelPage() {
       case "schedule":
         return renderScheduleDetails(row.schedules);
       case "classnote":
-        return renderClassnoteDetails(row.classnotes);
+        return renderClassnoteDetails(row.classnotes, row.student.name);
       case "diary":
-        return renderDiaryDetails(row.diaries);
+        return renderDiaryDetails(row.diaries, row.student.name);
       case "quizlet":
-        return renderQuizletDetails(row.quizlets);
+        return renderQuizletDetails(row.quizlets, row.student.name);
       default:
         return null;
     }
@@ -1006,28 +1122,40 @@ export default function AdminBillingExcelPage() {
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-            <label className="text-sm text-gray-700">
-              <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
-                Teacher
-              </span>
-              <select
-                className="w-64 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                value={selectedTeacher}
-                onChange={(e) => {
-                  setSelectedTeacher(e.target.value);
-                  setExpanded(null);
-                }}
-              >
-                {teacherNames.length === 0 && (
-                  <option value="">교사를 찾을 수 없습니다</option>
-                )}
-                {teacherNames.map((teacher) => (
-                  <option key={teacher} value={teacher}>
-                    {teacher || "Unassigned"}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {isAdmin && (
+              <label className="text-sm text-gray-700">
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Teacher
+                </span>
+                <select
+                  className="w-64 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  value={selectedTeacher}
+                  onChange={(e) => {
+                    setSelectedTeacher(e.target.value);
+                    setExpanded(null);
+                  }}
+                >
+                  {teacherNames.length === 0 && (
+                    <option value="">교사를 찾을 수 없습니다</option>
+                  )}
+                  {teacherNames.map((teacher) => (
+                    <option key={teacher} value={teacher}>
+                      {teacher || "Unassigned"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {!isAdmin && (
+              <div className="text-sm text-gray-700">
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Teacher
+                </span>
+                <div className="w-64 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm">
+                  {selectedTeacher || currentUser || "—"}
+                </div>
+              </div>
+            )}
           </div>
         </header>
 
@@ -1190,19 +1318,76 @@ export default function AdminBillingExcelPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                                {row.classnotes.length}개
-                              </span>
+                              <div className="flex flex-col gap-1">
+                                {row.classnotes.length === 0 ? (
+                                  <span className="text-xs text-gray-400">—</span>
+                                ) : (
+                                  row.classnotes.map((item, idx) => {
+                                    const dateStr = item.date ?? "";
+                                    const formattedDate = formatDateForLink(dateStr);
+                                    const classNoteUrl = `/teacher/student/class_record?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}&id=${encodeURIComponent(row.student.id)}${item._id ? `&class_note_id=${encodeURIComponent(item._id)}` : ""}`;
+                                    return (
+                                      <a
+                                        key={item._id ?? `${row.student.name}_classnote_${idx}`}
+                                        href={classNoteUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline"
+                                      >
+                                        {formattedDate || "—"}
+                                      </a>
+                                    );
+                                  })
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700">
-                                {row.diaries.length}개
-                              </span>
+                              <div className="flex flex-col gap-1">
+                                {row.diaries.length === 0 ? (
+                                  <span className="text-xs text-gray-400">—</span>
+                                ) : (
+                                  row.diaries.map((item, idx) => {
+                                    const dateStr = item.class_date ?? item.date ?? "";
+                                    const formattedDate = formatDateForLink(dateStr);
+                                    const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}`;
+                                    return (
+                                      <a
+                                        key={item._id ?? `${row.student.name}_diary_${idx}`}
+                                        href={diaryUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-medium text-sky-700 hover:text-sky-900 hover:underline"
+                                      >
+                                        {formattedDate || "—"}
+                                      </a>
+                                    );
+                                  })
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                                {row.quizlets.length}개
-                              </span>
+                              <div className="flex flex-col gap-1">
+                                {row.quizlets.length === 0 ? (
+                                  <span className="text-xs text-gray-400">—</span>
+                                ) : (
+                                  row.quizlets.map((item, idx) => {
+                                    const dateStr = item.class_date ?? item.date ?? "";
+                                    const formattedDate = formatDateForLink(dateStr);
+                                    const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}`;
+                                    return (
+                                      <a
+                                        key={item._id ?? `${row.student.name}_quizlet_${idx}`}
+                                        href={quizletUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
+                                      >
+                                        {formattedDate || "—"}
+                                      </a>
+                                    );
+                                  })
+                                )}
+                              </div>
                             </td>
                               <td className="px-4 py-3">
                                 <div className="flex flex-col gap-2">
@@ -1273,40 +1458,37 @@ export default function AdminBillingExcelPage() {
                                 </div>
                               </td>
                             <td className="px-4 py-3">
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() =>
-                                    handleExpand(row.student.name, "schedule")
-                                  }
-                                  className="rounded-md border border-indigo-200 px-3 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
-                                >
-                                  View schedule
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleExpand(row.student.name, "classnote")
-                                  }
-                                  className="rounded-md border border-amber-200 px-3 py-1 text-xs font-medium text-amber-600 hover:bg-amber-50"
-                                >
-                                  Class notes
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleExpand(row.student.name, "diary")
-                                  }
-                                  className="rounded-md border border-sky-200 px-3 py-1 text-xs font-medium text-sky-600 hover:bg-sky-50"
-                                >
-                                  Diary
-                                </button>
-                                <button
-                                  onClick={() =>
-                                    handleExpand(row.student.name, "quizlet")
-                                  }
-                                  className="rounded-md border border-emerald-200 px-3 py-1 text-xs font-medium text-emerald-600 hover:bg-emerald-50"
-                                >
-                                  Quizlet
-                                </button>
-                              </div>
+                              {isAdmin ? (
+                                <div className="flex flex-col gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleBillingProcess(
+                                        row.student,
+                                        financial
+                                      )
+                                    }
+                                    disabled={billingLinkLoading[row.student.id]}
+                                    className="rounded-md border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="결제 링크 생성"
+                                  >
+                                    {billingLinkLoading[row.student.id]
+                                      ? "처리 중..."
+                                      : "Billing Process"}
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleCheckStudentSchedule(row.student)
+                                    }
+                                    className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                                  >
+                                    Check Student Schedule
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-gray-400">
+                                  Admin only
+                                </div>
+                              )}
                             </td>
                           </tr>
                           {expanded &&
@@ -1335,6 +1517,14 @@ export default function AdminBillingExcelPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AdminBillingExcelPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading...</div>}>
+      <AdminBillingExcelPageInner />
+    </Suspense>
   );
 }
 
