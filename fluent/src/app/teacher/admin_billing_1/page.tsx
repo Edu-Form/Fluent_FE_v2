@@ -312,6 +312,17 @@ function AdminBillingExcelPageInner() {
       setBillingLinkLoading((prev) => ({ ...prev, [studentId]: true }));
 
       try {
+        // Guard: admins only
+        const user = (searchParams.get("user") || "").trim();
+        const adminOk = ALLOWED_ADMINS.some(
+          (a) => a.trim().toLowerCase() === user.toLowerCase()
+        );
+        if (!adminOk) {
+          alert("관리자만 결제 프로세스를 실행할 수 있습니다.");
+          setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
+          return;
+        }
+
         const amount = Math.round(financial.revenue);
         if (amount <= 0) {
           alert("결제할 금액이 없습니다.");
@@ -1458,37 +1469,39 @@ function AdminBillingExcelPageInner() {
                                 </div>
                               </td>
                             <td className="px-4 py-3">
-                              {isAdmin ? (
-                                <div className="flex flex-col gap-2">
-                                  <button
-                                    onClick={() =>
-                                      handleBillingProcess(
-                                        row.student,
-                                        financial
-                                      )
-                                    }
-                                    disabled={billingLinkLoading[row.student.id]}
-                                    className="rounded-md border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="결제 링크 생성"
-                                  >
-                                    {billingLinkLoading[row.student.id]
-                                      ? "처리 중..."
-                                      : "Billing Process"}
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleCheckStudentSchedule(row.student)
-                                    }
-                                    className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                                  >
-                                    Check Student Schedule
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="text-xs text-gray-400">
-                                  Admin only
-                                </div>
-                              )}
+                              {(() => {
+                                const loading = !!billingLinkLoading[row.student.id];
+                                const canProcess = isAdmin && financial.revenue > 0 && !loading;
+                                const disabledReason = !isAdmin
+                                  ? "관리자만 사용할 수 있습니다"
+                                  : financial.revenue <= 0
+                                  ? "결제할 금액이 없습니다"
+                                  : loading
+                                  ? "처리 중..."
+                                  : "";
+                                return (
+                                  <div className="flex flex-col gap-2">
+                                    <button
+                                      onClick={() =>
+                                        handleBillingProcess(row.student, financial)
+                                      }
+                                      disabled={!canProcess}
+                                      className="rounded-md border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title={canProcess ? "결제 링크 생성" : disabledReason}
+                                    >
+                                      {loading ? "처리 중..." : "Billing Process"}
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleCheckStudentSchedule(row.student)
+                                      }
+                                      className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                                    >
+                                      Check Student Schedule
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                             </td>
                           </tr>
                           {expanded &&
