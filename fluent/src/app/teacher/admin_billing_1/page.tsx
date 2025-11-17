@@ -77,9 +77,10 @@ type StudentFinancialSnapshot = {
   hourlyRate: number;
   classesCompleted: number;
   nextMonthPlanned: number;
-  billableClasses: number;
-  balanceClasses: number;
-  revenue: number;
+  carryAfterSettlement: number;
+  totalCreditsAvailable: number;
+  nextToPayClasses: number;
+  amountDue: number;
 };
 
 type DetailSection = "schedule" | "classnote" | "diary" | "quizlet";
@@ -323,7 +324,7 @@ function AdminBillingExcelPageInner() {
           return;
         }
 
-        const amount = Math.round(financial.revenue);
+        const amount = Math.round(financial.amountDue);
         if (amount <= 0) {
           alert("결제할 금액이 없습니다.");
           setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
@@ -865,10 +866,13 @@ function AdminBillingExcelPageInner() {
       const initialCredit = configCredit ?? defaultCredit;
       const classesCompleted = row.classnotes.length;
       const nextMonthPlanned = row.nextSchedules.length;
-      const balanceClasses =
-        initialCredit - classesCompleted + nextMonthPlanned;
-      const billableClasses = Math.max(balanceClasses, 0);
-      const revenue = billableClasses * hourlyRate;
+      const carryAfterSettlement = initialCredit - classesCompleted;
+      const totalCreditsAvailable = Math.max(0, carryAfterSettlement);
+      const nextToPayClasses = Math.max(
+        0,
+        nextMonthPlanned - totalCreditsAvailable
+      );
+      const amountDue = Math.max(0, nextToPayClasses * hourlyRate);
 
       return {
         id: row.student.id,
@@ -877,9 +881,10 @@ function AdminBillingExcelPageInner() {
         hourlyRate,
         classesCompleted,
         nextMonthPlanned,
-        billableClasses,
-        balanceClasses,
-        revenue,
+        carryAfterSettlement,
+        totalCreditsAvailable,
+        nextToPayClasses,
+        amountDue,
       };
     });
   }, [studentRows, studentConfigs, cacheTick]);
@@ -898,19 +903,19 @@ function AdminBillingExcelPageInner() {
       (sum, entry) => sum + normalizeDuration(entry.duration),
       0
     );
-    const hagwonRevenue = studentFinancials.reduce(
-      (sum, item) => sum + item.revenue,
+    const totalAmountDue = studentFinancials.reduce(
+      (sum, item) => sum + item.amountDue,
       0
     );
-    const billableClasses = studentFinancials.reduce(
-      (sum, item) => sum + item.billableClasses,
+    const totalNextToPay = studentFinancials.reduce(
+      (sum, item) => sum + item.nextToPayClasses,
       0
     );
     return {
       totalClasses,
       totalHours,
-      hagwonRevenue,
-      billableClasses,
+      totalAmountDue,
+      totalNextToPay,
       studentCount: (teacherStudents[selectedTeacher] ?? []).length,
     };
   }, [
@@ -986,14 +991,14 @@ function AdminBillingExcelPageInner() {
     );
   };
 
-  const formatDateForLink = (dateStr: string | null | undefined): string => {
-    if (!dateStr) return "";
-    const dt = parseDateString(dateStr);
-    if (!dt) return String(dateStr ?? "");
-    return formatDotDate(dt);
-  };
+const formatDateForLink = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "";
+  const dt = parseDateString(dateStr);
+  if (!dt) return String(dateStr ?? "");
+  return formatDotDate(dt);
+};
 
-  const renderClassnoteDetails = (rows: ClassnoteEntry[], studentName: string) => {
+  const renderClassnoteDetails = (rows: ClassnoteEntry[], student: StudentInfo) => {
     if (!rows.length) {
       return (
         <div className="text-sm text-gray-500">
@@ -1006,9 +1011,7 @@ function AdminBillingExcelPageInner() {
         {rows.map((item, idx) => {
           const dateStr = item.date ?? "";
           const formattedDate = formatDateForLink(dateStr);
-          // Find the student info to get the student ID
-          const studentInfo = studentRows.find(r => r.student.name === studentName)?.student;
-          const classNoteUrl = `/teacher/student/class_record?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(studentName)}&id=${encodeURIComponent(studentInfo?.id || "")}${item._id ? `&class_note_id=${encodeURIComponent(item._id)}` : ""}`;
+          const classNoteUrl = `/teacher/student/class_record?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}${item._id ? `&class_note_id=${encodeURIComponent(item._id)}` : ""}`;
           
           return (
             <div
@@ -1030,7 +1033,7 @@ function AdminBillingExcelPageInner() {
     );
   };
 
-  const renderDiaryDetails = (rows: DiaryEntry[], studentName: string) => {
+  const renderDiaryDetails = (rows: DiaryEntry[], student: StudentInfo) => {
     if (!rows.length) {
       return (
         <div className="text-sm text-gray-500">
@@ -1043,7 +1046,7 @@ function AdminBillingExcelPageInner() {
         {rows.map((item, idx) => {
           const dateStr = item.class_date ?? item.date ?? "";
           const formattedDate = formatDateForLink(dateStr);
-          const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(studentName)}`;
+          const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}`;
           
           return (
             <div
@@ -1065,7 +1068,7 @@ function AdminBillingExcelPageInner() {
     );
   };
 
-  const renderQuizletDetails = (rows: QuizletEntry[], studentName: string) => {
+  const renderQuizletDetails = (rows: QuizletEntry[], student: StudentInfo) => {
     if (!rows.length) {
       return (
         <div className="text-sm text-gray-500">
@@ -1078,7 +1081,7 @@ function AdminBillingExcelPageInner() {
         {rows.map((item, idx) => {
           const dateStr = item.class_date ?? item.date ?? "";
           const formattedDate = formatDateForLink(dateStr);
-          const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(studentName)}`;
+          const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}`;
           
           return (
             <div
@@ -1108,11 +1111,11 @@ function AdminBillingExcelPageInner() {
       case "schedule":
         return renderScheduleDetails(row.schedules);
       case "classnote":
-        return renderClassnoteDetails(row.classnotes, row.student.name);
+        return renderClassnoteDetails(row.classnotes, row.student);
       case "diary":
-        return renderDiaryDetails(row.diaries, row.student.name);
+        return renderDiaryDetails(row.diaries, row.student);
       case "quizlet":
-        return renderQuizletDetails(row.quizlets, row.student.name);
+        return renderQuizletDetails(row.quizlets, row.student);
       default:
         return null;
     }
@@ -1237,13 +1240,13 @@ function AdminBillingExcelPageInner() {
 
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Hagwon Pays
+                  결제 금액 (₩)
                 </div>
                 <div className="mt-1 text-2xl font-semibold text-gray-900">
-                  {CURRENCY_FORMATTER.format(Math.round(summary.hagwonRevenue))}
+                  {CURRENCY_FORMATTER.format(Math.round(summary.totalAmountDue))}
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
-                  {summary.billableClasses.toFixed(2)} 개 수업 (선결제 차감 후)
+                  결제 대상 수업 {summary.totalNextToPay.toFixed(2)}개
                 </div>
               </div>
 
@@ -1297,14 +1300,22 @@ function AdminBillingExcelPageInner() {
                           financial?.hourlyRate ?? DEFAULT_RATE;
                         const initialCreditValue =
                           financial?.initialCredit ?? 0;
-                        const balanceClassesValue =
-                          financial?.balanceClasses ?? 0;
-                        const billableClassesValue =
-                          financial?.billableClasses ?? Math.max(
-                            balanceClassesValue,
-                            0
-                          );
-                        const revenueValue = financial?.revenue ?? 0;
+                        const classesCompletedValue =
+                          financial?.classesCompleted ?? row.classnotes.length;
+                        const nextMonthPlannedValue =
+                          financial?.nextMonthPlanned ?? row.nextSchedules.length;
+                        const carryAfterValue =
+                          financial?.carryAfterSettlement ??
+                          initialCreditValue - classesCompletedValue;
+                        const totalCreditsAvailableValue =
+                          financial?.totalCreditsAvailable ??
+                          Math.max(0, carryAfterValue);
+                        const nextToPayClassesValue =
+                          financial?.nextToPayClasses ??
+                          Math.max(0, nextMonthPlannedValue - carryAfterValue);
+                        const amountDueValue =
+                          financial?.amountDue ??
+                          Math.max(0, nextToPayClassesValue * hourlyRateValue);
                         return (
                           <React.Fragment key={row.student.id}>
                             <tr className="hover:bg-slate-50">
@@ -1407,7 +1418,7 @@ function AdminBillingExcelPageInner() {
                                       <span className="mb-1">Initial credit</span>
                                       <input
                                         type="number"
-                                        step="0.5"
+                                        step="1"
                                         className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
                                         value={initialCreditValue}
                                         onChange={(e) => {
@@ -1446,22 +1457,40 @@ function AdminBillingExcelPageInner() {
                                   </div>
                                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
                                     <div className="flex items-center justify-between">
-                                      <span>Balance classes</span>
+                                      <span>이번달 선결제(예정/스케줄)</span>
                                       <span className="font-medium text-gray-900">
-                                        {balanceClassesValue.toFixed(2)}
+                                        {initialCreditValue.toFixed(0)}
                                       </span>
                                     </div>
                                     <div className="mt-1 flex items-center justify-between">
-                                      <span>Billable classes</span>
+                                      <span>이번달 실제 수업 (노트 기준)</span>
                                       <span className="font-medium text-gray-900">
-                                        {billableClassesValue.toFixed(2)}
+                                        {classesCompletedValue.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between">
+                                      <span>다음달 예정 수업 (스케줄)</span>
+                                      <span className="font-medium text-gray-900">
+                                        {nextMonthPlannedValue.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between">
+                                      <span>다음달 차감 가능 수업</span>
+                                      <span className="font-medium text-gray-900">
+                                        {totalCreditsAvailableValue.toFixed(2)}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between">
+                                      <span>결제 대상 수업</span>
+                                      <span className="font-medium text-gray-900">
+                                        {nextToPayClassesValue.toFixed(2)}
                                       </span>
                                     </div>
                                     <div className="mt-2 flex items-center justify-between text-gray-700">
-                                      <span>Hagwon pays</span>
+                                      <span>결제 금액 (₩)</span>
                                       <span className="text-sm font-semibold text-gray-900">
                                         {CURRENCY_FORMATTER.format(
-                                          Math.round(revenueValue)
+                                          Math.round(amountDueValue)
                                         )}
                                       </span>
                                     </div>
@@ -1471,10 +1500,11 @@ function AdminBillingExcelPageInner() {
                             <td className="px-4 py-3">
                               {(() => {
                                 const loading = !!billingLinkLoading[row.student.id];
-                                const canProcess = isAdmin && financial.revenue > 0 && !loading;
+                                const canProcess =
+                                  isAdmin && amountDueValue > 0 && !loading;
                                 const disabledReason = !isAdmin
                                   ? "관리자만 사용할 수 있습니다"
-                                  : financial.revenue <= 0
+                                  : amountDueValue <= 0
                                   ? "결제할 금액이 없습니다"
                                   : loading
                                   ? "처리 중..."
