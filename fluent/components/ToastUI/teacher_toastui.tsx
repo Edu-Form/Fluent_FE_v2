@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import "@toast-ui/calendar/dist/toastui-calendar.min.css";
 
 // Lightweight types because we lazy-load Calendar to avoid SSR issues
@@ -121,9 +122,8 @@ function shade(hex: string, p: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export default function TeacherToastUI({
+function TeacherToastUIInner({
   data,
-
   variant = "compact",
   saveEndpointBase = "/api/schedules",
   forceView,
@@ -133,6 +133,11 @@ export default function TeacherToastUI({
   allowedTeachers,
   teacherColors,
 }: Props) {
+  const searchParams = useSearchParams();
+  const urlUser = searchParams.get("user") || "";
+  const urlType = searchParams.get("type") || "teacher";
+  const urlId = searchParams.get("id") || "";
+  const currentUser = defaults?.teacher_name || urlUser;
 
   // --- per-student cache for class_history (for popover meta)
   const studentCacheRef = useRef<Map<string, any>>(new Map());
@@ -1231,6 +1236,15 @@ export default function TeacherToastUI({
               Admin Billing
             </a>
             <a
+              href={`/teacher/admin_billing_1?user=${encodeURIComponent(currentUser)}&type=${encodeURIComponent(urlType)}${urlId ? `&id=${encodeURIComponent(urlId)}` : ""}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Admin Billing 2"
+              className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+            >
+              Admin Billing 2
+            </a>
+            <a
               href="/teacher/schedule/admin/"
               target="_blank"
               rel="noopener noreferrer"
@@ -1833,5 +1847,13 @@ export default function TeacherToastUI({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TeacherToastUI(props: Props) {
+  return (
+    <Suspense fallback={<div className="p-4">Loading calendar...</div>}>
+      <TeacherToastUIInner {...props} />
+    </Suspense>
   );
 }
