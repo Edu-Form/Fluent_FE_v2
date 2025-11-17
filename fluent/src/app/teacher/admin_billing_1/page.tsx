@@ -313,12 +313,7 @@ function AdminBillingExcelPageInner() {
       setBillingLinkLoading((prev) => ({ ...prev, [studentId]: true }));
 
       try {
-        // Guard: admins only
-        const user = (searchParams.get("user") || "").trim();
-        const adminOk = ALLOWED_ADMINS.some(
-          (a) => a.trim().toLowerCase() === user.toLowerCase()
-        );
-        if (!adminOk) {
+        if (!isAdmin) {
           alert("관리자만 결제 프로세스를 실행할 수 있습니다.");
           setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
           return;
@@ -398,7 +393,7 @@ function AdminBillingExcelPageInner() {
         setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
       }
     },
-    []
+    [isAdmin]
   );
 
   const handleCheckStudentSchedule = useCallback(
@@ -504,7 +499,7 @@ function AdminBillingExcelPageInner() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentUser, isAdmin]);
 
   const ensureDiary = useCallback(
     async (studentName: string) => {

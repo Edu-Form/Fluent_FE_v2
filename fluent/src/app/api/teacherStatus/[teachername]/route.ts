@@ -44,16 +44,6 @@ function toDotDate(raw?: string | null) {
   return `${y}. ${mo}. ${d}.`;
 }
 
-function formatDotDate(dateInput: any) {
-  const date = new Date(dateInput);
-  if (isNaN(date.getTime())) return "";
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}. ${m}. ${d}.`;
-}
-/* ────────────────────────────────────────────────────────────────────────── */
-
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
