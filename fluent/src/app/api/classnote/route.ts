@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       quizlet_saved,
       teacher_name,
       type,
+      reason
     } = body || {};
 
     if (!quizletData) {
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
         quizlet_saved: !!quizlet_saved, // probably false at End Class time
         teacher_name: teacher_name ?? "",
         type: type ?? "",
+        reason: reason ?? "", 
       });
       results.push({ name, result: res });
     }

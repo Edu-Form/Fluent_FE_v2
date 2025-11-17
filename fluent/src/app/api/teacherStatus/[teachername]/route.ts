@@ -6,7 +6,7 @@ import {
   getStudentQuizletData,
   getStudentScheduleData,
   saveTeacherStatus,
-  getTempClassNote, // ✅ added import
+  getClassnotes,        // ✅ REAL classnotes
 } from "@/lib/data";
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
@@ -76,40 +76,63 @@ export async function GET(request: Request) {
 
     const teacherChecklist = await Promise.all(
       teacherStatus.map(async (student: any) => {
+        /* ─── Fetch supporting data ──────────────────────────── */
         const recent_diary = (await getStudentDiaryData(student.name)) ?? [];
         const recent_quizlet = (await getStudentQuizletData(student.name)) ?? [];
         const schedule_list = (await getStudentScheduleData(student.name)) ?? [];
 
-        // ✅ new: fetch temp class note from MongoDB
-        const tempClassNote = await getTempClassNote(student.name);
-        const tempDate = tempClassNote?.updatedAt
-          ? formatDotDate(tempClassNote.updatedAt)
-          : "";
+        /* ─── REAL CLASSNOTES (fixes EVERYTHING) ─────────────── */
+        const allNotes = await getClassnotes(student.name);
 
-        // ✅ original quizlet logic
-        const q0 = recent_quizlet[0] ?? { class_date: "", date: "" }; // current quizlet
-        const q1 = recent_quizlet[1] ?? { class_date: "", date: "" }; // previous quizlet
-        const d0 = recent_diary[0] ?? { class_date: "", date: "" };   // latest diary
+        // Sorted newest → oldest
+        allNotes.sort((a: any, b: any) => {
+          const da = new Date(a.class_date || a.date);
+          const db = new Date(b.class_date || b.date);
+          return db.getTime() - da.getTime();
+        });
 
-        // ✅ schedule matching based on tempDate
+        const latestNote = allNotes[0];
+        const previousNote = allNotes[1];
+
+        const classNoteDate =
+          latestNote?.class_date ||
+          latestNote?.date ||
+          "";
+
+        const previousClassNoteDate =
+          previousNote?.class_date ||
+          previousNote?.date ||
+          "";
+
+        /* ─── Quizlet / Diary Logic ───────────────────────────── */
+        const q0 = recent_quizlet[0] ?? { class_date: "", date: "" };
+        const d0 = recent_diary[0] ?? { class_date: "", date: "" };
+
+        /* ─── Match schedule with REAL classnote date ─────────── */
         let scheduleDate = "";
-        if (tempDate) {
-          const found = schedule_list.find((s: any) => s.date === tempDate);
+        if (classNoteDate) {
+          const found = schedule_list.find(
+            (s: any) => s.date === classNoteDate
+          );
           scheduleDate = found ? found.date : "";
         }
 
-        // ✅ build row: class_note from temp, quizlet_date from quizlet.class_date
+        /* ─── Build final row ─────────────────────────────────── */
         const row = {
           name: student.name,
           phoneNumber: student.phoneNumber,
-          class_note: tempDate || "",            // from quizlet_temp.updatedAt
-          previous_class_note: q1.class_date || "",
-          quizlet_date: q0.class_date || "",     // keep original quizlet class_date
-          diary_date: d0.class_date || "",
-          diary_edit: d0.date || "",
+
+          class_note: toDotDate(classNoteDate),
+          previous_class_note: toDotDate(previousClassNoteDate),
+
+          quizlet_date: toDotDate(q0.class_date || q0.date),
+          diary_date: toDotDate(d0.class_date),
+          diary_edit: toDotDate(d0.date),
+
           schedule_date: scheduleDate,
         };
 
+        /* ─── Diary window validation ─────────────────────────── */
         const diary_in_window =
           row.class_note &&
           row.previous_class_note &&
@@ -122,12 +145,12 @@ export async function GET(request: Request) {
             ? toDotDate(row.diary_date)
             : "N/A";
 
-        // ✅ persist snapshot
+        /* ─── Persist snapshot for admin dashboard ───────────── */
         if (row.class_note) {
           await saveTeacherStatus(
             row.name,
-            toDotDate(row.class_note),
-            toDotDate(row.quizlet_date) || "N/A",
+            row.class_note,
+            row.quizlet_date || "N/A",
             diary_in_window,
             row.phoneNumber
           ).catch((e: any) =>

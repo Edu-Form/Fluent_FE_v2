@@ -1725,7 +1725,8 @@ export async function saveClassnotesNew(input: {
   duration_ms?: number | null;
   quizlet_saved?: boolean;    // false at first; can be flipped later
   teacher_name?: string;      // optional
-  type?: string;              // optional: beginner/intermediate/business
+  type?: string;  
+  reason?: string;             // optional: beginner/intermediate/business
 }) {
   try {
     const client = await clientPromise;
@@ -1755,6 +1756,7 @@ export async function saveClassnotesNew(input: {
         quizlet_saved: !!input.quizlet_saved,
         teacher_name: input.teacher_name ?? "",
         type: input.type ?? "",
+        reason: input.reason ?? "", 
         updatedAt: toKoreanISOString(now),
       },
       $setOnInsert: { createdAt: toKoreanISOString(now) },
@@ -1884,6 +1886,25 @@ export async function getRecentClassnote(student_name: string) {
     return null;
   }
 }
+
+export async function getClassnotes(student_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    const docs = await coll
+      .find({ student_name })
+      .sort({ date: -1, createdAt: -1 })
+      .toArray();
+
+    return docs.map(serialize_document);
+  } catch (err) {
+    console.error("getClassnotes error:", err);
+    return [];
+  }
+}
+
 
 // lib/data.ts
 export async function setClassnoteQuizletSavedById(id: string) {

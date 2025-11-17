@@ -1360,9 +1360,63 @@ export default function TeacherToastUI({
         </p>
 
         <div className="grid grid-cols-2 gap-2">
-          <button className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-1 rounded-md hover:bg-yellow-100">
-            Paid Absence
+          <button
+            className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-1 rounded-md hover:bg-yellow-100"
+            onClick={async () => {
+              try {
+                const studentName = raw.student_name;
+                const teacherName = raw.teacher_name || "";
+                const dateDot = dateKey;               
+                const scheduleStart = new Date(ev.start);
+                const scheduleEnd = new Date(ev.end);
+                const durationMs = scheduleEnd.getTime() - scheduleStart.getTime();
+
+                // FIXED: original_text must be NON-empty HTML
+                const payload = {
+                  quizletData: {
+                    student_names: [studentName],
+                    class_date: dateDot,
+                    date: dateDot,
+                    original_text: "<p>Paid Class</p>",   // ✅ REQUIRED!
+                  },
+
+                  homework: "",
+                  nextClass: "",
+
+                  started_at: scheduleStart.toISOString(),
+                  ended_at: scheduleEnd.toISOString(),
+                  duration_ms: durationMs,
+                  quizlet_saved: false,
+                  teacher_name: teacherName,
+                  type: "teacher",
+                  reason: "paid class",
+                };
+
+                const res = await fetch("/api/classnote", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(payload),
+                });
+
+                if (!res.ok) {
+                  const err = await res.json().catch(()=>({}));
+                  alert("Failed to register paid class: " + (err.error || res.status));
+                  return;
+                }
+
+                alert("Paid class registered successfully.");
+                window.dispatchEvent(new CustomEvent("calendar:saved"));
+                setDetail(null);
+
+              } catch (err) {
+                console.error("Paid class error:", err);
+                alert("❌ Failed to save paid class.");
+              }
+            }}
+          >
+            Paid Class
           </button>
+
 
           <button
             onClick={handleDeleteSingle}
