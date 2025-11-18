@@ -1302,6 +1302,7 @@ function TeacherToastUIInner({
 
   const notes = classnoteMap.get(`${student}::${dateKey}`) || [];
   const note = notes[0];
+  const teacherFromNote = note?.teacher_name?.trim() || "";
   const hasNote = !!note;
   const hasSchedule = !raw.note_only;
 
@@ -1422,7 +1423,13 @@ function TeacherToastUIInner({
             onClick={async () => {
               try {
                 const studentName = raw.student_name;
-                const teacherName = raw.teacher_name || "";
+                const teacherName =
+                  teacherFromNote ||
+                  raw.teacher_name?.trim() ||
+                  defaults?.teacher_name?.trim() ||
+                  addForm.teacher_name?.trim() ||
+                  "";
+
                 const dateDot = dateKey;               
                 const scheduleStart = new Date(ev.start);
                 const scheduleEnd = new Date(ev.end);
@@ -1471,7 +1478,7 @@ function TeacherToastUIInner({
               }
             }}
           >
-            Paid Class
+            Paid Cancel
           </button>
 
 
@@ -1498,7 +1505,13 @@ function TeacherToastUIInner({
                 }
 
                 const studentName = student;
-                const teacherName = raw.teacher_name ?? "";
+                const teacherName =
+                  teacherFromNote ||
+                  raw.teacher_name?.trim() ||
+                  defaults?.teacher_name?.trim() ||
+                  addForm.teacher_name?.trim() ||
+                  "";
+
                 const roomName = raw.room_name || "101";
                 const date = ymdString(toLocalDateOnly(started));
                 let time = started.getHours() + started.getMinutes() / 60;
@@ -1555,7 +1568,13 @@ function TeacherToastUIInner({
                 }
 
                 const studentName = student;
-                const teacherName = raw.teacher_name ?? "";
+                const teacherName =
+                  teacherFromNote ||
+                  raw.teacher_name?.trim() ||
+                  defaults?.teacher_name?.trim() ||
+                  addForm.teacher_name?.trim() ||
+                  "";
+
                 const roomName = raw.room_name || "HF";
 
                 // Base date of this unscheduled class
@@ -1635,7 +1654,12 @@ function TeacherToastUIInner({
                   }
 
                   const studentName = student;
-                  const teacherName = raw.teacher_name ?? "";
+                  const teacherName =
+                    teacherFromNote ||
+                    raw.teacher_name?.trim() ||
+                    defaults?.teacher_name?.trim() ||
+                    addForm.teacher_name?.trim() ||
+                    "";
                   const roomName = raw.room_name || "HF";
 
                   const baseDate = toLocalDateOnly(started);

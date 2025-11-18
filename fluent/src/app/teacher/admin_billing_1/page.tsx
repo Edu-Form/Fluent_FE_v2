@@ -936,11 +936,11 @@ function AdminBillingExcelPageInner() {
               : Number(patch.rate);
         }
         if (patch.initialCredit !== undefined) {
-          next.initialCredit =
-            patch.initialCredit === null ||
-            !Number.isFinite(patch.initialCredit)
-              ? 0
-              : Number(patch.initialCredit);
+          if (patch.initialCredit === null || isNaN(patch.initialCredit)) {
+            next.initialCredit = existing.initialCredit ?? 0; 
+          } else {
+            next.initialCredit = patch.initialCredit;
+          }
         }
         return { ...prev, [studentId]: next };
       });
