@@ -1336,27 +1336,70 @@ function TeacherToastUIInner({
       }}
     >
     {caseType === "green" && (
-      <div className="space-y-2 text-sm text-gray-700">
-        <div className="font-semibold text-gray-900">📘 {dateKey}</div>
-        <div className="text-gray-600">{timeFmt(start)} – {timeFmt(end)}</div>
-        <div className="flex gap-2 mt-2">
+      <div className="text-[11px] text-gray-700 leading-tight space-y-1">
+
+        {/* Title */}
+        <div className="font-semibold text-gray-900 text-[12px] flex items-center gap-1">
+          📘 Class Info
+        </div>
+
+        {/* Date */}
+        <div className="grid grid-cols-2">
+          <div className="text-gray-500">Date</div>
+          <div className="font-medium text-gray-900 text-right">{dateKey}</div>
+        </div>
+
+        {/* Student / Teacher */}
+        <div className="grid grid-cols-2">
+          <div className="text-gray-500">Student</div>
+          <div className="font-medium text-gray-900 text-right truncate">
+            {student}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2">
+          <div className="text-gray-500">Teacher</div>
+          <div className="font-medium text-gray-900 text-right truncate">
+            {raw.teacher_name}
+          </div>
+        </div>
+
+        {/* Scheduled time */}
+        <div className="grid grid-cols-2">
+          <div className="text-gray-500">Scheduled</div>
+          <div className="font-medium text-gray-900 text-right">
+            {timeFmt(start)} – {timeFmt(end)}
+          </div>
+        </div>
+
+        {/* Actual classnote time */}
+        {started && ended && (
+          <div className="grid grid-cols-2">
+            <div className="text-gray-500">Actual</div>
+            <div className="font-medium text-gray-900 text-right">
+              {timeFmt(started)} – {timeFmt(ended)}
+            </div>
+          </div>
+        )}
+
+        {/* Links */}
+        <div className="flex gap-2 pt-1">
           <a
             href={`/teacher/student/quizlet?student_name=${encodeURIComponent(student)}`}
             target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-md hover:bg-blue-100"
+            className="text-[11px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md hover:bg-blue-100"
           >
-            Quizlet
+            Quizlet →
           </a>
           <a
             href={`/teacher/student/diary?student_name=${encodeURIComponent(student)}`}
             target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded-md hover:bg-green-100"
+            className="text-[11px] bg-green-50 text-green-600 px-2 py-0.5 rounded-md hover:bg-green-100"
           >
-            Diary
+            Diary →
           </a>
         </div>
+
       </div>
     )}
 
@@ -1501,6 +1544,187 @@ function TeacherToastUIInner({
           >
             Class Time Changed
           </button>
+          {caseType === "red_unscheduled" && (
+                    <button
+            className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100"
+            onClick={async () => {
+              try {
+                if (!started || !ended) {
+                  alert("No valid class note time found.");
+                  return;
+                }
+
+                const studentName = student;
+                const teacherName = raw.teacher_name ?? "";
+                const roomName = raw.room_name || "HF";
+
+                // Base date of this unscheduled class
+                const baseDate = toLocalDateOnly(started);  
+                const weekday = baseDate.getDay();
+
+                // Start time (rounded to 0.5)
+                let startTime = started.getHours() + started.getMinutes() / 60;
+                startTime = Math.round(startTime * 2) / 2;
+
+                // Duration (hours, 0.5 increments)
+                const durationH =
+                  Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
+
+                // 6 months range
+                const until = new Date(baseDate);
+                until.setMonth(until.getMonth() + 6);
+
+                // Build repeating schedules
+                const payloads = [];
+
+                for (
+                  let d = new Date(baseDate);
+                  d.getTime() <= until.getTime();
+                  d.setDate(d.getDate() + 7)
+                ) {
+                  if (d.getDay() !== weekday) continue;
+
+                  const iterDate = new Date(d);
+                  payloads.push({
+                    date: ymdString(iterDate),
+                    time: startTime,
+                    duration: durationH,
+                    room_name: roomName,
+                    teacher_name: teacherName,
+                    student_name: studentName,
+                    calendarId: "1",
+                  });
+                }
+
+
+                if (payloads.length === 0) {
+                  alert("No repeat dates found.");
+                  return;
+                }
+
+                const res = await fetch("/api/schedules", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(payloads),
+                });
+
+                if (!res.ok) throw new Error("Failed to create repeated schedules");
+
+                alert(`✅ ${payloads.length} repeated classes added (6 months).`);
+                window.dispatchEvent(new CustomEvent("calendar:saved"));
+                setDetail(null);
+
+              } catch (err) {
+                console.error("Repeat add error:", err);
+                alert("❌ Failed to add repeated classes.");
+              }
+            }}
+          >
+            Confirm class and add regularly to Calendar
+          </button>
+          )}
+
+          {(caseType === "red_unscheduled" || caseType === "red_mismatch") && (
+            <button
+              className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-300 px-2 py-1 rounded-md hover:bg-yellow-100"
+              onClick={async () => {
+                try {
+                  if (!started || !ended) {
+                    alert("No valid class note time available.");
+                    return;
+                  }
+
+                  const studentName = student;
+                  const teacherName = raw.teacher_name ?? "";
+                  const roomName = raw.room_name || "HF";
+
+                  const baseDate = toLocalDateOnly(started);
+                  const weekday = baseDate.getDay();
+
+                  // Start time (rounded)
+                  let startTime = started.getHours() + started.getMinutes() / 60;
+                  startTime = Math.round(startTime * 2) / 2;
+
+                  // Duration (rounded 0.5)
+                  const durationH =
+                    Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
+
+                  // Repeat 6 months
+                  const until = new Date(baseDate);
+                  until.setMonth(until.getMonth() + 6);
+
+                  const payloads = [];
+
+                  // 1️⃣ If SCHEDULE EXISTS (red_mismatch), update it
+                  if (caseType === "red_mismatch") {
+                    payloads.push({
+                      _id: raw.id || raw._id,
+                      update: {
+                        date: ymdString(baseDate),
+                        time: startTime,
+                        duration: durationH,
+                        room_name: roomName,
+                        teacher_name: teacherName,
+                        student_name: studentName,
+                      },
+                    });
+                  }
+
+                  // 1️⃣ If SCHEDULE MISSING (red_unscheduled), create the schedule for this date
+                  if (caseType === "red_unscheduled") {
+                    payloads.push({
+                      date: ymdString(baseDate),
+                      time: startTime,
+                      duration: durationH,
+                      room_name: roomName,
+                      teacher_name: teacherName,
+                      student_name: studentName,
+                      calendarId: "1",
+                    });
+                  }
+
+                  // 2️⃣ Add FUTURE WEEKLY SCHEDULES FOR 6 MONTHS
+                  for (
+                    let d = new Date(baseDate);
+                    d.getTime() <= until.getTime();
+                    d.setDate(d.getDate() + 7)
+                  ) {
+                    if (d.getDay() !== weekday) continue;
+
+                    payloads.push({
+                      date: ymdString(new Date(d)),
+                      time: startTime,
+                      duration: durationH,
+                      room_name: roomName,
+                      teacher_name: teacherName,
+                      student_name: studentName,
+                      calendarId: "1",
+                    });
+                  }
+
+                  // 3️⃣ Save all
+                  const res = await fetch("/api/schedules/mismatch-or-unscheduled-update", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payloads),
+                  });
+
+                  if (!res.ok) throw new Error("Failed to update schedules");
+
+                  alert(`✅ Class updated and future schedules added for 6 months`);
+                  window.dispatchEvent(new CustomEvent("calendar:saved"));
+                  setDetail(null);
+
+                } catch (err) {
+                  console.error(err);
+                  alert("❌ Failed to update class schedule.");
+                }
+              }}
+            >
+              Change Information About Class
+            </button>
+          )}
+
 
         </div>
       </div>
