@@ -82,20 +82,24 @@ const HomePageContent = () => {
 
   const sortedStudents = React.useMemo(() => {
     const now = Date.now();
-    const withFlag = (allStudents || []).map((s: any) => {
-      const dt = toDate(s.class_note); // returns Date | null
+    const threshold = INACTIVE_DAYS_THRESHOLD * MS;
+
+    const result = (allStudents || []).map((s: any) => {
+      const dt = toDate(s.class_note); 
       const inactive =
-        dt ? (now - dt.getTime()) > (INACTIVE_DAYS_THRESHOLD * MS) : false;
+        dt ? now - dt.getTime() > threshold : true;
+
       return { ...s, _inactive: inactive };
     });
-    // inactive at bottom
-    withFlag.sort((a: any, b: any) => {
-      const ai = !!a._inactive;
-      const bi = !!b._inactive;
-      return ai === bi ? 0 : ai ? 1 : -1;
+
+    result.sort((a, b) => {
+      if (a._inactive === b._inactive) return 0;
+      return a._inactive ? 1 : -1;  // inactive → bottom
     });
-    return withFlag;
-  }, [allStudents]);
+
+    return result;
+  }, [JSON.stringify(allStudents)]);
+
 
   const URL = `/api/schedules/${type}/${user}`;
   const ALL_STUDENTS_URL = `/api/teacherStatus/${user}`;

@@ -860,9 +860,10 @@ function TeacherToastUIInner({
           const y = (nativeEvent?.clientY ?? rect.top) - rect.top;
 
           const s = new Date(start);
-          const e = end ? new Date(end) : new Date(s.getTime() + 30 * 60 * 1000);
-          const mins = Math.max(30, Math.round((e.getTime() - s.getTime()) / 60000));
-          const hours = Math.round(mins / 30) / 2;
+          // Always default to 1 hour
+          const e = end ? new Date(end) : new Date(s.getTime() + 60 * 60 * 1000);
+          const hours = 1;
+
 
           setAddOpen(true);
           setRepeatMode(false);
