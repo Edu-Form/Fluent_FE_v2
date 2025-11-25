@@ -1415,13 +1415,7 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                       </tr>
                     ) : (
                       studentRows
-                        .filter((row) =>
-                          row.classnotes.length > 0 ||
-                          row.schedules.length > 0 ||
-                          row.diaries.length > 0 ||
-                          row.quizlets.length > 0 ||
-                          row.nextSchedules.length > 0
-                        )
+                        .filter((row) => row.classnotes.length > 0)
                         .map((row) => {
                         const financial = financialById[row.student.id];
                         const hourlyRateValue =
