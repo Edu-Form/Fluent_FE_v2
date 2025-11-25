@@ -503,6 +503,28 @@ export async function getStudentByName(student_name: string) {
   }
 }
 
+export async function updateStudentByName(name: string, updateData: any) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const res = await db.collection("students").findOneAndUpdate(
+      { name },
+      { $set: updateData },
+      { returnDocument: "after" }
+    );
+
+    // FIX: handle both "res is null" and "res.value is null"
+    if (!res || !res.value) return null;
+
+    return serialize_document(res.value);
+  } catch (err) {
+    console.error("updateStudentByName error:", err);
+    return null;
+  }
+}
+
+
 export async function getStudentQuizletData(student_name: string) {
   try {
     const client = await clientPromise;

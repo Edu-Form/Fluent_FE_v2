@@ -163,6 +163,27 @@ function parseDateString(
   return null;
 }
 
+async function fetchTeacherConfirm(studentName: string, monthKey: string) {
+  try {
+    const [year, mm] = monthKey.split("-");
+    const yyyymm = `${year}${mm}`;
+
+    const res = await fetch(
+      `/api/billing/check1/${encodeURIComponent(studentName)}/${yyyymm}`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return { confirmed: false };
+
+    const json = await res.json().catch(() => null);
+    if (!json?.data) return { confirmed: false };
+
+    return { confirmed: Boolean(json.data.locked) };
+  } catch {
+    return { confirmed: false };
+  }
+}
+
+
 function monthRangeFromKey(monthKey: string) {
   const [yearStr, monthStr] = monthKey.split("-");
   const year = Number(yearStr);
@@ -298,6 +319,10 @@ function AdminBillingExcelPageInner() {
   const [studentConfigs, setStudentConfigs] = useState<
     Record<string, { rate?: number; initialCredit?: number }>
   >({});
+
+  // Stores teacher-confirmed boolean per student
+  const [confirmState, setConfirmState] = useState<Record<string, boolean>>({});
+
 
   const [billingLinkLoading, setBillingLinkLoading] = useState<
     Record<string, boolean>
@@ -772,7 +797,7 @@ function AdminBillingExcelPageInner() {
     const diaryCache = diaryCacheRef.current;
     const quizletCache = quizletCacheRef.current;
 
-    return students.map((student) => {
+    const rows = students.map((student) => {
       const schedules = monthSchedules.filter(
         (entry) =>
           String(entry.student_name || "").trim() === student.name.trim()
@@ -808,6 +833,16 @@ function AdminBillingExcelPageInner() {
         totalHours,
       };
     });
+
+    return rows.map((row) => ({
+      ...row,
+      teacherConfirmedPromise: fetchTeacherConfirm(
+        row.student.name,
+        selectedMonth
+      ),
+    }));
+
+
   }, [
     selectedTeacher,
     selectedMonth,
@@ -817,6 +852,38 @@ function AdminBillingExcelPageInner() {
     monthClassnotes,
     cacheTick,
   ]);
+
+  // -------------------- LOAD TEACHER CONFIRM STATE --------------------
+useEffect(() => {
+  if (!studentRows.length || !selectedMonth) return;
+
+  let cancelled = false;
+
+  const loadConfirms = async () => {
+    const newState: Record<string, boolean> = {};
+
+    await Promise.all(
+      studentRows.map(async (row) => {
+        const res = await fetchTeacherConfirm(
+          row.student.name,
+          selectedMonth
+        );
+        newState[row.student.name] = res.confirmed;
+      })
+    );
+
+    if (!cancelled) {
+      setConfirmState(newState);
+    }
+  };
+
+  loadConfirms();
+  return () => {
+    cancelled = true;
+  };
+}, [selectedMonth, studentRows.map(r => r.student.name).join("|")]);
+
+
 
   const studentFinancials = useMemo<StudentFinancialSnapshot[]>(() => {
     return studentRows.map((row) => {
@@ -921,32 +988,60 @@ function AdminBillingExcelPageInner() {
   ]);
 
 
-  const handleConfigChange = useCallback(
-    (
-      studentId: string,
-      patch: { rate?: number | null; initialCredit?: number | null }
-    ) => {
-      setStudentConfigs((prev) => {
-        const existing = prev[studentId] ?? {};
-        const next = { ...existing };
-        if (patch.rate !== undefined) {
-          next.rate =
-            patch.rate === null || !Number.isFinite(patch.rate)
-              ? 0
-              : Number(patch.rate);
-        }
-        if (patch.initialCredit !== undefined) {
-          if (patch.initialCredit === null || isNaN(patch.initialCredit)) {
-            next.initialCredit = existing.initialCredit ?? 0; 
-          } else {
-            next.initialCredit = patch.initialCredit;
-          }
-        }
-        return { ...prev, [studentId]: next };
+const handleConfigChange = useCallback(
+  async (
+    studentId: string,
+    patch: { rate?: number | null; initialCredit?: number | null }
+  ) => {
+    // 1) Update local state (never store null)
+    setStudentConfigs((prev) => {
+      const existing = prev[studentId] ?? {};
+
+      const updated = {
+        ...existing,
+        ...(patch.rate !== undefined
+          ? { rate: patch.rate ?? undefined } // convert null → undefined
+          : {}),
+        ...(patch.initialCredit !== undefined
+          ? { initialCredit: patch.initialCredit ?? undefined } // convert null → undefined
+          : {}),
+      };
+
+      return { ...prev, [studentId]: updated };
+    });
+
+    // 2) Find the student info
+    const row = studentRows.find((r) => r.student.id === studentId);
+    if (!row) return;
+
+    const studentName = row.student.name;
+
+    // 3) Build POST payload (again: no null)
+    const payload: any = {};
+    if (patch.initialCredit !== undefined) {
+      payload.credits = patch.initialCredit ?? undefined;
+    }
+    if (patch.rate !== undefined) {
+      payload.hourlyRate = patch.rate ?? undefined;
+    }
+
+    // If payload is empty, no need to send API
+    if (Object.keys(payload).length === 0) return;
+
+    // 4) Send POST update
+    try {
+      await fetch(`/api/student/${encodeURIComponent(studentName)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
-    },
-    []
-  );
+    } catch (err) {
+      console.error("Failed to update student:", err);
+    }
+  },
+  [studentRows]
+);
+
 
   const renderScheduleDetails = (rows: ScheduleEntry[]) => {
     if (!rows.length) {
@@ -1289,7 +1384,9 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                         </td>
                       </tr>
                     ) : (
-                      studentRows.map((row) => {
+                      studentRows
+                        .filter((row) => row.classnotes.length > 0)    // ← ADD THIS LINE
+                        .map((row) => {
                         const financial = financialById[row.student.id];
                         const hourlyRateValue =
                           financial?.hourlyRate ?? DEFAULT_RATE;
@@ -1325,15 +1422,24 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-                                  {row.schedules.length}개
+                              {confirmState[row.student.name] ? (
+                                <span
+                                  className="inline-flex items-center rounded-full bg-emerald-50 
+                                            text-emerald-700 text-xs px-3 py-1 border border-emerald-200"
+                                >
+                                  ✅ Teacher Confirmed
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  {row.totalHours.toFixed(2)}h
+                              ) : (
+                                <span
+                                  className="inline-flex items-center rounded-full bg-red-50 
+                                            text-red-700 text-xs px-3 py-1 border border-red-200"
+                                >
+                                  ❌ Not Confirmed
                                 </span>
-                              </div>
+                              )}
                             </td>
+
+
                             <td className="px-4 py-3">
                               <div className="flex flex-col gap-1">
                                 {row.classnotes.length === 0 ? (

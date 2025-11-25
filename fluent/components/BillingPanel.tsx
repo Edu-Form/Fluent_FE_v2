@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
-/* ------------------------------ Types ------------------------------ */
+/* -------------------------------------------------------------------------- */
+/*                                TYPE DEFINITIONS                            */
+/* -------------------------------------------------------------------------- */
+
 type ScheduledRow = {
   _id?: string;
-  date: string;        // "YYYY. MM. DD" or "YYYY. MM. DD."
+  date: string; // "YYYY. MM. DD" or "YYYY. MM. DD."
   time?: string;
   room_name?: string;
   duration?: string;
@@ -14,46 +17,60 @@ type ScheduledRow = {
 };
 
 type BillingRow = {
-  id: string;          // local row id
-  noteDate: string;    // class-note date (editable)  -> "YYYY. MM. DD."
-  schedDate: string;   // schedule date (editable)    -> "YYYY. MM. DD."
+  id: string;
+  noteDate: string; // class date (canonical)
+  schedDate: string; // schedule date
 };
 
-type NextBillingRow = { id: string; schedDate: string };
+type NextBillingRow = {
+  id: string;
+  schedDate: string;
+};
 
-/* --------------------------- Date helpers -------------------------- */
-function toDateYMD(str?: string | null) {
+/* -------------------------------------------------------------------------- */
+/*                             DATE PARSING HELPERS                           */
+/* -------------------------------------------------------------------------- */
+
+function toDateYMD(str?: string | null): Date | null {
   if (!str) return null;
   const s = String(str).trim();
+
   const m =
-    s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?$/) || // 2025. 9. 9 or 2025. 09. 09.
-    s.match(/^(\d{4})[-\/]\s*(\d{1,2})[-\/]\s*(\d{1,2})\.?$/) || // 2025-9-9, 2025/09/09
+    s.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.?$/) || // 2025. 09. 09.
+    s.match(/^(\d{4})[-\/]\s*(\d{1,2})[-\/]\s*(\d{1,2})$/) || // 2025-09-09
     s.match(/^(\d{4})(\d{2})(\d{2})$/); // 20250909
+
   if (!m) return null;
-  const y = +m[1], mo = +m[2], d = +m[3];
+  const y = +m[1],
+    mo = +m[2],
+    d = +m[3];
   const dt = new Date(y, mo - 1, d);
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
-function ymdString(d: Date) {
+
+function ymdString(d: Date): string {
   // Always return with a TRAILING DOT
-  return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(d.getDate()).padStart(2, "0")}.`;
+  return `${d.getFullYear()}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(
+    d.getDate()
+  ).padStart(2, "0")}.`;
 }
-function sameYearMonth(a: Date, b: Date) {
+
+function sameYearMonth(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
 }
 
-/* ------------------------------ Component ------------------------------ */
+/* -------------------------------------------------------------------------- */
+/*                                BILLING PANEL                               */
+/* -------------------------------------------------------------------------- */
+
 export default function BillingPanel({
   studentName,
   teacherName,
-  quizletDates,               // class-note dates (strings)
-  scheduledRows,              // calendar schedules
-  onRefreshCalendar,          // optional calendar refresh hook
-  // Schedules API to create a class when matching a note without a schedule
+  quizletDates, // not used directly; we fetch from API for correctness
+  scheduledRows,
+  onRefreshCalendar,
   saveEndpointBase = "/api/schedules",
-  // If true, “Match” will CREATE a schedule when missing
   autoCreateScheduleOnMatch = true,
-  // Defaults for new schedule created by Match
   defaultsForNewSchedule = { room_name: "HF1", time: 18, duration: 1 },
 }: {
   studentName: string;
@@ -65,69 +82,164 @@ export default function BillingPanel({
   autoCreateScheduleOnMatch?: boolean;
   defaultsForNewSchedule?: { room_name?: string; time?: number; duration?: number };
 }) {
-  /* ---- Part 0: Local month control (independent of ToastUI) ---- */
+  /* ------------------------------------------------------------------------ */
+  /*                         MONTH CONTROL (HEADER)                           */
+  /* ------------------------------------------------------------------------ */
+
   const [monthAnchor, setMonthAnchor] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const monthLabel = `${monthAnchor.getFullYear()}. ${String(monthAnchor.getMonth() + 1).padStart(2, "0")}`;
-  const goPrevMonth = () => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
-  const goNextMonth = () => setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+
+  const monthLabel = `${monthAnchor.getFullYear()}. ${String(
+    monthAnchor.getMonth() + 1
+  ).padStart(2, "0")}`;
+
+  const goPrevMonth = () =>
+    setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const goNextMonth = () =>
+    setMonthAnchor((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   const todayMonth = () => {
     const now = new Date();
     setMonthAnchor(new Date(now.getFullYear(), now.getMonth(), 1));
   };
 
-  /* ---- Part 1: Simplified state (no fee / no settlement / no text message) ---- */
-  const [rows, setRows] = useState<BillingRow[]>([]);       // this month's actual classes (from notes)
-  const [nextRows, setNextRows] = useState<NextBillingRow[]>([]); // next month's planned schedules
-  const studentCacheRef = useRef<Map<string, any>>(new Map());
-  const [studentMeta, setStudentMeta] = useState<Record<string, { quizlet_date?: string; diary_date?: string }> | null>(null);
-  const [studentMetaLoading, setStudentMetaLoading] = useState(false);
+  /* ------------------------------------------------------------------------ */
+  /*                             CORE BILLING STATE                           */
+  /* ------------------------------------------------------------------------ */
 
-  // LOCK state: when true, panel is read-only because billing data exists for selected month
+  const [rows, setRows] = useState<BillingRow[]>([]);
+  const [nextRows, setNextRows] = useState<NextBillingRow[]>([]);
   const [locked, setLocked] = useState<boolean>(false);
   const [loadingCheck, setLoadingCheck] = useState<boolean>(false);
 
+  /* ------------------------------------------------------------------------ */
+  /*              FETCH TRUE QUIZLET / DIARY DATES (VIA CORRECT APIs)        */
+  /* ------------------------------------------------------------------------ */
+
+  const [quizletDatesAll, setQuizletDatesAll] = useState<string[]>([]);
+  const [diaryDatesAll, setDiaryDatesAll] = useState<string[]>([]);
+  const [loadingMeta, setLoadingMeta] = useState<boolean>(false);
+
+  // Fetch quizlets from correct API
   useEffect(() => {
-    if (!studentName) { setStudentMeta(null); return; }
-    const cached = studentCacheRef.current.get(studentName);
-    if (cached) {
-      setStudentMeta(buildClassHistoryMap(cached.class_history || []));
+    if (!studentName) {
+      setQuizletDatesAll([]);
       return;
     }
-    setStudentMetaLoading(true);
-    fetch(`/api/student/${encodeURIComponent(studentName)}`)
-      .then(res => res.ok ? res.json() : null)
-      .then(doc => {
-        if (doc) {
-          studentCacheRef.current.set(studentName, doc);
-          setStudentMeta(buildClassHistoryMap(doc.class_history || []));
-        } else {
-          setStudentMeta(null);
+
+    let cancelled = false;
+
+    const loadQuizlets = async () => {
+      setLoadingMeta(true);
+      try {
+        const res = await fetch(
+          `/api/quizlet/student/${encodeURIComponent(studentName)}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) {
+          if (!cancelled) setQuizletDatesAll([]);
+          return;
         }
-      })
-      .catch(() => setStudentMeta(null))
-      .finally(() => setStudentMetaLoading(false));
+        const data = await res.json();
+        const list: string[] = [];
+
+        for (const q of Array.isArray(data) ? data : []) {
+          const d = q?.class_date ?? q?.date;
+          const dt = toDateYMD(d);
+          if (dt) list.push(ymdString(dt));
+        }
+
+        if (!cancelled) {
+          const uniqSorted = Array.from(new Set(list)).sort((a, b) =>
+            a.localeCompare(b)
+          );
+          setQuizletDatesAll(uniqSorted);
+        }
+      } catch {
+        if (!cancelled) setQuizletDatesAll([]);
+      } finally {
+        if (!cancelled) setLoadingMeta(false);
+      }
+    };
+
+    loadQuizlets();
+    return () => {
+      cancelled = true;
+    };
   }, [studentName]);
 
-  // turn [{ "2025. 09. 15.": {quizlet_date, diary_date}}, ...] into a map
-  function buildClassHistoryMap(class_history: any[]): Record<string, { quizlet_date?: string; diary_date?: string }> {
-    const map: Record<string, { quizlet_date?: string; diary_date?: string }> = {};
-    (class_history || []).forEach((entry: any) => {
-      const [k, v] = Object.entries(entry || {})[0] || [];
-      if (k && v && typeof v === "object") map[String(k)] = v as any;
-    });
-    return map;
-  }
+  // Fetch diaries from correct API
+  useEffect(() => {
+    if (!studentName) {
+      setDiaryDatesAll([]);
+      return;
+    }
 
-  /* ---- Month data (this + next) ---- */
+    let cancelled = false;
+
+    const loadDiaries = async () => {
+      setLoadingMeta(true);
+      try {
+        const res = await fetch(
+          `/api/diary/student/${encodeURIComponent(studentName)}`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) {
+          if (!cancelled) setDiaryDatesAll([]);
+          return;
+        }
+        const data = await res.json();
+        const list: string[] = [];
+
+        for (const dval of Array.isArray(data) ? data : []) {
+          const d = dval?.class_date ?? dval?.date;
+          const dt = toDateYMD(d);
+          if (dt) list.push(ymdString(dt));
+        }
+
+        if (!cancelled) {
+          const uniqSorted = Array.from(new Set(list)).sort((a, b) =>
+            a.localeCompare(b)
+          );
+          setDiaryDatesAll(uniqSorted);
+        }
+      } catch {
+        if (!cancelled) setDiaryDatesAll([]);
+      } finally {
+        if (!cancelled) setLoadingMeta(false);
+      }
+    };
+
+    loadDiaries();
+    return () => {
+      cancelled = true;
+    };
+  }, [studentName]);
+
+  /* ------------------------------------------------------------------------ */
+  /*          PER-MONTH QUIZLET / SCHEDULE DATES (ANCHOR FOR DIARIES)        */
+  /* ------------------------------------------------------------------------ */
+
+  const quizletDatesThisMonth = useMemo(() => {
+    return quizletDatesAll
+      .map((s) => toDateYMD(s))
+      .filter((dt): dt is Date => !!dt && sameYearMonth(dt, monthAnchor))
+      .map((dt) => ymdString(dt))
+      .sort((a, b) => a.localeCompare(b)); // old -> new
+  }, [quizletDatesAll, monthAnchor]);
+
+  const quizletSetThisMonth = useMemo(
+    () => new Set(quizletDatesThisMonth),
+    [quizletDatesThisMonth]
+  );
+
   const scheduleDatesThisMonth = useMemo(() => {
     return (scheduledRows || [])
       .map((r) => toDateYMD(r?.date))
       .filter((dt): dt is Date => !!dt && sameYearMonth(dt, monthAnchor))
       .map((dt) => ymdString(dt))
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => a.localeCompare(b)); // old -> new
   }, [scheduledRows, monthAnchor]);
 
   const scheduleSetThisMonth = useMemo(
@@ -145,159 +257,202 @@ export default function BillingPanel({
       .map((r) => toDateYMD(r?.date))
       .filter((dt): dt is Date => !!dt && sameYearMonth(dt, nextMonthAnchor))
       .map((dt) => ymdString(dt))
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => a.localeCompare(b)); // old -> new
   }, [scheduledRows, nextMonthAnchor]);
 
-// Replace your existing useEffect that checks saved billing for the month with this one:
-useEffect(() => {
-  if (!studentName) return;
-  const y = monthAnchor.getFullYear();
-  const m = String(monthAnchor.getMonth() + 1).padStart(2, "0");
-  const yyyymm = `${y}${m}`; // e.g. "202510"
+  /* ------------------------------------------------------------------------ */
+  /*     DIARY MAPPING: ASSIGN EACH DIARY DATE TO THE "NEXT" CLASS DATE      */
+  /* ------------------------------------------------------------------------ */
 
-  let cancelled = false;
-  setLoadingCheck(true);
+  // Anchor class dates for diary mapping: union of quizlet & schedule dates in this month
+  const anchorClassDatesForDiary = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of quizletDatesThisMonth) set.add(d);
+    for (const d of scheduleDatesThisMonth) set.add(d);
+    return Array.from(set).sort((a, b) => a.localeCompare(b)); // old -> new
+  }, [quizletDatesThisMonth, scheduleDatesThisMonth]);
 
-  (async () => {
-    try {
-      const res = await fetch(`/api/billing/check1/${encodeURIComponent(studentName)}/${yyyymm}`, { cache: "no-store" });
+  const diaryAssignmentMap = useMemo(() => {
+    const result: Record<string, string> = {};
+    if (anchorClassDatesForDiary.length === 0) return result;
 
-      // If non-200, mark unlocked and return (404 means no saved billing)
-      if (!res.ok) {
-        if (!cancelled) setLocked(false);
-        // optional: log server text for debugging
-        const txt = await res.text().catch(() => "");
-        console.debug("billing/check1 GET not ok:", res.status, txt.slice ? txt.slice(0,300) : txt);
-        return;
-      }
-
-      const json = await res.json().catch(() => null);
-      if (!json) {
-        if (!cancelled) setLocked(false);
-        return;
-      }
-
-      // Support two possible shapes:
-      // 1) { ok: true, found: true, data: { ...entry... } }
-      // 2) directly { locked, this_month_lines, next_month_lines, ... }
-      const entry = (json && (json.data ?? json)) as any;
-
-      if (!entry) {
-        if (!cancelled) setLocked(false);
-        return;
-      }
-
-      // Determine presence of billing data
-      const hasBilling =
-        entry.locked === true ||
-        (Array.isArray(entry.this_month_lines) && entry.this_month_lines.length > 0) ||
-        (Array.isArray(entry.next_month_lines) && entry.next_month_lines.length > 0) ||
-        (Array.isArray(entry.rows) && entry.rows.length > 0) || // older shape fallback
-        (entry.this_month && Array.isArray(entry.this_month.lines) && entry.this_month.lines.length > 0);
-
-      if (!hasBilling) {
-        if (!cancelled) setLocked(false);
-        return;
-      }
-
-      // map various possible server shapes into our UI rows
-      const mappedRows: BillingRow[] = [];
-      if (Array.isArray(entry.this_month_lines)) {
-        entry.this_month_lines.forEach((r: any, idx: number) => {
-          mappedRows.push({
-            id: `${String(r.note_date ?? r.date ?? idx)}-${idx}`,
-            noteDate: String(r.note_date ?? r.date ?? ""),
-            schedDate: String(r.schedule_date ?? r.schedDate ?? r.schedule_date ?? ""),
-          });
-        });
-      } else if (Array.isArray(entry.rows)) {
-        entry.rows.forEach((r: any, idx: number) => {
-          mappedRows.push({
-            id: `${String(r.note_date ?? r.date ?? idx)}-${idx}`,
-            noteDate: String(r.note_date ?? r.date ?? ""),
-            schedDate: String(r.schedule_date ?? r.schedDate ?? ""),
-          });
-        });
-      } else if (entry.this_month && Array.isArray(entry.this_month.lines)) {
-        entry.this_month.lines.forEach((l: any, idx: number) => {
-          mappedRows.push({
-            id: `${String(l.note_date ?? l.noteDate ?? idx)}-${idx}`,
-            noteDate: String(l.note_date ?? l.noteDate ?? ""),
-            schedDate: String(l.schedule_date ?? l.scheduleDate ?? ""),
-          });
-        });
-      }
-
-      const mappedNext: NextBillingRow[] = [];
-      if (Array.isArray(entry.next_month_lines)) {
-        entry.next_month_lines.forEach((n: any, idx: number) => {
-          mappedNext.push({
-            id: `${String(n.schedule_date ?? idx)}-${idx}`,
-            schedDate: String(n.schedule_date ?? n.schedDate ?? ""),
-          });
-        });
-      } else if (Array.isArray(entry.next_rows)) {
-        entry.next_rows.forEach((n: any, idx: number) => {
-          mappedNext.push({
-            id: `${String(n.schedule_date ?? idx)}-${idx}`,
-            schedDate: String(n.schedule_date ?? n.schedDate ?? ""),
-          });
-        });
-      } else if (entry.next_month && Array.isArray(entry.next_month.lines)) {
-        entry.next_month.lines.forEach((n: any, idx: number) => {
-          mappedNext.push({
-            id: `${String(n.schedule_date ?? idx)}-${idx}`,
-            schedDate: String(n.schedule_date ?? n.schedDate ?? ""),
-          });
-        });
-      }
-
-      if (!cancelled) {
-        if (mappedRows.length > 0) setRows(mappedRows);
-        if (mappedNext.length > 0) setNextRows(mappedNext);
-        setLocked(Boolean(entry.locked));
-      }
-    } catch (err) {
-      console.error("billing/check1 fetch error:", err);
-      if (!cancelled) setLocked(false);
-    } finally {
-      if (!cancelled) setLoadingCheck(false);
-    }
-  })();
-
-  return () => {
-    cancelled = true;
-  };
-}, [studentName, monthAnchor]);
-
-
-  /* ---- Generate (fills both sections) ---- */
-  const generateDraft = () => {
-    if (locked) return; // disabled when read-only
-    // This month (from class notes)
-    const base: BillingRow[] = [];
-    const seen = new Set<string>();
-
-    const candidates = (quizletDates || [])
+    const classDtList: Date[] = anchorClassDatesForDiary
       .map((d) => toDateYMD(d))
+      .filter((dt): dt is Date => !!dt);
+
+    if (classDtList.length === 0) return result;
+
+    const diariesThisMonth = diaryDatesAll
+      .map((s) => toDateYMD(s))
       .filter((dt): dt is Date => !!dt && sameYearMonth(dt, monthAnchor))
-      .map((dt) => ymdString(dt))
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => a.getTime() - b.getTime()); // old -> new
 
-    for (const note of candidates) {
-      if (seen.has(note)) continue;
-      seen.add(note);
+    for (const diaryDt of diariesThisMonth) {
+      let assignedIdx = -1;
+      for (let i = 0; i < classDtList.length; i++) {
+        if (classDtList[i].getTime() >= diaryDt.getTime()) {
+          assignedIdx = i;
+          break;
+        }
+      }
 
-      const schedSame = scheduleSetThisMonth.has(note) ? note : "";
-      base.push({
-        id: `${note}-${Math.random().toString(36).slice(2, 8)}`,
-        noteDate: note,
-        schedDate: schedSame,
-      });
+      if (assignedIdx === -1) {
+        assignedIdx = classDtList.length - 1;
+      }
+
+      const classKey = ymdString(classDtList[assignedIdx]);
+      const diaryKey = ymdString(diaryDt);
+
+      if (!result[classKey]) {
+        result[classKey] = diaryKey;
+      }
     }
+
+    return result;
+  }, [anchorClassDatesForDiary, diaryDatesAll, monthAnchor]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                 LOAD EXISTING BILLING DATA (billing/check1)              */
+  /* ------------------------------------------------------------------------ */
+
+  useEffect(() => {
+    if (!studentName) return;
+
+    const y = monthAnchor.getFullYear();
+    const m = String(monthAnchor.getMonth() + 1).padStart(2, "0");
+    const yyyymm = `${y}${m}`;
+
+    let cancelled = false;
+    setLoadingCheck(true);
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/billing/check1/${encodeURIComponent(studentName)}/${yyyymm}`,
+          { cache: "no-store" }
+        );
+
+        if (!res.ok) {
+          if (!cancelled) {
+            setLocked(false);
+            setRows([]);
+            setNextRows([]);
+          }
+          return;
+        }
+
+        const json = await res.json().catch(() => null);
+        if (!json) {
+          if (!cancelled) {
+            setLocked(false);
+            setRows([]);
+            setNextRows([]);
+          }
+          return;
+        }
+
+        const entry = (json && (json.data ?? json)) as any;
+
+        const hasBilling =
+          Boolean(entry?.locked) ||
+          (Array.isArray(entry?.this_month_lines) &&
+            entry.this_month_lines.length > 0) ||
+          (Array.isArray(entry?.rows) && entry.rows.length > 0);
+
+        if (!hasBilling) {
+          if (!cancelled) {
+            setLocked(false);
+            setRows([]);
+            setNextRows([]);
+          }
+          return;
+        }
+
+        const mappedRows: BillingRow[] = [];
+        if (Array.isArray(entry.this_month_lines)) {
+          entry.this_month_lines.forEach((r: any, idx: number) => {
+            mappedRows.push({
+              id: `${String(r.note_date ?? r.date ?? idx)}-${idx}`,
+              noteDate: String(r.note_date ?? r.date ?? ""),
+              schedDate: String(r.schedule_date ?? r.schedDate ?? ""),
+            });
+          });
+        } else if (Array.isArray(entry.rows)) {
+          entry.rows.forEach((r: any, idx: number) => {
+            mappedRows.push({
+              id: `${String(r.note_date ?? r.date ?? idx)}-${idx}`,
+              noteDate: String(r.note_date ?? r.date ?? ""),
+              schedDate: String(r.schedule_date ?? r.schedDate ?? ""),
+            });
+          });
+        }
+
+        const mappedNext: NextBillingRow[] = [];
+        if (Array.isArray(entry.next_month_lines)) {
+          entry.next_month_lines.forEach((n: any, idx: number) => {
+            mappedNext.push({
+              id: `${String(n.schedule_date ?? n.schedDate ?? idx)}-${idx}`,
+              schedDate: String(n.schedule_date ?? n.schedDate ?? ""),
+            });
+          });
+        } else if (Array.isArray(entry.next_rows)) {
+          entry.next_rows.forEach((n: any, idx: number) => {
+            mappedNext.push({
+              id: `${String(n.schedule_date ?? n.schedDate ?? idx)}-${idx}`,
+              schedDate: String(n.schedule_date ?? n.schedDate ?? ""),
+            });
+          });
+        }
+
+        if (!cancelled) {
+          setRows(mappedRows);
+          setNextRows(mappedNext);
+          setLocked(Boolean(entry.locked));
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLocked(false);
+          setRows([]);
+          setNextRows([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingCheck(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [studentName, monthAnchor]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                           GENERATE DRAFT BILLING                         */
+  /* ------------------------------------------------------------------------ */
+
+  const generateDraft = () => {
+    if (locked) return;
+
+    // This month rows: from quizlet (class actually happened)
+    const candidates = quizletDatesThisMonth; // already sorted old -> new
+
+    const uniqNotes: string[] = [];
+    const seen = new Set<string>();
+    for (const d of candidates) {
+      if (!seen.has(d)) {
+        seen.add(d);
+        uniqNotes.push(d);
+      }
+    }
+
+    const base: BillingRow[] = uniqNotes.map((note) => ({
+      id: `${note}-${Math.random().toString(36).slice(2, 8)}`,
+      noteDate: note,
+      schedDate: scheduleSetThisMonth.has(note) ? note : "",
+    }));
+
     setRows(base);
 
-    // Next month (from schedules only)
+    // Next month rows: from schedules
     const uniqNext: string[] = [];
     const seenNext = new Set<string>();
     for (const d of nextMonthScheduleDates) {
@@ -306,6 +461,7 @@ useEffect(() => {
         uniqNext.push(d);
       }
     }
+
     setNextRows(
       uniqNext.map((d) => ({
         id: `${d}-${Math.random().toString(36).slice(2, 8)}`,
@@ -314,36 +470,76 @@ useEffect(() => {
     );
   };
 
-  /* ---- Editing helpers ---- */
+  // Auto-generate on load once data is ready and no existing billing is saved
+  useEffect(() => {
+    const metaReady = !loadingMeta;
+    const scheduleReady = scheduledRows.length >= 0;
+
+    if (
+      metaReady &&
+      scheduleReady &&
+      !loadingCheck &&
+      !locked &&
+      rows.length === 0
+    ) {
+      generateDraft();
+    }
+  }, [
+    loadingMeta,
+    loadingCheck,
+    locked,
+    rows.length,
+    quizletDatesAll,
+    diaryDatesAll,
+    scheduledRows,
+    monthAnchor,
+  ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                             EDITING HELPERS                              */
+  /* ------------------------------------------------------------------------ */
+
   const updateRow = (id: string, patch: Partial<BillingRow>) =>
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+
   const addRow = () =>
     setRows((prev) => [
       ...prev,
-      { id: `row-${Date.now().toString(36)}`, noteDate: ymdString(new Date()), schedDate: "" },
+      {
+        id: `row-${Date.now().toString(36)}`,
+        noteDate: ymdString(new Date()),
+        schedDate: "",
+      },
     ]);
-  const removeRow = (id: string) => setRows((prev) => prev.filter((r) => r.id !== id));
+
+  const removeRow = (id: string) =>
+    setRows((prev) => prev.filter((r) => r.id !== id));
 
   const updateNextRow = (id: string, schedDate: string) =>
-    setNextRows((prev) => prev.map((r) => (r.id === id ? { ...r, schedDate } : r)));
+    setNextRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, schedDate } : r))
+    );
+
   const removeNextRow = (id: string) =>
     setNextRows((prev) => prev.filter((r) => r.id !== id));
 
-  // Create a schedule for noteDate (if missing) OR simply link the schedDate if it already exists
   const matchOrCreateRow = async (row: BillingRow) => {
-    if (locked) return; // disabled in read-only mode
+    if (locked) return;
+
     const dt = toDateYMD(row.noteDate);
-    if (!dt) return alert("Invalid date. Use YYYY. MM. DD.");
+    if (!dt) {
+      alert("Invalid date. Use YYYY. MM. DD.");
+      return;
+    }
 
-    const normalized = ymdString(dt); // with trailing dot
+    const normalized = ymdString(dt);
 
-    // If a schedule for that day already exists, just fill it (UI hides Match in that case anyway)
+    // If schedule already exists that day, just fill
     if (scheduleSetThisMonth.has(normalized)) {
       updateRow(row.id, { schedDate: normalized });
       return;
     }
 
-    // Otherwise, optionally create a schedule on that day
     if (!autoCreateScheduleOnMatch) {
       updateRow(row.id, { schedDate: normalized });
       return;
@@ -368,28 +564,36 @@ useEffect(() => {
       if (!res.ok) throw new Error("Failed to create schedule");
 
       updateRow(row.id, { schedDate: normalized });
-      try { await onRefreshCalendar?.(); } catch {}
+      try {
+        await onRefreshCalendar?.();
+      } catch {
+        // ignore
+      }
     } catch (e: any) {
       alert(e?.message || "Failed to create schedule");
     }
   };
 
-  /* ---- Confirm/save (payload only; wire your API later) ---- */
+  /* ------------------------------------------------------------------------ */
+  /*                           FINAL CONFIRM SAVE                             */
+  /* ------------------------------------------------------------------------ */
+
   const handleConfirm = async () => {
-    // if locked, allow confirm to simply re-send or no-op depending on backend rules
     const payload = {
       student_name: studentName,
       teacher_name: teacherName ?? "",
-      month: { year: monthAnchor.getFullYear(), month: monthAnchor.getMonth() + 1 },
-
-      // This-month lines (from UI)
-      this_month_lines: rows.map((r) => ({ note_date: r.noteDate, schedule_date: r.schedDate })),
-
-      // Next-month plan lines
-      next_month_lines: nextRows.map((r) => ({ schedule_date: r.schedDate })),
-
-      // client-side flag: whether this is a final save (you can use it server-side to lock the month)
-      final_save: locked ? false : true,
+      month: {
+        year: monthAnchor.getFullYear(),
+        month: monthAnchor.getMonth() + 1,
+      },
+      this_month_lines: rows.map((r) => ({
+        note_date: r.noteDate,
+        schedule_date: r.schedDate,
+      })),
+      next_month_lines: nextRows.map((r) => ({
+        schedule_date: r.schedDate,
+      })),
+      final_save: !locked,
     };
 
     try {
@@ -400,193 +604,350 @@ useEffect(() => {
       });
 
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        alert("Save failed: " + text);
+        const txt = await res.text().catch(() => "");
+        alert("Save failed: " + txt);
         return;
       }
 
-      alert("Billing saved (server response OK).");
-      // optionally lock UI if server indicates saved locking behaviour
+      alert("Billing saved (server OK).");
       setLocked(true);
-      try { await onRefreshCalendar?.(); } catch {}
+      try {
+        await onRefreshCalendar?.();
+      } catch {
+        // ignore
+      }
     } catch (err) {
       console.error("handleConfirm error:", err);
       alert("Save failed (network).");
     }
   };
 
-  /* ----------------------------- Render ----------------------------- */
+  /* ------------------------------------------------------------------------ */
+  /*                         DERIVED UI / VALIDATION                          */
+  /* ------------------------------------------------------------------------ */
+
+  const totalRows = rows.length;
+  const totalNextRows = nextRows.length;
+
+  const invalidNoteCount = rows.filter((r) => !toDateYMD(r.noteDate)).length;
+  const invalidScheduleCount = rows.filter(
+    (r) => !!r.schedDate && !toDateYMD(r.schedDate)
+  ).length;
+  const missingScheduleCount = rows.filter(
+    (r) => !r.schedDate || !toDateYMD(r.schedDate)
+  ).length;
+
+  const missingNextMonthScheduleCount = nextRows.filter(
+    (r) => !r.schedDate || !toDateYMD(r.schedDate)
+  ).length;
+
+  const allGoodForConfirm =
+    totalRows > 0 &&
+    missingScheduleCount === 0 &&
+    missingNextMonthScheduleCount === 0;
+
+  /* ------------------------------------------------------------------------ */
+  /*                                   UI                                     */
+  /* ------------------------------------------------------------------------ */
+
   return (
     <div className="w-1/3 bg-gray-50 flex flex-col border-l">
       {/* Header */}
       <div className="p-4 border-b bg-white">
-        <div className="flex items-center justify-between">
-          <div className="font-semibold text-gray-900">Billing</div>
-          <div className="flex items-center gap-2">
-            <button onClick={goPrevMonth} className="px-2 py-1 border rounded-lg text-sm hover:bg-slate-50">←</button>
-            <div className="text-sm font-medium">{monthLabel}</div>
-            <button onClick={goNextMonth} className="px-2 py-1 border rounded-lg text-sm hover:bg-slate-50">→</button>
-            <button onClick={todayMonth} className="ml-1 px-2 py-1 border rounded-lg text-xs hover:bg-slate-50">This month</button>
-          </div>
-        </div>
-
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className="text-sm">
-            <div className="text-gray-600 mb-1">Student</div>
-            <input
-              className="w-full border rounded-lg px-2 py-1.5 bg-gray-50 text-black"
-              value={studentName}
-              readOnly
-            />
-          </label>
-
-          <div className="flex items-end">
-            <div className="w-full grid grid-cols-1 gap-2">
-              <button
-                onClick={generateDraft}
-                className="w-full rounded-lg bg-indigo-600 text-white py-2 hover:bg-indigo-700"
-                title="Generate a billing draft from this month's class notes and next month's schedules"
-                disabled={locked}
-              >
-                Generate
-              </button>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Teacher Billing
+            </div>
+            <div className="mt-1 text-lg font-semibold text-gray-900">
+              {monthLabel} – {studentName || "학생"}
             </div>
           </div>
-        </div>
-        {loadingCheck && <div className="mt-2 text-xs text-gray-500">Checking saved billing for this month…</div>}
-        {locked && !loadingCheck && <div className="mt-2 text-xs text-rose-600">선생님 확인 완료</div>}
-      </div>
 
-      {/* This month’s classes */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-semibold text-gray-800">This month’s classes</div>
-          <div className="flex items-center gap-2">
-            {studentMetaLoading && <span className="text-xs text-gray-500">Loading class details…</span>}
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={goPrevMonth}
+                className="px-2 py-1 border rounded-lg text-xs text-slate-700 hover:bg-slate-50"
+              >
+                ←
+              </button>
+              <div className="text-xs font-medium text-slate-800">{monthLabel}</div>
+              <button
+                onClick={goNextMonth}
+                className="px-2 py-1 border rounded-lg text-xs text-slate-700 hover:bg-slate-50"
+              >
+                →
+              </button>
+            </div>
             <button
-              onClick={addRow}
-              className="text-xs px-3 py-1 rounded-md border border-slate-300 hover:bg-slate-50"
-              disabled={locked}
+              onClick={todayMonth}
+              className="px-2 py-1 border rounded-lg text-[11px] text-slate-600 hover:bg-slate-50"
             >
-              Add row
+              This month
             </button>
           </div>
         </div>
 
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b">
-              <tr className="text-left text-gray-600">
-                <th className="px-3 py-2 w-10">#</th>
-                <th className="px-3 py-2">Class note date</th>
-                <th className="px-3 py-2">Schedule date</th>
-                <th className="px-3 py-2">Quizlet Date</th>
-                <th className="px-3 py-2">Diary Date</th>
-                <th className="px-3 py-2 w-28">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
-                    No rows. Click <b>Generate</b> to pull this month’s class notes.
-                  </td>
-                </tr>
-              ) : (
-                rows.map((r, i) => {
-                  const normalizedNote = (() => {
-                    const dt = toDateYMD(r.noteDate);
-                    return dt ? ymdString(dt) : r.noteDate;
-                  })();
-                  const hasScheduleThatDay = scheduleSetThisMonth.has(normalizedNote);
-
-                  const metaKey = (() => {
-                    const dt = toDateYMD(r.schedDate || r.noteDate);
-                    return dt ? ymdString(dt) : "";
-                  })();
-                  const meta = metaKey && studentMeta ? studentMeta[metaKey] : undefined;
-
-                  return (
-                    <tr key={r.id} className="border-b last:border-b-0">
-                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
-
-                      <td className="px-3 py-2">
-                        <input
-                          className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                          value={r.noteDate}
-                          onChange={(e) => updateRow(r.id, { noteDate: e.target.value })}
-                          onBlur={(e) => {
-                            if (locked) return;
-                            const dt = toDateYMD(e.target.value);
-                            if (dt) updateRow(r.id, { noteDate: ymdString(dt) });
-                          }}
-                          placeholder="YYYY. MM. DD."
-                          readOnly={locked}
-                        />
-                      </td>
-
-                      <td className="px-3 py-2">
-                        <input
-                          list={`sched-options-${i}`}
-                          className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                          value={r.schedDate}
-                          onChange={(e) => updateRow(r.id, { schedDate: e.target.value })}
-                          onBlur={(e) => {
-                            if (locked) return;
-                            const dt = toDateYMD(e.target.value);
-                            if (dt) updateRow(r.id, { schedDate: ymdString(dt) });
-                          }}
-                          placeholder="YYYY. MM. DD."
-                          readOnly={locked}
-                        />
-                        <datalist id={`sched-options-${i}`}>
-                          {scheduleDatesThisMonth.map((d) => (
-                            <option key={d} value={d} />
-                          ))}
-                        </datalist>
-                      </td>
-
-                      <td className="px-3 py-2">{meta?.quizlet_date ?? "—"}</td>
-                      <td className="px-3 py-2">{meta?.diary_date ?? "—"}</td>
-
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          {!hasScheduleThatDay && (
-                            <button
-                              onClick={() => matchOrCreateRow(r)}
-                              className="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50"
-                              title="Create a schedule on this day and link it"
-                              disabled={locked}
-                            >
-                              Match
-                            </button>
-                          )}
-                          <button
-                            onClick={() => removeRow(r.id)}
-                            className="text-xs px-2 py-1 rounded border border-rose-300 text-rose-700 hover:bg-rose-50"
-                            title="Remove row"
-                            disabled={locked}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+        {/* 3-step wizard indicator */}
+        <div className="mt-4 flex items-center gap-3 text-xs">
+          <div className="flex-1 flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 flex items-center justify-center rounded-full bg-indigo-600 text-white text-[11px] font-semibold">
+                1
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900">
+                  이번 달 수업 확인
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="h-px flex-1 bg-slate-200" />
+          <div className="flex-1 flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-semibold">
+                2
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900">
+                  다음 달 스케줄 확인
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="h-px flex-1 bg-slate-200" />
+          <div className="flex-1 flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-semibold">
+                3
+              </div>
+              <div>
+                <div className="font-semibold text-slate-900">
+                  최종 확인 & 저장
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Next month’s scheduled classes */}
-        <div className="mt-8">
-          <div className="flex items-center justify-between mb-2">
-            <div className="font-semibold text-gray-800">
-              Next month’s scheduled classes
-              <span className="ml-2 text-xs text-gray-500">
-                ({nextMonthAnchor.getFullYear()}. {String(nextMonthAnchor.getMonth() + 1).padStart(2, "0")})
-              </span>
+        {loadingCheck && (
+          <div className="mt-3 rounded-md bg-slate-50 px-3 py-2 text-[11px] text-slate-600 border border-slate-200">
+            이번 달 저장된 정산 정보를 확인하는 중입니다…
+          </div>
+        )}
+        {locked && !loadingCheck && (
+          <div className="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700 border border-emerald-200">
+            🔒 이 달은 이미 <span className="font-semibold">선생님 확인 완료</span> 상태입니다.
+            수정이 필요하면 관리자에게 문의해주세요.
+          </div>
+        )}
+        {loadingMeta && (
+          <div className="mt-1 text-[11px] text-slate-500">
+            Quizlet / Diary 정보를 불러오는 중입니다…
+          </div>
+        )}
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 p-4 overflow-y-auto space-y-6">
+
+        {/* Step 1: This month */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 border border-indigo-100">
+                STEP 1
+              </div>
+              <h2 className="mt-1 text-sm font-semibold text-slate-900">
+                이번 달 수업(클래스 노트) 날짜 확인
+              </h2>
+              <p className="mt-1 text-[11px] text-slate-500">
+                아래 표에서 <span className="font-medium">클래스 노트 날짜</span>와{" "}
+                <span className="font-medium">스케줄 날짜</span>가 맞는지만 확인해 주세요.
+                <br />
+                Quizlet / Diary 날짜는 자동으로 연결되며, 선생님이 직접 수정할 필요는 없습니다.
+              </p>
+            </div>
+            <button
+              onClick={addRow}
+              className="text-[11px] px-3 py-1 rounded-md border border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+              disabled={locked}
+            >
+              행 추가
+            </button>
+          </div>
+
+          <div className="bg-white border rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b">
+                <tr className="text-left text-gray-600">
+                  <th className="px-3 py-2 w-10 text-xs">#</th>
+                  <th className="px-3 py-2 text-xs">Class note date</th>
+                  <th className="px-3 py-2 text-xs">Schedule date</th>
+                  <th className="px-3 py-2 text-xs">Quizlet Date</th>
+                  <th className="px-3 py-2 text-xs">Diary Date</th>
+                  <th className="px-3 py-2 w-28 text-xs">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-3 py-6 text-center text-gray-500 text-xs"
+                    >
+                      이번 달에 작성된 Quizlet / 클래스 노트가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r, i) => {
+                    const dt = toDateYMD(r.noteDate);
+                    const normalizedNote = dt ? ymdString(dt) : r.noteDate;
+
+                    const quizletForClass = quizletSetThisMonth.has(
+                      normalizedNote
+                    )
+                      ? normalizedNote
+                      : "—";
+                    const diaryForClass =
+                      diaryAssignmentMap[normalizedNote] ?? "—";
+
+                    const hasScheduleThatDay =
+                      scheduleSetThisMonth.has(normalizedNote);
+
+                    const isNoteValid = !!toDateYMD(r.noteDate);
+                    const isScheduleValid = !!r.schedDate
+                      ? !!toDateYMD(r.schedDate)
+                      : false;
+                    const hasQuizlet = quizletForClass !== "—";
+                    const hasDiary = diaryForClass !== "—";
+
+                    const rowNeedsAttention =
+                      !isNoteValid || !isScheduleValid || !hasQuizlet;
+
+                    return (
+                      <tr
+                        key={r.id}
+                        className="border-b last:border-b-0 align-middle"
+                      >
+                        <td className="px-3 py-2 text-gray-500 align-top">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs">{i + 1}</span>
+                            {rowNeedsAttention ? (
+                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 border border-amber-100">
+                                확인 필요
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-100">
+                                OK
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-3 py-2 align-top">
+                          <input
+                            className="w-full border rounded-lg px-2 py-1.5 bg-white text-xs text-black placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-400"
+                            value={r.noteDate}
+                            onChange={(e) =>
+                              updateRow(r.id, { noteDate: e.target.value })
+                            }
+                            onBlur={(e) => {
+                              if (locked) return;
+                              const dt2 = toDateYMD(e.target.value);
+                              if (dt2)
+                                updateRow(r.id, { noteDate: ymdString(dt2) });
+                            }}
+                            placeholder="YYYY. MM. DD."
+                            readOnly={locked}
+                          />
+                        </td>
+
+                        <td className="px-3 py-2 align-top">
+                          <input
+                            list={`sched-options-${i}`}
+                            className="w-full border rounded-lg px-2 py-1.5 bg-white text-xs text-black placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-400"
+                            value={r.schedDate}
+                            onChange={(e) =>
+                              updateRow(r.id, { schedDate: e.target.value })
+                            }
+                            onBlur={(e) => {
+                              if (locked) return;
+                              const dt2 = toDateYMD(e.target.value);
+                              if (dt2)
+                                updateRow(r.id, { schedDate: ymdString(dt2) });
+                            }}
+                            placeholder="YYYY. MM. DD."
+                            readOnly={locked}
+                          />
+                          <datalist id={`sched-options-${i}`}>
+                            {scheduleDatesThisMonth.map((d) => (
+                              <option key={d} value={d} />
+                            ))}
+                          </datalist>
+                        </td>
+
+                        <td className="px-3 py-2 text-xs text-slate-800 align-top">
+                          {hasQuizlet ? (
+                            quizletForClass
+                          ) : (
+                            <span className="text-amber-600">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-slate-800 align-top">
+                          {hasDiary ? (
+                            diaryForClass
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+
+                        <td className="px-3 py-2 align-top">
+                          <div className="flex flex-col gap-1">
+                            {!hasScheduleThatDay && (
+                              <button
+                                onClick={() => matchOrCreateRow(r)}
+                                className="text-[10px] px-2 py-1 rounded border border-slate-300 hover:bg-slate-50 disabled:opacity-50"
+                                title="이 날에 스케줄을 자동 생성하고 연결합니다"
+                                disabled={locked}
+                              >
+                                Match
+                              </button>
+                            )}
+                            <button
+                              onClick={() => removeRow(r.id)}
+                              className="text-[10px] px-2 py-1 rounded border border-rose-300 text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                              title="행 삭제"
+                              disabled={locked}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Step 2: Next month */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 border border-indigo-100">
+                STEP 2
+              </div>
+              <h2 className="mt-1 text-sm font-semibold text-slate-900">
+                다음 달 예정 스케줄 확인
+              </h2>
+              <p className="mt-1 text-[11px] text-slate-500">
+                아래 표는 <span className="font-medium">캘린더에 등록된 다음 달 스케줄</span>입니다.
+                날짜만 맞는지 확인해 주세요. 수정이 필요하면 날짜를 직접 변경하셔도 됩니다.
+              </p>
             </div>
           </div>
 
@@ -594,71 +955,115 @@ useEffect(() => {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b">
                 <tr className="text-left text-gray-600">
-                  <th className="px-3 py-2 w-10">#</th>
-                  <th className="px-3 py-2">Schedule date</th>
-                  <th className="px-3 py-2 w-28">Actions</th>
+                  <th className="px-3 py-2 w-10 text-xs">#</th>
+                  <th className="px-3 py-2 text-xs">
+                    Schedule date{" "}
+                    <span className="text-[10px] text-slate-400">
+                      ({nextMonthAnchor.getFullYear()}.{" "}
+                      {String(nextMonthAnchor.getMonth() + 1).padStart(2, "0")})
+                    </span>
+                  </th>
+                  <th className="px-3 py-2 w-28 text-xs">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {nextRows.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-3 py-6 text-center text-gray-500">
-                      No rows. Click <b>Generate</b> above to populate next month’s schedules.
+                    <td
+                      colSpan={3}
+                      className="px-3 py-6 text-center text-gray-500 text-xs"
+                    >
+                      다음 달에 등록된 스케줄이 없습니다. 캘린더에서 먼저 수업을
+                      등록해 주세요.
                     </td>
                   </tr>
                 ) : (
-                  nextRows.map((r, i) => (
-                    <tr key={r.id} className="border-b last:border-b-0">
-                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
-                      <td className="px-3 py-2">
-                        <input
-                          list="next-sched-options"
-                          className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                          value={r.schedDate}
-                          onChange={(e) => updateNextRow(r.id, e.target.value)}
-                          onBlur={(e) => {
-                            if (locked) return;
-                            const dt = toDateYMD(e.target.value);
-                            if (dt) updateNextRow(r.id, ymdString(dt));
-                          }}
-                          placeholder="YYYY. MM. DD."
-                          readOnly={locked}
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <button
-                          onClick={() => removeNextRow(r.id)}
-                          className="text-xs px-2 py-1 rounded border border-rose-300 text-rose-700 hover:bg-rose-50"
-                          disabled={locked}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  nextRows.map((r, i) => {
+                    const isValid = !!toDateYMD(r.schedDate);
+
+                    return (
+                      <tr key={r.id} className="border-b last:border-b-0">
+                        <td className="px-3 py-2 text-gray-500 text-xs">
+                          <div className="flex items-center gap-1">
+                            <span>{i + 1}</span>
+                            {isValid ? (
+                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-emerald-100">
+                                OK
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 border border-amber-100">
+                                확인 필요
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          <input
+                            list="next-sched-options"
+                            className="w-full border rounded-lg px-2 py-1.5 bg-white text-xs text-black placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-400"
+                            value={r.schedDate}
+                            onChange={(e) =>
+                              updateNextRow(r.id, e.target.value)
+                            }
+                            onBlur={(e) => {
+                              if (locked) return;
+                              const dt = toDateYMD(e.target.value);
+                              if (dt) updateNextRow(r.id, ymdString(dt));
+                            }}
+                            placeholder="YYYY. MM. DD."
+                            readOnly={locked}
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          <button
+                            onClick={() => removeNextRow(r.id)}
+                            className="text-[10px] px-2 py-1 rounded border border-rose-300 text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                            disabled={locked}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
 
-            {/* Datalist to help pick from next month’s scheduled days */}
             <datalist id="next-sched-options">
               {nextMonthScheduleDates.map((d) => (
                 <option key={d} value={d} />
               ))}
             </datalist>
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* Confirm (save) */}
+      {/* Step 3: Footer Confirm */}
       <div className="p-3 border-t bg-white">
+        {!locked && (
+          <div className="mb-2 text-[11px] text-slate-600 leading-relaxed">
+            <div className="font-semibold text-slate-900 mb-1">STEP 3. 최종 확인</div>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>위 표에서 이번 달 수업 날짜가 맞는지 확인하셨나요?</li>
+              <li>다음 달 스케줄 날짜도 모두 확인하셨나요?</li>
+              <li>모두 맞다면 아래 버튼을 눌러 정산을 확정해 주세요.</li>
+            </ul>
+          </div>
+        )}
         <button
           onClick={handleConfirm}
-          className="w-full rounded-lg bg-emerald-600 text-white py-2 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          title={locked ? "This month is locked — unable to save." : "Save billing info (hook API here later)"}
+          className="w-full rounded-lg bg-emerald-600 text-white py-2 text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={
+            locked
+              ? "This month is locked — unable to save."
+              : "모든 내용을 확인 후 정산 정보를 저장합니다."
+          }
           disabled={loadingCheck || locked}
         >
-          {locked ? "Teacher Confirmed" : "1차 Teacher Confirm (Can't Undo Save)"}
+          {locked
+            ? "Teacher Confirmed"
+            : "Teacher Confirm (저장 후 되돌릴 수 없습니다)"}
         </button>
       </div>
     </div>
