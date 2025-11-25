@@ -850,7 +850,7 @@ function TeacherToastUIInner({
         };
 
         const handleSelectDateTime = (args: any) => {
-          const { start, end, nativeEvent } = args || {};
+          const { start, nativeEvent } = args || {};
           if (!containerRef.current || !start) return;
 
           setDetail(null);
@@ -861,7 +861,6 @@ function TeacherToastUIInner({
 
           const s = new Date(start);
           // Always default to 1 hour
-          const e = end ? new Date(end) : new Date(s.getTime() + 60 * 60 * 1000);
           const hours = 1;
 
 

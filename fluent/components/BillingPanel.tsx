@@ -66,7 +66,6 @@ function sameYearMonth(a: Date, b: Date): boolean {
 export default function BillingPanel({
   studentName,
   teacherName,
-  quizletDates, // not used directly; we fetch from API for correctness
   scheduledRows,
   onRefreshCalendar,
   saveEndpointBase = "/api/schedules",
@@ -409,7 +408,7 @@ export default function BillingPanel({
           setNextRows(mappedNext);
           setLocked(Boolean(entry.locked));
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setLocked(false);
           setRows([]);
@@ -493,6 +492,7 @@ export default function BillingPanel({
     diaryDatesAll,
     scheduledRows,
     monthAnchor,
+    generateDraft
   ]);
 
   /* ------------------------------------------------------------------------ */
@@ -621,30 +621,6 @@ export default function BillingPanel({
       alert("Save failed (network).");
     }
   };
-
-  /* ------------------------------------------------------------------------ */
-  /*                         DERIVED UI / VALIDATION                          */
-  /* ------------------------------------------------------------------------ */
-
-  const totalRows = rows.length;
-  const totalNextRows = nextRows.length;
-
-  const invalidNoteCount = rows.filter((r) => !toDateYMD(r.noteDate)).length;
-  const invalidScheduleCount = rows.filter(
-    (r) => !!r.schedDate && !toDateYMD(r.schedDate)
-  ).length;
-  const missingScheduleCount = rows.filter(
-    (r) => !r.schedDate || !toDateYMD(r.schedDate)
-  ).length;
-
-  const missingNextMonthScheduleCount = nextRows.filter(
-    (r) => !r.schedDate || !toDateYMD(r.schedDate)
-  ).length;
-
-  const allGoodForConfirm =
-    totalRows > 0 &&
-    missingScheduleCount === 0 &&
-    missingNextMonthScheduleCount === 0;
 
   /* ------------------------------------------------------------------------ */
   /*                                   UI                                     */

@@ -456,7 +456,14 @@ function AdminBillingExcelPageInner() {
           const studentJson = await studentRes.json();
           if (Array.isArray(studentJson)) {
             studentJson.forEach((item, index) => {
-              const teacher = item?.teacher ? String(item.teacher).trim() : "";
+              const teacher = (
+                item?.teacher ??
+                item?.teacher_name ??
+                item?.teacherName ??
+                item?.assigned_teacher ??
+                ""
+              ).trim();
+
               const studentName =
                 item?.student_name ??
                 item?.name ??
@@ -723,32 +730,51 @@ function AdminBillingExcelPageInner() {
       return;
     }
 
-    let cancelled = false;
-    const loadDetails = async () => {
-      setDetailLoading(true);
-      setDetailError(null);
-      try {
-        await Promise.all(
-          students.map((student) => ensureStudentProfile(student.name))
-        );
-        await ensureClassnotes(selectedTeacher, selectedMonth, students);
-        await Promise.all(
-          students.map((student) =>
-            Promise.all([
-              ensureDiary(student.name),
-              ensureQuizlet(student.name),
-            ])
-          )
-        );
-        if (!cancelled) setDetailLoading(false);
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Failed to load detail data:", err);
-          setDetailError("Failed to load detail data for this month.");
-          setDetailLoading(false);
-        }
+  let cancelled = false;
+  const loadDetails = async () => {
+    setDetailLoading(true);
+    setDetailError(null);
+
+    try {
+      // Extract names once
+      const names = students.map((s) => s.name);
+
+      // 1) Load ALL profiles in one batch
+      const loadProfiles = Promise.all(
+        names.map((name) => ensureStudentProfile(name))
+      );
+
+      // 2) Load classnotes for the entire teacher+month (already batched)
+      const loadNotes = ensureClassnotes(selectedTeacher, selectedMonth, students);
+
+      // 3) Load ALL diaries in one batch
+      const loadDiaries = Promise.all(
+        names.map((name) => ensureDiary(name))
+      );
+
+      // 4) Load ALL quizlets in one batch
+      const loadQuizlets = Promise.all(
+        names.map((name) => ensureQuizlet(name))
+      );
+
+      // Run 4 BIG batches in parallel instead of hundreds of micro-batches
+      await Promise.all([
+        loadProfiles,
+        loadNotes,
+        loadDiaries,
+        loadQuizlets,
+      ]);
+
+      if (!cancelled) setDetailLoading(false);
+    } catch (err) {
+      if (!cancelled) {
+        console.error("Failed to load detail data:", err);
+        setDetailError("Failed to load detail data for this month.");
+        setDetailLoading(false);
       }
-    };
+    }
+  };
+
 
     loadDetails();
     return () => {
@@ -836,10 +862,6 @@ function AdminBillingExcelPageInner() {
 
     return rows.map((row) => ({
       ...row,
-      teacherConfirmedPromise: fetchTeacherConfirm(
-        row.student.name,
-        selectedMonth
-      ),
     }));
 
 
@@ -853,9 +875,11 @@ function AdminBillingExcelPageInner() {
     cacheTick,
   ]);
 
-  // -------------------- LOAD TEACHER CONFIRM STATE --------------------
+// -------------------- LOAD TEACHER CONFIRM STATE --------------------
 useEffect(() => {
-  if (!studentRows.length || !selectedMonth) return;
+  if (!selectedMonth || studentRows.length === 0) return;
+
+  const names = studentRows.map((r) => r.student.name); // stable array
 
   let cancelled = false;
 
@@ -863,12 +887,9 @@ useEffect(() => {
     const newState: Record<string, boolean> = {};
 
     await Promise.all(
-      studentRows.map(async (row) => {
-        const res = await fetchTeacherConfirm(
-          row.student.name,
-          selectedMonth
-        );
-        newState[row.student.name] = res.confirmed;
+      names.map(async (name) => {
+        const res = await fetchTeacherConfirm(name, selectedMonth);
+        newState[name] = res.confirmed;
       })
     );
 
@@ -881,7 +902,8 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [selectedMonth, studentRows.map(r => r.student.name).join("|")]);
+}, [selectedMonth, studentRows.length]);   // ONLY depend on month + count
+
 
 
 
@@ -930,11 +952,11 @@ useEffect(() => {
       const nextMonthPlanned = row.nextSchedules.length;
       const carryAfterSettlement = initialCredit - classesCompleted;
       const totalCreditsAvailable = Math.max(0, carryAfterSettlement);
-      const nextToPayClasses = Math.max(
-        0,
-        nextMonthPlanned - totalCreditsAvailable
-      );
-      const amountDue = Math.max(0, nextToPayClasses * hourlyRate);
+      const nextToPayClasses =
+        classesCompleted + nextMonthPlanned - initialCredit;
+
+      const amountDue = Math.max(0, nextToPayClasses) * hourlyRate;
+
 
       return {
         id: row.student.id,
@@ -1033,8 +1055,16 @@ const handleConfigChange = useCallback(
       await fetch(`/api/student/${encodeURIComponent(studentName)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
+
+      // 🔥 Refresh cache after saving
+      studentProfileCacheRef.current[studentName] = undefined;
+      await ensureStudentProfile(studentName);
+
+      // Force recalculation
+      setCacheTick((t) => t + 1);
+
     } catch (err) {
       console.error("Failed to update student:", err);
     }
@@ -1385,7 +1415,13 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                       </tr>
                     ) : (
                       studentRows
-                        .filter((row) => row.classnotes.length > 0)    // ← ADD THIS LINE
+                        .filter((row) =>
+                          row.classnotes.length > 0 ||
+                          row.schedules.length > 0 ||
+                          row.diaries.length > 0 ||
+                          row.quizlets.length > 0 ||
+                          row.nextSchedules.length > 0
+                        )
                         .map((row) => {
                         const financial = financialById[row.student.id];
                         const hourlyRateValue =
