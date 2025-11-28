@@ -559,15 +559,25 @@ function TeacherToastUIInner({
   }, [data, teacherColorMap, classnoteMap, pastSchedulesIndex]);
 
   /* ------------------------------- Apply filters ---------------------------- */
-  const filteredEvents = useMemo(() => {
-    return (eventsFromProps || []).filter((ev) => {
-      const teacher = ev?.raw?.teacher_name || "";
-      if (enableTeacherSidebar) {
-        if (teacherFilter.size > 0 && !teacherFilter.has(teacher)) return false;
+const filteredEvents = useMemo(() => {
+  return (eventsFromProps || []).filter((ev) => {
+    const teacherOfEvent = ev?.raw?.teacher_name?.trim() || "";
+    const currentTeacher = currentUser?.trim() || "";
+
+    // 1️⃣ NEW HARD FILTER: teacher must match URL teacher
+    if (teacherOfEvent !== currentTeacher) return false;
+
+    // 2️⃣ Apply sidebar teacher filters (admin only)
+    if (enableTeacherSidebar) {
+      if (teacherFilter.size > 0 && !teacherFilter.has(teacherOfEvent)) {
+        return false;
       }
-      return true;
-    });
-  }, [eventsFromProps, enableTeacherSidebar, teacherFilter]);
+    }
+
+    return true;
+  });
+}, [eventsFromProps, enableTeacherSidebar, teacherFilter, currentUser]);
+
 
   /* ------------------------------- API helpers ------------------------------- */
   const postJSON = async (url: string, method: "POST" | "PATCH" | "DELETE", body?: any) => {
@@ -1516,7 +1526,10 @@ function TeacherToastUIInner({
                 const date = ymdString(toLocalDateOnly(started));
                 let time = started.getHours() + started.getMinutes() / 60;
                 time = Math.round(time * 2) / 2;
-                const duration = 1;
+                // calculate actual duration from classnote
+                const duration =
+                  Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
+
 
                 const scheduleId = raw.schedule_id || raw._id || raw.id;
 
