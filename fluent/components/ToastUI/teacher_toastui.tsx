@@ -1302,474 +1302,579 @@ const filteredEvents = useMemo(() => {
           <div ref={containerRef} className="absolute inset-0" />
 
           {/* Event popover */}
-{detail?.event && (() => {
-  const ev = detail.event;
-  const raw = ev.raw || {};
-  const student = raw.student_name ?? "";
-  const start = new Date(ev.start);
-  const end = new Date(ev.end);
-  const dateKey = `${start.getFullYear()}. ${String(start.getMonth() + 1).padStart(2, "0")}. ${String(start.getDate()).padStart(2, "0")}.`;
+          {detail?.event && (() => {
+            const ev = detail.event;
+            const raw = ev.raw || {};
+            const student = raw.student_name ?? "";
+            const start = new Date(ev.start);
+            const end = new Date(ev.end);
+            const dateKey = `${start.getFullYear()}. ${String(start.getMonth() + 1).padStart(2, "0")}. ${String(start.getDate()).padStart(2, "0")}.`;
 
-  const notes = classnoteMap.get(`${student}::${dateKey}`) || [];
-  const note = notes[0];
-  const teacherFromNote = note?.teacher_name?.trim() || "";
-  const hasNote = !!note;
-  const hasSchedule = !raw.note_only;
+            const notes = classnoteMap.get(`${student}::${dateKey}`) || [];
+            const note = notes[0];
+            const teacherFromNote = note?.teacher_name?.trim() || "";
+            const hasNote = !!note;
+            const hasSchedule = !raw.note_only;
 
-  const started = note?.started_at ? new Date(note.started_at) : null;
-  const ended = note?.ended_at ? new Date(note.ended_at) : null;
+            const started = note?.started_at ? new Date(note.started_at) : null;
+            const ended = note?.ended_at ? new Date(note.ended_at) : null;
 
-  const matchOK =
-    started && ended &&
-    Math.abs((started.getTime() - start.getTime()) / 60000) <= 15 &&
-    Math.abs((ended.getTime() - end.getTime()) / 60000) <= 15;
+            const matchOK =
+              started && ended &&
+              Math.abs((started.getTime() - start.getTime()) / 60000) <= 15 &&
+              Math.abs((ended.getTime() - end.getTime()) / 60000) <= 15;
 
-  const timeFmt = (d: any) =>
-    d ? `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}` : "";
+            const timeFmt = (d: any) =>
+              d ? `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}` : "";
 
-  let caseType = "none";
-  if (raw.note_only) caseType = "red_unscheduled";
-  else if (ev.backgroundColor === "#D1FAE5") caseType = "green";
-  else if (ev.backgroundColor === "#FECACA" && hasNote) caseType = "red_mismatch";
-  else if (ev.backgroundColor === "#FECACA" && !hasNote) caseType = "red_no_note";
+            let caseType = "none";
+            if (raw.note_only) caseType = "red_unscheduled";
+            else if (ev.backgroundColor === "#D1FAE5") caseType = "green";
+            else if (ev.backgroundColor === "#FECACA" && hasNote) caseType = "red_mismatch";
+            else if (ev.backgroundColor === "#FECACA" && !hasNote) caseType = "red_no_note";
 
-  else if (!hasNote && hasSchedule) caseType = "red_no_note";
-  else if (hasNote && hasSchedule && !matchOK) caseType = "red_mismatch";
-  else if (hasNote && !hasSchedule) caseType = "red_unscheduled";
+            else if (!hasNote && hasSchedule) caseType = "red_no_note";
+            else if (hasNote && hasSchedule && !matchOK) caseType = "red_mismatch";
+            else if (hasNote && !hasSchedule) caseType = "red_unscheduled";
 
-  return (
-    <div
-      ref={popRef}
-      className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-[260px]"
-      style={{
-        left: `${detail.x + 12}px`,
-        top: `${detail.y + 12}px`,
-      }}
-    >
-    {caseType === "green" && (
-      <div className="text-[11px] text-gray-700 leading-tight space-y-1">
+            return (
+              <div
+                ref={popRef}
+                className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-[260px]"
+                style={{
+                  left: `${detail.x + 12}px`,
+                  top: `${detail.y + 12}px`,
+                }}
+              >
+              {caseType === "green" && (
+                <div className="text-[11px] text-gray-700 leading-tight space-y-1">
 
-        {/* Title */}
-        <div className="font-semibold text-gray-900 text-[12px] flex items-center gap-1">
-          📘 Class Info
-        </div>
+                  {/* Title */}
+                  <div className="font-semibold text-gray-900 text-[12px] flex items-center gap-1">
+                    📘 Class Info
+                  </div>
 
-        {/* Date */}
-        <div className="grid grid-cols-2">
-          <div className="text-gray-500">Date</div>
-          <div className="font-medium text-gray-900 text-right">{dateKey}</div>
-        </div>
+                  {/* Date */}
+                  <div className="grid grid-cols-2">
+                    <div className="text-gray-500">Date</div>
+                    <div className="font-medium text-gray-900 text-right">{dateKey}</div>
+                  </div>
 
-        {/* Student / Teacher */}
-        <div className="grid grid-cols-2">
-          <div className="text-gray-500">Student</div>
-          <div className="font-medium text-gray-900 text-right truncate">
-            {student}
-          </div>
-        </div>
+                  {/* Student / Teacher */}
+                  <div className="grid grid-cols-2">
+                    <div className="text-gray-500">Student</div>
+                    <div className="font-medium text-gray-900 text-right truncate">
+                      {student}
+                    </div>
+                  </div>
 
-        <div className="grid grid-cols-2">
-          <div className="text-gray-500">Teacher</div>
-          <div className="font-medium text-gray-900 text-right truncate">
-            {raw.teacher_name}
-          </div>
-        </div>
+                  <div className="grid grid-cols-2">
+                    <div className="text-gray-500">Teacher</div>
+                    <div className="font-medium text-gray-900 text-right truncate">
+                      {raw.teacher_name}
+                    </div>
+                  </div>
 
-        {/* Scheduled time */}
-        <div className="grid grid-cols-2">
-          <div className="text-gray-500">Scheduled</div>
-          <div className="font-medium text-gray-900 text-right">
-            {timeFmt(start)} – {timeFmt(end)}
-          </div>
-        </div>
+                  {/* Scheduled time */}
+                  <div className="grid grid-cols-2">
+                    <div className="text-gray-500">Scheduled</div>
+                    <div className="font-medium text-gray-900 text-right">
+                      {timeFmt(start)} – {timeFmt(end)}
+                    </div>
+                  </div>
 
-        {/* Actual classnote time */}
-        {started && ended && (
-          <div className="grid grid-cols-2">
-            <div className="text-gray-500">Actual</div>
-            <div className="font-medium text-gray-900 text-right">
-              {timeFmt(started)} – {timeFmt(ended)}
-            </div>
-          </div>
-        )}
+                  {/* Actual classnote time */}
+                  {started && ended && (
+                    <div className="grid grid-cols-2">
+                      <div className="text-gray-500">Actual</div>
+                      <div className="font-medium text-gray-900 text-right">
+                        {timeFmt(started)} – {timeFmt(ended)}
+                      </div>
+                    </div>
+                  )}
 
-        {/* Links */}
-        <div className="flex gap-2 pt-1">
-          <a
-            href={`/teacher/student/quizlet?student_name=${encodeURIComponent(student)}`}
-            target="_blank"
-            className="text-[11px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md hover:bg-blue-100"
-          >
-            Quizlet →
-          </a>
-          <a
-            href={`/teacher/student/diary?student_name=${encodeURIComponent(student)}`}
-            target="_blank"
-            className="text-[11px] bg-green-50 text-green-600 px-2 py-0.5 rounded-md hover:bg-green-100"
-          >
-            Diary →
-          </a>
-        </div>
+                  {/* Links */}
+                  <div className="flex gap-2 pt-1">
+                    <a
+                      href={`/teacher/student/quizlet?student_name=${encodeURIComponent(student)}`}
+                      target="_blank"
+                      className="text-[11px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md hover:bg-blue-100"
+                    >
+                      Quizlet →
+                    </a>
 
-      </div>
-    )}
+                    <a
+                      href={`/teacher/student/diary?student_name=${encodeURIComponent(student)}`}
+                      target="_blank"
+                      className="text-[11px] bg-green-50 text-green-600 px-2 py-0.5 rounded-md hover:bg-green-100"
+                    >
+                      Diary →
+                    </a>
 
-    {/* === For red or yellow === */}
-    {(caseType === "red_no_note" ||
-      caseType === "red_mismatch" ||
-      caseType === "red_unscheduled") && (
-      <div className="space-y-3 text-sm text-gray-700">
-        <p className="text-center font-medium text-gray-900">
-          {caseType === "red_no_note"
-            ? "You had a scheduled class, but didn't have a class today."
-            : caseType === "red_unscheduled"
-            ? `You had an unscheduled class at ${timeFmt(started)} – ${timeFmt(ended)}.`
-            : `You had class at ${timeFmt(started)} – ${timeFmt(ended)}.`}
-        </p>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-1 rounded-md hover:bg-yellow-100"
-            onClick={async () => {
-              try {
-                const studentName = raw.student_name;
-                const teacherName =
-                  teacherFromNote ||
-                  raw.teacher_name?.trim() ||
-                  defaults?.teacher_name?.trim() ||
-                  addForm.teacher_name?.trim() ||
-                  "";
-
-                const dateDot = dateKey;               
-                const scheduleStart = new Date(ev.start);
-                const scheduleEnd = new Date(ev.end);
-                const durationMs = scheduleEnd.getTime() - scheduleStart.getTime();
-
-                // FIXED: original_text must be NON-empty HTML
-                const payload = {
-                  quizletData: {
-                    student_names: [studentName],
-                    class_date: dateDot,
-                    date: dateDot,
-                    original_text: "<p>Paid Class</p>",   // ✅ REQUIRED!
-                  },
-
-                  homework: "",
-                  nextClass: "",
-
-                  started_at: scheduleStart.toISOString(),
-                  ended_at: scheduleEnd.toISOString(),
-                  duration_ms: durationMs,
-                  quizlet_saved: false,
-                  teacher_name: teacherName,
-                  type: "teacher",
-                  reason: "paid class",
-                };
-
-                const res = await fetch("/api/classnote", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload),
-                });
-
-                if (!res.ok) {
-                  const err = await res.json().catch(()=>({}));
-                  alert("Failed to register paid class: " + (err.error || res.status));
-                  return;
-                }
-
-                alert("Paid class registered successfully.");
-                window.dispatchEvent(new CustomEvent("calendar:saved"));
-                setDetail(null);
-
-              } catch (err) {
-                console.error("Paid class error:", err);
-                alert("❌ Failed to save paid class.");
-              }
-            }}
-          >
-            Paid Cancel
-          </button>
-
-
-          <button
-            onClick={handleDeleteSingle}
-            className="text-xs bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 rounded-md hover:bg-rose-100"
-          >
-            Delete Single
-          </button>
-
-          <button
-            onClick={() => openBulkDeletePanel(ev)}
-            className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded-md hover:bg-red-100"
-          >
-            Delete Future Classes
-          </button>
-
-          <button
-            onClick={async () => {
-              try {
-                if (!started || !ended) {
-                  alert("No valid class note time found to sync.");
-                  return;
-                }
-
-                const studentName = student;
-                const teacherName =
-                  teacherFromNote ||
-                  raw.teacher_name?.trim() ||
-                  defaults?.teacher_name?.trim() ||
-                  addForm.teacher_name?.trim() ||
-                  "";
-
-                const roomName = raw.room_name || "101";
-                const date = ymdString(toLocalDateOnly(started));
-                let time = started.getHours() + started.getMinutes() / 60;
-                time = Math.round(time * 2) / 2;
-                // calculate actual duration from classnote
-                const duration =
-                  Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
-
-
-                const scheduleId = raw.schedule_id || raw._id || raw.id;
-
-                // ✅ Sync schedule time first
-                if (scheduleId) {
-                  await saveUpdateById(scheduleId, date, time, duration);
-                } else {
-                  await saveCreate({
-                    date,
-                    time,
-                    duration,
-                    room_name: roomName,
-                    teacher_name: teacherName,
-                    student_name: studentName,
-                    calendarId: "1",
-                  });
-                }
-
-                // ✅ Then mark the related class note with reason
-                const classnoteId = raw.classnote_id || note?._id;
-                if (classnoteId) {
-                  await fetch(`/api/classnote/${classnoteId}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ reason: "class time changed" }),
-                  });
-                }
-
-                alert("✅ Schedule synced and classnote updated.");
-                window.dispatchEvent(new CustomEvent("calendar:saved"));
-                setDetail(null);
-              } catch (err) {
-                console.error("Sync schedule error:", err);
-                alert("❌ Failed to sync schedule.");
-              }
-            }}
-            className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-md hover:bg-indigo-100"
-          >
-            Class Time Changed
-          </button>
-          {caseType === "red_unscheduled" && (
+                    {/* NEW – CLASSNOTE BUTTON */}
                     <button
-            className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100"
-            onClick={async () => {
-              try {
-                if (!started || !ended) {
-                  alert("No valid class note time found.");
-                  return;
-                }
+                      onClick={async () => {
+                        try {
+                          const cleanDate = dateKey.endsWith(".") ? dateKey : `${dateKey}.`;
 
-                const studentName = student;
-                const teacherName =
-                  teacherFromNote ||
-                  raw.teacher_name?.trim() ||
-                  defaults?.teacher_name?.trim() ||
-                  addForm.teacher_name?.trim() ||
-                  "";
+                          const url = `/api/classnote?student_name=${encodeURIComponent(student)}&teacher_name=${encodeURIComponent(raw.teacher_name)}&date=${cleanDate}`;
+                          const res = await fetch(url, { cache: "no-store" });
+                          const json = await res.json();
 
-                const roomName = raw.room_name || "HF";
+                          if (!json || !json.data) {
+                            alert("No class notes found for this date.");
+                            return;
+                          }
 
-                // Base date of this unscheduled class
-                const baseDate = toLocalDateOnly(started);  
-                const weekday = baseDate.getDay();
+                          const note = json.data;
 
-                // Start time (rounded to 0.5)
-                let startTime = started.getHours() + started.getMinutes() / 60;
-                startTime = Math.round(startTime * 2) / 2;
+                          // ✅ Directly open a new tab with full HTML rendering
+                          const w = window.open("", "_blank", "width=900,height=700,scrollbars=yes");
+                          if (!w) {
+                            alert("Popup blocked. Please enable popups to view class notes.");
+                            return;
+                          }
 
-                // Duration (hours, 0.5 increments)
-                const durationH =
-                  Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
+                          w.document.write(`
+                            <html>
+                              <head>
+                                <title>${student} — Class Note (${note.date})</title>
+                                <style>
+                                  body {
+                                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                    background-color: #f8f9fa;
+                                    padding: 2rem;
+                                  }
+                                  .container {
+                                    max-width: 800px;
+                                    margin: 0 auto;
+                                    background-color: white;
+                                    border: 1px solid #f2f4f6;
+                                    border-radius: 16px;
+                                    padding: 2rem;
+                                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+                                  }
+                                  h2 {
+                                    font-size: 1.5rem;
+                                    margin-bottom: 1rem;
+                                    color: #191f28;
+                                    font-weight: 700;
+                                  }
+                                  h3 {
+                                    font-size: 1.25rem;
+                                    margin-top: 2rem;
+                                    margin-bottom: 0.75rem;
+                                    color: #191f28;
+                                    font-weight: 700;
+                                  }
+                                  p, li {
+                                    font-size: 1rem;
+                                    line-height: 1.6;
+                                    color: #4e5968;
+                                  }
+                                  ul, ol {
+                                    padding-left: 1.5rem;
+                                    margin-bottom: 1rem;
+                                  }
+                                  hr {
+                                    margin: 2rem 0;
+                                    border-color: #f2f4f6;
+                                  }
+                                </style>
+                              </head>
+                              <body>
+                                <div class="container">
+                                  <h2>${student} — Class Note (${note.date})</h2>
 
-                // 6 months range
-                const until = new Date(baseDate);
-                until.setMonth(until.getMonth() + 6);
+                                  ${note.original_text || ""}
 
-                // Build repeating schedules
-                const payloads = [];
+                                  ${
+                                    note.homework
+                                      ? `<hr/><h3>Homework</h3><p>${note.homework.replace(/\n/g, "<br/>")}</p>`
+                                      : ""
+                                  }
 
-                for (
-                  let d = new Date(baseDate);
-                  d.getTime() <= until.getTime();
-                  d.setDate(d.getDate() + 7)
-                ) {
-                  if (d.getDay() !== weekday) continue;
+                                  ${
+                                    note.nextClass
+                                      ? `<hr/><h3>Next Class</h3><p>${note.nextClass}</p>`
+                                      : ""
+                                  }
+                                </div>
+                              </body>
+                            </html>
+                          `);
 
-                  const iterDate = new Date(d);
-                  payloads.push({
-                    date: ymdString(iterDate),
-                    time: startTime,
-                    duration: durationH,
-                    room_name: roomName,
-                    teacher_name: teacherName,
-                    student_name: studentName,
-                    calendarId: "1",
-                  });
-                }
+                          w.document.close();
+                        } catch (err) {
+                          console.error("Classnote open error:", err);
+                          alert("Failed to load class notes.");
+                        }
+                      }}
+                      className="text-[11px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md hover:bg-purple-100"
+                    >
+                      Class Note →
+                    </button>
 
+                  </div>
+                </div>
+              )}
 
-                if (payloads.length === 0) {
-                  alert("No repeat dates found.");
-                  return;
-                }
+              {/* === For red or yellow === */}
+              {(caseType === "red_no_note" ||
+                caseType === "red_mismatch" ||
+                caseType === "red_unscheduled") && (
+                <div className="space-y-3 text-sm text-gray-700">
+                  <p className="text-center font-medium text-gray-900">
+                    {caseType === "red_no_note"
+                      ? "You had a scheduled class, but didn't have a class today."
+                      : caseType === "red_unscheduled"
+                      ? `You had an unscheduled class at ${timeFmt(started)} – ${timeFmt(ended)}.`
+                      : `You had class at ${timeFmt(started)} – ${timeFmt(ended)}.`}
+                  </p>
 
-                const res = await fetch("/api/schedules", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payloads),
-                });
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-1 rounded-md hover:bg-yellow-100"
+                      onClick={async () => {
+                        try {
+                          const studentName = raw.student_name;
+                          const teacherName =
+                            teacherFromNote ||
+                            raw.teacher_name?.trim() ||
+                            defaults?.teacher_name?.trim() ||
+                            addForm.teacher_name?.trim() ||
+                            "";
 
-                if (!res.ok) throw new Error("Failed to create repeated schedules");
+                          const dateDot = dateKey;               
+                          const scheduleStart = new Date(ev.start);
+                          const scheduleEnd = new Date(ev.end);
+                          const durationMs = scheduleEnd.getTime() - scheduleStart.getTime();
 
-                alert(`✅ ${payloads.length} repeated classes added (6 months).`);
-                window.dispatchEvent(new CustomEvent("calendar:saved"));
-                setDetail(null);
+                          // FIXED: original_text must be NON-empty HTML
+                          const payload = {
+                            quizletData: {
+                              student_names: [studentName],
+                              class_date: dateDot,
+                              date: dateDot,
+                              original_text: "<p>Paid Class</p>",   // ✅ REQUIRED!
+                            },
 
-              } catch (err) {
-                console.error("Repeat add error:", err);
-                alert("❌ Failed to add repeated classes.");
-              }
-            }}
-          >
-            Confirm class and add regularly to Calendar
-          </button>
-          )}
+                            homework: "",
+                            nextClass: "",
 
-          {(caseType === "red_unscheduled" || caseType === "red_mismatch") && (
-            <button
-              className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-300 px-2 py-1 rounded-md hover:bg-yellow-100"
-              onClick={async () => {
-                try {
-                  if (!started || !ended) {
-                    alert("No valid class note time available.");
-                    return;
-                  }
+                            started_at: scheduleStart.toISOString(),
+                            ended_at: scheduleEnd.toISOString(),
+                            duration_ms: durationMs,
+                            quizlet_saved: false,
+                            teacher_name: teacherName,
+                            type: "teacher",
+                            reason: "paid class",
+                          };
 
-                  const studentName = student;
-                  const teacherName =
-                    teacherFromNote ||
-                    raw.teacher_name?.trim() ||
-                    defaults?.teacher_name?.trim() ||
-                    addForm.teacher_name?.trim() ||
-                    "";
-                  const roomName = raw.room_name || "HF";
+                          const res = await fetch("/api/classnote", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload),
+                          });
 
-                  const baseDate = toLocalDateOnly(started);
-                  const weekday = baseDate.getDay();
+                          if (!res.ok) {
+                            const err = await res.json().catch(()=>({}));
+                            alert("Failed to register paid class: " + (err.error || res.status));
+                            return;
+                          }
 
-                  // Start time (rounded)
-                  let startTime = started.getHours() + started.getMinutes() / 60;
-                  startTime = Math.round(startTime * 2) / 2;
+                          alert("Paid class registered successfully.");
+                          window.dispatchEvent(new CustomEvent("calendar:saved"));
+                          setDetail(null);
 
-                  // Duration (rounded 0.5)
-                  const durationH =
-                    Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
-
-                  // Repeat 6 months
-                  const until = new Date(baseDate);
-                  until.setMonth(until.getMonth() + 6);
-
-                  const payloads = [];
-
-                  // 1️⃣ If SCHEDULE EXISTS (red_mismatch), update it
-                  if (caseType === "red_mismatch") {
-                    payloads.push({
-                      _id: raw.id || raw._id,
-                      update: {
-                        date: ymdString(baseDate),
-                        time: startTime,
-                        duration: durationH,
-                        room_name: roomName,
-                        teacher_name: teacherName,
-                        student_name: studentName,
-                      },
-                    });
-                  }
-
-                  // 1️⃣ If SCHEDULE MISSING (red_unscheduled), create the schedule for this date
-                  if (caseType === "red_unscheduled") {
-                    payloads.push({
-                      date: ymdString(baseDate),
-                      time: startTime,
-                      duration: durationH,
-                      room_name: roomName,
-                      teacher_name: teacherName,
-                      student_name: studentName,
-                      calendarId: "1",
-                    });
-                  }
-
-                  // 2️⃣ Add FUTURE WEEKLY SCHEDULES FOR 6 MONTHS
-                  for (
-                    let d = new Date(baseDate);
-                    d.getTime() <= until.getTime();
-                    d.setDate(d.getDate() + 7)
-                  ) {
-                    if (d.getDay() !== weekday) continue;
-
-                    payloads.push({
-                      date: ymdString(new Date(d)),
-                      time: startTime,
-                      duration: durationH,
-                      room_name: roomName,
-                      teacher_name: teacherName,
-                      student_name: studentName,
-                      calendarId: "1",
-                    });
-                  }
-
-                  // 3️⃣ Save all
-                  const res = await fetch("/api/schedules/mismatch-or-unscheduled-update", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payloads),
-                  });
-
-                  if (!res.ok) throw new Error("Failed to update schedules");
-
-                  alert(`✅ Class updated and future schedules added for 6 months`);
-                  window.dispatchEvent(new CustomEvent("calendar:saved"));
-                  setDetail(null);
-
-                } catch (err) {
-                  console.error(err);
-                  alert("❌ Failed to update class schedule.");
-                }
-              }}
-            >
-              Change Information About Class
-            </button>
-          )}
+                        } catch (err) {
+                          console.error("Paid class error:", err);
+                          alert("❌ Failed to save paid class.");
+                        }
+                      }}
+                    >
+                      Paid Cancel
+                    </button>
 
 
-        </div>
-      </div>
-    )}
+                    <button
+                      onClick={handleDeleteSingle}
+                      className="text-xs bg-rose-50 text-rose-700 border border-rose-200 px-2 py-1 rounded-md hover:bg-rose-100"
+                    >
+                      Delete Single
+                    </button>
 
-    </div>
-  );
-})()}
+                    <button
+                      onClick={() => openBulkDeletePanel(ev)}
+                      className="text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-1 rounded-md hover:bg-red-100"
+                    >
+                      Delete Future Classes
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        try {
+                          if (!started || !ended) {
+                            alert("No valid class note time found to sync.");
+                            return;
+                          }
+
+                          const studentName = student;
+                          const teacherName =
+                            teacherFromNote ||
+                            raw.teacher_name?.trim() ||
+                            defaults?.teacher_name?.trim() ||
+                            addForm.teacher_name?.trim() ||
+                            "";
+
+                          const roomName = raw.room_name || "101";
+                          const date = ymdString(toLocalDateOnly(started));
+                          let time = started.getHours() + started.getMinutes() / 60;
+                          time = Math.round(time * 2) / 2;
+                          // calculate actual duration from classnote
+                          const duration =
+                            Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
+
+
+                          const scheduleId = raw.schedule_id || raw._id || raw.id;
+
+                          // ✅ Sync schedule time first
+                          if (scheduleId) {
+                            await saveUpdateById(scheduleId, date, time, duration);
+                          } else {
+                            await saveCreate({
+                              date,
+                              time,
+                              duration,
+                              room_name: roomName,
+                              teacher_name: teacherName,
+                              student_name: studentName,
+                              calendarId: "1",
+                            });
+                          }
+
+                          // ✅ Then mark the related class note with reason
+                          const classnoteId = raw.classnote_id || note?._id;
+                          if (classnoteId) {
+                            await fetch(`/api/classnote/${classnoteId}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ reason: "class time changed" }),
+                            });
+                          }
+
+                          alert("✅ Schedule synced and classnote updated.");
+                          window.dispatchEvent(new CustomEvent("calendar:saved"));
+                          setDetail(null);
+                        } catch (err) {
+                          console.error("Sync schedule error:", err);
+                          alert("❌ Failed to sync schedule.");
+                        }
+                      }}
+                      className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-md hover:bg-indigo-100"
+                    >
+                      Class Time Changed
+                    </button>
+                    {caseType === "red_unscheduled" && (
+                              <button
+                      className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100"
+                      onClick={async () => {
+                        try {
+                          if (!started || !ended) {
+                            alert("No valid class note time found.");
+                            return;
+                          }
+
+                          const studentName = student;
+                          const teacherName =
+                            teacherFromNote ||
+                            raw.teacher_name?.trim() ||
+                            defaults?.teacher_name?.trim() ||
+                            addForm.teacher_name?.trim() ||
+                            "";
+
+                          const roomName = raw.room_name || "HF";
+
+                          // Base date of this unscheduled class
+                          const baseDate = toLocalDateOnly(started);  
+                          const weekday = baseDate.getDay();
+
+                          // Start time (rounded to 0.5)
+                          let startTime = started.getHours() + started.getMinutes() / 60;
+                          startTime = Math.round(startTime * 2) / 2;
+
+                          // Duration (hours, 0.5 increments)
+                          const durationH =
+                            Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
+
+                          // 6 months range
+                          const until = new Date(baseDate);
+                          until.setMonth(until.getMonth() + 6);
+
+                          // Build repeating schedules
+                          const payloads = [];
+
+                          for (
+                            let d = new Date(baseDate);
+                            d.getTime() <= until.getTime();
+                            d.setDate(d.getDate() + 7)
+                          ) {
+                            if (d.getDay() !== weekday) continue;
+
+                            const iterDate = new Date(d);
+                            payloads.push({
+                              date: ymdString(iterDate),
+                              time: startTime,
+                              duration: durationH,
+                              room_name: roomName,
+                              teacher_name: teacherName,
+                              student_name: studentName,
+                              calendarId: "1",
+                            });
+                          }
+
+
+                          if (payloads.length === 0) {
+                            alert("No repeat dates found.");
+                            return;
+                          }
+
+                          const res = await fetch("/api/schedules", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payloads),
+                          });
+
+                          if (!res.ok) throw new Error("Failed to create repeated schedules");
+
+                          alert(`✅ ${payloads.length} repeated classes added (6 months).`);
+                          window.dispatchEvent(new CustomEvent("calendar:saved"));
+                          setDetail(null);
+
+                        } catch (err) {
+                          console.error("Repeat add error:", err);
+                          alert("❌ Failed to add repeated classes.");
+                        }
+                      }}
+                    >
+                      Confirm class and add regularly to Calendar
+                    </button>
+                    )}
+
+                    {(caseType === "red_unscheduled" || caseType === "red_mismatch") && (
+                      <button
+                        className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-300 px-2 py-1 rounded-md hover:bg-yellow-100"
+                        onClick={async () => {
+                          try {
+                            if (!started || !ended) {
+                              alert("No valid class note time available.");
+                              return;
+                            }
+
+                            const studentName = student;
+                            const teacherName =
+                              teacherFromNote ||
+                              raw.teacher_name?.trim() ||
+                              defaults?.teacher_name?.trim() ||
+                              addForm.teacher_name?.trim() ||
+                              "";
+                            const roomName = raw.room_name || "HF";
+
+                            const baseDate = toLocalDateOnly(started);
+                            const weekday = baseDate.getDay();
+
+                            // Start time (rounded)
+                            let startTime = started.getHours() + started.getMinutes() / 60;
+                            startTime = Math.round(startTime * 2) / 2;
+
+                            // Duration (rounded 0.5)
+                            const durationH =
+                              Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
+
+                            // Repeat 6 months
+                            const until = new Date(baseDate);
+                            until.setMonth(until.getMonth() + 6);
+
+                            const payloads = [];
+
+                            // 1️⃣ If SCHEDULE EXISTS (red_mismatch), update it
+                            if (caseType === "red_mismatch") {
+                              payloads.push({
+                                _id: raw.id || raw._id,
+                                update: {
+                                  date: ymdString(baseDate),
+                                  time: startTime,
+                                  duration: durationH,
+                                  room_name: roomName,
+                                  teacher_name: teacherName,
+                                  student_name: studentName,
+                                },
+                              });
+                            }
+
+                            // 1️⃣ If SCHEDULE MISSING (red_unscheduled), create the schedule for this date
+                            if (caseType === "red_unscheduled") {
+                              payloads.push({
+                                date: ymdString(baseDate),
+                                time: startTime,
+                                duration: durationH,
+                                room_name: roomName,
+                                teacher_name: teacherName,
+                                student_name: studentName,
+                                calendarId: "1",
+                              });
+                            }
+
+                            // 2️⃣ Add FUTURE WEEKLY SCHEDULES FOR 6 MONTHS
+                            for (
+                              let d = new Date(baseDate);
+                              d.getTime() <= until.getTime();
+                              d.setDate(d.getDate() + 7)
+                            ) {
+                              if (d.getDay() !== weekday) continue;
+
+                              payloads.push({
+                                date: ymdString(new Date(d)),
+                                time: startTime,
+                                duration: durationH,
+                                room_name: roomName,
+                                teacher_name: teacherName,
+                                student_name: studentName,
+                                calendarId: "1",
+                              });
+                            }
+
+                            // 3️⃣ Save all
+                            const res = await fetch("/api/schedules/mismatch-or-unscheduled-update", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(payloads),
+                            });
+
+                            if (!res.ok) throw new Error("Failed to update schedules");
+
+                            alert(`✅ Class updated and future schedules added for 6 months`);
+                            window.dispatchEvent(new CustomEvent("calendar:saved"));
+                            setDetail(null);
+
+                          } catch (err) {
+                            console.error(err);
+                            alert("❌ Failed to update class schedule.");
+                          }
+                        }}
+                      >
+                        Change Information About Class
+                      </button>
+                    )}
+
+
+                  </div>
+                </div>
+              )}
+
+              </div>
+            );
+          })()}
 
 
 

@@ -1799,6 +1799,36 @@ export async function saveClassnotesNew(input: {
   }
 }
 
+export async function getExactClassnote(
+  student_name: string,
+  teacher_name: string,
+  date: string   // "YYYY. MM. DD."
+) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    const result = await coll
+      .find({
+        student_name,
+        teacher_name,
+        date,
+      })
+      .sort({ updatedAt: -1 })
+      .limit(1)
+      .toArray();
+
+    if (!result.length) return null;
+
+    const doc = result[0];
+    return { ...doc, _id: String(doc._id) };
+  } catch (err) {
+    console.error("getExactClassnote error:", err);
+    return null;
+  }
+}
+
 export async function updateClassnoteData(
   id: string,
   patch: Partial<{ reason: string; comment: string; note: string }>

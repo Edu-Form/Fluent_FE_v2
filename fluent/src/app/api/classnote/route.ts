@@ -1,6 +1,36 @@
 // app/api/classnotes/route.ts
 import { NextResponse } from "next/server";
-import { saveClassnotesNew } from "@/lib/data";
+import { saveClassnotesNew, getExactClassnote } from "@/lib/data";
+
+
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url);
+
+    const student = url.searchParams.get("student_name");
+    const teacher = url.searchParams.get("teacher_name");
+    const date = url.searchParams.get("date");
+
+    if (!student || !teacher || !date) {
+      return NextResponse.json(
+        { error: "student_name, teacher_name, and date are required" },
+        { status: 400 }
+      );
+    }
+
+    // Normalize date → ensure it ends with "."
+    const cleanDate = date.endsWith(".") ? date : `${date}.`;
+
+    const doc = await getExactClassnote(student, teacher, cleanDate);
+    console.log(doc)
+
+    return NextResponse.json({ data: doc ?? null });
+  } catch (err) {
+    console.error("GET /api/classnote error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
 
 export async function POST(request: Request) {
   try {
