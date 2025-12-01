@@ -1457,15 +1457,17 @@ export async function saveQuizletData(
 }
 
 // lib/data.ts
-export const saveTempClassNote = async (student_name: string, original_text: string) => {
+export const saveTempClassNote = async (student_name: string, payload: any) => {
   const client = await clientPromise;
   const db = client.db("room_allocation_db");
+
   return db.collection("quizlet_temp").updateOne(
     { student_name },
-    { $set: { original_text, updatedAt: new Date() } },
+    { $set: payload },
     { upsert: true }
   );
 };
+
 
 export const getTempClassNote = async (student_name: string) => {
   const client = await clientPromise;

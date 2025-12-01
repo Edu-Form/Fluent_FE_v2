@@ -982,7 +982,7 @@ useEffect(() => {
   }, [studentFinancials]);
 
   const summary = useMemo(() => {
-    const totalClasses = monthSchedules.length;
+    const totalClasses = monthClassnotes.length;
     const totalHours = monthSchedules.reduce(
       (sum, entry) => sum + normalizeDuration(entry.duration),
       0

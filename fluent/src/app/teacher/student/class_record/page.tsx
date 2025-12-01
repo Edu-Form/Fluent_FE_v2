@@ -2890,9 +2890,50 @@ const ClassPageContent: React.FC = () => {
       {translationModalOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-3xl w-[90%] max-w-4xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-[#191F28]">
-              Review Translations
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-[#191F28]">
+                Review Translations
+              </h2>
+
+              {/* 🔄 Re-Translate Button */}
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setTranslating(true);  // show loading spinner
+
+                    const response = await fetch("/api/quizlet/translate", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ original_text }),
+                    });
+
+                    if (!response.ok) {
+                      const data = await response.json().catch(() => ({}));
+                      throw new Error(data?.error || "Translation failed");
+                    }
+
+                    const { eng_quizlet, kor_quizlet } = await response.json();
+
+                    const merged = eng_quizlet.map((eng: any, i: any) => ({
+                      eng,
+                      kor: kor_quizlet[i] || "",
+                    }));
+
+                    // 🔥 Update the modal inputs WITHOUT refreshing
+                    setQuizletLines(merged);
+
+                  } catch (err) {
+                    alert(err instanceof Error ? err.message : "Unknown re-translation error.");
+                  } finally {
+                    setTranslating(false);
+                  }
+                }}
+                className="px-3 py-1.5 text-xs font-semibold bg-[#E7F1FF] text-[#3182F6] rounded-lg hover:bg-[#D9E9FF] transition-all"
+              >
+                🔄 Refresh Translations
+              </button>
+            </div>
             <p className="text-sm text-[#4E5968] mb-4 p-4 bg-[#F8F9FA] rounded-2xl border border-[#F2F4F6] leading-relaxed">
               Please revise any awkward translations before saving.
             </p>
@@ -3021,6 +3062,12 @@ const ClassPageContent: React.FC = () => {
                       const errorData = await res.json();
                       throw new Error(errorData?.error || "Save failed.");
                     }
+
+                    await fetch("/api/quizlet/temp", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ student_name, original_text: "" }),
+                    });
 
                     setTranslationModalOpen(false);
                     setSaveSuccess(true);

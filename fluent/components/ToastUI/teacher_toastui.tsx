@@ -138,6 +138,8 @@ function TeacherToastUIInner({
   const urlType = searchParams.get("type") || "teacher";
   const urlId = searchParams.get("id") || "";
   const currentUser = defaults?.teacher_name || urlUser;
+  // Store all students so we can map student → teacher later
+  const allStudentsRef = useRef<Map<string, any>>(new Map());
 
   // --- per-student cache for class_history (for popover meta)
   const studentCacheRef = useRef<Map<string, any>>(new Map());
@@ -559,13 +561,21 @@ function TeacherToastUIInner({
   }, [data, teacherColorMap, classnoteMap, pastSchedulesIndex]);
 
   /* ------------------------------- Apply filters ---------------------------- */
-const filteredEvents = useMemo(() => {
-  return (eventsFromProps || []).filter((ev) => {
-    const teacherOfEvent = ev?.raw?.teacher_name?.trim() || "";
-    const currentTeacher = currentUser?.trim() || "";
+  const filteredEvents = useMemo(() => {
+    return (eventsFromProps || []).filter((ev) => {
+    // 1) If schedule exists → use schedule’s teacher
+    let teacherOfEvent = ev?.raw?.teacher_name?.trim();
 
-    // 1️⃣ NEW HARD FILTER: teacher must match URL teacher
-    if (teacherOfEvent !== currentTeacher) return false;
+    // 2) If no schedule teacher → get student’s assigned teacher
+    if (!teacherOfEvent) {
+      const studentName = ev?.raw?.student_name?.trim();
+      const student = allStudentsRef.current.get(studentName);
+      if (student) teacherOfEvent = student.teacher?.trim() || "";
+    }
+
+    // 3) Now compare
+    if (teacherOfEvent !== currentUser?.trim()) return false;
+
 
     // 2️⃣ Apply sidebar teacher filters (admin only)
     if (enableTeacherSidebar) {
@@ -944,37 +954,73 @@ const filteredEvents = useMemo(() => {
     const from = dateKeyFromDate(rangeStart);
     const to   = dateKeyFromDate(rangeEnd);
 
-    const studentsSet = new Set<string>();
-    (data || []).forEach(row => {
-      const nm = row?.student_name?.trim();
-      if (nm) studentsSet.add(nm);
-    });
-    const students = Array.from(studentsSet);
-    if (!students.length) { setClassnoteMap(new Map()); return; }
+    async function fetchStudentsAndNotes() {
+      try {
+        // 1️⃣ FETCH ALL STUDENTS
+        const res = await fetch("/api/studentList", { cache: "no-store" });
+        if (!res.ok) {
+          console.error("Failed to fetch students");
+          setClassnoteMap(new Map());
+          return;
+        }
 
-    // ✅ PUT YOUR LOG RIGHT HERE
-    console.log("📘 Students used for classnote search:", students);
+        const allStudents = await res.json();
 
-    const params = new URLSearchParams();
-    students.forEach(s => params.append("student_name", s));
-    params.set("from", from);
-    params.set("to", to);
+        // Save students into map for quick lookup
+        const map = new Map();
+        allStudents.forEach((s: any) => {
+          if (s?.name) map.set(s.name.trim(), s);
+        });
+        allStudentsRef.current = map;
 
-    fetch(`/api/classnote/search?${params.toString()}`, { cache: "no-store" })
-      .then(res => res.ok ? res.json() : null)
-      .then(json => {
-        const list = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-        const map = new Map<string, any[]>();
+
+        // 2️⃣ PICK ONLY STUDENTS BELONGING TO CURRENT TEACHER
+        const studentNames = allStudents
+          .filter((s: any) => s.teacher?.trim() === currentUser?.trim())
+          .map((s: any) => s.name?.trim())
+          .filter(Boolean);
+
+        if (!studentNames.length) {
+          setClassnoteMap(new Map());
+          return;
+        }
+
+        // 3️⃣ FETCH CLASSNOTES ONLY FOR THESE STUDENTS
+        const params = new URLSearchParams();
+        studentNames.forEach((s: any) => params.append("student_name", s));
+        params.set("from", from);
+        params.set("to", to);
+
+        const notesRes = await fetch(`/api/classnote/search?${params.toString()}`, {
+          cache: "no-store",
+        });
+
+        const json = await notesRes.json();
+        const list = Array.isArray(json?.data)
+          ? json.data
+          : Array.isArray(json)
+          ? json
+          : [];
+
+        const cnMap = new Map<string, any[]>();
         for (const note of list) {
           const normalizedDate = ymdString(toDateYMD(note.date)!);
           const key = `${note.student_name}::${normalizedDate}`;
-          if (!map.has(key)) map.set(key, []);
-          map.get(key)!.push(note);
+          if (!cnMap.has(key)) cnMap.set(key, []);
+          cnMap.get(key)!.push(note);
         }
-        setClassnoteMap(map);
-      })
-      .catch(() => setClassnoteMap(new Map()));
-  }, [currentDate?.getTime?.(), viewName, data]);
+
+        setClassnoteMap(cnMap);
+
+      } catch (err) {
+        console.error("Error fetching classnotes:", err);
+        setClassnoteMap(new Map());
+      }
+    }
+
+    fetchStudentsAndNotes();
+  }, [currentDate, viewName, currentUser]);
+
 
   // Close popovers on outside click / ESC
   useEffect(() => {
