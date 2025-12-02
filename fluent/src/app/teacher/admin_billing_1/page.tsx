@@ -65,8 +65,8 @@ type StudentRow = {
   schedules: ScheduleEntry[];
   nextSchedules: ScheduleEntry[];
   classnotes: ClassnoteEntry[];
-  diaries: DiaryEntry[];
-  quizlets: QuizletEntry[];
+  diaries: (DiaryEntry | null)[];
+  quizlets: (QuizletEntry | null)[];
   totalHours: number;
 };
 
@@ -824,38 +824,113 @@ function AdminBillingExcelPageInner() {
     const quizletCache = quizletCacheRef.current;
 
     const rows = students.map((student) => {
-      const schedules = monthSchedules.filter(
-        (entry) =>
-          String(entry.student_name || "").trim() === student.name.trim()
-      );
-      const nextSchedules = nextMonthSchedules.filter(
-        (entry) =>
-          String(entry.student_name || "").trim() === student.name.trim()
-      );
-      const totalHours = schedules.reduce(
-        (sum, entry) => sum + normalizeDuration(entry.duration),
-        0
-      );
+    const schedules = monthSchedules.filter(
+      (entry) =>
+        String(entry.student_name || "").trim() === student.name.trim()
+    );
 
-      const classnotes = monthClassnotes.filter(
-        (entry) =>
-          String(entry.student_name || "").trim() === student.name.trim()
-      );
+    const nextSchedules = nextMonthSchedules.filter(
+      (entry) =>
+        String(entry.student_name || "").trim() === student.name.trim()
+    );
 
-      const diaries = (diaryCache[student.name] ?? []).filter((entry) =>
-        matchesMonth(entry.class_date ?? entry.date, selectedMonth)
-      );
-      const quizlets = (quizletCache[student.name] ?? []).filter((entry) =>
-        matchesMonth(entry.class_date ?? entry.date, selectedMonth)
-      );
+    const totalHours = schedules.reduce(
+      (sum, entry) => sum + normalizeDuration(entry.duration),
+      0
+    );
+
+    const classnotes = monthClassnotes.filter(
+      (entry) =>
+        String(entry.student_name || "").trim() === student.name.trim()
+    );
+
+    // (Original filtered lists)
+    const diaryRaw = (diaryCache[student.name] ?? []).filter((entry) =>
+      matchesMonth(entry.class_date ?? entry.date, selectedMonth)
+    );
+
+    const quizletRaw = (quizletCache[student.name] ?? []).filter((entry) =>
+      matchesMonth(entry.class_date ?? entry.date, selectedMonth)
+    );
+
+    // // ⭐ STEP 1 — Build unified date list from classnotes
+    // const unifiedDates = classnotes
+    //   .map((cn) => {
+    //     const dt = parseDateString(cn.date);
+    //     return dt ? formatDotDate(dt) : "";
+    //   })
+    //   .filter(Boolean)
+    //   .sort((a, b) => (a < b ? -1 : 1));
+
+    // Create lookup maps
+    const diaryMap: Record<string, DiaryEntry> = {};
+    diaryRaw.forEach((d) => {
+      const dt = parseDateString(d.class_date ?? d.date);
+      if (!dt) return;
+      diaryMap[formatDotDate(dt)] = d;
+    });
+
+    const quizletMap: Record<string, QuizletEntry> = {};
+    quizletRaw.forEach((q) => {
+      const dt = parseDateString(q.class_date ?? q.date);
+      if (!dt) return;
+      quizletMap[formatDotDate(dt)] = q;
+    });
+
+    // ⭐ align to unifiedDates
+    const classDates = classnotes
+      .map((cn) => parseDateString(cn.date))
+      .filter(Boolean) as Date[];
+
+    // Pre-sort timestamps (should already be sorted)
+    classDates.sort((a, b) => a.getTime() - b.getTime());
+
+    // Prepare buckets
+    const alignedDiaries: (DiaryEntry | null)[] = [];
+    const alignedQuizlets: (QuizletEntry | null)[] = [];
+
+    // Loop over class intervals
+    for (let i = 0; i < classDates.length; i++) {
+      const cur = classDates[i];
+      const prev = classDates[i - 1] ?? null;
+      const next = classDates[i + 1] ?? null;
+
+      // DIARY range: prev → cur
+      const diaryStart = prev ?? cur;     // if no prev, diary only on this date
+      const diaryEnd = cur;               // inclusive
+
+      const diaryItem =
+        diaryRaw.find((d) => {
+          const dt = parseDateString(d.class_date ?? d.date);
+          if (!dt) return false;
+          return dt.getTime() >= diaryStart.getTime() &&
+                dt.getTime() <= diaryEnd.getTime();
+        }) ?? null;
+      alignedDiaries.push(diaryItem);
+
+      // QUIZLET range: cur → next
+      const quizletStart = cur;
+      const quizletEnd = next ?? new Date(cur.getFullYear(), cur.getMonth() + 1, 1); // next month boundary
+
+      const quizletItem =
+        quizletRaw.find((q) => {
+          const dt = parseDateString(q.class_date ?? q.date);
+          if (!dt) return false;
+          return dt.getTime() >= quizletStart.getTime() &&
+                dt.getTime() < quizletEnd.getTime();
+        }) ?? null;
+
+      alignedQuizlets.push(quizletItem);
+    }
+
 
       return {
         student,
         schedules,
         nextSchedules,
         classnotes,
-        diaries,
-        quizlets,
+        diaries: alignedDiaries,
+        quizlets: alignedQuizlets,
         totalHours,
       };
     });
@@ -1089,7 +1164,7 @@ const handleConfigChange = useCallback(
             String(item.date ?? "");
           return (
             <div
-              key={item._id ?? `${item.student_name}_${idx}`}
+              key={`${item.student_name}_schedule_${idx}`}
               className="flex flex-wrap gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2"
             >
               <div className="font-medium text-gray-800">{dateLabel}</div>
@@ -1135,7 +1210,7 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
           
           return (
             <div
-              key={item._id ?? `${item.student_name}_classnote_${idx}`}
+              key={`${student.name}_classnote_${idx}`}
               className="flex items-center gap-2"
             >
               <a
@@ -1153,7 +1228,10 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
     );
   };
 
-  const renderDiaryDetails = (rows: DiaryEntry[], student: StudentInfo) => {
+  const renderDiaryDetails = (
+    rows: (DiaryEntry | null)[],
+    student: StudentInfo
+  ) => {
     if (!rows.length) {
       return (
         <div className="text-sm text-gray-500">
@@ -1161,34 +1239,53 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
         </div>
       );
     }
+
     return (
       <div className="space-y-1.5">
         {rows.map((item, idx) => {
+          // ⛔ When no diary exists for that class interval
+          if (!item) {
+            return (
+              <span
+                key={`empty_diary_${idx}`}
+                className="text-xs opacity-0 select-none"
+              >
+                &nbsp;
+              </span>
+            );
+          }
+
+          // 🗓 Extract date
           const dateStr = item.class_date ?? item.date ?? "";
           const formattedDate = formatDateForLink(dateStr);
-          const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}`;
-          
+
+          // 🔗 Diary URL
+          const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(
+            selectedTeacher
+          )}&type=teacher&student_name=${encodeURIComponent(
+            student.name
+          )}&id=${encodeURIComponent(student.id)}`;
+
           return (
-            <div
-              key={item._id ?? `${item.student_name}_diary_${idx}`}
-              className="flex items-center gap-2"
+            <a
+              key={`${student.name}_diary_${idx}`}
+              href={diaryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-medium text-sky-700 hover:text-sky-900 hover:underline"
             >
-              <a
-                href={diaryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
-              >
-                {formattedDate || "—"}
-              </a>
-            </div>
+              {formattedDate || "—"}
+            </a>
           );
         })}
       </div>
     );
   };
 
-  const renderQuizletDetails = (rows: QuizletEntry[], student: StudentInfo) => {
+  const renderQuizletDetails = (
+    rows: (QuizletEntry | null)[],
+    student: StudentInfo
+  ) => {
     if (!rows.length) {
       return (
         <div className="text-sm text-gray-500">
@@ -1196,32 +1293,44 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
         </div>
       );
     }
+
     return (
       <div className="space-y-1.5">
         {rows.map((item, idx) => {
+          if (!item)
+            return (
+              <span
+                key={`empty_quizlet_${idx}`}
+                className="text-xs opacity-0 select-none"
+              >
+                &nbsp;
+              </span>
+            );
+
           const dateStr = item.class_date ?? item.date ?? "";
           const formattedDate = formatDateForLink(dateStr);
-          const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}`;
-          
+          const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(
+            selectedTeacher
+          )}&type=teacher&student_name=${encodeURIComponent(
+            student.name
+          )}&id=${encodeURIComponent(student.id)}`;
+
           return (
-            <div
-              key={item._id ?? `${item.student_name}_quizlet_${idx}`}
-              className="flex items-center gap-2"
+            <a
+              key={`${student.name}_quizlet_${idx}`}
+              href={quizletUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
             >
-              <a
-                href={quizletUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
-              >
-                {formattedDate || "—"}
-              </a>
-            </div>
+              {formattedDate || "—"}
+            </a>
           );
         })}
       </div>
     );
   };
+
 
   const renderExpandedContent = (row: StudentRow) => {
     if (!expanded) return null;
@@ -1481,7 +1590,7 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                                     const classNoteUrl = `/teacher/student/class_record?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}&id=${encodeURIComponent(row.student.id)}${item._id ? `&class_note_id=${encodeURIComponent(item._id)}` : ""}`;
                                     return (
                                       <a
-                                        key={item._id ?? `${row.student.name}_classnote_${idx}`}
+                                        key={`${row.student.name}_classnote_${idx}`}
                                         href={classNoteUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -1500,12 +1609,18 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                                   <span className="text-xs text-gray-400">—</span>
                                 ) : (
                                   row.diaries.map((item, idx) => {
+                                    if (!item)
+                                      return (
+                                      <span key={`empty_diary_${idx}`} className="text-xs opacity-0 select-none">
+                                        &nbsp;
+                                      </span>
+                                      );
                                     const dateStr = item.class_date ?? item.date ?? "";
                                     const formattedDate = formatDateForLink(dateStr);
                                     const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}`;
                                     return (
                                       <a
-                                        key={item._id ?? `${row.student.name}_diary_${idx}`}
+                                        key={`${row.student.name}_diary_${idx}`}
                                         href={diaryUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -1524,12 +1639,18 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                                   <span className="text-xs text-gray-400">—</span>
                                 ) : (
                                   row.quizlets.map((item, idx) => {
+                                    if (!item)
+                                    return (
+                                    <span key={`empty_quizlet_${idx}`} className="text-xs opacity-0 select-none">
+                                      &nbsp;
+                                    </span>
+                                    );
                                     const dateStr = item.class_date ?? item.date ?? "";
                                     const formattedDate = formatDateForLink(dateStr);
                                     const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}`;
                                     return (
                                       <a
-                                        key={item._id ?? `${row.student.name}_quizlet_${idx}`}
+                                        key={`${row.student.name}_quizlet_${idx}`}
                                         href={quizletUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"

@@ -77,6 +77,22 @@ const formatElapsed = (ms: number): string => {
   return `${mm}:${ss}`;
 };
 
+const combineDateAndTime = (dateDot: string | undefined, timeHHMM: string) => {
+  if (!dateDot || !timeHHMM) return null;
+
+  const m = dateDot.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\./);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+
+  const [hhStr, mmStr] = timeHHMM.split(":");
+  const hh = Number(hhStr);
+  const mm = Number(mmStr);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+
+  return new Date(Number(y), Number(mo) - 1, Number(d), hh, mm, 0, 0);
+};
+
+
 // 퀴즐렛 페이지 내용 컴포넌트
 const ClassPageContent: React.FC = () => {
   const router = useRouter();
@@ -130,6 +146,12 @@ const ClassPageContent: React.FC = () => {
   const [classStarted, setClassStarted] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
+  // 🔹 Modify-class mode states
+  const [isModifyMode, setIsModifyMode] = useState(false);
+  // 🔹 Manual time input modal
+  const [timeModalOpen, setTimeModalOpen] = useState(false);
+  const [manualStartTime, setManualStartTime] = useState(""); // "HH:MM"
+  const [manualEndTime, setManualEndTime] = useState("");     // "HH:MM"
   // Page lock & call-to-action state
   const [isEditable, setIsEditable] = useState(false);       // blocks all inputs & editor
   const [awaitingAction, setAwaitingAction] = useState(true); // controls blinking on initial load
@@ -167,126 +189,160 @@ const ClassPageContent: React.FC = () => {
     }
   }, [next_class_date]);
 
-  const handleEndClassClick = async () => {
-
-    // compute group names locally (avoids block-scope ordering issues)
-    const groupNames = (Array.isArray(selectedGroupStudents) && selectedGroupStudents.length > 0)
+  const saveClassnoteAndTranslate = async (opts: {
+  started_at: string | null;
+  ended_at: string;
+  duration_ms: number | null;
+}) => {
+  const groupNames =
+    Array.isArray(selectedGroupStudents) && selectedGroupStudents.length > 0
       ? [student_name, ...selectedGroupStudents]
       : [student_name];
 
-    // same validations
-    if (!homework.trim()) {
-      alert("Homework field is required.");
-      return;
-    }
-    if (!original_text || original_text.trim().length === 0) {
-      alert("Please write class notes.");
-      return;
-    }
-    if (!class_date || class_date.trim() === "") {
-      alert("Please select a class date.");
-      return;
-    }
-    if (!original_text.includes("<mark>")) {
-      alert("Please highlight at least one Quizlet expression.");
-      return;
-    }
+  if (!homework.trim()) {
+    alert("Homework field is required.");
+    return;
+  }
+  if (!original_text || original_text.trim().length === 0) {
+    alert("Please write class notes.");
+    return;
+  }
+  if (!class_date || class_date.trim() === "") {
+    alert("Please select a class date.");
+    return;
+  }
+  if (!original_text.includes("<mark>")) {
+    alert("Please highlight at least one Quizlet expression.");
+    return;
+  }
 
-    // 1) Save classnotes first
-    try {
-      const classnotesPayload = {
-        quizletData: {
-          student_names: groupNames,
-          class_date,
-          date,
-          original_text,
-        },
-        homework,
-        nextClass,
+  // SAVE CLASSNOTE
+  try {
+    const classnotesPayload = {
+      quizletData: {
+        student_names: groupNames,
+        class_date,
+        date,
+        original_text,
+      },
+      homework,
+      nextClass,
+      started_at: opts.started_at,
+      ended_at: opts.ended_at,
+      duration_ms: opts.duration_ms,
+      quizlet_saved: false,
+      teacher_name: user || "",
+      type: type || "",
+    };
 
-        // timing/meta
-        started_at: startTime ? new Date(startTime).toISOString() : null,
-        ended_at: new Date().toISOString(),
-        duration_ms: startTime ? Date.now() - startTime : null,
-        quizlet_saved: false,       // at End Class time, quizlet not yet saved
-        teacher_name: user || "",
-        type: type || "",
-      };
+    const classnotesRes = await fetch("/api/classnote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(classnotesPayload),
+    });
 
-      const classnotesRes = await fetch("/api/classnote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(classnotesPayload),
-      });
-
-      // Only continue if not 404 (and preferably OK)
-      if (classnotesRes.status === 404) {
-        alert("Classnotes endpoint returned 404. Aborting translation.");
-        return;
-      }
-      if (!classnotesRes.ok) {
-        const err = await classnotesRes.json().catch(() => ({}));
-        alert(err?.error || "Failed to save classnotes.");
-        return;
-      } 
-      
-      // ✅ new try starts cleanly here
-      try {
-        const json = await classnotesRes.json();
-        const saved =
-          json?.results?.[0]?.result ||
-          json?.results?.[0] ||
-          json;
-
-        if (saved && typeof saved === "object") {
-          setRecentClassnote(saved);
-        } else {
-          setRecentClassnote({
-            student_name: groupNames[0] || student_name,
-            class_date,
-            date,
-            started_at: startTime ? new Date(startTime).toISOString() : null,
-            ended_at: new Date().toISOString(),
-          });
-        }
-      } catch (e) {
-        console.warn("Could not parse /api/classnote response for modal metadata:", e);
-      }
-    } catch (err) {
-      console.error("Classnotes save failed:", err);
-      alert("Failed to save classnotes.");
+    if (!classnotesRes.ok) {
+      const err = await classnotesRes.json().catch(() => ({}));
+      alert(err?.error || "Failed to save classnotes.");
       return;
     }
 
+    const json = await classnotesRes.json().catch(() => null);
+    const saved =
+      json?.results?.[0]?.result ||
+      json?.results?.[0] ||
+      json;
 
-    // 2) Translate (unchanged)
-    setTranslating(true);
-    try {
-      const response = await fetch("/api/quizlet/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ original_text }),
-      });
+    setRecentClassnote(saved || {
+      student_name,
+      class_date,
+      date,
+      started_at: opts.started_at,
+      ended_at: opts.ended_at,
+    });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Translation failed");
-      }
+  } catch (err) {
+    console.error("Classnotes save failed:", err);
+    alert("Failed to save classnotes.");
+    return;
+  }
 
-      const { eng_quizlet, kor_quizlet } = await response.json();
-      const merged = eng_quizlet.map((eng: string, i: number) => ({
-        eng,
-        kor: kor_quizlet[i] || "",
-      }));
+  // TRANSLATE (same as your previous logic)
+  setTranslating(true);
+  try {
+    const response = await fetch("/api/quizlet/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ original_text }),
+    });
 
-      setQuizletLines(merged);
-      setTranslationModalOpen(true); // open review modal
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Unknown error during translation.");
-    } finally {
-      setTranslating(false);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data?.error || "Translation failed");
     }
+
+    const { eng_quizlet, kor_quizlet } = await response.json();
+    const merged = eng_quizlet.map((eng: string, i: number) => ({
+      eng,
+      kor: kor_quizlet[i] || "",
+    }));
+
+    setQuizletLines(merged);
+    setTranslationModalOpen(true);
+  } catch (err) {
+    if (err instanceof Error) {
+      alert(err.message);
+    } else {
+      alert("Unknown translation error.");
+    }
+  } finally {
+    setTranslating(false);
+  }
   };
+
+
+  const handleEndClassClick = async () => {
+    await saveClassnoteAndTranslate({
+      started_at: startTime ? new Date(startTime).toISOString() : null,
+      ended_at: new Date().toISOString(),
+      duration_ms: startTime ? Date.now() - startTime : null,
+    });
+  };
+
+  const handleManualTimeConfirm = async () => {
+  if (!manualStartTime || !manualEndTime) {
+    alert("Please enter both start and end time.");
+    return;
+  }
+  if (!class_date) {
+    alert("Missing class date.");
+    return;
+  }
+
+  const startDt = combineDateAndTime(class_date, manualStartTime);
+  const endDt = combineDateAndTime(class_date, manualEndTime);
+
+  if (!startDt || !endDt) {
+    alert("Invalid time.");
+    return;
+  }
+  if (endDt.getTime() <= startDt.getTime()) {
+    alert("End time must be after start time.");
+    return;
+  }
+
+  const duration_ms = endDt.getTime() - startDt.getTime();
+
+  // reuse your shared logic
+  await saveClassnoteAndTranslate({
+    started_at: startDt.toISOString(),
+    ended_at: endDt.toISOString(),
+    duration_ms,
+  });
+
+  setTimeModalOpen(false);
+  };
+
 
 
   const notesTemplate1 = `
@@ -2694,8 +2750,9 @@ const ClassPageContent: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setIsEditable(true);       // unlock editing
-                setAwaitingAction(false);  // stop blinking
+                setIsEditable(true);
+                setAwaitingAction(false);
+                setIsModifyMode(true);   // 🔹 ENTER MODIFY MODE
               }}
               className={`flex-1 py-4 rounded-2xl text-sm font-bold border transition-all
                 ${awaitingAction ? "cta-blink" : ""}
@@ -2706,35 +2763,42 @@ const ClassPageContent: React.FC = () => {
             </button>
           )}
 
-          {/* ✅ Right side: Start → End flow */}
-          {!classStarted ? (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => {
+        {/* Right side: Start → End flow OR Modify → Translate */}
+        {!classStarted ? (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              if (isModifyMode) {
+                // 🔹 MODIFY MODE → open manual time modal
+                setTimeModalOpen(true);
+              } else {
+                // 🕒 NORMAL CLASS → start timer
                 setClassStarted(true);
                 setStartTime(Date.now());
                 setElapsedMs(0);
                 setIsEditable(true);
                 setAwaitingAction(false);
-              }}
-              className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
-                ${awaitingAction ? "cta-blink" : ""}
-                ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#3182F6] hover:bg-[#1B64DA]"}`}
-            >
-              수업 시작하기
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={loading}
-              onClick={handleEndClassClick} // existing save + modal logic
-              className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
-                ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#FF6B6B] hover:bg-[#FA5252]"}`} // 🔴 red color
-            >
-              수업 끝내기
-            </button>
-          )}
+              }
+            }}
+            className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
+              ${awaitingAction ? "cta-blink" : ""}
+              ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#3182F6] hover:bg-[#1B64DA]"}`}
+          >
+            {isModifyMode ? "Move to Translate" : "수업 시작하기"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={loading}
+            onClick={handleEndClassClick}
+            className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
+              ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#FF6B6B] hover:bg-[#FA5252]"}`}
+          >
+            수업 끝내기
+          </button>
+        )}
+
         </div>
 
 
@@ -2886,6 +2950,56 @@ const ClassPageContent: React.FC = () => {
           </div>
         </div>
       )}
+
+      {timeModalOpen && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl w-[90%] max-w-md p-6 shadow-xl space-y-4">
+            <h2 className="text-xl font-bold text-[#191F28]">수업 시간 입력</h2>
+            <p className="text-sm text-[#4E5968]">
+              수정된 수업 노트의 시작 / 종료 시간을 입력해주세요.
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold mb-1">Start Time</label>
+                <input
+                  type="time"
+                  value={manualStartTime}
+                  onChange={(e) => setManualStartTime(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl bg-white text-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1">End Time</label>
+                <input
+                  type="time"
+                  value={manualEndTime}
+                  onChange={(e) => setManualEndTime(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-xl bg-white text-black"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                onClick={() => setTimeModalOpen(false)}
+                className="px-6 py-3 text-sm text-[#8B95A1] border rounded-xl"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleManualTimeConfirm}
+                className="px-6 py-3 text-sm bg-[#3182F6] text-white rounded-xl"
+              >
+                Confirm & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {translationModalOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
