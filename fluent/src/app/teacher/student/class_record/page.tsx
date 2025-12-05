@@ -222,7 +222,7 @@ const ClassPageContent: React.FC = () => {
       quizletData: {
         student_names: groupNames,
         class_date,
-        date,
+        date: class_date,
         original_text,
       },
       homework,
