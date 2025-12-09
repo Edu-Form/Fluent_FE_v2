@@ -6,8 +6,6 @@ import { useState } from "react";
 export default function PaymentPage() {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
-  const type = searchParams.get("type");
-  const id = searchParams.get("id");
 
   const [loading, setLoading] = useState(false);
 
