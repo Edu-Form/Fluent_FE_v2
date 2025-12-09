@@ -7,7 +7,10 @@ function PaymentPageInner() {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
 
-  // 🔒 Only allow David
+  // hooks MUST be here (before any returns)
+  const [loading, setLoading] = useState(false);
+
+  // ❗ now safe: hooks already executed
   if (user !== "David") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -20,8 +23,6 @@ function PaymentPageInner() {
       </div>
     );
   }
-
-  const [loading, setLoading] = useState(false);
 
   async function handlePay(amount: number, label: string) {
     setLoading(true);
@@ -56,6 +57,7 @@ function PaymentPageInner() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 px-6 py-8 flex justify-center">
       <div className="w-full max-w-lg">
+        
         {/* HEADER */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-extrabold text-gray-900">
@@ -70,7 +72,7 @@ function PaymentPageInner() {
 
         {/* PROGRAM PLANS */}
         <div className="space-y-6">
-          {/* 3개월 플랜 - Most Popular */}
+          {/* 3개월 플랜 */}
           <div className="relative bg-white rounded-2xl shadow-lg border border-blue-200 p-6 transition transform hover:scale-[1.02]">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs px-3 py-1 rounded-full shadow">
               Most Popular
@@ -78,7 +80,6 @@ function PaymentPageInner() {
 
             <h2 className="text-xl font-bold text-gray-900">3개월 플랜</h2>
             <p className="text-sm text-gray-600 mt-1">24회 + 무료 추가수업 2회</p>
-
             <p className="mt-4 text-2xl font-extrabold text-blue-600">
               1,440,000원
             </p>
@@ -151,7 +152,7 @@ function PaymentPageInner() {
         {/* Divider */}
         <div className="my-12 border-t border-gray-200"></div>
 
-        {/* Tuition Section */}
+        {/* TUITION SECTION */}
         <h2 className="text-2xl font-extrabold text-gray-900 mb-6">
           Tuition Fee
         </h2>
