@@ -55,8 +55,10 @@ export async function POST(request: Request) {
       quizlet_saved,
       teacher_name,
       type,
-      reason
+      reason,
+      reason_note    // <-- ADD THIS
     } = body || {};
+
 
     if (!quizletData) {
       return NextResponse.json({ error: "Missing quizletData" }, { status: 400 });
@@ -95,6 +97,7 @@ export async function POST(request: Request) {
         teacher_name: teacher_name ?? "",
         type: type ?? "",
         reason: reason ?? "", 
+        reason_note: reason_note ?? "",
       });
       results.push({ name, result: res });
     }

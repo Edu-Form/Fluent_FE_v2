@@ -178,7 +178,9 @@ function TeacherToastUIInner({
   // popovers
   const popRef = useRef<HTMLDivElement | null>(null);
   const [detail, setDetail] = useState<{ event: EventObject | null; x: number; y: number } | null>(null);
-
+  // Reason input for special actions
+  const [reasonInput, setReasonInput] = useState("");
+  const [reasonMode, setReasonMode] = useState<null | "paid" | "changed">(null);
   const addRef = useRef<HTMLDivElement | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [repeatMode, setRepeatMode] = useState(false);
@@ -1119,6 +1121,72 @@ function TeacherToastUIInner({
     rememberAndSetDate(d);
   };
 
+  const handleSubmitReason = async (mode: "paid" | "changed") => {
+  if (!detail?.event) return;
+  const ev = detail.event;
+  const raw = ev.raw || {};
+
+  try {
+    if (mode === "paid") {
+      // Build Paid Cancel payload
+      const studentName = raw.student_name;
+      const teacherName = raw.teacher_name;
+      const dateKey = ymdString(new Date(ev.start));
+
+      const scheduleStart = new Date(ev.start);
+      const scheduleEnd = new Date(ev.end);
+      const durationMs = scheduleEnd.getTime() - scheduleStart.getTime();
+
+      const payload = {
+        quizletData: {
+          student_names: [studentName],
+          class_date: dateKey,
+          date: dateKey,
+          original_text: "<p>Paid Class</p>",
+        },
+        homework: "",
+        nextClass: "",
+        started_at: scheduleStart.toISOString(),
+        ended_at: scheduleEnd.toISOString(),
+        duration_ms: durationMs,
+        quizlet_saved: false,
+        teacher_name: teacherName,
+        type: "teacher",
+        reason: "paid cancel",
+        reason_note: reasonInput,
+      };
+
+      await fetch("/api/classnote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    }
+
+    if (mode === "changed") {
+      const classnoteId = raw.classnote_id;
+
+      await fetch(`/api/classnote/${classnoteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: "class time changed",
+          reason_note: reasonInput,
+        }),
+      });
+    }
+
+    alert("Saved successfully.");
+    setReasonMode(null);
+    setReasonInput("");
+    setDetail(null);
+    window.dispatchEvent(new CustomEvent("calendar:saved"));
+  } catch (err) {
+    console.error(err);
+    alert("Failed to save reason.");
+  }
+  };
+
   /* --------------------------- Single delete (popover) ----------------------- */
   const handleDeleteSingle = async () => {
     if (!detail?.event) return;
@@ -1581,63 +1649,11 @@ function TeacherToastUIInner({
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-1 rounded-md hover:bg-yellow-100"
-                      onClick={async () => {
-                        try {
-                          const studentName = raw.student_name;
-                          const teacherName =
-                            teacherFromNote ||
-                            raw.teacher_name?.trim() ||
-                            defaults?.teacher_name?.trim() ||
-                            addForm.teacher_name?.trim() ||
-                            "";
-
-                          const dateDot = dateKey;               
-                          const scheduleStart = new Date(ev.start);
-                          const scheduleEnd = new Date(ev.end);
-                          const durationMs = scheduleEnd.getTime() - scheduleStart.getTime();
-
-                          // FIXED: original_text must be NON-empty HTML
-                          const payload = {
-                            quizletData: {
-                              student_names: [studentName],
-                              class_date: dateDot,
-                              date: dateDot,
-                              original_text: "<p>Paid Class</p>",   // ✅ REQUIRED!
-                            },
-
-                            homework: "",
-                            nextClass: "",
-
-                            started_at: scheduleStart.toISOString(),
-                            ended_at: scheduleEnd.toISOString(),
-                            duration_ms: durationMs,
-                            quizlet_saved: false,
-                            teacher_name: teacherName,
-                            type: "teacher",
-                            reason: "paid class",
-                          };
-
-                          const res = await fetch("/api/classnote", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload),
-                          });
-
-                          if (!res.ok) {
-                            const err = await res.json().catch(()=>({}));
-                            alert("Failed to register paid class: " + (err.error || res.status));
-                            return;
-                          }
-
-                          alert("Paid class registered successfully.");
-                          window.dispatchEvent(new CustomEvent("calendar:saved"));
-                          setDetail(null);
-
-                        } catch (err) {
-                          console.error("Paid class error:", err);
-                          alert("❌ Failed to save paid class.");
-                        }
+                      onClick={() => {
+                        setReasonInput("");
+                        setReasonMode("paid");
                       }}
+
                     >
                       Paid Cancel
                     </button>
@@ -1658,69 +1674,15 @@ function TeacherToastUIInner({
                     </button>
 
                     <button
-                      onClick={async () => {
-                        try {
-                          if (!started || !ended) {
-                            alert("No valid class note time found to sync.");
-                            return;
-                          }
-
-                          const studentName = student;
-                          const teacherName =
-                            teacherFromNote ||
-                            raw.teacher_name?.trim() ||
-                            defaults?.teacher_name?.trim() ||
-                            addForm.teacher_name?.trim() ||
-                            "";
-
-                          const roomName = raw.room_name || "101";
-                          const date = ymdString(toLocalDateOnly(started));
-                          let time = started.getHours() + started.getMinutes() / 60;
-                          time = Math.round(time * 2) / 2;
-                          // calculate actual duration from classnote
-                          const duration =
-                            Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
-
-
-                          const scheduleId = raw.schedule_id || raw._id || raw.id;
-
-                          // ✅ Sync schedule time first
-                          if (scheduleId) {
-                            await saveUpdateById(scheduleId, date, time, duration);
-                          } else {
-                            await saveCreate({
-                              date,
-                              time,
-                              duration,
-                              room_name: roomName,
-                              teacher_name: teacherName,
-                              student_name: studentName,
-                              calendarId: "1",
-                            });
-                          }
-
-                          // ✅ Then mark the related class note with reason
-                          const classnoteId = raw.classnote_id || note?._id;
-                          if (classnoteId) {
-                            await fetch(`/api/classnote/${classnoteId}`, {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ reason: "class time changed" }),
-                            });
-                          }
-
-                          alert("✅ Schedule synced and classnote updated.");
-                          window.dispatchEvent(new CustomEvent("calendar:saved"));
-                          setDetail(null);
-                        } catch (err) {
-                          console.error("Sync schedule error:", err);
-                          alert("❌ Failed to sync schedule.");
-                        }
-                      }}
                       className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-md hover:bg-indigo-100"
+                      onClick={() => {
+                        setReasonInput("");
+                        setReasonMode("changed");
+                      }}
                     >
                       Class Time Changed
                     </button>
+
                     {caseType === "red_unscheduled" && (
                               <button
                       className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100"
@@ -1915,6 +1877,32 @@ function TeacherToastUIInner({
 
 
                   </div>
+
+                  {/* === REASON INPUT UI (shows only when reasonMode is active) === */}
+                  {reasonMode && (
+                    <div className="mt-3 p-2 border border-gray-200 rounded-md bg-gray-50">
+                      <div className="text-xs text-gray-600 mb-1">
+                        Please enter a reason:
+                      </div>
+
+                      <textarea
+                        className="w-full bg-white text-black text-xs border rounded p-1"
+                        value={reasonInput}
+                        onChange={(e) => setReasonInput(e.target.value)}
+                        placeholder="Explain the reason..."
+                      />
+
+                      <div className="flex justify-end mt-2">
+                        <button
+                          className="px-2 py-1 text-xs bg-indigo-600 text-white rounded"
+                          onClick={() => handleSubmitReason(reasonMode)}
+                        >
+                          Submit
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
 

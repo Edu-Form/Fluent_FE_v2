@@ -1750,7 +1750,8 @@ export async function saveClassnotesNew(input: {
   quizlet_saved?: boolean;    // false at first; can be flipped later
   teacher_name?: string;      // optional
   type?: string;  
-  reason?: string;             // optional: beginner/intermediate/business
+  reason?: string;   
+  reason_note?: string;          // optional: beginner/intermediate/business
 }) {
   try {
     const client = await clientPromise;
