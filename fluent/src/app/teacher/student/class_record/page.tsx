@@ -156,7 +156,6 @@ const ClassPageContent: React.FC = () => {
   const [isEditable, setIsEditable] = useState(false);       // blocks all inputs & editor
   const [awaitingAction, setAwaitingAction] = useState(true); // controls blinking on initial load
   const [recentClassnote, setRecentClassnote] = useState<any>(null);
-  const [wasCancelled, setWasCancelled] = useState(false);
 
   // ⏸️ Pause timer
   const pauseTimer = () => {
