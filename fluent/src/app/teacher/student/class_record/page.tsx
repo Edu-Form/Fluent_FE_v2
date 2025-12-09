@@ -156,6 +156,9 @@ const ClassPageContent: React.FC = () => {
   const [isEditable, setIsEditable] = useState(false);       // blocks all inputs & editor
   const [awaitingAction, setAwaitingAction] = useState(true); // controls blinking on initial load
   const [recentClassnote, setRecentClassnote] = useState<any>(null);
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+
 
   // ⏸️ Pause timer
   const pauseTimer = () => {
@@ -274,6 +277,24 @@ const ClassPageContent: React.FC = () => {
       ended_at: opts.ended_at,
     });
 
+    // Make sure timer values appear in modal
+    if (opts.started_at && opts.ended_at) {
+      const s = new Date(opts.started_at);
+      const e = new Date(opts.ended_at);
+
+      setEditStartTime(
+        `${String(s.getHours()).padStart(2, "0")}:${String(
+          s.getMinutes()
+        ).padStart(2, "0")}`
+      );
+
+      setEditEndTime(
+        `${String(e.getHours()).padStart(2, "0")}:${String(
+          e.getMinutes()
+        ).padStart(2, "0")}`
+      );
+    }
+
   } catch (err) {
     console.error("Classnotes save failed:", err);
     alert("Failed to save classnotes.");
@@ -314,13 +335,31 @@ const ClassPageContent: React.FC = () => {
   };
 
 
-  const handleEndClassClick = async () => {
-    await saveClassnoteAndTranslate({
-      started_at: startTime ? new Date(startTime).toISOString() : null,
-      ended_at: new Date().toISOString(),
-      duration_ms: startTime ? Date.now() - startTime : null,
+  const handleEndClassClick = () => {
+    pauseTimer();
+
+    const start = new Date(startTime!);
+    const end = new Date(startTime! + elapsedMs);
+
+    setEditStartTime(
+      `${String(start.getHours()).padStart(2, "0")}:${String(
+        start.getMinutes()
+      ).padStart(2, "0")}`
+    );
+
+    setEditEndTime(
+      `${String(end.getHours()).padStart(2, "0")}:${String(
+        end.getMinutes()
+      ).padStart(2, "0")}`
+    );
+
+    saveClassnoteAndTranslate({
+      started_at: start.toISOString(),
+      ended_at: end.toISOString(),
+      duration_ms: elapsedMs,
     });
   };
+
 
 
   const handleManualTimeConfirm = async () => {
@@ -3088,31 +3127,30 @@ const ClassPageContent: React.FC = () => {
             {/* 🧩 Class info block */}
             {recentClassnote && (
               <div className="mb-4 bg-[#F8F9FA] rounded-2xl border border-[#E5E8EB] p-4 text-sm text-[#4E5968]">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                  {/* Editable Start Time */}
                   <div>
-                    <span className="font-semibold text-[#191F28]">Student:</span>{" "}
-                    {recentClassnote.student_name || student_name}
+                    <label className="font-semibold text-[#191F28] block mb-1">Start Time</label>
+                    <input
+                      type="time"
+                      value={editStartTime}
+                      onChange={(e) => setEditStartTime(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-sm"
+                    />
                   </div>
+
+                  {/* Editable End Time */}
                   <div>
-                    <span className="font-semibold text-[#191F28]">Class Date:</span>{" "}
-                    {recentClassnote.class_date || recentClassnote.date || class_date}
+                    <label className="font-semibold text-[#191F28] block mb-1">End Time</label>
+                    <input
+                      type="time"
+                      value={editEndTime}
+                      onChange={(e) => setEditEndTime(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-300 bg-white text-sm"
+                    />
                   </div>
-                  <div>
-                    <span className="font-semibold text-[#191F28]">Start:</span>{" "}
-                    {recentClassnote.started_at
-                      ? new Date(recentClassnote.started_at).toLocaleTimeString("ko-KR", {
-                          timeZone: "Asia/Seoul",
-                        })
-                      : "-"}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-[#191F28]">End:</span>{" "}
-                    {recentClassnote.ended_at
-                      ? new Date(recentClassnote.ended_at).toLocaleTimeString("ko-KR", {
-                          timeZone: "Asia/Seoul",
-                        })
-                      : "-"}
-                  </div>
+
                 </div>
               </div>
             )}
@@ -3201,7 +3239,17 @@ const ClassPageContent: React.FC = () => {
                       kor_quizlet: quizletLines.map((l) => l.kor),
                       homework,
                       nextClass,
+
+                      // 🔥 ADD THESE LINES
+                      started_at: editStartTime
+                        ? `${class_date} ${editStartTime}:00`
+                        : recentClassnote?.started_at || null,
+
+                      ended_at: editEndTime
+                        ? `${class_date} ${editEndTime}:00`
+                        : recentClassnote?.ended_at || null,
                     };
+
 
                     const res = await fetch("/api/quizlet/save", {
                       method: "POST",
