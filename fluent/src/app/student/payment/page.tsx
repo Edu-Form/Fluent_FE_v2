@@ -1,11 +1,25 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 
-export default function PaymentPage() {
+function PaymentPageInner() {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
+
+  // 🔒 Only allow David
+  if (user !== "David") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-800">접근 권한 없음</h1>
+          <p className="text-gray-600 mt-2">
+            이 페이지는 현재 이용하실 수 없습니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const [loading, setLoading] = useState(false);
 
@@ -41,34 +55,29 @@ export default function PaymentPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 px-6 py-8 flex justify-center">
-      <div className="w-full max-w-lg">  {/* <----- NEW WIDTH WRAPPER */}
-
+      <div className="w-full max-w-lg">
         {/* HEADER */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-extrabold text-gray-900">
             Fluent Learning Programs
           </h1>
           <p className="text-gray-600 text-sm mt-2">
-            Good things take time.<br />
+            Good things take time.
+            <br />
             미리 공부 계획을 세우고 할인 혜택을 받아보세요.
           </p>
         </div>
 
         {/* PROGRAM PLANS */}
         <div className="space-y-6">
-
-          {/* Recommended Plan */}
+          {/* 3개월 플랜 - Most Popular */}
           <div className="relative bg-white rounded-2xl shadow-lg border border-blue-200 p-6 transition transform hover:scale-[1.02]">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs px-3 py-1 rounded-full shadow">
               Most Popular
             </div>
 
-            <h2 className="text-xl font-bold text-gray-900">
-              3개월 플랜
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              24회 + 무료 추가수업 2회
-            </p>
+            <h2 className="text-xl font-bold text-gray-900">3개월 플랜</h2>
+            <p className="text-sm text-gray-600 mt-1">24회 + 무료 추가수업 2회</p>
 
             <p className="mt-4 text-2xl font-extrabold text-blue-600">
               1,440,000원
@@ -83,7 +92,7 @@ export default function PaymentPage() {
             </button>
           </div>
 
-          {/* 1 month */}
+          {/* 1개월 플랜 */}
           <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
             <h2 className="text-xl font-semibold text-gray-900">
               1개월 플랜 (8회)
@@ -100,11 +109,9 @@ export default function PaymentPage() {
             </button>
           </div>
 
-          {/* 6 months */}
+          {/* 6개월 플랜 */}
           <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
-            <h2 className="text-xl font-semibold text-gray-900">
-              6개월 플랜
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-900">6개월 플랜</h2>
             <p className="text-sm text-gray-600 mt-1">
               48회 + 무료 추가수업 6회
             </p>
@@ -121,11 +128,9 @@ export default function PaymentPage() {
             </button>
           </div>
 
-          {/* 12 months */}
+          {/* 12개월 플랜 */}
           <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
-            <h2 className="text-xl font-semibold text-gray-900">
-              12개월 플랜
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-900">12개월 플랜</h2>
             <p className="text-sm text-gray-600 mt-1">
               96회 + 무료 추가수업 15회
             </p>
@@ -146,13 +151,12 @@ export default function PaymentPage() {
         {/* Divider */}
         <div className="my-12 border-t border-gray-200"></div>
 
-        {/* TUITION SECTION */}
+        {/* Tuition Section */}
         <h2 className="text-2xl font-extrabold text-gray-900 mb-6">
           Tuition Fee
         </h2>
 
         <div className="space-y-5 mb-20">
-          
           {/* Offline 1:1 */}
           <div className="flex justify-between items-center bg-white rounded-xl shadow-sm border p-5 hover:bg-gray-50 transition">
             <div>
@@ -210,5 +214,13 @@ export default function PaymentPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center">Loading...</div>}>
+      <PaymentPageInner />
+    </Suspense>
   );
 }
