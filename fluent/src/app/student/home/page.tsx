@@ -68,6 +68,9 @@ function next_schedule(data: any) {
   return null;
 }
 
+
+
+
 const HomePage = () => {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
@@ -85,6 +88,10 @@ const HomePage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
+
+  function Payment() {
+  router.push(`/student/payment?${url_data}`);
+  }
 
   useEffect(() => {
     const fetchData = async () => {
@@ -334,6 +341,18 @@ const HomePage = () => {
               </span>
             )}
           </div>
+
+          {/* 크레딧 결제 버튼 */}
+          {user === "David" && (
+            <button
+              onClick={Payment}
+              className="w-full bg-green-600 text-white rounded-xl py-3 text-center text-sm font-semibold shadow hover:bg-green-700 transition"
+            >
+              크레딧 결제
+            </button>
+          )}
+
+
 
           {isLoading ? (
             <div className="bg-blue-50 rounded-2xl p-4 flex items-center justify-center h-24">

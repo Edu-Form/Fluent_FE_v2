@@ -90,15 +90,21 @@ const AnnouncementPage = () => {
             오늘의 학습 계획을 확인해보세요
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-amber-50 rounded-full px-4 py-2">
-          <MdDiamond className="text-amber-600" />
-          <div>
-            <p className="text-xs text-amber-700 font-medium">Credit</p>
-            <p className="text-lg font-bold text-amber-700 leading-tight">
-              {userCredits.toLocaleString()}
-            </p>
-          </div>
-        </div>
+        {user === "David" && (
+          <Link
+            href={`/student/payment?user=${user}&type=${type}&id=${user_id}`}
+            className="flex items-center gap-2 bg-amber-50 rounded-full px-4 py-2 hover:bg-amber-100 transition"
+          >
+            <MdDiamond className="text-amber-600" />
+            <div>
+              <p className="text-xs text-amber-700 font-medium">Credit</p>
+              <p className="text-lg font-bold text-amber-700 leading-tight">
+                {userCredits.toLocaleString()}
+              </p>
+            </div>
+          </Link>
+        )}
+
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
