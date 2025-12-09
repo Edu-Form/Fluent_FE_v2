@@ -158,6 +158,18 @@ const ClassPageContent: React.FC = () => {
   const [recentClassnote, setRecentClassnote] = useState<any>(null);
   const [wasCancelled, setWasCancelled] = useState(false);
 
+  // ⏸️ Pause timer
+  const pauseTimer = () => {
+    setClassStarted(false); // stop ticking
+  };
+
+  // ▶️ Resume timer
+  const resumeTimer = () => {
+    setClassStarted(true);  
+    if (startTime !== null) {
+      setStartTime(Date.now() - elapsedMs); // continue from where paused
+    }
+  };
 
 
   useEffect(() => {
@@ -310,6 +322,7 @@ const ClassPageContent: React.FC = () => {
       duration_ms: startTime ? Date.now() - startTime : null,
     });
   };
+
 
   const handleManualTimeConfirm = async () => {
   if (!manualStartTime || !manualEndTime) {
@@ -2752,23 +2765,6 @@ const ClassPageContent: React.FC = () => {
           </div>
         </div>
 
-        {/* 🟡 Resume Class Button */}
-        {wasCancelled && !classStarted && (
-          <button
-            type="button"
-            onClick={() => {
-              setClassStarted(true);
-              setStartTime(Date.now());
-              setElapsedMs(0);
-              setWasCancelled(false);
-            }}
-            className="flex-1 py-4 rounded-2xl text-black text-sm font-bold bg-yellow-300 hover:bg-yellow-400 transition-all shadow-sm"
-          >
-            🟡 Resume Class
-          </button>
-        )}
-
-
         <div className="w-full bg-white border-t border-[#F2F4F6] py-6 px-6 flex gap-4">
           {/* ✅ 수업 수정하기 — hidden once class starts */}
           {!classStarted && (
@@ -2777,14 +2773,8 @@ const ClassPageContent: React.FC = () => {
               onClick={() => {
                 setIsEditable(true);
                 setAwaitingAction(false);
-                setIsModifyMode(true);
-
-                // If cancelling class, stop timer and allow resume
-                if (classStarted) {
-                  setClassStarted(false);
-                  setWasCancelled(true);
-                }
-            }}
+                setIsModifyMode(true); // 🔹 ENTER MODIFY MODE
+              }}
               className={`flex-1 py-4 rounded-2xl text-sm font-bold border transition-all
                 ${awaitingAction ? "cta-blink" : ""}
                 text-[#8B95A1] border-[#F2F4F6] hover:bg-[#F8F9FA]`}
@@ -2794,47 +2784,53 @@ const ClassPageContent: React.FC = () => {
             </button>
           )}
 
-        {/* Right side: Start → End flow OR Modify → Translate */}
-        {!classStarted ? (
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => {
-              if (isModifyMode) {
-                // 🔹 MODIFY MODE → open manual time modal
-                setTimeModalOpen(true);
-              } else {
-                // 🕒 NORMAL CLASS → start timer
-                setClassStarted(true);
-                setStartTime(Date.now());
-                setElapsedMs(0);
-                setIsEditable(true);
-                setAwaitingAction(false);
-              }
-            }}
-            className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
-              ${awaitingAction ? "cta-blink" : ""}
-              ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#3182F6] hover:bg-[#1B64DA]"}`}
-          >
-            {isModifyMode ? "Move to Translate" : "수업 시작하기"}
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => {
-              setClassStarted(false);   // 🔥 stop timer
-              handleEndClassClick();
-            }}
-            className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
-              ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#FF6B6B] hover:bg-[#FA5252]"}`}
-          >
-            수업 끝내기
-          </button>
-        )}
-
+          {/* Right side: Start → End flow OR Modify → Translate */}
+          {!classStarted ? (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                if (isModifyMode) {
+                  // 🔹 MODIFY MODE → open manual time modal
+                  setTimeModalOpen(true);
+                } else {
+                  // 🕒 NORMAL CLASS → start timer
+                  setClassStarted(true);
+                  setStartTime(Date.now());
+                  setElapsedMs(0);
+                  setIsEditable(true);
+                  setAwaitingAction(false);
+                }
+              }}
+              className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
+                ${awaitingAction ? "cta-blink" : ""}
+                ${
+                  loading
+                    ? "bg-[#DEE2E6] cursor-not-allowed"
+                    : "bg-[#3182F6] hover:bg-[#1B64DA]"
+                }`}
+            >
+              {isModifyMode ? "Move to Translate" : "수업 시작하기"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                pauseTimer();          // ⏸️ pause
+                handleEndClassClick(); // run your existing class end logic
+              }}
+              className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
+                ${
+                  loading
+                    ? "bg-[#DEE2E6] cursor-not-allowed"
+                    : "bg-[#FF6B6B] hover:bg-[#FA5252]"
+                }`}
+            >
+              수업 끝내기
+            </button>
+          )}
         </div>
-
 
       </form>
 
@@ -3038,6 +3034,11 @@ const ClassPageContent: React.FC = () => {
       {translationModalOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white rounded-3xl w-[90%] max-w-4xl p-6 shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
+            {translating && (
+              <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-50">
+                <div className="w-10 h-10 border-4 border-[#3182F6] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-[#191F28]">
                 Review Translations
@@ -3179,7 +3180,10 @@ const ClassPageContent: React.FC = () => {
 
             <div className="flex justify-end gap-3 pt-4">
               <button
-                onClick={() => setTranslationModalOpen(false)}
+                onClick={() => {
+                  setTranslationModalOpen(false);
+                  resumeTimer(); // ▶️ resume timer when closing modal
+                }}
                 className="px-6 py-3 text-sm text-[#8B95A1] border border-[#F2F4F6] rounded-xl hover:bg-[#F8F9FA] transition-all font-semibold"
               >
                 Cancel
@@ -3210,6 +3214,7 @@ const ClassPageContent: React.FC = () => {
                       const errorData = await res.json();
                       throw new Error(errorData?.error || "Save failed.");
                     }
+
 
                     setTranslationModalOpen(false);
                     setSaveSuccess(true);

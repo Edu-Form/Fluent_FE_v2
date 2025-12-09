@@ -41,15 +41,16 @@ interface ScheduleData {
 }
 
 interface HomeworkData {
-  _id: string;
-  student_name: string;
-  class_date: string;
-  date: string;
-  original_text: string;
-  homework: string;
-  eng_quizlet: string[];
-  kor_quizlet: string[];
+  _id?: string;
+  student_name?: string;
+  class_date?: string;
+  date?: string;
+  original_text?: string;
+  homework?: string;
+  eng_quizlet?: string[];
+  kor_quizlet?: string[];
 }
+
 
 function next_schedule(data: any) {
   const today = new Date();
@@ -148,7 +149,19 @@ const HomePage = () => {
         }
 
         const data = await response.json();
-        setHomeworkData(data);
+
+        if (!data || typeof data !== "object") {
+          setHomeworkData(null);
+        } else {
+          setHomeworkData({
+            homework: data?.homework ?? "",
+            class_date: data?.class_date ?? "",
+            original_text: data?.original_text ?? "",
+            eng_quizlet: data?.eng_quizlet ?? [],
+            kor_quizlet: data?.kor_quizlet ?? [],
+          });
+        }
+
       } catch (err) {
         console.error("숙제 데이터 로딩 오류:", err);
         setError("숙제 데이터를 불러올 수 없습니다.");
@@ -405,7 +418,9 @@ const HomePage = () => {
         {/* 오늘의 학생 공지 */}
         <div className="bg-white rounded-lg p-3 sm:p-4 shadow-lg flex-1 ">
           <Suspense fallback={<SkeletonLoader />}>
-            <Announcement />
+            <ErrorBoundary>
+              <Announcement />
+            </ErrorBoundary>
           </Suspense>
         </div>
         {/* 학습 메뉴 버튼들 + 글쓰기 버튼 */}
@@ -460,3 +475,20 @@ export default function Home() {
     </Suspense>
   );
 }
+
+function ErrorBoundary({ children }: any) {
+  return (
+    <div>
+      {children}
+    </div>
+  );
+}
+
+ErrorBoundary.getDerivedStateFromError = function () {
+  return { hasError: true };
+};
+
+ErrorBoundary.prototype.componentDidCatch = function (error: any) {
+  console.error("Announcement Error:", error);
+};
+

@@ -99,7 +99,7 @@ const AnnouncementPage = () => {
             <div>
               <p className="text-xs text-amber-700 font-medium">Credit</p>
               <p className="text-lg font-bold text-amber-700 leading-tight">
-                {userCredits.toLocaleString()}
+                {Number(userCredits || 0).toLocaleString()}
               </p>
             </div>
           </Link>
