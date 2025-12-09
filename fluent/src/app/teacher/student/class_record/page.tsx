@@ -156,6 +156,8 @@ const ClassPageContent: React.FC = () => {
   const [isEditable, setIsEditable] = useState(false);       // blocks all inputs & editor
   const [awaitingAction, setAwaitingAction] = useState(true); // controls blinking on initial load
   const [recentClassnote, setRecentClassnote] = useState<any>(null);
+  const [wasCancelled, setWasCancelled] = useState(false);
+
 
 
   useEffect(() => {
@@ -2750,6 +2752,23 @@ const ClassPageContent: React.FC = () => {
           </div>
         </div>
 
+        {/* 🟡 Resume Class Button */}
+        {wasCancelled && !classStarted && (
+          <button
+            type="button"
+            onClick={() => {
+              setClassStarted(true);
+              setStartTime(Date.now());
+              setElapsedMs(0);
+              setWasCancelled(false);
+            }}
+            className="flex-1 py-4 rounded-2xl text-black text-sm font-bold bg-yellow-300 hover:bg-yellow-400 transition-all shadow-sm"
+          >
+            🟡 Resume Class
+          </button>
+        )}
+
+
         <div className="w-full bg-white border-t border-[#F2F4F6] py-6 px-6 flex gap-4">
           {/* ✅ 수업 수정하기 — hidden once class starts */}
           {!classStarted && (
@@ -2758,8 +2777,14 @@ const ClassPageContent: React.FC = () => {
               onClick={() => {
                 setIsEditable(true);
                 setAwaitingAction(false);
-                setIsModifyMode(true);   // 🔹 ENTER MODIFY MODE
-              }}
+                setIsModifyMode(true);
+
+                // If cancelling class, stop timer and allow resume
+                if (classStarted) {
+                  setClassStarted(false);
+                  setWasCancelled(true);
+                }
+            }}
               className={`flex-1 py-4 rounded-2xl text-sm font-bold border transition-all
                 ${awaitingAction ? "cta-blink" : ""}
                 text-[#8B95A1] border-[#F2F4F6] hover:bg-[#F8F9FA]`}
@@ -2797,7 +2822,10 @@ const ClassPageContent: React.FC = () => {
           <button
             type="button"
             disabled={loading}
-            onClick={handleEndClassClick}
+            onClick={() => {
+              setClassStarted(false);   // 🔥 stop timer
+              handleEndClassClick();
+            }}
             className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm
               ${loading ? "bg-[#DEE2E6] cursor-not-allowed" : "bg-[#FF6B6B] hover:bg-[#FA5252]"}`}
           >
@@ -3182,12 +3210,6 @@ const ClassPageContent: React.FC = () => {
                       const errorData = await res.json();
                       throw new Error(errorData?.error || "Save failed.");
                     }
-
-                    await fetch("/api/quizlet/temp", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ student_name, original_text: "" }),
-                    });
 
                     setTranslationModalOpen(false);
                     setSaveSuccess(true);
