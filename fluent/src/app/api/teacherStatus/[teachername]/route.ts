@@ -56,7 +56,7 @@ export async function GET(request: Request) {
       );
     }
 
-    let teacherStatus = await getTeacherStatus(teachername);
+    const teacherStatus = await getTeacherStatus(teachername);
 
     // ⭐ Always normalize into an array
     const safeStatus = Array.isArray(teacherStatus) ? teacherStatus : [];
