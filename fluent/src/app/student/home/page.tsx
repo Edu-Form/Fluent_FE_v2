@@ -7,7 +7,8 @@ import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
 
-import { X } from "lucide-react";
+import { X, History } from "lucide-react";
+import { MdDiamond } from "react-icons/md";
 
 // 동적 컴포넌트 로딩 추가
 const Alert = dynamic(() => import("@/components/StudentAlert"), {
@@ -96,6 +97,7 @@ const HomePage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user_id) return;
       try {
         const URL = `/api/user/${user_id}`;
         const res = await fetch(URL, { cache: "no-store" });
@@ -145,6 +147,12 @@ const HomePage = () => {
         });
 
         if (!response.ok) {
+          // 404 means no homework found, which is okay
+          if (response.status === 404) {
+            setHomeworkData(null);
+            setIsLoading(false);
+            return;
+          }
           throw new Error("숙제 데이터를 가져오는데 실패했습니다.");
         }
 
@@ -316,18 +324,40 @@ const HomePage = () => {
         {/* 인사말 카드  */}
         <div className="bg-blue-50 rounded-3xl shadow-sm border border-gray-100 p-6">
           <div className="flex flex-col">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-medium text-lg">
-                  {user ? user.charAt(0) : "F"}
-                </span>
-              </div>
-              <div>
-                <div className="text-sm text-gray-500">안녕하세요</div>
-                <div className="text-lg font-bold text-gray-900">
-                  {user || "Fluent"} 님
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 font-medium text-lg">
+                    {user ? user.charAt(0) : "F"}
+                  </span>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-500">안녕하세요</div>
+                  <div className="text-lg font-bold text-gray-900">
+                    {user || "Fluent"} 님
+                  </div>
                 </div>
               </div>
+              
+              {/* 크레딧 결제 및 내역 버튼 */}
+              {user_id && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => router.push(`/student/payment/history?user=${encodeURIComponent(user || "")}&type=${type || "student"}&id=${user_id}`)}
+                    className="flex items-center gap-2 bg-gray-100 text-gray-700 rounded-full px-3 py-2 shadow-sm hover:bg-gray-200 transition-all text-xs font-medium"
+                    title="결제 내역"
+                  >
+                    <History className="text-gray-600 w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={Payment}
+                    className="flex items-center gap-2 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full px-4 py-2.5 shadow-md hover:from-amber-500 hover:to-amber-600 transition-all transform hover:scale-105 active:scale-95"
+                  >
+                    <MdDiamond className="text-white text-lg" />
+                    <span className="text-white font-semibold text-sm">크레딧 결제</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="mt-2 border-t border-gray-100 pt-4">
@@ -354,18 +384,6 @@ const HomePage = () => {
               </span>
             )}
           </div>
-
-          {/* 크레딧 결제 버튼 */}
-          {user === "David" && (
-            <button
-              onClick={Payment}
-              className="w-full bg-green-600 text-white rounded-xl py-3 text-center text-sm font-semibold shadow hover:bg-green-700 transition"
-            >
-              크레딧 결제
-            </button>
-          )}
-
-
 
           {isLoading ? (
             <div className="bg-blue-50 rounded-2xl p-4 flex items-center justify-center h-24">

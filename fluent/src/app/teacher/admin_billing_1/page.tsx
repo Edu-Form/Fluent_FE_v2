@@ -739,25 +739,40 @@ function AdminBillingExcelPageInner() {
       // Extract names once
       const names = students.map((s) => s.name);
 
-      // 1) Load ALL profiles in one batch
-      const loadProfiles = Promise.all(
-        names.map((name) => ensureStudentProfile(name))
+      // Check which data actually needs to be loaded (not already cached)
+      const profilesToLoad = names.filter(
+        (name) => !studentProfileCacheRef.current[name]
       );
-
-      // 2) Load classnotes for the entire teacher+month (already batched)
-      const loadNotes = ensureClassnotes(selectedTeacher, selectedMonth, students);
-
-      // 3) Load ALL diaries in one batch
-      const loadDiaries = Promise.all(
-        names.map((name) => ensureDiary(name))
+      const diariesToLoad = names.filter(
+        (name) => !diaryCacheRef.current[name]
       );
-
-      // 4) Load ALL quizlets in one batch
-      const loadQuizlets = Promise.all(
-        names.map((name) => ensureQuizlet(name))
+      const quizletsToLoad = names.filter(
+        (name) => !quizletCacheRef.current[name]
       );
+      const classnoteCacheKey = `${selectedTeacher}__${selectedMonth}`;
+      const needClassnotes = !classnoteCacheRef.current[classnoteCacheKey];
 
-      // Run 4 BIG batches in parallel instead of hundreds of micro-batches
+      // 1) Load only missing profiles in batch
+      const loadProfiles = profilesToLoad.length > 0 
+        ? Promise.all(profilesToLoad.map((name) => ensureStudentProfile(name)))
+        : Promise.resolve([]);
+
+      // 2) Load classnotes only if not cached
+      const loadNotes = needClassnotes
+        ? ensureClassnotes(selectedTeacher, selectedMonth, students)
+        : Promise.resolve([]);
+
+      // 3) Load only missing diaries in batch
+      const loadDiaries = diariesToLoad.length > 0
+        ? Promise.all(diariesToLoad.map((name) => ensureDiary(name)))
+        : Promise.resolve([]);
+
+      // 4) Load only missing quizlets in batch
+      const loadQuizlets = quizletsToLoad.length > 0
+        ? Promise.all(quizletsToLoad.map((name) => ensureQuizlet(name)))
+        : Promise.resolve([]);
+
+      // Run batches in parallel, but only load what's needed
       await Promise.all([
         loadProfiles,
         loadNotes,
@@ -1058,10 +1073,72 @@ useEffect(() => {
 
   const summary = useMemo(() => {
     const totalClasses = monthClassnotes.length;
-    const totalHours = monthSchedules.reduce(
-      (sum, entry) => sum + normalizeDuration(entry.duration),
-      0
-    );
+    
+    // More reliable calculation: Use classnotes (actual completed classes) as source of truth
+    // Match each classnote with its corresponding schedule to get accurate duration
+    let totalHours = 0;
+    
+    if (monthClassnotes.length > 0 && monthSchedules.length > 0) {
+      // Create a map of schedules by date and student for quick lookup
+      const scheduleMap = new Map<string, ScheduleEntry[]>();
+      monthSchedules.forEach((schedule) => {
+        const key = `${schedule.date || ""}_${schedule.student_name || ""}`;
+        if (!scheduleMap.has(key)) {
+          scheduleMap.set(key, []);
+        }
+        scheduleMap.get(key)!.push(schedule);
+      });
+      
+      // For each completed classnote, find matching schedule and sum duration
+      monthClassnotes.forEach((classnote) => {
+        const classnoteDate = classnote.date || (classnote as any).class_date;
+        const studentName = classnote.student_name;
+        
+        if (!classnoteDate || !studentName) return;
+        
+        // Try to find matching schedule(s) for this classnote
+        const scheduleKey = `${classnoteDate}_${studentName}`;
+        const matchingSchedules = scheduleMap.get(scheduleKey) || [];
+        
+        if (matchingSchedules.length > 0) {
+          // Use the first matching schedule's duration (or sum if multiple)
+          matchingSchedules.forEach((schedule) => {
+            totalHours += normalizeDuration(schedule.duration);
+          });
+        } else {
+          // If no matching schedule found, try to find by date only (within same day)
+          const classnoteDateObj = parseDateString(classnoteDate);
+          if (classnoteDateObj) {
+            const sameDaySchedules = monthSchedules.filter((s) => {
+              const sDate = parseDateString(s.date);
+              if (!sDate) return false;
+              return (
+                sDate.toDateString() === classnoteDateObj.toDateString() &&
+                (s.student_name || "").trim() === studentName.trim() &&
+                (s.teacher_name || "").trim() === selectedTeacher.trim()
+              );
+            });
+            sameDaySchedules.forEach((schedule) => {
+              totalHours += normalizeDuration(schedule.duration);
+            });
+          }
+        }
+      });
+    }
+    
+    // Fallback: If no classnotes or no matches found, use schedule-based calculation
+    // but ensure we're filtering correctly by teacher
+    if (totalHours === 0) {
+      totalHours = monthSchedules
+        .filter((entry) => {
+          // Ensure teacher_name matches selectedTeacher for reliability
+          const entryTeacher = (entry.teacher_name || "").trim();
+          const selectedTeacherTrimmed = (selectedTeacher || "").trim();
+          return entryTeacher === selectedTeacherTrimmed || !entryTeacher;
+        })
+        .reduce((sum, entry) => sum + normalizeDuration(entry.duration), 0);
+    }
+    
     const totalAmountDue = studentFinancials.reduce(
       (sum, item) => sum + item.amountDue,
       0
@@ -1079,9 +1156,10 @@ useEffect(() => {
     };
   }, [
     monthSchedules,
+    monthClassnotes,
+    selectedTeacher,
     studentFinancials,
     teacherStudents,
-    selectedTeacher,
   ]);
 
 
@@ -1457,13 +1535,13 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
 
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Total Hours
+                  교사 수업 시간
                 </div>
-                <div className="mt-1 text-2xl font-semibold text-gray-900">
-                  {summary.totalHours.toFixed(2)}h
+                <div className="mt-1 text-2xl font-semibold text-blue-600">
+                  {summary.totalHours.toFixed(2)}시간
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
-                  일정 duration 합계
+                  {selectedTeacher} 선생님 {monthLabelFromKey(selectedMonth || "")} 총 수업 시간
                 </div>
               </div>
 

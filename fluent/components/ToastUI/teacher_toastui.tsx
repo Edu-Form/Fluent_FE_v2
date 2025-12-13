@@ -1350,7 +1350,8 @@ function TeacherToastUIInner({
           )}
 
           <div className="ml-auto flex items-center gap-2">
-            <a
+            {/* Admin Billing 버튼 - 숨김 처리 (주석 처리) */}
+            {/* <a
               href="/teacher/admin_billing/"
               target="_blank"
               rel="noopener noreferrer"
@@ -1358,15 +1359,15 @@ function TeacherToastUIInner({
               className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
             >
               Admin Billing
-            </a>
+            </a> */}
             <a
               href={`/teacher/admin_billing_1?user=${encodeURIComponent(currentUser)}&type=${encodeURIComponent(urlType)}${urlId ? `&id=${encodeURIComponent(urlId)}` : ""}`}
               target="_blank"
               rel="noopener noreferrer"
-              title="Admin Billing 2"
+              title="관리자 결제"
               className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
             >
-              Admin Billing 2
+              관리자 결제
             </a>
             <a
               href="/teacher/schedule/admin/"

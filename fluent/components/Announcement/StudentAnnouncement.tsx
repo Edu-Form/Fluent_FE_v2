@@ -64,6 +64,7 @@ const AnnouncementPage = () => {
     };
 
     const fetchData2 = async () => {
+      if (!user_id) return;
       const URL2 = `/api/user/${user_id}`;
       try {
         const res2 = await fetch(URL2, { cache: "no-store" });
@@ -90,7 +91,7 @@ const AnnouncementPage = () => {
             오늘의 학습 계획을 확인해보세요
           </p>
         </div>
-        {user === "David" && (
+        {user_id && (
           <Link
             href={`/student/payment?user=${user}&type=${type}&id=${user_id}`}
             className="flex items-center gap-2 bg-amber-50 rounded-full px-4 py-2 hover:bg-amber-100 transition"
