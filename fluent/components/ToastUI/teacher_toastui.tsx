@@ -1163,18 +1163,79 @@ function TeacherToastUIInner({
       });
     }
 
-    if (mode === "changed") {
-      const classnoteId = raw.classnote_id;
+if (mode === "changed") {
+  const studentName = raw.student_name?.trim();
+  const teacherName = raw.teacher_name?.trim() || addForm.teacher_name?.trim() || "";
+  const roomName = raw.room_name || "HF";
 
-      await fetch(`/api/classnote/${classnoteId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reason: "class time changed",
-          reason_note: reasonInput,
-        }),
-      });
-    }
+  if (!studentName) throw new Error("Missing student_name");
+
+  // 1) Find the classnote for this student/date (so we use ACTUAL time)
+  const dateKey = ymdString(new Date(ev.start)); // "YYYY. MM. DD."
+  const notes = classnoteMap.get(`${studentName}::${dateKey}`) || [];
+  const note =
+    notes
+      .slice()
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt || b.createdAt || 0).getTime() -
+          new Date(a.updatedAt || a.createdAt || 0).getTime()
+      )[0] || null;
+
+  // Prefer note started/ended; fallback to event start/end
+  const started = note?.started_at ? new Date(note.started_at) : new Date(ev.start);
+  const ended   = note?.ended_at   ? new Date(note.ended_at)   : new Date(ev.end);
+
+  if (!Number.isFinite(started.getTime()) || !Number.isFinite(ended.getTime())) {
+    throw new Error("Invalid started/ended time");
+  }
+
+  // 2) Build SAME params as Add Class
+  const date = ymdString(started); // ✅ normalize like Add Class
+  const time = started.getHours() + started.getMinutes() / 60;
+  const duration = getDurationHours(started, ended);
+
+  // (Optional but recommended) avoid duplicates:
+  // if a schedule already exists for this student/date/time/duration, skip create
+  const already = (data || []).some((r: any) => {
+    if (r?.student_name?.trim() !== studentName) return false;
+    if (ymdString(toDateYMD(r.date)!) !== date) return false;
+    return Number(r.time) === time && Number(r.duration) === duration;
+  });
+
+  if (!already) {
+    await fetch("/api/schedules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date,
+        time,
+        duration,
+        room_name: roomName,
+        teacher_name: teacherName,
+        student_name: studentName,
+        calendarId: "1",
+      }),
+    });
+  }
+
+  // 3) Keep your existing “reason” write (optional, but matches your UI logic)
+  const classnoteId = raw.classnote_id || note?._id;
+  if (classnoteId) {
+    await fetch(`/api/classnote/${classnoteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reason: "class time changed",
+        reason_note: reasonInput,
+      }),
+    });
+  }
+
+  // 4) Refresh
+  window.dispatchEvent(new CustomEvent("calendar:saved"));
+}
+
 
     alert("Saved successfully.");
     setReasonMode(null);
@@ -1787,54 +1848,24 @@ function TeacherToastUIInner({
                               defaults?.teacher_name?.trim() ||
                               addForm.teacher_name?.trim() ||
                               "";
+
                             const roomName = raw.room_name || "HF";
+
+                            // 1️⃣ Use ACTUAL classnote time
+                            let startTime = started.getHours() + started.getMinutes() / 60;
+                            startTime = Math.round(startTime * 2) / 2;
+
+                            const durationH =
+                              Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
 
                             const baseDate = toLocalDateOnly(started);
                             const weekday = baseDate.getDay();
 
-                            // Start time (rounded)
-                            let startTime = started.getHours() + started.getMinutes() / 60;
-                            startTime = Math.round(startTime * 2) / 2;
-
-                            // Duration (rounded 0.5)
-                            const durationH =
-                              Math.round(((ended.getTime() - started.getTime()) / 3600000) * 2) / 2;
-
-                            // Repeat 6 months
+                            // 2️⃣ Build payloads EXACTLY like Add Class (Repeat)
+                            const payloads: any[] = [];
                             const until = new Date(baseDate);
-                            until.setMonth(until.getMonth() + 6);
+                            until.setMonth(until.getMonth() + 6); // same as your other repeat logic
 
-                            const payloads = [];
-
-                            // 1️⃣ If SCHEDULE EXISTS (red_mismatch), update it
-                            if (caseType === "red_mismatch") {
-                              payloads.push({
-                                _id: raw.id || raw._id,
-                                update: {
-                                  date: ymdString(baseDate),
-                                  time: startTime,
-                                  duration: durationH,
-                                  room_name: roomName,
-                                  teacher_name: teacherName,
-                                  student_name: studentName,
-                                },
-                              });
-                            }
-
-                            // 1️⃣ If SCHEDULE MISSING (red_unscheduled), create the schedule for this date
-                            if (caseType === "red_unscheduled") {
-                              payloads.push({
-                                date: ymdString(baseDate),
-                                time: startTime,
-                                duration: durationH,
-                                room_name: roomName,
-                                teacher_name: teacherName,
-                                student_name: studentName,
-                                calendarId: "1",
-                              });
-                            }
-
-                            // 2️⃣ Add FUTURE WEEKLY SCHEDULES FOR 6 MONTHS
                             for (
                               let d = new Date(baseDate);
                               d.getTime() <= until.getTime();
@@ -1843,7 +1874,7 @@ function TeacherToastUIInner({
                               if (d.getDay() !== weekday) continue;
 
                               payloads.push({
-                                date: ymdString(new Date(d)),
+                                date: ymdString(d),          // ✅ SAME as Add Class
                                 time: startTime,
                                 duration: durationH,
                                 room_name: roomName,
@@ -1853,22 +1884,36 @@ function TeacherToastUIInner({
                               });
                             }
 
-                            // 3️⃣ Save all
-                            const res = await fetch("/api/schedules/mismatch-or-unscheduled-update", {
+                            if (!payloads.length) {
+                              alert("No schedules to create.");
+                              return;
+                            }
+
+                            // 3️⃣ Create schedules (same API as Add Class)
+                            const res = await fetch("/api/schedules", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify(payloads),
                             });
 
-                            if (!res.ok) throw new Error("Failed to update schedules");
+                            if (!res.ok) throw new Error("Failed to create schedules");
 
-                            alert(`✅ Class updated and future schedules added for 6 months`);
+                            // 4️⃣ Optional: mark classnote
+                            if (raw.classnote_id) {
+                              await fetch(`/api/classnote/${raw.classnote_id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ reason: "class time changed" }),
+                              });
+                            }
+
+                            alert(`✅ ${payloads.length} classes created`);
                             window.dispatchEvent(new CustomEvent("calendar:saved"));
                             setDetail(null);
 
                           } catch (err) {
                             console.error(err);
-                            alert("❌ Failed to update class schedule.");
+                            alert("❌ Failed to change class information.");
                           }
                         }}
                       >
