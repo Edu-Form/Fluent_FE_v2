@@ -258,7 +258,9 @@ export default function BillingPanel({
         body: JSON.stringify({ 
           student_name: studentName, 
           amount: amountDueNext,
-          yyyymm: yyyymm
+          yyyymm: yyyymm,
+          description: `Monthly payment for ${yyyymm}`,
+          quantity: 1
         }),
       });
 

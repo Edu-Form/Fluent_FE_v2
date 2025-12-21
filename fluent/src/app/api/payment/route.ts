@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBillingCheck2, saveInitialPayment, updatePaymentStatus, getStudentByOrderId, savePaymentConfirmStatus } from "@/lib/data";
+import { getBillingCheck2, saveInitialPayment, updatePaymentStatus, getStudentByOrderId, savePaymentConfirmStatus, getStudentByName } from "@/lib/data";
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -10,7 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
  */
 export async function POST(req: NextRequest) {
   try {
-    const { student_name, amount, yyyymm } = await req.json();
+    // Accept description and quantity parameters
+    const { student_name, amount, yyyymm, description, quantity, student_id } = await req.json();
 
     if (!student_name || !amount) {
       return NextResponse.json({ message: 'Missing student_name or amount' }, { status: 400 });
@@ -33,6 +34,46 @@ export async function POST(req: NextRequest) {
     const orderId = uuidv4();
     // Save the initial pending state of the transaction to the database.
     await saveInitialPayment(student_name, orderId, amount, yyyymm);
+
+    // NEW: Create payment document in payments collection (non-blocking)
+    // This is SAFE: wrapped in try-catch, won't affect existing payment flow
+    try {
+      // Fetch student_id (phoneNumber) from students collection if not provided
+      let finalStudentId = student_id;
+      if (!finalStudentId) {
+        try {
+          const student = await getStudentByName(student_name);
+          if (student && student.phoneNumber) {
+            finalStudentId = student.phoneNumber;
+            console.log(`[Payment API] Fetched student_id (phoneNumber) from students collection: ${finalStudentId}`);
+          }
+        } catch (err) {
+          console.warn('[Payment API] Could not fetch student_id from students collection:', err);
+          // Continue without student_id - it's optional
+        }
+      }
+
+      const { createPayment } = await import('@/lib/payments');
+      await createPayment({
+        orderId,
+        student_name,
+        student_id: finalStudentId, // Use fetched or provided student_id
+        amount,
+        yyyymm,
+        description: description || `${student_name}'s English class fee`,
+        quantity: quantity,
+        orderName: `${student_name}'s English class fee`,
+        metadata: {
+          source: 'student/payment',
+        },
+      });
+      console.log(`[Payment API] Payment document created successfully for orderId: ${orderId}`);
+    } catch (err) {
+      // Log but don't fail the request - payments collection is additional storage
+      // Existing payment flow continues normally even if this fails
+      console.error('[Payment API] Failed to create payment document (non-critical):', err);
+      // Don't throw - existing payment creation already succeeded above
+    }
 
     const orderName = `${student_name}'s English class fee`;
     
@@ -139,6 +180,46 @@ export async function GET(req: NextRequest) {
       }
     } else {
       console.warn("Could not save PaymentConfirm status: missing student_name or yyyymm", studentInfo);
+    }
+
+    // NEW: Update payment document in payments collection (non-blocking)
+    // This is SAFE: wrapped in try-catch, won't affect existing payment flow
+    try {
+      const { updatePaymentStatus: updatePaymentDoc } = await import('@/lib/payments');
+      const updateResult = await updatePaymentDoc(orderId, {
+        status: payment.status === 'DONE' ? 'COMPLETED' : 'FAILED',
+        paymentKey: payment.paymentKey,
+        tossData: {
+          orderId: payment.orderId,
+          paymentKey: payment.paymentKey,
+          method: payment.method,
+          status: payment.status,
+          totalAmount: payment.totalAmount,
+          balanceAmount: payment.balanceAmount,
+          approvedAt: payment.approvedAt,
+          requestedAt: payment.requestedAt,
+          lastTransactionKey: payment.lastTransactionKey,
+          receipt: payment.receipt,
+          cancels: payment.cancels,
+          failure: payment.failure,
+          card: payment.card,
+          virtualAccount: payment.virtualAccount,
+          transfer: payment.transfer,
+          mobilePhone: payment.mobilePhone,
+        },
+        source: 'api',
+        notes: 'Payment confirmed via redirect',
+      });
+      if (updateResult) {
+        console.log(`[Payment API] Payment document updated successfully for orderId: ${orderId}`);
+      } else {
+        console.warn(`[Payment API] Payment document not found for orderId: ${orderId} (may not have been created initially)`);
+      }
+    } catch (err) {
+      // Log but don't fail the request - payments collection is additional storage
+      // Existing payment flow continues normally even if this fails
+      console.error('[Payment API] Failed to update payment document (non-critical):', err);
+      // Don't throw - existing payment updates already succeeded above
     }
 
     // Return the final payment object to the frontend.

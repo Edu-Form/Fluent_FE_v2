@@ -1,0 +1,615 @@
+/**
+ * Payment Collection Helper Functions
+ * 
+ * This module provides CRUD operations for the new centralized payments collection.
+ * All functions are designed to work alongside (not replace) existing payment storage.
+ */
+
+import { clientPromise } from "@/lib/mongodb";
+import type {
+  PaymentDocument,
+  PaymentStatus,
+  CreatePaymentInput,
+  UpdatePaymentStatusInput,
+  PaymentQueryOptions,
+} from "@/types/payment";
+
+const COLLECTION_NAME = "payments";
+const DB_NAME = "school_management";
+
+// Test mode: Defaults to FALSE (production mode - writes to MongoDB)
+// Only enable test mode by explicitly setting PAYMENTS_TEST_MODE=true in .env.local
+// Test mode writes to JSON file instead of MongoDB for safe testing
+const TEST_MODE = process.env.PAYMENTS_TEST_MODE === 'true'; // Defaults to false if not set
+// Default test data file path - resolved dynamically in loadTestData/saveTestData to avoid path issues
+const TEST_DATA_FILE = process.env.PAYMENTS_TEST_DATA_FILE || 'test-payments-data.json';
+
+/**
+ * Test mode helper: Load test data from JSON file
+ */
+async function loadTestData(): Promise<PaymentDocument[]> {
+  if (!TEST_MODE) return [];
+  
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    // Resolve path: if TEST_DATA_FILE is relative, resolve from cwd; if absolute, use as-is
+    const filePath = path.isAbsolute(TEST_DATA_FILE)
+      ? TEST_DATA_FILE
+      : path.resolve(process.cwd(), TEST_DATA_FILE);
+    
+    try {
+      const data = await fs.readFile(filePath, 'utf-8');
+      const parsed = JSON.parse(data);
+      // Convert date strings back to Date objects
+      return parsed.map((doc: any) => ({
+        ...doc,
+        createdAt: new Date(doc.createdAt),
+        updatedAt: new Date(doc.updatedAt),
+        initiatedAt: doc.initiatedAt ? new Date(doc.initiatedAt) : undefined,
+        pendingAt: doc.pendingAt ? new Date(doc.pendingAt) : undefined,
+        completedAt: doc.completedAt ? new Date(doc.completedAt) : undefined,
+        failedAt: doc.failedAt ? new Date(doc.failedAt) : undefined,
+        cancelledAt: doc.cancelledAt ? new Date(doc.cancelledAt) : undefined,
+        refundedAt: doc.refundedAt ? new Date(doc.refundedAt) : undefined,
+        statusHistory: (doc.statusHistory || []).map((h: any) => ({
+          ...h,
+          timestamp: new Date(h.timestamp),
+        })),
+      })) as PaymentDocument[];
+    } catch (err: any) {
+      if (err.code === 'ENOENT') {
+        // File doesn't exist yet, return empty array
+        return [];
+      }
+      throw err;
+    }
+  } catch (error) {
+    console.error('[Payments Test Mode] Error loading test data:', error);
+    return [];
+  }
+}
+
+/**
+ * Test mode helper: Save test data to JSON file
+ */
+async function saveTestData(data: PaymentDocument[]): Promise<void> {
+  if (!TEST_MODE) return;
+  
+  try {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const filePath = path.resolve(process.cwd(), TEST_DATA_FILE);
+    const dirPath = path.dirname(filePath);
+    
+    // Ensure directory exists
+    await fs.mkdir(dirPath, { recursive: true });
+    
+    // Write to file
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    console.log(`[Payments Test Mode] Data saved to: ${filePath}`);
+  } catch (error) {
+    console.error('[Payments Test Mode] Error saving test data:', error);
+  }
+}
+
+/**
+ * Creates a new payment document in the payments collection
+ * 
+ * @param input Payment creation data
+ * @returns Created payment document
+ */
+export async function createPayment(input: CreatePaymentInput): Promise<PaymentDocument> {
+  try {
+    // Validation - prevent invalid data
+    if (!input.orderId || !input.student_name || !input.amount) {
+      throw new Error('Missing required fields: orderId, student_name, and amount are required');
+    }
+
+    if (input.amount <= 0) {
+      throw new Error('Amount must be greater than 0');
+    }
+
+    const now = new Date();
+    
+    const paymentDoc: PaymentDocument = {
+      orderId: input.orderId,
+      student_name: input.student_name,
+      student_id: input.student_id,
+      amount: input.amount,
+      currency: 'KRW',
+      status: 'INITIATED',
+      yyyymm: input.yyyymm,
+      description: input.description || `${input.student_name}'s English class fee`,
+      quantity: input.quantity,
+      orderName: input.orderName,
+      createdAt: now,
+      updatedAt: now,
+      initiatedAt: now,
+      statusHistory: [
+        {
+          status: 'INITIATED',
+          timestamp: now,
+          source: 'api',
+          notes: 'Payment initiated',
+        },
+      ],
+      metadata: input.metadata || {},
+      _id: `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Test ID
+    };
+
+    // TEST MODE: Write to JSON file instead of MongoDB
+    if (TEST_MODE) {
+      console.log('[Payments Test Mode] ⚠️ TEST MODE ACTIVE - Writing to JSON file instead of MongoDB');
+      const testData = await loadTestData();
+      
+      // Check if payment with this orderId already exists
+      const existing = testData.find(p => p.orderId === input.orderId);
+      if (existing) {
+        console.warn(`[Payments Test Mode] Payment with orderId ${input.orderId} already exists, returning existing document`);
+        return existing;
+      }
+      
+      // Add new payment to test data
+      testData.push(paymentDoc);
+      await saveTestData(testData);
+      
+      console.log(`[Payments Test Mode] ✅ Created payment (TEST): orderId=${input.orderId}, student=${input.student_name}, amount=${input.amount}`);
+      console.log(`[Payments Test Mode] 📄 Test data file: ${TEST_DATA_FILE}`);
+      return paymentDoc;
+    }
+
+    // PRODUCTION MODE: Write to MongoDB
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection<PaymentDocument>(COLLECTION_NAME);
+
+    // Check if payment with this orderId already exists (prevent duplicates)
+    const existing = await collection.findOne({ orderId: input.orderId });
+    if (existing) {
+      console.warn(`[Payments] Payment with orderId ${input.orderId} already exists, returning existing document`);
+      return {
+        ...existing,
+        _id: existing._id?.toString(),
+      } as PaymentDocument;
+    }
+
+    const result = await collection.insertOne(paymentDoc as any);
+    
+    console.log(`[Payments] ✅ Created payment document: orderId=${input.orderId}, student=${input.student_name}, amount=${input.amount}`);
+    
+    return {
+      ...paymentDoc,
+      _id: result.insertedId.toString(),
+    };
+  } catch (error) {
+    console.error("[Payments] Error creating payment:", error);
+    throw error;
+  }
+}
+
+/**
+ * Updates payment status and adds entry to status history
+ * 
+ * @param orderId Payment order ID
+ * @param updates Status update data
+ * @returns Updated payment document
+ */
+export async function updatePaymentStatus(
+  orderId: string,
+  updates: UpdatePaymentStatusInput
+): Promise<PaymentDocument | null> {
+  try {
+    // Validation
+    if (!orderId) {
+      throw new Error('orderId is required');
+    }
+
+    // TEST MODE: Update JSON file instead of MongoDB
+    if (TEST_MODE) {
+      console.log('[Payments Test Mode] ⚠️ TEST MODE ACTIVE - Updating JSON file instead of MongoDB');
+      const testData = await loadTestData();
+      const existingIndex = testData.findIndex(p => p.orderId === orderId);
+      
+      if (existingIndex === -1) {
+        console.warn(`[Payments Test Mode] Payment with orderId ${orderId} not found, cannot update`);
+        return null;
+      }
+      
+      const existing = testData[existingIndex];
+      const now = new Date();
+      
+      // Update the payment document
+      const updated: PaymentDocument = {
+        ...existing,
+        status: updates.status,
+        updatedAt: now,
+        paymentKey: updates.paymentKey || existing.paymentKey,
+        tossData: updates.tossData || existing.tossData,
+        statusHistory: [
+          ...(existing.statusHistory || []),
+          {
+            status: updates.status,
+            timestamp: now,
+            source: updates.source || 'api',
+            notes: updates.notes,
+          },
+        ],
+      };
+      
+      // Set status-specific timestamps
+      if (updates.status === 'PENDING') updated.pendingAt = now;
+      else if (updates.status === 'COMPLETED') updated.completedAt = now;
+      else if (updates.status === 'FAILED') updated.failedAt = now;
+      else if (updates.status === 'CANCELLED') updated.cancelledAt = now;
+      else if (updates.status === 'REFUNDED' || updates.status === 'PARTIALLY_REFUNDED') updated.refundedAt = now;
+      
+      testData[existingIndex] = updated;
+      await saveTestData(testData);
+      
+      console.log(`[Payments Test Mode] ✅ Updated payment (TEST): orderId=${orderId}, status=${updates.status}`);
+      return updated;
+    }
+
+    // PRODUCTION MODE: Update MongoDB
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection<PaymentDocument>(COLLECTION_NAME);
+
+    // Check if payment exists first
+    const existing = await collection.findOne({ orderId });
+    if (!existing) {
+      console.warn(`[Payments] Payment with orderId ${orderId} not found, cannot update`);
+      return null;
+    }
+
+    const now = new Date();
+    const updateData: any = {
+      $set: {
+        status: updates.status,
+        updatedAt: now,
+      },
+      $push: {
+        statusHistory: {
+          status: updates.status,
+          timestamp: now,
+          source: updates.source || 'api',
+          notes: updates.notes,
+        },
+      },
+    };
+
+    // Set status-specific timestamp
+    if (updates.status === 'PENDING') {
+      updateData.$set.pendingAt = now;
+    } else if (updates.status === 'COMPLETED') {
+      updateData.$set.completedAt = now;
+    } else if (updates.status === 'FAILED') {
+      updateData.$set.failedAt = now;
+    } else if (updates.status === 'CANCELLED') {
+      updateData.$set.cancelledAt = now;
+    } else if (updates.status === 'REFUNDED' || updates.status === 'PARTIALLY_REFUNDED') {
+      updateData.$set.refundedAt = now;
+    }
+
+    // Update paymentKey if provided
+    if (updates.paymentKey) {
+      updateData.$set.paymentKey = updates.paymentKey;
+    }
+
+    // Update Toss data if provided
+    if (updates.tossData) {
+      updateData.$set.tossData = updates.tossData;
+    }
+
+    const result = await collection.findOneAndUpdate(
+      { orderId },
+      updateData,
+      { returnDocument: 'after' }
+    );
+
+    return result || null;
+  } catch (error) {
+    console.error("Error updating payment status:", error);
+    throw new Error(`Failed to update payment status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Retrieves a payment document by orderId
+ * 
+ * @param orderId Payment order ID
+ * @returns Payment document or null if not found
+ */
+export async function getPaymentByOrderId(orderId: string): Promise<PaymentDocument | null> {
+  try {
+    // TEST MODE: Read from JSON file
+    if (TEST_MODE) {
+      const testData = await loadTestData();
+      const payment = testData.find(p => p.orderId === orderId);
+      return payment || null;
+    }
+
+    // PRODUCTION MODE: Read from MongoDB
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection<PaymentDocument>(COLLECTION_NAME);
+
+    const payment = await collection.findOne({ orderId });
+    
+    if (!payment) {
+      return null;
+    }
+
+    return {
+      ...payment,
+      _id: payment._id?.toString(),
+    } as PaymentDocument;
+  } catch (error) {
+    console.error("Error getting payment by orderId:", error);
+    throw new Error(`Failed to get payment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Retrieves payments for a specific student
+ * 
+ * @param studentName Student name
+ * @param options Query options (limit, skip, status, date range)
+ * @returns Array of payment documents
+ */
+export async function getPaymentsByStudent(
+  studentName: string,
+  options: PaymentQueryOptions = {}
+): Promise<PaymentDocument[]> {
+  try {
+    // TEST MODE: Read from JSON file
+    if (TEST_MODE) {
+      const testData = await loadTestData();
+      let payments = testData.filter(p => p.student_name === studentName);
+      
+      if (options.status) {
+        payments = payments.filter(p => p.status === options.status);
+      }
+      
+      if (options.startDate || options.endDate) {
+        payments = payments.filter(p => {
+          const created = new Date(p.createdAt);
+          if (options.startDate && created < options.startDate) return false;
+          if (options.endDate && created > options.endDate) return false;
+          return true;
+        });
+      }
+      
+      payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      
+      if (options.skip) payments = payments.slice(options.skip);
+      if (options.limit) payments = payments.slice(0, options.limit);
+      
+      return payments;
+    }
+
+    // PRODUCTION MODE: Read from MongoDB
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection<PaymentDocument>(COLLECTION_NAME);
+
+    const query: any = { student_name: studentName };
+
+    if (options.status) {
+      query.status = options.status;
+    }
+
+    if (options.startDate || options.endDate) {
+      query.createdAt = {};
+      if (options.startDate) {
+        query.createdAt.$gte = options.startDate;
+      }
+      if (options.endDate) {
+        query.createdAt.$lte = options.endDate;
+      }
+    }
+
+    const cursor = collection.find(query).sort({ createdAt: -1 });
+
+    if (options.skip) {
+      cursor.skip(options.skip);
+    }
+
+    if (options.limit) {
+      cursor.limit(options.limit);
+    }
+
+    const payments = await cursor.toArray();
+
+    return payments.map(p => ({
+      ...p,
+      _id: p._id?.toString(),
+    })) as PaymentDocument[];
+  } catch (error) {
+    console.error("Error getting payments by student:", error);
+    throw new Error(`Failed to get payments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Retrieves payments by status
+ * 
+ * @param status Payment status
+ * @param options Query options
+ * @returns Array of payment documents
+ */
+export async function getPaymentsByStatus(
+  status: PaymentStatus,
+  options: PaymentQueryOptions = {}
+): Promise<PaymentDocument[]> {
+  try {
+    // TEST MODE: Read from JSON file
+    if (TEST_MODE) {
+      const testData = await loadTestData();
+      let payments = testData.filter(p => p.status === status);
+      
+      if (options.startDate || options.endDate) {
+        payments = payments.filter(p => {
+          const created = new Date(p.createdAt);
+          if (options.startDate && created < options.startDate) return false;
+          if (options.endDate && created > options.endDate) return false;
+          return true;
+        });
+      }
+      
+      payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      
+      if (options.skip) payments = payments.slice(options.skip);
+      if (options.limit) payments = payments.slice(0, options.limit);
+      
+      return payments;
+    }
+
+    // PRODUCTION MODE: Read from MongoDB
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection<PaymentDocument>(COLLECTION_NAME);
+
+    const query: any = { status };
+
+    if (options.startDate || options.endDate) {
+      query.createdAt = {};
+      if (options.startDate) {
+        query.createdAt.$gte = options.startDate;
+      }
+      if (options.endDate) {
+        query.createdAt.$lte = options.endDate;
+      }
+    }
+
+    const cursor = collection.find(query).sort({ createdAt: -1 });
+
+    if (options.skip) {
+      cursor.skip(options.skip);
+    }
+
+    if (options.limit) {
+      cursor.limit(options.limit);
+    }
+
+    const payments = await cursor.toArray();
+
+    return payments.map(p => ({
+      ...p,
+      _id: p._id?.toString(),
+    })) as PaymentDocument[];
+  } catch (error) {
+    console.error("Error getting payments by status:", error);
+    throw new Error(`Failed to get payments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Adds an error entry to a payment document
+ * 
+ * @param orderId Payment order ID
+ * @param error Error information
+ */
+export async function addPaymentError(
+  orderId: string,
+  error: {
+    message: string;
+    code?: string;
+    source: string;
+  }
+): Promise<void> {
+  try {
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection<PaymentDocument>(COLLECTION_NAME);
+
+    await collection.updateOne(
+      { orderId },
+      {
+        $push: {
+          errors: {
+            ...error,
+            timestamp: new Date(),
+          },
+        },
+        $set: {
+          updatedAt: new Date(),
+        },
+      }
+    );
+  } catch (err) {
+    console.error("Error adding payment error:", err);
+    // Don't throw - error logging shouldn't break the flow
+  }
+}
+
+/**
+ * Gets payment statistics for a student
+ * 
+ * @param studentName Student name
+ * @returns Payment statistics
+ */
+export async function getPaymentStatistics(studentName: string): Promise<{
+  totalPayments: number;
+  totalAmount: number;
+  completedPayments: number;
+  failedPayments: number;
+  pendingPayments: number;
+}> {
+  try {
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection<PaymentDocument>(COLLECTION_NAME);
+
+    const pipeline = [
+      { $match: { student_name: studentName } },
+      {
+        $group: {
+          _id: null,
+          totalPayments: { $sum: 1 },
+          totalAmount: { $sum: '$amount' },
+          completedPayments: {
+            $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] },
+          },
+          failedPayments: {
+            $sum: { $cond: [{ $eq: ['$status', 'FAILED'] }, 1, 0] },
+          },
+          pendingPayments: {
+            $sum: {
+              $cond: [
+                { $in: ['$status', ['PENDING', 'PROCESSING', 'INITIATED']] },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ];
+
+    const result = await collection.aggregate(pipeline).toArray();
+
+    if (result.length === 0) {
+      return {
+        totalPayments: 0,
+        totalAmount: 0,
+        completedPayments: 0,
+        failedPayments: 0,
+        pendingPayments: 0,
+      };
+    }
+
+    return result[0] as any;
+  } catch (error) {
+    console.error("Error getting payment statistics:", error);
+    return {
+      totalPayments: 0,
+      totalAmount: 0,
+      completedPayments: 0,
+      failedPayments: 0,
+      pendingPayments: 0,
+    };
+  }
+}
+

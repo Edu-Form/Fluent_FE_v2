@@ -25,6 +25,36 @@ export async function POST(req: NextRequest) {
       totalAmount
     });
 
+    // NEW: Update payment document in payments collection (non-blocking)
+    // This is SAFE: wrapped in try-catch, won't affect existing webhook flow
+    try {
+      const { updatePaymentStatus: updatePaymentDoc } = await import('@/lib/payments');
+      const paymentStatus = status === 'DONE' ? 'COMPLETED' : status === 'CANCELED' ? 'CANCELLED' : 'FAILED';
+      const updateResult = await updatePaymentDoc(orderId, {
+        status: paymentStatus,
+        paymentKey,
+        tossData: {
+          orderId,
+          paymentKey,
+          method,
+          status,
+          totalAmount,
+        },
+        source: 'webhook',
+        notes: 'Payment status updated via webhook',
+      });
+      if (updateResult) {
+        console.log(`[Webhook] Payment document updated successfully for orderId: ${orderId}`);
+      } else {
+        console.warn(`[Webhook] Payment document not found for orderId: ${orderId} (may not have been created initially)`);
+      }
+    } catch (err) {
+      // Log but don't fail the request - payments collection is additional storage
+      // Existing webhook flow continues normally even if this fails
+      console.error('[Webhook] Failed to update payment document (non-critical):', err);
+      // Don't throw - existing webhook processing already succeeded above
+    }
+
     console.log(`Webhook: Payment ${status} for order ${orderId}`);
 
     return NextResponse.json({ message: 'Webhook processed successfully' });

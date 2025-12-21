@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clientPromise } from "@/lib/mongodb";
+import { getPaymentsByStudent } from "@/lib/payments";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,38 @@ export async function GET(request: NextRequest) {
       { name: studentName },
       { projection: { paymentHistory: 1, credits: 1, orderId: 1, paymentId: 1, paymentStatus: 1 } }
     );
+
+    // NEW: Get payments from payments collection (most comprehensive source)
+    // This is non-blocking - if it fails, we fall back to existing collections
+    let paymentsCollectionData: any[] = [];
+    try {
+      const paymentsDocs = await getPaymentsByStudent(studentName, {
+        limit: 1000, // Get all payments
+        status: undefined, // Get all statuses
+      });
+      
+      // Convert PaymentDocument to the format expected by the frontend
+      paymentsCollectionData = paymentsDocs.map((doc) => ({
+        orderId: doc.orderId,
+        paymentKey: doc.paymentKey || "",
+        amount: doc.amount,
+        method: doc.tossData?.method || doc.method || "카드",
+        status: doc.status === 'COMPLETED' ? 'DONE' : doc.status,
+        approvedAt: doc.tossData?.approvedAt || doc.completedAt?.toISOString(),
+        savedAt: doc.updatedAt?.toISOString() || doc.createdAt?.toISOString(),
+        yyyymm: doc.yyyymm,
+        description: doc.description, // Additional field available from payments collection
+      })).sort((a, b) => {
+        const dateA = a.approvedAt ? new Date(a.approvedAt).getTime() : 0;
+        const dateB = b.approvedAt ? new Date(b.approvedAt).getTime() : 0;
+        return dateB - dateA; // Most recent first
+      });
+      
+      console.log(`[Payment History] Found ${paymentsCollectionData.length} payments from payments collection for ${studentName}`);
+    } catch (err) {
+      console.warn('[Payment History] Could not fetch from payments collection (non-critical):', err);
+      // Continue with existing collections - non-blocking
+    }
 
     // Get payment confirmations from billing collection
     // Handle both array and string formats for student_names
@@ -157,12 +190,44 @@ export async function GET(request: NextRequest) {
       return dateB - dateA;
     });
 
-    // Combine billing payments with fallback payments from history
-    const allPayments = [...studentPayments, ...fallbackPayments];
+    // Combine payments: prioritize payments collection, then billing, then fallback
+    // Create a map to deduplicate by orderId (payments collection takes priority)
+    const paymentsMap = new Map<string, any>();
+    
+    // First add payments from payments collection (highest priority - most comprehensive)
+    paymentsCollectionData.forEach(payment => {
+      if (payment.orderId) {
+        paymentsMap.set(payment.orderId, payment);
+      }
+    });
+    
+    // Then add billing collection payments (only if not already in payments collection)
+    studentPayments.forEach(payment => {
+      if (payment.orderId && !paymentsMap.has(payment.orderId)) {
+        paymentsMap.set(payment.orderId, payment);
+      }
+    });
+    
+    // Finally add fallback payments from paymentHistory string (only if not already present)
+    fallbackPayments.forEach(payment => {
+      if (payment.orderId && !paymentsMap.has(payment.orderId)) {
+        paymentsMap.set(payment.orderId, payment);
+      }
+    });
+    
+    // Convert map to array and sort by date (most recent first)
+    const allPayments = Array.from(paymentsMap.values()).sort((a, b) => {
+      const dateA = a.approvedAt ? new Date(a.approvedAt).getTime() : 0;
+      const dateB = b.approvedAt ? new Date(b.approvedAt).getTime() : 0;
+      return dateB - dateA;
+    });
     
     // Debug logging
     console.log(`Payment history for ${studentName}:`, {
       paymentsFound: allPayments.length,
+      fromPaymentsCollection: paymentsCollectionData.length,
+      fromBillingCollection: studentPayments.length,
+      fromFallback: fallbackPayments.length,
       creditTransactionsFound: creditTransactions.length,
       currentCredits: student?.credits || 0,
       hasPaymentHistory: !!student?.paymentHistory,
@@ -177,6 +242,7 @@ export async function GET(request: NextRequest) {
       debug: {
         studentFound: !!student,
         billingDocsCount: uniquePaymentConfirms.length,
+        paymentsCollectionCount: paymentsCollectionData.length,
       },
     });
   } catch (error) {

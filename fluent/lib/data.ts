@@ -1690,13 +1690,18 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
+    
+    // Get existing paymentHistory to append instead of overwrite
+    const studentData = await db.collection("students").findOne({ orderId }) || { paymentHistory: "" };
+    const existingHistory = studentData.paymentHistory || "";
+    
     const result = await db.collection("students").updateOne(
       { orderId },
       {
         $set: {
           paymentId: payment.paymentKey,
           paymentStatus: payment.status === 'DONE' ? 'COMPLETED' : 'FAILED',
-          paymentHistory: `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount}`,
+          paymentHistory: existingHistory ? `${existingHistory} ${new Date().toISOString()}: ${payment.method} ${payment.totalAmount}` : `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount}`,
         },
       }
     );
