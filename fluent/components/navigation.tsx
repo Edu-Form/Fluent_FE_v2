@@ -121,7 +121,11 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
   };
 
   const handleNoteClick = () => {
-    router.push(`/${type}/note?${url_data}`);
+    if (type === "teacher") {
+      router.push(`/${type}/notes?user=${user}`);
+    } else {
+      router.push(`/${type}/note?${url_data}`);
+    }
   };
 
   const handleCardsClick = () => {
