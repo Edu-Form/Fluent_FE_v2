@@ -149,7 +149,7 @@ export default function TeacherTemplatesPage() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="template_name"
-            className="flex-1 px-3 py-2 text-xs border rounded-xl"
+            className="flex-1 px-3 py-2 text-xs border rounded-xl bg-white text-black"
           />
           <button
             onClick={createTemplate}
@@ -297,7 +297,7 @@ export default function TeacherTemplatesPage() {
         <div className="flex-1 overflow-y-auto p-6 bg-white">
           <EditorContent
             editor={editor}
-            className="prose max-w-none min-h-[400px]"
+            className="prose prose-neutral text-black max-w-none min-h-[400px]"
           />
         </div>
 
