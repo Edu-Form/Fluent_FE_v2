@@ -40,6 +40,8 @@ export async function GET(request: NextRequest) {
         savedAt: doc.updatedAt?.toISOString() || doc.createdAt?.toISOString(),
         yyyymm: doc.yyyymm,
         description: doc.description, // Additional field available from payments collection
+        receiptUrl: doc.tossData?.receipt?.url || doc.tossData?.card?.receiptUrl || null, // Toss receipt URL
+        receiptKey: doc.tossData?.receipt?.receiptKey || null, // Toss receipt key
       })).sort((a, b) => {
         const dateA = a.approvedAt ? new Date(a.approvedAt).getTime() : 0;
         const dateB = b.approvedAt ? new Date(b.approvedAt).getTime() : 0;
@@ -133,6 +135,13 @@ export async function GET(request: NextRequest) {
       type: "payment" | "deduction";
       amount: number;
       description: string;
+      classDetails?: {
+        teacher?: string;
+        room?: string;
+        time?: string;
+        date?: string;
+        preview?: string;
+      };
     }> = [];
 
     if (student?.paymentHistory) {
@@ -166,14 +175,53 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get class schedules to find credit deductions
+    // Get classnotes to find credit deductions with detailed class information
+    let classnotes: any[] = [];
+    try {
+      const classnotesDb = client.db("room_allocation_db");
+      classnotes = await classnotesDb.collection("classnotes").find({
+        student_name: studentName,
+      }).sort({ date: -1, createdAt: -1 }).toArray();
+    } catch (err) {
+      console.warn('[Payment History] Could not fetch classnotes (non-critical):', err);
+      // Continue without classnotes - fallback to schedules
+    }
+
+    // Extract credit deductions from classnotes (when class happened)
+    classnotes.forEach((note) => {
+      if (note.date) {
+        const classDate = note.date;
+        const teacherName = note.teacher_name || "";
+        const roomName = note.room_name || "";
+        const time = note.started_at || note.time || "";
+        const classDescription = note.original_text ? 
+          (note.original_text.substring(0, 50) + (note.original_text.length > 50 ? "..." : "")) : "";
+        
+        creditTransactions.push({
+          date: classDate,
+          type: "deduction",
+          amount: -1,
+          description: `수업 진행`,
+          classDetails: {
+            teacher: teacherName,
+            room: roomName,
+            time: time,
+            date: classDate,
+            preview: classDescription,
+          },
+        });
+      }
+    });
+
+    // Also get class schedules as fallback (for older data)
     const schedules = await db.collection("schedules").find({
       student_name: studentName,
     }).sort({ date: -1 }).toArray();
 
-    // Extract credit deductions from schedules (when class was completed)
+    // Extract credit deductions from schedules (when class was completed) - only if not already in classnotes
+    const existingDates = new Set(classnotes.map(n => n.date));
     schedules.forEach((schedule) => {
-      if (schedule.date && schedule.completed) {
+      if (schedule.date && schedule.completed && !existingDates.has(schedule.date)) {
         creditTransactions.push({
           date: schedule.date,
           type: "deduction",

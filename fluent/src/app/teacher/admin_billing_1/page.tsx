@@ -351,30 +351,21 @@ function AdminBillingExcelPageInner() {
           return;
         }
 
-        const res = await fetch("/api/payment/link", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            studentName: student.name,
-            amount,
-          }),
-        });
+        // Generate orderId for tracking
+        const orderId = new Date().getTime().toString();
 
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({}));
-          throw new Error(error.message || "Failed to create payment link");
-        }
+        // Create wrapper link that generates payment link on-demand
+        // Pass student name, amount, and orderId as query parameters
+        const wrapperLink = `/payment/link?studentName=${encodeURIComponent(student.name)}&amount=${amount}&orderId=${orderId}`;
+        const fullWrapperLink = `${window.location.origin}${wrapperLink}`;
 
-        const data = await res.json();
-        const paymentLink = data.paymentLink;
-
-        // Try to copy to clipboard
+        // Try to copy wrapper link to clipboard
         try {
-          await navigator.clipboard.writeText(paymentLink);
-          alert(`결제 링크가 클립보드에 복사되었습니다.\n${paymentLink}`);
+          await navigator.clipboard.writeText(fullWrapperLink);
+          alert(`결제 링크가 클립보드에 복사되었습니다.\n\n래퍼 링크: ${fullWrapperLink}\n\n이 링크를 클릭하면 결제 페이지로 이동합니다.`);
         } catch {
           // Fallback: show link in prompt
-          prompt("결제 링크를 복사하세요:", paymentLink);
+          prompt("결제 링크를 복사하세요 (래퍼 링크):", fullWrapperLink);
         }
 
         // Optional: Send via Kakao if enabled (can be disabled)
@@ -394,7 +385,7 @@ function AdminBillingExcelPageInner() {
                 templateArgs: {
                   studentName: student.name,
                   amount: amount.toLocaleString("ko-KR"),
-                  paymentLink: paymentLink,
+                  paymentLink: fullWrapperLink, // Send wrapper link instead
                 },
               }),
             });
@@ -509,13 +500,30 @@ function AdminBillingExcelPageInner() {
 
           setTeacherNames(filteredTeachers);
           setTeacherStudents(studentMap);
-          setSelectedTeacher((prev) =>
-            prev && prev.length > 0 && filteredTeachers.includes(prev)
+          // Set default teacher: For admins (David, Phil), use their own name; otherwise David if available, then first teacher
+          let defaultTeacher = "";
+          if (isAdmin && currentUser && (currentUser === "David" || currentUser === "Phil")) {
+            // For admins David/Phil, default to their own name
+            defaultTeacher = filteredTeachers.includes(currentUser) ? currentUser : "";
+          }
+          if (!defaultTeacher && filteredTeachers.includes("David")) {
+            defaultTeacher = "David";
+          }
+          if (!defaultTeacher && filteredTeachers.length > 0) {
+            defaultTeacher = filteredTeachers[0];
+          }
+          setSelectedTeacher((prev) => {
+            // If currentUser is David/Phil and isAdmin, always use their name (override prev)
+            if (isAdmin && currentUser && (currentUser === "David" || currentUser === "Phil")) {
+              if (filteredTeachers.includes(currentUser)) {
+                return currentUser;
+              }
+            }
+            // Otherwise, keep prev if it's valid, or use defaultTeacher
+            return prev && prev.length > 0 && filteredTeachers.includes(prev)
               ? prev
-              : filteredTeachers.length > 0
-              ? filteredTeachers[0]
-              : ""
-          );
+              : defaultTeacher;
+          });
         }
       } catch (err) {
         if (!cancelled) {
@@ -1076,12 +1084,21 @@ useEffect(() => {
     
     // More reliable calculation: Use classnotes (actual completed classes) as source of truth
     // Match each classnote with its corresponding schedule to get accurate duration
+    // IMPORTANT: Only count schedules that match the selectedTeacher
     let totalHours = 0;
+    const selectedTeacherTrimmed = (selectedTeacher || "").trim();
     
     if (monthClassnotes.length > 0 && monthSchedules.length > 0) {
       // Create a map of schedules by date and student for quick lookup
+      // ONLY include schedules that match the selectedTeacher
       const scheduleMap = new Map<string, ScheduleEntry[]>();
       monthSchedules.forEach((schedule) => {
+        // Filter by teacher_name to ensure we only count this teacher's hours
+        const entryTeacher = (schedule.teacher_name || "").trim();
+        if (entryTeacher && entryTeacher !== selectedTeacherTrimmed) {
+          return; // Skip schedules from other teachers
+        }
+        
         const key = `${schedule.date || ""}_${schedule.student_name || ""}`;
         if (!scheduleMap.has(key)) {
           scheduleMap.set(key, []);
@@ -1093,6 +1110,12 @@ useEffect(() => {
       monthClassnotes.forEach((classnote) => {
         const classnoteDate = classnote.date || (classnote as any).class_date;
         const studentName = classnote.student_name;
+        const classnoteTeacher = (classnote.teacher_name || "").trim();
+        
+        // Only count classnotes from the selected teacher
+        if (classnoteTeacher && classnoteTeacher !== selectedTeacherTrimmed) {
+          return; // Skip classnotes from other teachers
+        }
         
         if (!classnoteDate || !studentName) return;
         
@@ -1112,10 +1135,11 @@ useEffect(() => {
             const sameDaySchedules = monthSchedules.filter((s) => {
               const sDate = parseDateString(s.date);
               if (!sDate) return false;
+              const sTeacher = (s.teacher_name || "").trim();
               return (
                 sDate.toDateString() === classnoteDateObj.toDateString() &&
                 (s.student_name || "").trim() === studentName.trim() &&
-                (s.teacher_name || "").trim() === selectedTeacher.trim()
+                (sTeacher === selectedTeacherTrimmed || (!sTeacher && selectedTeacherTrimmed))
               );
             });
             sameDaySchedules.forEach((schedule) => {
@@ -1127,14 +1151,14 @@ useEffect(() => {
     }
     
     // Fallback: If no classnotes or no matches found, use schedule-based calculation
-    // but ensure we're filtering correctly by teacher
+    // but ensure we're filtering correctly by teacher (STRICT: only selectedTeacher)
     if (totalHours === 0) {
       totalHours = monthSchedules
         .filter((entry) => {
-          // Ensure teacher_name matches selectedTeacher for reliability
+          // STRICT filtering: Only count schedules from selectedTeacher
           const entryTeacher = (entry.teacher_name || "").trim();
-          const selectedTeacherTrimmed = (selectedTeacher || "").trim();
-          return entryTeacher === selectedTeacherTrimmed || !entryTeacher;
+          // Only include if teacher_name matches exactly, or if teacher_name is empty AND we're matching by selectedTeacher
+          return entryTeacher === selectedTeacherTrimmed;
         })
         .reduce((sum, entry) => sum + normalizeDuration(entry.duration), 0);
     }
@@ -1550,10 +1574,16 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                   결제 금액 (₩)
                 </div>
                 <div className="mt-1 text-2xl font-semibold text-gray-900">
-                  {CURRENCY_FORMATTER.format(Math.round(summary.totalAmountDue))}
+                  {isAdmin 
+                    ? CURRENCY_FORMATTER.format(Math.round(summary.totalAmountDue))
+                    : `${summary.totalHours.toFixed(2)}시간 × 25,000`
+                  }
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
-                  결제 대상 수업 {summary.totalNextToPay.toFixed(2)}개
+                  {isAdmin 
+                    ? `결제 대상 수업 ${summary.totalNextToPay.toFixed(2)}개`
+                    : `총 ${CURRENCY_FORMATTER.format(Math.round(summary.totalHours * 25000))}`
+                  }
                 </div>
               </div>
 
@@ -1787,41 +1817,21 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                                   </div>
                                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
                                     <div className="flex items-center justify-between">
-                                      <span>이번달 선결제(예정/스케줄)</span>
+                                      <span>잔여 수업</span>
                                       <span className="font-medium text-gray-900">
-                                        {initialCreditValue.toFixed(0)}
+                                        {Math.max(0, Math.round(totalCreditsAvailableValue))}회
                                       </span>
                                     </div>
                                     <div className="mt-1 flex items-center justify-between">
-                                      <span>이번달 실제 수업 (노트 기준)</span>
+                                      <span>진행 예정 수업</span>
                                       <span className="font-medium text-gray-900">
-                                        {classesCompletedValue.toFixed(2)}
+                                        {Math.round(nextMonthPlannedValue)}회
                                       </span>
                                     </div>
                                     <div className="mt-1 flex items-center justify-between">
-                                      <span>다음달 예정 수업 (스케줄)</span>
+                                      <span>오늘 결제 필요 수업</span>
                                       <span className="font-medium text-gray-900">
-                                        {nextMonthPlannedValue.toFixed(2)}
-                                      </span>
-                                    </div>
-                                    <div className="mt-1 flex items-center justify-between">
-                                      <span>다음달 차감 가능 수업</span>
-                                      <span className="font-medium text-gray-900">
-                                        {totalCreditsAvailableValue.toFixed(2)}
-                                      </span>
-                                    </div>
-                                    <div className="mt-1 flex items-center justify-between">
-                                      <span>결제 대상 수업</span>
-                                      <span className="font-medium text-gray-900">
-                                        {nextToPayClassesValue.toFixed(2)}
-                                      </span>
-                                    </div>
-                                    <div className="mt-2 flex items-center justify-between text-gray-700">
-                                      <span>결제 금액 (₩)</span>
-                                      <span className="text-sm font-semibold text-gray-900">
-                                        {CURRENCY_FORMATTER.format(
-                                          Math.round(amountDueValue)
-                                        )}
+                                        {Math.round(nextToPayClassesValue)}회 ({CURRENCY_FORMATTER.format(Math.round(amountDueValue))})
                                       </span>
                                     </div>
                                   </div>

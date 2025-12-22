@@ -98,7 +98,7 @@ const AnnouncementPage = () => {
           >
             <MdDiamond className="text-amber-600" />
             <div>
-              <p className="text-xs text-amber-700 font-medium">Credit</p>
+              <p className="text-xs text-amber-700 font-medium">수업 횟수</p>
               <p className="text-lg font-bold text-amber-700 leading-tight">
                 {Number(userCredits || 0).toLocaleString()}
               </p>

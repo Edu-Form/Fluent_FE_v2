@@ -4,29 +4,37 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navigation from "@/components/navigation";
 
-interface Note {
+interface ClassNote {
   _id: string;
   student_name: string;
-  class_date: string;
+  teacher_name?: string;
+  class_date?: string;
   date: string;
   original_text: string;
   homework?: string;
+  nextClass?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // 클라이언트 컴포넌트에서 useSearchParams 사용
 function NotesContent() {
   const searchParams = useSearchParams();
   const user = searchParams.get("user");
-  const type = searchParams.get("type");
 
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<ClassNote[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [classStats, setClassStats] = useState<{
+    totalClassesCompleted: number;
+    currentCredits: number;
+    classesUsed: number;
+  } | null>(null);
 
   useEffect(() => {
     const fetchNotes = async () => {
-      if (!user || !type) {
+      if (!user) {
         setIsLoading(false);
         return;
       }
@@ -35,20 +43,20 @@ function NotesContent() {
       setError(null);
 
       try {
-        const res = await fetch(`/api/quizlet/${type}/${user}`);
+        const res = await fetch(`/api/classnote/student/${encodeURIComponent(user)}`);
         if (!res.ok) {
           throw new Error(`Failed to fetch notes: ${res.status}`);
         }
 
-        const data: Note[] = await res.json();
+        const data: ClassNote[] = await res.json();
         setNotes(data);
         if (data.length > 0) {
-          setSelectedIndex(data.length - 1); // default to latest
+          setSelectedIndex(0); // default to latest (first item after sort)
         }
       } catch (error) {
         console.error("Failed to fetch notes:", error);
         setError(
-          error instanceof Error ? error.message : "노트를 가져오지 못했습니다."
+          error instanceof Error ? error.message : "수업 노트를 가져오지 못했습니다."
         );
       } finally {
         setIsLoading(false);
@@ -56,7 +64,29 @@ function NotesContent() {
     };
 
     fetchNotes();
-  }, [user, type]);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetch(`/api/classnote/count/${encodeURIComponent(user)}`)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        // Only set stats if we got valid data
+        if (data && typeof data === 'object') {
+          setClassStats(data);
+        }
+      })
+      .catch((error) => {
+        console.log("클래스 통계를 불러오지 못 합니다", error);
+        // Don't set classStats on error - page will work without it
+      });
+  }, [user]);
 
   const selectedNote = notes[selectedIndex];
 
@@ -81,52 +111,113 @@ function NotesContent() {
   }
 
   return (
-    <div className="h-full">
-      <h1 className="text-2xl font-bold mb-4">
-        {user ? `${user}님 Notes` : "Notes"}
+    <div className="h-full pb-20">
+      <h1 className="text-2xl font-bold mb-4 px-4">
+        {user ? `${user}님의 수업 노트` : "수업 노트"}
       </h1>
 
+      {classStats && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mx-4 mb-4 shadow-sm border border-blue-100">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg p-3 shadow-sm">
+              <p className="text-xs text-gray-600 mb-1">전체 수업 횟수</p>
+              <p className="text-xl font-bold text-blue-600">{classStats.totalClassesCompleted}회</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 shadow-sm">
+              <p className="text-xs text-gray-600 mb-1">사용한 수업 횟수</p>
+              <p className="text-xl font-bold text-indigo-600">{classStats.classesUsed}회</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {notes.length > 0 ? (
-        <>
-          <select
-            value={selectedIndex}
-            onChange={(e) => setSelectedIndex(Number(e.target.value))}
-            className="border bg-white rounded px-3 py-2 mb-6 w-full md:w-auto"
-          >
-            {notes.map((note, idx) => (
-              <option key={note._id ?? idx} value={idx}>
-                {note.date} (Note {idx + 1})
-              </option>
-            ))}
-          </select>
-
-          {selectedNote && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold mb-2">Class Notes</h2>
+        <div className="px-4 space-y-3">
+          {/* Notes List - Mobile Friendly */}
+          <div className="space-y-2">
+            {notes.map((note, idx) => {
+              const noteDate = note.date || note.class_date || "";
+              const isSelected = idx === selectedIndex;
+              
+              return (
                 <div
-                  className="prose whitespace-pre-wrap border p-4 rounded bg-white"
-                  dangerouslySetInnerHTML={{
-                    __html: selectedNote.original_text,
-                  }}
-                />
-              </div>
-
-              {selectedNote.homework && (
-                <div>
-                  <h2 className="text-xl font-semibold mb-2">Homework</h2>
+                  key={note._id ?? idx}
+                  onClick={() => setSelectedIndex(idx)}
+                  className={`border rounded-xl p-3 transition-all ${
+                    isSelected
+                      ? "bg-blue-50 border-blue-300 shadow-md"
+                      : "bg-white border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <p className={`text-sm font-semibold ${isSelected ? "text-blue-700" : "text-gray-700"}`}>
+                      {noteDate || "날짜 없음"}
+                    </p>
+                    {note.teacher_name && (
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                        {note.teacher_name} 선생님
+                      </span>
+                    )}
+                  </div>
                   <div
-                    className="prose whitespace-pre-wrap border p-4 rounded bg-white"
-                    dangerouslySetInnerHTML={{ __html: selectedNote.homework }}
+                    className="text-xs text-gray-600 line-clamp-2"
+                    dangerouslySetInnerHTML={{
+                      __html: note.original_text?.slice(0, 100) + (note.original_text?.length > 100 ? "..." : "") || "",
+                    }}
                   />
                 </div>
-              )}
+              );
+            })}
+          </div>
+
+          {/* Selected Note Detail */}
+          {selectedNote && (
+            <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+              <div className="mb-4 pb-3 border-b border-gray-200">
+                <h2 className="text-lg font-bold text-gray-900 mb-1">
+                  {selectedNote.date || selectedNote.class_date || "수업 노트"}
+                </h2>
+                {selectedNote.teacher_name && (
+                  <p className="text-sm text-gray-600">{selectedNote.teacher_name} 선생님</p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">수업 내용</h3>
+                  <div
+                    className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3"
+                    dangerouslySetInnerHTML={{
+                      __html: selectedNote.original_text,
+                    }}
+                  />
+                </div>
+
+                {selectedNote.homework && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">숙제</h3>
+                    <div
+                      className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap bg-amber-50 rounded-lg p-3 border border-amber-200"
+                      dangerouslySetInnerHTML={{ __html: selectedNote.homework }}
+                    />
+                  </div>
+                )}
+
+                {selectedNote.nextClass && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">다음 수업</h3>
+                    <div className="text-sm text-gray-700 whitespace-pre-wrap bg-blue-50 rounded-lg p-3 border border-blue-200">
+                      {selectedNote.nextClass}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-        </>
+        </div>
       ) : (
-        <div className="bg-blue-50 p-4 rounded-lg text-blue-700">
-          <p>이 사용자에 대한 노트가 없습니다.</p>
+        <div className="bg-blue-50 p-4 mx-4 rounded-lg text-blue-700">
+          <p>아직 수업 노트가 없습니다.</p>
         </div>
       )}
     </div>
@@ -148,7 +239,7 @@ function LoadingFallback() {
 // 메인 페이지 컴포넌트
 export default function NotesPage() {
   return (
-    <div className="max-w-3xl mx-auto p-6 min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       {/* Suspense 경계 내에서 useSearchParams를 사용하는 컴포넌트 래핑 */}
       <Suspense fallback={<LoadingFallback />}>
         <NotesContent />

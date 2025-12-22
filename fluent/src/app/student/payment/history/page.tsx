@@ -14,6 +14,8 @@ interface Payment {
   approvedAt?: string;
   savedAt?: string;
   yyyymm?: string;
+  receiptUrl?: string | null;
+  receiptKey?: string | null;
 }
 
 interface CreditTransaction {
@@ -21,6 +23,13 @@ interface CreditTransaction {
   type: "payment" | "deduction";
   amount: number;
   description: string;
+  classDetails?: {
+    teacher?: string;
+    room?: string;
+    time?: string;
+    date?: string;
+    preview?: string;
+  };
 }
 
 function PaymentHistoryInner() {
@@ -36,6 +45,7 @@ function PaymentHistoryInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"payments" | "credits">("payments");
+  const [showExampleData, setShowExampleData] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -56,8 +66,82 @@ function PaymentHistoryInner() {
 
         const data = await response.json();
         console.log("Payment history data:", data); // Debug log
-        setPayments(data.payments || []);
-        setCreditTransactions(data.creditTransactions || []);
+        
+        // Prepare example data (for testing/demo)
+        const examplePayments: Payment[] = [
+          {
+            orderId: "example_order_001",
+            paymentKey: "example_payment_key_001",
+            amount: 480000,
+            method: "카드",
+            status: "DONE",
+            approvedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            savedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            yyyymm: "202412",
+            receiptUrl: "https://docs.tosspayments.com/receipt/example",
+          },
+          {
+            orderId: "example_order_002",
+            paymentKey: "example_payment_key_002",
+            amount: 240000,
+            method: "간편결제",
+            status: "DONE",
+            approvedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+            savedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+            yyyymm: "202411",
+            receiptUrl: "https://docs.tosspayments.com/receipt/example",
+          },
+        ];
+        
+        const exampleCredits: CreditTransaction[] = [
+          {
+            date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            type: "payment",
+            amount: 10,
+            description: "카드 결제로 크레딧 충전",
+          },
+          {
+            date: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+            type: "deduction",
+            amount: -1,
+            description: "수업 진행",
+            classDetails: {
+              teacher: "David",
+              room: "Room A",
+              time: "14:00",
+              date: "2024. 12. 15.",
+              preview: "Today we learned about present perfect tense...",
+            },
+          },
+          {
+            date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+            type: "deduction",
+            amount: -1,
+            description: "수업 진행",
+            classDetails: {
+              teacher: "David",
+              room: "Room B",
+              time: "16:00",
+              date: "2024. 12. 20.",
+              preview: "We practiced conversation skills and reviewed vocabulary...",
+            },
+          },
+          {
+            date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+            type: "payment",
+            amount: 5,
+            description: "간편결제로 크레딧 충전",
+          },
+        ];
+        
+        // Add example data if enabled (for testing/demo)
+        if (showExampleData) {
+          setPayments([...examplePayments, ...(data.payments || [])]);
+          setCreditTransactions([...exampleCredits, ...(data.creditTransactions || [])]);
+        } else {
+          setPayments(data.payments || []);
+          setCreditTransactions(data.creditTransactions || []);
+        }
         setCurrentCredits(data.currentCredits || 0);
         
         // Log if no data found
@@ -73,7 +157,7 @@ function PaymentHistoryInner() {
     };
 
     fetchHistory();
-  }, [user]);
+  }, [user, showExampleData]);
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "-";
@@ -173,7 +257,15 @@ function PaymentHistoryInner() {
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">돌아가기</span>
           </button>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">결제 및 크레딧 내역</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold text-gray-900">결제 및 크레딧 내역</h1>
+            <button
+              onClick={() => setShowExampleData(!showExampleData)}
+              className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+            >
+              {showExampleData ? "예시 데이터 숨기기" : "예시 데이터 보기"}
+            </button>
+          </div>
           <p className="text-gray-600">
             결제 내역과 크레딧 사용 내역을 확인하실 수 있습니다.
           </p>
@@ -255,13 +347,26 @@ function PaymentHistoryInner() {
                       <p className="text-2xl font-bold text-gray-900 mb-2">
                         {formatCurrency(payment.amount)}
                       </p>
-                      <button
-                        onClick={() => generateReceipt(payment)}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
-                      >
-                        <Download className="w-4 h-4" />
-                        영수증 다운로드
-                      </button>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => generateReceipt(payment)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                        >
+                          <Download className="w-4 h-4" />
+                          영수증 다운로드
+                        </button>
+                        {payment.receiptUrl && (
+                          <a
+                            href={payment.receiptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm"
+                          >
+                            <Receipt className="w-4 h-4" />
+                            Toss 영수증 보기
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -318,7 +423,26 @@ function PaymentHistoryInner() {
                             )}
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900">
-                            {transaction.description}
+                            <div>
+                              <div className="font-medium">{transaction.description}</div>
+                              {transaction.classDetails && (
+                                <div className="mt-1 text-xs text-gray-500 space-y-1">
+                                  <div>선생님: {transaction.classDetails.teacher || "-"}</div>
+                                  <div>수업일: {transaction.classDetails.date || transaction.date}</div>
+                                  {transaction.classDetails.time && (
+                                    <div>시간: {transaction.classDetails.time}</div>
+                                  )}
+                                  {transaction.classDetails.room && (
+                                    <div>장소: {transaction.classDetails.room}</div>
+                                  )}
+                                  {transaction.classDetails.preview && (
+                                    <div className="mt-2 p-2 bg-gray-50 rounded text-gray-700 italic">
+                                      &ldquo;{transaction.classDetails.preview}&rdquo;
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <span
