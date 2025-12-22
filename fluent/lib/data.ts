@@ -2058,3 +2058,142 @@ export async function getStudentByOrderId(orderId: string): Promise<{ student_na
     return null;
   }
 }
+
+/* ======================================================
+   Classnote Template CRUD (by template_name)
+   Collection: school_management.templates
+   ====================================================== */
+
+export async function getTemplateByName(template_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("templates");
+
+    const doc = await coll.findOne({ template_name });
+    if (!doc) return null;
+
+    return serialize_document(doc);
+  } catch (error) {
+    console.error("getTemplateByName error:", error);
+    return null;
+  }
+}
+
+export async function getTemplateById(id: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("templates");
+
+    const { ObjectId } = await import("mongodb");
+
+    const doc = await coll.findOne({ _id: new ObjectId(id) });
+    if (!doc) return null;
+
+    return serialize_document(doc);
+  } catch (error) {
+    console.error("getTemplateById error:", error);
+    return null;
+  }
+}
+
+
+export async function createTemplateByName(
+  template_name: string,
+  html: string,
+  level: "beginner" | "intermediate" | "business"
+) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("templates");
+
+    const now = new Date();
+
+    const doc = {
+      template_name,
+      html,
+      level, // ✅ SAVE LEVEL
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await coll.insertOne(doc);
+    return { status: 200, message: "Template created" };
+  } catch (error) {
+    console.error("createTemplateByName error:", error);
+    throw error;
+  }
+}
+
+export async function updateTemplateByName(
+  template_name: string,
+  html?: string,
+  level?: "beginner" | "intermediate" | "business"
+) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("templates");
+
+    const update: any = {
+      updatedAt: new Date(),
+    };
+
+    if (html !== undefined) {
+      update.html = html;
+    }
+
+    if (level !== undefined) {
+      update.level = level; // ✅ UPDATE LEVEL
+    }
+
+    const res = await coll.updateOne(
+      { template_name },
+      { $set: update }
+    );
+
+    if (res.matchedCount === 0) {
+      return { status: 404, message: "Template not found" };
+    }
+
+    return { status: 200, message: "Template updated" };
+  } catch (error) {
+    console.error("updateTemplateByName error:", error);
+    return { status: 500, message: "Internal Server Error" };
+  }
+}
+
+export async function deleteTemplateByName(template_name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+    const coll = db.collection("templates");
+
+    const res = await coll.deleteOne({ template_name });
+
+    if (res.deletedCount === 0) {
+      return { status: 404, message: "Template not found" };
+    }
+
+    return { status: 200, message: "Template deleted" };
+  } catch (error) {
+    console.error("deleteTemplateByName error:", error);
+    return { status: 500, message: "Internal Server Error" };
+  }
+}
+
+export async function getAllTemplates() {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const docs = await db
+    .collection("templates")
+    .find({})
+    .sort({ template_name: 1 })
+    .toArray();
+
+  return docs.map(serialize_document);
+}
+

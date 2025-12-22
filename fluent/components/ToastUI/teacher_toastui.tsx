@@ -122,6 +122,20 @@ function shade(hex: string, p: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+function highlightEvent(cal: any, ev: any) {
+  cal.updateEvent(ev.id, ev.calendarId, {
+    boxShadow: "0 0 0 3px rgba(37,99,235,0.6)",
+    borderRadius: "12px",
+  });
+}
+
+function unhighlightEvent(cal: any, ev: any) {
+  cal.updateEvent(ev.id, ev.calendarId, {
+    boxShadow: "none",
+  });
+}
+
+
 function TeacherToastUIInner({
   data,
   variant = "compact",
@@ -164,6 +178,8 @@ function TeacherToastUIInner({
   // calendar refs
   const containerRef = useRef<HTMLDivElement>(null);
   const calRef = useRef<InstanceType<CalendarCtor> | null>(null);
+  const selectedEventRef = useRef<{ id: string; calendarId: string } | null>(null);
+
 
   // remember where the user is (prevents snap-back)
   const viewDateRef = useRef<Date>(new Date());
@@ -837,13 +853,37 @@ function TeacherToastUIInner({
         // Handlers
         const handleClick = (args: { event: EventObject; nativeEvent?: MouseEvent }) => {
           const { event, nativeEvent } = args || {};
-          if (!event) return;
+          if (!event || !calRef.current) return;
+
+          const cal = calRef.current;
+
+          // 1️⃣ Remove highlight from previous event
+          if (selectedEventRef.current) {
+            try {
+              const prev = selectedEventRef.current;
+              const prevEvent = cal.getEvent(prev.id, prev.calendarId);
+              if (prevEvent) unhighlightEvent(cal, prevEvent);
+            } catch {}
+          }
+
+          // 2️⃣ Highlight current event
+          highlightEvent(cal, event);
+
+          // 3️⃣ Save selected reference
+          selectedEventRef.current = {
+            id: event.id,
+            calendarId: event.calendarId,
+          };
+
+          // 4️⃣ Existing popover positioning (unchanged)
           const rect = containerRef.current?.getBoundingClientRect();
           const x = (nativeEvent?.clientX ?? 0) - (rect?.left ?? 0);
           const y = (nativeEvent?.clientY ?? 0) - (rect?.top ?? 0);
+
           setDetail({ event, x, y });
           setAddOpen(false);
         };
+
 
         const handleBeforeUpdate = async ({ event, changes }: { event: EventObject; changes: Partial<EventObject> }) => {
           const oldStart = new Date(event.start as any);
@@ -1030,6 +1070,15 @@ function TeacherToastUIInner({
       const t = e.target as Node | null;
       if (popRef.current && !popRef.current.contains(t as Node)) setDetail(null);
       if (addRef.current && !addRef.current.contains(t as Node)) { setAddOpen(false); setAddAnchor(null); }
+      if (selectedEventRef.current && calRef.current) {
+        try {
+          const { id, calendarId } = selectedEventRef.current;
+          const ev = calRef.current.getEvent(id, calendarId);
+          if (ev) unhighlightEvent(calRef.current, ev);
+        } catch {}
+        selectedEventRef.current = null;
+      }
+
     };
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -1037,6 +1086,15 @@ function TeacherToastUIInner({
         setAddOpen(false);
         setAddAnchor(null);
       }
+      if (selectedEventRef.current && calRef.current) {
+        try {
+          const { id, calendarId } = selectedEventRef.current;
+          const ev = calRef.current.getEvent(id, calendarId);
+          if (ev) unhighlightEvent(calRef.current, ev);
+        } catch {}
+        selectedEventRef.current = null;
+      }
+
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onEsc);
