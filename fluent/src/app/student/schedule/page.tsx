@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import React, { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
+import Navigation from "@/components/navigation";
 
 import "react-day-picker/dist/style.css";
 
@@ -73,7 +74,7 @@ const SchedulePage = () => {
   }, [user]);
 
   return (
-    <div className="flex w-full h-full overflow-hidden p-2">
+    <div className="flex w-full h-full overflow-hidden p-2 pb-20">
       <div className="flex-1 flex flex-col max-w-full max-h-full overflow-auto">
         {classStats && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 m-5 mb-2 shadow-sm border border-blue-100">
@@ -99,8 +100,11 @@ const SchedulePage = () => {
 
 export default function Schedule() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SchedulePage />
-    </Suspense>
+    <div>
+      <Suspense fallback={<div>Loading...</div>}>
+        <SchedulePage />
+      </Suspense>
+      <Navigation mobileOnly={true} defaultActiveIndex={4} />
+    </div>
   );
 }

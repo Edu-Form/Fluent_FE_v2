@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import TeacherToastUI from "@/components/ToastUI/teacher_toastui";
 import BillingPanel from "@/components/BillingPanel"; // 👈 NEW
+import Navigation from "@/components/navigation";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ScheduledRow = {
@@ -184,8 +185,11 @@ function StudentCalendarWithChatInner() {
 // ── Page export wrapped in Suspense (required for useSearchParams) ────────────
 export default function StudentCalendarWithChat() {
   return (
-    <Suspense fallback={<div className="p-6">Loading…</div>}>
-      <StudentCalendarWithChatInner />
-    </Suspense>
+    <div className="pb-20">
+      <Suspense fallback={<div className="p-6">Loading…</div>}>
+        <StudentCalendarWithChatInner />
+      </Suspense>
+      <Navigation mobileOnly={true} defaultActiveIndex={4} />
+    </div>
   );
 }

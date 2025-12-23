@@ -6,6 +6,7 @@ import { RiHome6Fill } from "react-icons/ri";
 import { PiBookBookmarkFill } from "react-icons/pi";
 import { TbCardsFilled } from "react-icons/tb";
 import { RiEdit2Fill } from "react-icons/ri"; // 다이어리 쓰기 아이콘 추가
+import { FaCalendarDays } from "react-icons/fa6"; // 일정 아이콘 추가
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 
@@ -111,10 +112,14 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
       (pathname.includes("/student") && func === "quizlet")
     ) {
       setActiveIndex(1); // 퀴즐렛 탭
+    } else if (pathname.includes("/schedule")) {
+      setActiveIndex(4); // 일정 탭
+    } else if (pathname.includes("/notes") || (pathname.includes("/note") && type === "teacher")) {
+      setActiveIndex(5); // 노트 탭
     } else if (pathname.includes("/home") && !func) {
       setActiveIndex(0); // 홈 탭
     }
-  }, [pathname, func, defaultActiveIndex]);
+  }, [pathname, func, defaultActiveIndex, type]);
 
   const handleHomeClick = () => {
     router.push(`/${type}/home?${url_data}`);
@@ -146,6 +151,10 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
 
   const handleDiaryWriteClick = () => {
     router.push(`/${type}/diary_note?${diary_url_data}`);
+  };
+
+  const handleScheduleClick = () => {
+    router.push(`/${type}/schedule?${url_data}`);
   };
 
   const handleLogout = () => {
@@ -210,11 +219,20 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
             }}
           />
           <NavIcon
-            Icon={RiHome6Fill}
+            Icon={FaCalendarDays}
             isActive={activeIndex === 4}
-            label="노트"
+            label="일정"
             onClick={() => {
               setActiveIndex(4);
+              handleScheduleClick();
+            }}
+          />
+          <NavIcon
+            Icon={RiHome6Fill}
+            isActive={activeIndex === 5}
+            label="노트"
+            onClick={() => {
+              setActiveIndex(5);
               handleNoteClick();
             }}
           />

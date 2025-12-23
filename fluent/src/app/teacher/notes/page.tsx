@@ -344,7 +344,7 @@ export default function TeacherNotesPage() {
       <Suspense fallback={<LoadingFallback />}>
         <NotesContent />
       </Suspense>
-      <Navigation mobileOnly={true} defaultActiveIndex={4} />
+      <Navigation mobileOnly={true} defaultActiveIndex={5} />
     </div>
   );
 }
