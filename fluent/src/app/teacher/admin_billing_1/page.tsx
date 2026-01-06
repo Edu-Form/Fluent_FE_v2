@@ -163,6 +163,12 @@ function parseDateString(
   return null;
 }
 
+function monthDotLabelFromKey(key: string) {
+  const [year, month] = key.split("-");
+  return `${year}.${month}`;
+}
+
+
 async function fetchTeacherConfirm(studentName: string, monthKey: string) {
   try {
     const [year, mm] = monthKey.split("-");
@@ -1167,6 +1173,32 @@ useEffect(() => {
       (sum, item) => sum + item.amountDue,
       0
     );
+    const monthlyRevenue = studentFinancials.reduce((sum, item) => {
+      const completedClasses = item.classesCompleted ?? 0;
+      const rate = item.hourlyRate ?? 0;
+      return sum + completedClasses * rate;
+    }, 0);
+
+    const teacherPay = studentFinancials.reduce((sum, item) => {
+      const completed = item.classesCompleted ?? 0;
+      const rate = item.hourlyRate ?? 0;
+
+      // Rule 1: Student fee is 40,000
+      if (rate === 40000) {
+        return sum + completed * 17500;
+      }
+
+      // Rule 2: Special teachers
+      const teacherLower = (currentUser || "").toLowerCase();
+      if (teacherLower === "chris" || teacherLower === "jeff") {
+        return sum + completed * 27500;
+      }
+
+      // Rule 3: Default
+      return sum + completed * 25000;
+    }, 0);
+
+
     const totalNextToPay = studentFinancials.reduce(
       (sum, item) => sum + item.nextToPayClasses,
       0
@@ -1174,6 +1206,8 @@ useEffect(() => {
     return {
       totalClasses,
       totalHours,
+      monthlyRevenue,
+      teacherPay,          // ✅ NEW
       totalAmountDue,
       totalNextToPay,
       studentCount: (teacherStudents[selectedTeacher] ?? []).length,
@@ -1557,7 +1591,7 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              {/* <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   교사 수업 시간
                 </div>
@@ -1567,23 +1601,40 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                 <div className="mt-2 text-xs text-gray-500">
                   {selectedTeacher} 선생님 {monthLabelFromKey(selectedMonth || "")} 총 수업 시간
                 </div>
-              </div>
+              </div> */}
 
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  결제 금액 (₩)
+                  {isAdmin 
+                    ? `이번달 매출 (₩)`
+                    : ''
+                  }
                 </div>
                 <div className="mt-1 text-2xl font-semibold text-gray-900">
                   {isAdmin 
-                    ? CURRENCY_FORMATTER.format(Math.round(summary.totalAmountDue))
-                    : `${summary.totalHours.toFixed(2)}시간 × 25,000`
+                    ? CURRENCY_FORMATTER.format(Math.round(summary.monthlyRevenue))
+                    : '잘하고 있어요 😊'
                   }
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
                   {isAdmin 
-                    ? `결제 대상 수업 ${summary.totalNextToPay.toFixed(2)}개`
-                    : `총 ${CURRENCY_FORMATTER.format(Math.round(summary.totalHours * 25000))}`
+                    ? `이번달 수업 매출 (${monthLabelFromKey(selectedMonth)})`
+                    : ''
                   }
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  선생님 Pay (₩)
+                </div>
+
+                <div className="mt-1 text-2xl font-semibold text-emerald-700">
+                  {CURRENCY_FORMATTER.format(Math.round(summary.teacherPay))}
+                </div>
+
+                <div className="mt-2 text-xs text-gray-500">
+                  정산 금액
                 </div>
               </div>
 
@@ -1816,14 +1867,19 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                                     </label>
                                   </div>
                                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
-                                    <div className="flex items-center justify-between">
-                                      <span>잔여 수업</span>
+                                    <div className="mt-1 flex items-center justify-between">
+                                      <span>
+                                        {monthDotLabelFromKey(selectedMonth)}.01 기준 잔여 수업
+                                      </span>
                                       <span className="font-medium text-gray-900">
                                         {Math.max(0, Math.round(totalCreditsAvailableValue))}회
                                       </span>
                                     </div>
+
                                     <div className="mt-1 flex items-center justify-between">
-                                      <span>진행 예정 수업</span>
+                                      <span>
+                                        다음달 진행 예정 수업
+                                      </span>
                                       <span className="font-medium text-gray-900">
                                         {Math.round(nextMonthPlannedValue)}회
                                       </span>
