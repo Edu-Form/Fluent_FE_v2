@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
+import { saveInitialPayment, getStudentByName } from '@/lib/data';
 
 const tossSecretKey = process.env.TOSS_SECRET_KEY;
 
 export async function POST(request: Request) {
-  console.log("Toss Secret Key:", process.env.TOSS_SECRET_KEY ? "Loaded" : "Missing");
-  console.log("NEXT_PUBLIC_URL:", process.env.NEXT_PUBLIC_URL || "Missing");
   try {
-    const { studentName, amount } = await request.json();
+    const { studentName, amount, yyyymm } = await request.json();
 
     if (!studentName || !amount) {
       return NextResponse.json({ message: 'Student name and amount are required' }, { status: 400 });
@@ -14,6 +13,45 @@ export async function POST(request: Request) {
 
     const orderId = new Date().getTime().toString();
     const orderName = `${studentName} - Tuition`;
+    
+    // Save initial payment to students collection (existing flow)
+    try {
+      await saveInitialPayment(studentName, orderId, amount, yyyymm);
+      console.log(`[Payment Link] Initial payment saved for ${studentName}, orderId: ${orderId}`);
+    } catch (err) {
+      console.error('[Payment Link] Failed to save initial payment:', err);
+      // Continue - payment link creation should still work
+    }
+    
+    // NEW: Create payment document in payments collection (non-blocking)
+    try {
+      let finalStudentId;
+      try {
+        const student = await getStudentByName(studentName);
+        if (student && student.phoneNumber) {
+          finalStudentId = student.phoneNumber;
+        }
+      } catch {
+        // Continue without student_id - it's optional
+      }
+
+      const { createPayment } = await import('@/lib/payments');
+      await createPayment({
+        orderId,
+        student_name: studentName,
+        student_id: finalStudentId,
+        amount,
+        yyyymm,
+        description: `${studentName}'s tuition payment via payment link`,
+        orderName,
+        metadata: {
+          source: 'payment-link',
+        },
+      });
+    } catch (err) {
+      // Log but don't fail - payment link creation should continue
+      console.error('[Payment Link] Failed to create payment document (non-critical):', err);
+    }
 
     const response = await fetch('https://api.tosspayments.com/v1/payments', {
       method: 'POST',

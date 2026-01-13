@@ -28,9 +28,11 @@ export async function POST(req: NextRequest) {
     // NEW: Update payment document in payments collection (non-blocking)
     // This is SAFE: wrapped in try-catch, won't affect existing webhook flow
     try {
-      const { updatePaymentStatus: updatePaymentDoc } = await import('@/lib/payments');
+      const { updatePaymentStatus: updatePaymentDoc, createPayment } = await import('@/lib/payments');
       const paymentStatus = status === 'DONE' ? 'COMPLETED' : status === 'CANCELED' ? 'CANCELLED' : 'FAILED';
-      const updateResult = await updatePaymentDoc(orderId, {
+      
+      // Try to update first
+      let updateResult = await updatePaymentDoc(orderId, {
         status: paymentStatus,
         paymentKey,
         tossData: {
@@ -43,10 +45,60 @@ export async function POST(req: NextRequest) {
         source: 'webhook',
         notes: 'Payment status updated via webhook',
       });
-      if (updateResult) {
-        console.log(`[Webhook] Payment document updated successfully for orderId: ${orderId}`);
+      
+      // If document doesn't exist, create it (fallback for missed initial creation)
+      if (!updateResult) {
+        console.warn(`[Webhook] Payment document not found for orderId: ${orderId}, creating from webhook data`);
+        
+        // Try to get student name from students collection
+        const { getStudentByOrderId } = await import('@/lib/data');
+        let studentName = 'Unknown';
+        try {
+          const studentInfo = await getStudentByOrderId(orderId);
+          if (studentInfo?.student_name) {
+            studentName = studentInfo.student_name;
+          }
+        } catch (err) {
+          console.warn('[Webhook] Could not fetch student info for payment creation:', err);
+        }
+        
+        // Create payment document from webhook data
+        try {
+          await createPayment({
+            orderId,
+            student_name: studentName,
+            amount: totalAmount || 0,
+            description: `Payment received via webhook for ${studentName}`,
+            orderName: `${studentName} - Tuition`,
+            metadata: {
+              source: 'webhook-fallback',
+              createdFromWebhook: true,
+            },
+          });
+          
+          // Now update it with webhook data
+          updateResult = await updatePaymentDoc(orderId, {
+            status: paymentStatus,
+            paymentKey,
+            tossData: {
+              orderId,
+              paymentKey,
+              method,
+              status,
+              totalAmount,
+            },
+            source: 'webhook',
+            notes: 'Payment created and updated via webhook (fallback)',
+          });
+          
+          if (updateResult) {
+            console.log(`[Webhook] Payment document created and updated successfully for orderId: ${orderId}`);
+          }
+        } catch (createErr) {
+          console.error('[Webhook] Failed to create payment document from webhook:', createErr);
+        }
       } else {
-        console.warn(`[Webhook] Payment document not found for orderId: ${orderId} (may not have been created initially)`);
+        console.log(`[Webhook] Payment document updated successfully for orderId: ${orderId}`);
       }
     } catch (err) {
       // Log but don't fail the request - payments collection is additional storage

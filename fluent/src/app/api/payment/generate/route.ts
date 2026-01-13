@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { saveInitialPayment, getStudentByName } from '@/lib/data';
 
 const tossSecretKey = process.env.TOSS_SECRET_KEY;
 
@@ -9,7 +10,7 @@ const tossSecretKey = process.env.TOSS_SECRET_KEY;
  */
 export async function POST(request: Request) {
   try {
-    const { studentName, amount, orderId } = await request.json();
+    const { studentName, amount, orderId, yyyymm } = await request.json();
 
     if (!studentName || !amount) {
       return NextResponse.json({ 
@@ -20,6 +21,61 @@ export async function POST(request: Request) {
     // Use provided orderId or generate a new one
     const finalOrderId = orderId || new Date().getTime().toString();
     const orderName = `${studentName} - Tuition`;
+    
+    // Save initial payment to students collection (if orderId is new)
+    if (!orderId) {
+      try {
+        await saveInitialPayment(studentName, finalOrderId, amount, yyyymm);
+        console.log(`[Payment Generate] Initial payment saved for ${studentName}, orderId: ${finalOrderId}`);
+      } catch (err) {
+        console.error('[Payment Generate] Failed to save initial payment:', err);
+        // Continue - payment link creation should still work
+      }
+    } else {
+      // OrderId was provided - payment might already be initialized, but check if it exists
+      try {
+        const { getStudentByOrderId } = await import('@/lib/data');
+        const existing = await getStudentByOrderId(finalOrderId);
+        if (!existing) {
+          // OrderId provided but no record exists - create it
+          console.log(`[Payment Generate] OrderId provided but no record found, creating initial payment`);
+          await saveInitialPayment(studentName, finalOrderId, amount, yyyymm);
+        }
+      } catch (err) {
+        console.warn('[Payment Generate] Could not check existing payment, proceeding:', err);
+      }
+    }
+    
+    // NEW: Create payment document in payments collection (ALWAYS, regardless of orderId)
+    // This ensures payment is tracked even if orderId was pre-generated
+    try {
+      let finalStudentId;
+      try {
+        const student = await getStudentByName(studentName);
+        if (student && student.phoneNumber) {
+          finalStudentId = student.phoneNumber;
+        }
+      } catch {
+        // Continue without student_id - it's optional
+      }
+
+      const { createPayment } = await import('@/lib/payments');
+      await createPayment({
+        orderId: finalOrderId,
+        student_name: studentName,
+        student_id: finalStudentId,
+        amount,
+        yyyymm,
+        description: `${studentName}'s tuition payment via payment link`,
+        orderName,
+        metadata: {
+          source: 'payment-link-generate',
+        },
+      });
+    } catch (err) {
+      // Log but don't fail - payment link creation should continue
+      console.error('[Payment Generate] Failed to create payment document (non-critical):', err);
+    }
 
     const response = await fetch('https://api.tosspayments.com/v1/payments', {
       method: 'POST',
