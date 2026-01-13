@@ -150,6 +150,9 @@ const ClassPageContent: React.FC = () => {
   const [classStarted, setClassStarted] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
+  type ClassPhase = "idle" | "running" | "ended";
+  const [classPhase, setClassPhase] = useState<ClassPhase>("idle");
+
   // 🔹 Modify-class mode states
   const [isModifyMode, setIsModifyMode] = useState(false);
   // 🔹 Manual time input modal
@@ -609,38 +612,38 @@ const ClassPageContent: React.FC = () => {
     },
   });
 
-  useEffect(() => {
-    const initFromRecent = async () => {
-      if (!student_name || !editor) return;
+  // useEffect(() => {
+  //   const initFromRecent = async () => {
+  //     if (!student_name || !editor) return;
 
-      // 🚫 DO NOT OVERRIDE TEMP
-      if (hasInitializedContent.current) return;
+  //     // 🚫 DO NOT OVERRIDE TEMP
+  //     if (hasInitializedContent.current) return;
 
-      try {
-        const res = await fetch(
-          `/api/classnote/recent?student_name=${encodeURIComponent(student_name)}`,
-          { cache: "no-store" }
-        );
+  //     try {
+  //       const res = await fetch(
+  //         `/api/classnote/recent?student_name=${encodeURIComponent(student_name)}`,
+  //         { cache: "no-store" }
+  //       );
 
-        if (!res.ok) return;
+  //       if (!res.ok) return;
 
-        const recent = await res.json();
-        setRecentClassnote(recent);
+  //       const recent = await res.json();
+  //       setRecentClassnote(recent);
 
-        // ONLY load if quizlet is unfinished
-        if (recent?.quizlet_saved === false && recent?.original_text) {
-          hasInitializedContent.current = true;
+  //       // ONLY load if quizlet is unfinished
+  //       if (recent?.quizlet_saved === false && recent?.original_text) {
+  //         hasInitializedContent.current = true;
 
-          setOriginal_text(recent.original_text);
-          editor.commands.setContent(recent.original_text);
-        }
-      } catch (err) {
-        console.error("recent classnote init error:", err);
-      }
-    };
+  //         setOriginal_text(recent.original_text);
+  //         editor.commands.setContent(recent.original_text);
+  //       }
+  //     } catch (err) {
+  //       console.error("recent classnote init error:", err);
+  //     }
+  //   };
 
-    initFromRecent();
-  }, [student_name, editor]);
+  //   initFromRecent();
+  // }, [student_name, editor]);
 
 
   useEffect(() => {
@@ -1435,7 +1438,7 @@ const ClassPageContent: React.FC = () => {
 
         <div className="w-full bg-white border-t border-[#F2F4F6] py-6 px-6 flex gap-4">
           {/* ✅ 수업 수정하기 — hidden once class starts */}
-          {!classStarted && (
+          {classPhase === "idle" && (
             <button
               type="button"
               onClick={() => {
@@ -1453,7 +1456,7 @@ const ClassPageContent: React.FC = () => {
           )}
 
           {/* Right side: Start → End flow OR Modify → Translate */}
-          {!classStarted ? (
+          {classPhase === "idle" ? (
             <button
               type="button"
               disabled={loading}
@@ -1464,6 +1467,7 @@ const ClassPageContent: React.FC = () => {
                 } else {
                   // 🕒 NORMAL CLASS → start timer
                   setClassStarted(true);
+                  setClassPhase("running"); // ✅ ADD THIS
                   setStartTime(Date.now());
                   setElapsedMs(0);
                   setIsEditable(true);
@@ -1485,7 +1489,8 @@ const ClassPageContent: React.FC = () => {
               type="button"
               disabled={loading}
               onClick={() => {
-                pauseTimer();          // ⏸️ pause
+                pauseTimer();  
+                setClassPhase("ended");    // ✅ ADD THIS (CRITICAL)        // ⏸️ pause
                 handleEndClassClick(); // run your existing class end logic
               }}
               className={`flex-1 py-4 rounded-2xl text-white text-sm font-bold transition-all shadow-sm

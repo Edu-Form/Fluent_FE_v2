@@ -51,6 +51,7 @@ interface Props {
   allowedTeachers?: string[];
   /** Optional explicit per-teacher color map (background). e.g., { "Amy": "#FBCFE8" } */
   teacherColors?: Record<string, string>;
+  fixedStudentName?: string; // 👈 추가
 }
 
 /* ---------------------------- Date helpers (KST-like local) ---------------------------- */
@@ -138,6 +139,7 @@ function unhighlightEvent(cal: any, ev: any) {
 
 function TeacherToastUIInner({
   data,
+  fixedStudentName, 
   variant = "compact",
   saveEndpointBase = "/api/schedules",
   forceView,
@@ -591,8 +593,14 @@ function TeacherToastUIInner({
       if (student) teacherOfEvent = student.teacher?.trim() || "";
     }
 
-    // 3) Now compare
+    // 👇 제일 위에 추가
+    if (fixedStudentName) {
+      return ev?.raw?.student_name === fixedStudentName;
+    }
+
+    // 기존 teacher 기준 필터 유지
     if (teacherOfEvent !== currentUser?.trim()) return false;
+
 
 
     // 2️⃣ Apply sidebar teacher filters (admin only)
@@ -1017,10 +1025,13 @@ function TeacherToastUIInner({
 
 
         // 2️⃣ PICK ONLY STUDENTS BELONGING TO CURRENT TEACHER
-        const studentNames = allStudents
-          .filter((s: any) => s.teacher?.trim() === currentUser?.trim())
-          .map((s: any) => s.name?.trim())
-          .filter(Boolean);
+        const studentNames = fixedStudentName
+          ? [fixedStudentName]   // 👈 schedule confirm page
+          : allStudents
+              .filter((s: any) => s.teacher?.trim() === currentUser?.trim())
+              .map((s: any) => s.name?.trim())
+              .filter(Boolean);
+
 
         if (!studentNames.length) {
           setClassnoteMap(new Map());

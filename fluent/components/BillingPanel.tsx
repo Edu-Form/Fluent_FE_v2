@@ -593,7 +593,7 @@ export default function BillingPanel({
       next_month_lines: nextRows.map((r) => ({
         schedule_date: r.schedDate,
       })),
-      final_save: !locked,
+      final_save: !locked, // same line, but meaning changes
     };
 
     try {
@@ -609,8 +609,8 @@ export default function BillingPanel({
         return;
       }
 
-      alert("Billing saved (server OK).");
-      setLocked(true);
+      alert(locked ? "Teacher confirmation undone." : "Teacher confirmed.");
+      setLocked((prev) => !prev);
       try {
         await onRefreshCalendar?.();
       } catch {
@@ -1029,17 +1029,32 @@ export default function BillingPanel({
         )}
         <button
           onClick={handleConfirm}
-          className="w-full rounded-lg bg-emerald-600 text-white py-2 text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loadingCheck}
+          className={`group w-full rounded-lg py-2 text-sm font-semibold transition-colors
+            ${locked
+              ? "bg-emerald-600 text-white hover:bg-rose-600"
+              : "bg-emerald-600 text-white hover:bg-emerald-700"
+            }
+            disabled:opacity-50 disabled:cursor-not-allowed
+          `}
           title={
             locked
-              ? "This month is locked — unable to save."
+              ? "Click to cancel teacher confirmation"
               : "모든 내용을 확인 후 정산 정보를 저장합니다."
           }
-          disabled={loadingCheck || locked}
         >
-          {locked
-            ? "Teacher Confirmed"
-            : "Teacher Confirm (저장 후 되돌릴 수 없습니다)"}
+          {locked ? (
+            <>
+              <span className="block group-hover:hidden">
+                Teacher Confirmed
+              </span>
+              <span className="hidden group-hover:block">
+                Cancel Teacher Confirmation
+              </span>
+            </>
+          ) : (
+            "Teacher Confirm (저장 후 되돌릴 수 없습니다)"
+          )}
         </button>
       </div>
     </div>

@@ -162,6 +162,7 @@ function StudentCalendarWithChatInner() {
             teacher_name: s.teacher_name || teacherName || "",
             student_name: s.student_name || studentName || "",
           }))}
+          fixedStudentName={studentName}   // 👈 추가
           variant="full"
           forceView="month"
           studentOptions={[studentName]}
