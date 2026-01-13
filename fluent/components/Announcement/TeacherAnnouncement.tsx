@@ -55,6 +55,14 @@ const today_formatted = (tz = "Asia/Seoul") => {
   return `${parts.year}. ${parts.month}. ${parts.day}.`; // ← trailing dot added
 };
 
+const buildGroupStudentParams = (students: string[]) => {
+  return students
+    .map(
+      (name, idx) =>
+        `group${idx + 1}_student_name=${encodeURIComponent(name)}`
+    )
+    .join("&");
+};
 
 
 const AnnouncementPage = () => {
@@ -110,7 +118,7 @@ const AnnouncementPage = () => {
     let groupCounter = 1;
 
     schedules.forEach((schedule) => {
-      const key = `${schedule.time}-${schedule.room_name}`;
+      const key = `${schedule.time}`;
 
       if (grouped[key]) {
         // 이미 존재하는 그룹에 학생 추가
@@ -282,6 +290,7 @@ const AnnouncementPage = () => {
                     className={`px-3 py-2 ${styles.headerClass} border-b border-gray-200`}
                   >
                     <div className="flex items-center justify-between">
+                      {/* LEFT: existing group info */}
                       <div className="flex items-center space-x-2">
                         <div
                           className={`w-6 h-6 rounded-full flex items-center justify-center`}
@@ -299,6 +308,7 @@ const AnnouncementPage = () => {
                         >
                           <FiUsers className="text-white text-sm" />
                         </div>
+
                         <div>
                           <div className="flex items-center space-x-2 text-sm">
                             <div className="flex items-center space-x-1">
@@ -319,7 +329,21 @@ const AnnouncementPage = () => {
                           </div>
                         </div>
                       </div>
+
+                      {/* RIGHT: ✅ GROUP Class Record button */}
+                      <Link
+                        href={`/teacher/student/class_record?user=${user}&type=${type}&id=${user_id}&${buildGroupStudentParams(
+                          schedule.students
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-1 px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs transition-colors"
+                      >
+                        <LuCircleFadingPlus className="text-white text-sm" />
+                        <span>Class Record</span>
+                      </Link>
                     </div>
+
                   </div>
                 )}
 

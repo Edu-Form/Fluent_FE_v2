@@ -118,7 +118,27 @@ const ClassPageContent: React.FC = () => {
   const student_name = getParam("student_name");
   const type = getParam("type");
   const user_id = getParam("id");
+  // ✅ Extract group students from URL params (group1_student_name, group2_student_name, ...)
+  const groupStudentNamesFromURL = (() => {
+    if (!searchParams) return [];
 
+    const result: string[] = [];
+
+    for (const [key, value] of searchParams.entries()) {
+      if (key.startsWith("group") && key.endsWith("_student_name")) {
+        result.push(value);
+      }
+    }
+
+    return result;
+  })();
+  // ✅ Final resolved student list for this class
+  const resolvedStudentNames: string[] =
+    student_name
+      ? [student_name]
+      : groupStudentNamesFromURL;
+
+  const isGroupClass = resolvedStudentNames.length > 1;
   const [class_date, setClassDate] = useState<string>("");
   const [date, setDate] = useState<string>("");
   const [original_text, setOriginal_text] = useState<string>("");
@@ -218,9 +238,10 @@ const ClassPageContent: React.FC = () => {
   duration_ms: number | null;
 }) => {
   const groupNames =
-    Array.isArray(selectedGroupStudents) && selectedGroupStudents.length > 0
-      ? [student_name, ...selectedGroupStudents]
+    resolvedStudentNames.length > 0
+      ? resolvedStudentNames
       : [student_name];
+
 
   if (!homework.trim()) {
     alert("Homework field is required.");
@@ -511,8 +532,12 @@ const ClassPageContent: React.FC = () => {
 
   useEffect(() => {
     const fetchStudentNotes = async () => {
-      const studentParam = searchParams?.get("student_name");
-      if (!studentParam) return;
+      // ✅ Decide which student to use for previous-notes lookup
+      const historyStudent =
+        student_name || groupStudentNamesFromURL[0];
+
+      if (!historyStudent) return;
+
 
       setSearchLoading(true);
       setSearchError(null);
@@ -520,7 +545,7 @@ const ClassPageContent: React.FC = () => {
 
       try {
         const res = await fetch(
-          `/api/quizlet/student/${encodeURIComponent(studentParam)}`
+          `/api/quizlet/student/${encodeURIComponent(historyStudent)}`
         );
         if (!res.ok) throw new Error("No student found");
 
@@ -748,7 +773,15 @@ const ClassPageContent: React.FC = () => {
       )}
 
       {/* 헤더 - 토스 스타일 */}
-      <header className="bg-white border-b border-[#F2F4F6] px-6 py-5 flex items-center justify-between">
+      <header
+        className={`border-b px-6 py-5 flex items-center justify-between transition-colors
+          ${
+            isGroupClass
+              ? "bg-[#F2F8FF] border-[#E8F3FF]"
+              : "bg-white border-[#F2F4F6]"
+          }
+        `}
+      >
         <div className="flex items-center gap-6">
           <button
             onClick={() => {
@@ -778,12 +811,10 @@ const ClassPageContent: React.FC = () => {
           </button>
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold text-[#191F28]">Class Note</h1>
-            {(group_student_names?.length > 0 || student_name) && (
+            {resolvedStudentNames.length > 0 && (
               <div className="px-4 py-2 bg-[#F2F8FF] rounded-full border border-[#E8F3FF]">
                 <span className="text-sm font-semibold text-[#3182F6]">
-                  {group_student_names?.length > 0
-                    ? group_student_names.join(", ")
-                    : student_name}
+                  {resolvedStudentNames.join(", ")}
                 </span>
               </div>
             )}
