@@ -186,7 +186,33 @@ const QuizletCardContent = ({
   // Add component unmounted flag - CRITICAL ADDITION
   const componentUnmountedRef = useRef(false);
 
+  // Add refs for currentCard and isFlipped to avoid restarting autoplay when they change
+  const currentCardRef = useRef(currentCard);
+  const isFlippedRef = useRef(isFlipped);
+  const cardsRef = useRef(cards);
+  const isAutoPlayingRef = useRef(isAutoPlaying);
+  const isPausedRef = useRef(isPaused);
 
+  // Update refs when state changes
+  useEffect(() => {
+    currentCardRef.current = currentCard;
+  }, [currentCard]);
+
+  useEffect(() => {
+    isFlippedRef.current = isFlipped;
+  }, [isFlipped]);
+
+  useEffect(() => {
+    cardsRef.current = cards;
+  }, [cards]);
+
+  useEffect(() => {
+    isAutoPlayingRef.current = isAutoPlaying;
+  }, [isAutoPlaying]);
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   // Add audio control ref to prevent multiple simultaneous audio
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -279,6 +305,7 @@ const QuizletCardContent = ({
     setFavoriteCards(favoriteMap);
   }, [content]);
 
+
   // CRITICAL FIX: Replace the entire auto-play useEffect with proper cleanup checks
   useEffect(() => {
     const clearAutoPlayTimer = (): void => {
@@ -296,12 +323,22 @@ const QuizletCardContent = ({
 
     if (isAutoPlaying && !isPaused && !componentUnmountedRef.current) {
       const handleAutoPlayStep = async (): Promise<void> => {
-        // CRITICAL: Check if component is still mounted and autoplay is still active
-        if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+        // CRITICAL: Check if component is still mounted and autoplay is still active (use refs for latest values)
+        if (componentUnmountedRef.current || !isAutoPlayingRef.current || isPausedRef.current) {
           return;
         }
 
-        const text = isFlipped ? cards[currentCard][0] : cards[currentCard][1];
+        // Use refs to get latest values without causing useEffect to restart
+        const currentCardIndex = currentCardRef.current;
+        const currentIsFlipped = isFlippedRef.current;
+        const currentCards = cardsRef.current;
+
+        // Safety check for empty cards
+        if (!currentCards || currentCards.length === 0) {
+          return;
+        }
+
+        const text = currentIsFlipped ? currentCards[currentCardIndex][0] : currentCards[currentCardIndex][1];
 
         try {
           // Stop any previously playing audio
@@ -310,8 +347,8 @@ const QuizletCardContent = ({
             currentAudioRef.current = null;
           }
 
-          // CRITICAL: Check again before making API call
-          if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+          // CRITICAL: Check again before making API call (use refs for latest values)
+          if (componentUnmountedRef.current || !isAutoPlayingRef.current || isPausedRef.current) {
             return;
           }
 
@@ -321,16 +358,16 @@ const QuizletCardContent = ({
             body: JSON.stringify({ text }),
           });
 
-          // CRITICAL: Check again after API call
-          if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+          // CRITICAL: Check again after API call (use refs for latest values)
+          if (componentUnmountedRef.current || !isAutoPlayingRef.current || isPausedRef.current) {
             return;
           }
 
           if (response.ok) {
             const audioBlob = await response.blob();
 
-            // CRITICAL: Check again after blob creation
-            if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+            // CRITICAL: Check again after blob creation (use refs for latest values)
+            if (componentUnmountedRef.current || !isAutoPlayingRef.current || isPausedRef.current) {
               return;
             }
 
@@ -372,11 +409,11 @@ const QuizletCardContent = ({
               };
 
               const onCanPlay = () => {
-                // CRITICAL: Triple-check we're still in autoplay mode before playing
+                // CRITICAL: Triple-check we're still in autoplay mode before playing (use refs for latest values)
                 if (
                   componentUnmountedRef.current ||
-                  !isAutoPlaying ||
-                  isPaused
+                  !isAutoPlayingRef.current ||
+                  isPausedRef.current
                 ) {
                   cleanup();
                   return;
@@ -432,23 +469,29 @@ const QuizletCardContent = ({
           await new Promise((resolve) => setTimeout(resolve, 1500));
         }
 
-        // CRITICAL: Check again if still in autoplay mode before proceeding
-        if (componentUnmountedRef.current || !isAutoPlaying || isPaused) {
+        // CRITICAL: Check again if still in autoplay mode before proceeding (use refs for latest values)
+        if (componentUnmountedRef.current || !isAutoPlayingRef.current || isPausedRef.current) {
           return;
         }
 
+        // Get latest values from refs (after async operations, values might have changed)
+        const latestCardIndex = currentCardRef.current;
+        const latestIsFlipped = isFlippedRef.current;
+        const latestCards = cardsRef.current;
+
         // Move to next step
-        if (isFlipped) {
+        if (latestIsFlipped) {
           // Was showing English, move to next card
-          setCurrentCard((prev) => (prev + 1 === cards.length ? 0 : prev + 1));
+          const nextCard = (latestCardIndex + 1) % latestCards.length;
+          setCurrentCard(nextCard);
           setIsFlipped(false);
         } else {
           // Was showing Korean, flip to English
           setIsFlipped(true);
         }
 
-        // Schedule next step with a small delay to allow UI update
-        if (!componentUnmountedRef.current && isAutoPlaying && !isPaused) {
+        // Schedule next step with a small delay to allow UI update (use refs for latest values)
+        if (!componentUnmountedRef.current && isAutoPlayingRef.current && !isPausedRef.current) {
           autoPlayTimerRef.current = setTimeout(() => {
             // CRITICAL: Final check before recursive call
             if (!componentUnmountedRef.current) {
@@ -467,9 +510,6 @@ const QuizletCardContent = ({
     cards,
     isAutoPlaying,
     isPaused,
-    isFlipped,
-    currentCard,
-    cards.length,
     autoPlay,
     playbackRate,
   ]);
@@ -540,13 +580,14 @@ const QuizletCardContent = ({
       setIsCheckedView(false);
       setIsBookmark(false); // ✅ turn off button highlight
     } else {
-      const checkedCards = cards.filter((card) => card[2] === "1");
+      // Fix: Filter from originalCards instead of cards
+      const checkedCards = originalCards.filter((card) => card[2] === "1");
 
       if (checkedCards.length === 0) {
         setShowAlert(true);
         setTimeout(() => setShowAlert(false), 1000);
       } else {
-        setOriginalCards(cards); // Save before filtering
+        // Save current cards before filtering
         setCards(checkedCards);
         setIsCheckedView(true);
         setIsBookmark(true); // ✅ turn on yellow button
