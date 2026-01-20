@@ -571,9 +571,14 @@ const ClassPageContent: React.FC = () => {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const group_student_names: string[] =
-    selectedGroupStudents.length > 0
-      ? [student_name, ...selectedGroupStudents]
-      : [student_name];
+    resolvedStudentNames.length > 0
+      ? resolvedStudentNames
+      : selectedGroupStudents.length > 0
+        ? selectedGroupStudents
+        : student_name
+          ? [student_name]
+          : [];
+
 
   useEffect(() => {
   const fetchTemplates = async () => {

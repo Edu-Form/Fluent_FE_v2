@@ -193,36 +193,6 @@ function PaymentPageInner() {
             </button>
           </div>
 
-          {/* David 1:1 (70,000원 / 회당) */}
-          <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
-            <h2 className="text-xl font-semibold text-gray-900">
-              David 1:1 Class
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              데이비드 선생님 수업 · 회당 70,000원
-            </p>
-            <p className="mt-4 text-2xl font-bold text-gray-900">70,000원 / 회당</p>
-
-            <QuantitySelector
-              quantity={quantities["David 1:1 Class"]}
-              onUpdate={(delta) => updateQuantity("David 1:1 Class", delta)}
-            />
-
-            {quantities["David 1:1 Class"] > 1 && (
-              <p className="mt-2 text-sm text-gray-700">
-                총 금액: {(70000 * quantities["David 1:1 Class"]).toLocaleString()}원
-              </p>
-            )}
-
-            <button
-              onClick={() => handlePay(70000, "David 1:1 Class")}
-              className="w-full mt-5 bg-gray-800 text-white py-3 rounded-xl font-semibold text-sm shadow hover:bg-gray-900 transition disabled:opacity-50"
-              disabled={loading}
-            >
-              결제하기
-            </button>
-          </div>
-
           {/* 6개월 플랜 */}
           <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
             <h2 className="text-xl font-semibold text-gray-900">6개월 플랜</h2>
@@ -292,7 +262,39 @@ function PaymentPageInner() {
           Tuition Fee
         </h2>
 
+
         <div className="space-y-5 mb-20">
+
+                    {/* David 1:1 (70,000원 / 회당) */}
+          <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
+            <h2 className="text-xl font-semibold text-gray-900">
+              David 1:1 Class
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              데이비드 선생님 수업 · 회당 70,000원
+            </p>
+          
+
+            <QuantitySelector
+              quantity={quantities["David 1:1 Class"]}
+              onUpdate={(delta) => updateQuantity("David 1:1 Class", delta)}
+            />
+
+            {quantities["David 1:1 Class"] > 1 && (
+              <p className="mt-2 text-sm text-gray-700">
+                총 금액: {(70000 * quantities["David 1:1 Class"]).toLocaleString()}원
+              </p>
+            )}
+
+            <button
+              onClick={() => handlePay(70000, "David 1:1 Class")}
+              className="w-full mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg font-medium shadow hover:bg-blue-700 transition disabled:opacity-50"
+              disabled={loading}
+            >
+              결제하기
+            </button>
+          </div>
+
           {/* Offline 1:1 */}
           <div className="bg-white rounded-xl shadow-sm border p-5 hover:bg-gray-50 transition">
             <div className="flex justify-between items-start mb-3">
