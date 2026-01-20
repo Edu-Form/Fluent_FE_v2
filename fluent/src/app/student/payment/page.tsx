@@ -22,6 +22,7 @@ function PaymentPageInner() {
     "오프라인 1:1 수업": 1,
     "온라인 1:1 수업": 1,
     "오프라인 2:1 그룹수업": 1,
+    "David 1:1 Class": 1,
   });
 
   const updateQuantity = (label: string, delta: number) => {
@@ -189,6 +190,36 @@ function PaymentPageInner() {
               disabled={loading}
             >
               구매하기
+            </button>
+          </div>
+
+          {/* David 1:1 (70,000원 / 회당) */}
+          <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
+            <h2 className="text-xl font-semibold text-gray-900">
+              David 1:1 Class
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              데이비드 선생님 수업 · 회당 70,000원
+            </p>
+            <p className="mt-4 text-2xl font-bold text-gray-900">70,000원 / 회당</p>
+
+            <QuantitySelector
+              quantity={quantities["David 1:1 Class"]}
+              onUpdate={(delta) => updateQuantity("David 1:1 Class", delta)}
+            />
+
+            {quantities["David 1:1 Class"] > 1 && (
+              <p className="mt-2 text-sm text-gray-700">
+                총 금액: {(70000 * quantities["David 1:1 Class"]).toLocaleString()}원
+              </p>
+            )}
+
+            <button
+              onClick={() => handlePay(70000, "David 1:1 Class")}
+              className="w-full mt-5 bg-gray-800 text-white py-3 rounded-xl font-semibold text-sm shadow hover:bg-gray-900 transition disabled:opacity-50"
+              disabled={loading}
+            >
+              결제하기
             </button>
           </div>
 
