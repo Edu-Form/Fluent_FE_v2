@@ -189,6 +189,56 @@ async function fetchTeacherConfirm(studentName: string, monthKey: string) {
   }
 }
 
+async function toggleTeacherConfirm(studentName: string, monthKey: string, currentStatus: boolean) {
+  try {
+    const [year, mm] = monthKey.split("-");
+    const yyyymm = `${year}${mm}`;
+
+    const res = await fetch(
+      `/api/billing/check1/${encodeURIComponent(studentName)}/${yyyymm}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locked: !currentStatus }),
+      }
+    );
+
+    if (!res.ok) throw new Error("Failed to toggle");
+    return !currentStatus;
+  } catch (err) {
+    console.error(err);
+    return currentStatus;
+  }
+}
+
+async function fetchPaymentStatus(studentName: string, monthKey: string) {
+  try {
+    // Fetch recent payments for this student
+    const res = await fetch(`/api/payment/history?studentName=${encodeURIComponent(studentName)}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const json = await res.json();
+
+    // Check for payments in the selected month
+    // Format of monthKey is YYYY-MM
+    const payments = json.payments || [];
+    const [year, month] = monthKey.split("-");
+
+    // Find if there is a completed payment for this month (approximate check by date or yyyymm)
+    const relevantPayment = payments.find((p: any) => {
+      if (p.status !== "DONE" && p.status !== "COMPLETED") return false;
+      if (p.yyyymm === `${year}${month}`) return true;
+
+      // Or check date if yyyymm is missing
+      const payDate = new Date(p.approvedAt || p.savedAt);
+      return payDate.getFullYear() === Number(year) && (payDate.getMonth() + 1) === Number(month);
+    });
+
+    return relevantPayment || null;
+  } catch {
+    return null;
+  }
+}
+
 
 function monthRangeFromKey(monthKey: string) {
   const [yearStr, monthStr] = monthKey.split("-");
@@ -286,7 +336,7 @@ function AdminBillingExcelPageInner() {
   const isAdmin = ALLOWED_ADMINS.some(
     (admin) => admin.trim().toLowerCase() === currentUser.toLowerCase()
   );
-  
+
   // Debug: Log admin status (remove in production if needed)
   useEffect(() => {
     if (currentUser) {
@@ -328,6 +378,8 @@ function AdminBillingExcelPageInner() {
 
   // Stores teacher-confirmed boolean per student
   const [confirmState, setConfirmState] = useState<Record<string, boolean>>({});
+  // Stores payment status per student
+  const [paymentState, setPaymentState] = useState<Record<string, any>>({});
 
 
   const [billingLinkLoading, setBillingLinkLoading] = useState<
@@ -655,9 +707,9 @@ function AdminBillingExcelPageInner() {
         const data = res.ok ? await res.json() : [];
         const list = Array.isArray(data)
           ? data.map((item: any) => ({
-              ...item,
-              date: item?.date ?? item?.class_date,
-            }))
+            ...item,
+            date: item?.date ?? item?.class_date,
+          }))
           : [];
         classnoteCacheRef.current[cacheKey] = list;
         setCacheTick((tick) => tick + 1);
@@ -691,14 +743,14 @@ function AdminBillingExcelPageInner() {
         const data = await res.json();
         const list: ScheduleEntry[] = Array.isArray(data)
           ? data.map((item: any) => ({
-              _id: item?._id,
-              date: item?.date,
-              time: item?.time,
-              duration: item?.duration,
-              room_name: item?.room_name,
-              teacher_name: item?.teacher_name,
-              student_name: item?.student_name,
-            }))
+            _id: item?._id,
+            date: item?.date,
+            time: item?.time,
+            duration: item?.duration,
+            room_name: item?.room_name,
+            teacher_name: item?.teacher_name,
+            student_name: item?.student_name,
+          }))
           : [];
         if (!cancelled) {
           schedulesByTeacher.current[selectedTeacher] = list;
@@ -744,65 +796,65 @@ function AdminBillingExcelPageInner() {
       return;
     }
 
-  let cancelled = false;
-  const loadDetails = async () => {
-    setDetailLoading(true);
-    setDetailError(null);
+    let cancelled = false;
+    const loadDetails = async () => {
+      setDetailLoading(true);
+      setDetailError(null);
 
-    try {
-      // Extract names once
-      const names = students.map((s) => s.name);
+      try {
+        // Extract names once
+        const names = students.map((s) => s.name);
 
-      // Check which data actually needs to be loaded (not already cached)
-      const profilesToLoad = names.filter(
-        (name) => !studentProfileCacheRef.current[name]
-      );
-      const diariesToLoad = names.filter(
-        (name) => !diaryCacheRef.current[name]
-      );
-      const quizletsToLoad = names.filter(
-        (name) => !quizletCacheRef.current[name]
-      );
-      const classnoteCacheKey = `${selectedTeacher}__${selectedMonth}`;
-      const needClassnotes = !classnoteCacheRef.current[classnoteCacheKey];
+        // Check which data actually needs to be loaded (not already cached)
+        const profilesToLoad = names.filter(
+          (name) => !studentProfileCacheRef.current[name]
+        );
+        const diariesToLoad = names.filter(
+          (name) => !diaryCacheRef.current[name]
+        );
+        const quizletsToLoad = names.filter(
+          (name) => !quizletCacheRef.current[name]
+        );
+        const classnoteCacheKey = `${selectedTeacher}__${selectedMonth}`;
+        const needClassnotes = !classnoteCacheRef.current[classnoteCacheKey];
 
-      // 1) Load only missing profiles in batch
-      const loadProfiles = profilesToLoad.length > 0 
-        ? Promise.all(profilesToLoad.map((name) => ensureStudentProfile(name)))
-        : Promise.resolve([]);
+        // 1) Load only missing profiles in batch
+        const loadProfiles = profilesToLoad.length > 0
+          ? Promise.all(profilesToLoad.map((name) => ensureStudentProfile(name)))
+          : Promise.resolve([]);
 
-      // 2) Load classnotes only if not cached
-      const loadNotes = needClassnotes
-        ? ensureClassnotes(selectedTeacher, selectedMonth, students)
-        : Promise.resolve([]);
+        // 2) Load classnotes only if not cached
+        const loadNotes = needClassnotes
+          ? ensureClassnotes(selectedTeacher, selectedMonth, students)
+          : Promise.resolve([]);
 
-      // 3) Load only missing diaries in batch
-      const loadDiaries = diariesToLoad.length > 0
-        ? Promise.all(diariesToLoad.map((name) => ensureDiary(name)))
-        : Promise.resolve([]);
+        // 3) Load only missing diaries in batch
+        const loadDiaries = diariesToLoad.length > 0
+          ? Promise.all(diariesToLoad.map((name) => ensureDiary(name)))
+          : Promise.resolve([]);
 
-      // 4) Load only missing quizlets in batch
-      const loadQuizlets = quizletsToLoad.length > 0
-        ? Promise.all(quizletsToLoad.map((name) => ensureQuizlet(name)))
-        : Promise.resolve([]);
+        // 4) Load only missing quizlets in batch
+        const loadQuizlets = quizletsToLoad.length > 0
+          ? Promise.all(quizletsToLoad.map((name) => ensureQuizlet(name)))
+          : Promise.resolve([]);
 
-      // Run batches in parallel, but only load what's needed
-      await Promise.all([
-        loadProfiles,
-        loadNotes,
-        loadDiaries,
-        loadQuizlets,
-      ]);
+        // Run batches in parallel, but only load what's needed
+        await Promise.all([
+          loadProfiles,
+          loadNotes,
+          loadDiaries,
+          loadQuizlets,
+        ]);
 
-      if (!cancelled) setDetailLoading(false);
-    } catch (err) {
-      if (!cancelled) {
-        console.error("Failed to load detail data:", err);
-        setDetailError("Failed to load detail data for this month.");
-        setDetailLoading(false);
+        if (!cancelled) setDetailLoading(false);
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to load detail data:", err);
+          setDetailError("Failed to load detail data for this month.");
+          setDetailLoading(false);
+        }
       }
-    }
-  };
+    };
 
 
     loadDetails();
@@ -853,104 +905,104 @@ function AdminBillingExcelPageInner() {
     const quizletCache = quizletCacheRef.current;
 
     const rows = students.map((student) => {
-    const schedules = monthSchedules.filter(
-      (entry) =>
-        String(entry.student_name || "").trim() === student.name.trim()
-    );
+      const schedules = monthSchedules.filter(
+        (entry) =>
+          String(entry.student_name || "").trim() === student.name.trim()
+      );
 
-    const nextSchedules = nextMonthSchedules.filter(
-      (entry) =>
-        String(entry.student_name || "").trim() === student.name.trim()
-    );
+      const nextSchedules = nextMonthSchedules.filter(
+        (entry) =>
+          String(entry.student_name || "").trim() === student.name.trim()
+      );
 
-    const totalHours = schedules.reduce(
-      (sum, entry) => sum + normalizeDuration(entry.duration),
-      0
-    );
+      const totalHours = schedules.reduce(
+        (sum, entry) => sum + normalizeDuration(entry.duration),
+        0
+      );
 
-    const classnotes = monthClassnotes.filter(
-      (entry) =>
-        String(entry.student_name || "").trim() === student.name.trim()
-    );
+      const classnotes = monthClassnotes.filter(
+        (entry) =>
+          String(entry.student_name || "").trim() === student.name.trim()
+      );
 
-    // (Original filtered lists)
-    const diaryRaw = (diaryCache[student.name] ?? []).filter((entry) =>
-      matchesMonth(entry.class_date ?? entry.date, selectedMonth)
-    );
+      // (Original filtered lists)
+      const diaryRaw = (diaryCache[student.name] ?? []).filter((entry) =>
+        matchesMonth(entry.class_date ?? entry.date, selectedMonth)
+      );
 
-    const quizletRaw = (quizletCache[student.name] ?? []).filter((entry) =>
-      matchesMonth(entry.class_date ?? entry.date, selectedMonth)
-    );
+      const quizletRaw = (quizletCache[student.name] ?? []).filter((entry) =>
+        matchesMonth(entry.class_date ?? entry.date, selectedMonth)
+      );
 
-    // // ⭐ STEP 1 — Build unified date list from classnotes
-    // const unifiedDates = classnotes
-    //   .map((cn) => {
-    //     const dt = parseDateString(cn.date);
-    //     return dt ? formatDotDate(dt) : "";
-    //   })
-    //   .filter(Boolean)
-    //   .sort((a, b) => (a < b ? -1 : 1));
+      // // ⭐ STEP 1 — Build unified date list from classnotes
+      // const unifiedDates = classnotes
+      //   .map((cn) => {
+      //     const dt = parseDateString(cn.date);
+      //     return dt ? formatDotDate(dt) : "";
+      //   })
+      //   .filter(Boolean)
+      //   .sort((a, b) => (a < b ? -1 : 1));
 
-    // Create lookup maps
-    const diaryMap: Record<string, DiaryEntry> = {};
-    diaryRaw.forEach((d) => {
-      const dt = parseDateString(d.class_date ?? d.date);
-      if (!dt) return;
-      diaryMap[formatDotDate(dt)] = d;
-    });
+      // Create lookup maps
+      const diaryMap: Record<string, DiaryEntry> = {};
+      diaryRaw.forEach((d) => {
+        const dt = parseDateString(d.class_date ?? d.date);
+        if (!dt) return;
+        diaryMap[formatDotDate(dt)] = d;
+      });
 
-    const quizletMap: Record<string, QuizletEntry> = {};
-    quizletRaw.forEach((q) => {
-      const dt = parseDateString(q.class_date ?? q.date);
-      if (!dt) return;
-      quizletMap[formatDotDate(dt)] = q;
-    });
+      const quizletMap: Record<string, QuizletEntry> = {};
+      quizletRaw.forEach((q) => {
+        const dt = parseDateString(q.class_date ?? q.date);
+        if (!dt) return;
+        quizletMap[formatDotDate(dt)] = q;
+      });
 
-    // ⭐ align to unifiedDates
-    const classDates = classnotes
-      .map((cn) => parseDateString(cn.date))
-      .filter(Boolean) as Date[];
+      // ⭐ align to unifiedDates
+      const classDates = classnotes
+        .map((cn) => parseDateString(cn.date))
+        .filter(Boolean) as Date[];
 
-    // Pre-sort timestamps (should already be sorted)
-    classDates.sort((a, b) => a.getTime() - b.getTime());
+      // Pre-sort timestamps (should already be sorted)
+      classDates.sort((a, b) => a.getTime() - b.getTime());
 
-    // Prepare buckets
-    const alignedDiaries: (DiaryEntry | null)[] = [];
-    const alignedQuizlets: (QuizletEntry | null)[] = [];
+      // Prepare buckets
+      const alignedDiaries: (DiaryEntry | null)[] = [];
+      const alignedQuizlets: (QuizletEntry | null)[] = [];
 
-    // Loop over class intervals
-    for (let i = 0; i < classDates.length; i++) {
-      const cur = classDates[i];
-      const prev = classDates[i - 1] ?? null;
-      const next = classDates[i + 1] ?? null;
+      // Loop over class intervals
+      for (let i = 0; i < classDates.length; i++) {
+        const cur = classDates[i];
+        const prev = classDates[i - 1] ?? null;
+        const next = classDates[i + 1] ?? null;
 
-      // DIARY range: prev → cur
-      const diaryStart = prev ?? cur;     // if no prev, diary only on this date
-      const diaryEnd = cur;               // inclusive
+        // DIARY range: prev → cur
+        const diaryStart = prev ?? cur;     // if no prev, diary only on this date
+        const diaryEnd = cur;               // inclusive
 
-      const diaryItem =
-        diaryRaw.find((d) => {
-          const dt = parseDateString(d.class_date ?? d.date);
-          if (!dt) return false;
-          return dt.getTime() >= diaryStart.getTime() &&
-                dt.getTime() <= diaryEnd.getTime();
-        }) ?? null;
-      alignedDiaries.push(diaryItem);
+        const diaryItem =
+          diaryRaw.find((d) => {
+            const dt = parseDateString(d.class_date ?? d.date);
+            if (!dt) return false;
+            return dt.getTime() >= diaryStart.getTime() &&
+              dt.getTime() <= diaryEnd.getTime();
+          }) ?? null;
+        alignedDiaries.push(diaryItem);
 
-      // QUIZLET range: cur → next
-      const quizletStart = cur;
-      const quizletEnd = next ?? new Date(cur.getFullYear(), cur.getMonth() + 1, 1); // next month boundary
+        // QUIZLET range: cur → next
+        const quizletStart = cur;
+        const quizletEnd = next ?? new Date(cur.getFullYear(), cur.getMonth() + 1, 1); // next month boundary
 
-      const quizletItem =
-        quizletRaw.find((q) => {
-          const dt = parseDateString(q.class_date ?? q.date);
-          if (!dt) return false;
-          return dt.getTime() >= quizletStart.getTime() &&
-                dt.getTime() < quizletEnd.getTime();
-        }) ?? null;
+        const quizletItem =
+          quizletRaw.find((q) => {
+            const dt = parseDateString(q.class_date ?? q.date);
+            if (!dt) return false;
+            return dt.getTime() >= quizletStart.getTime() &&
+              dt.getTime() < quizletEnd.getTime();
+          }) ?? null;
 
-      alignedQuizlets.push(quizletItem);
-    }
+        alignedQuizlets.push(quizletItem);
+      }
 
 
       return {
@@ -979,34 +1031,48 @@ function AdminBillingExcelPageInner() {
     cacheTick,
   ]);
 
-// -------------------- LOAD TEACHER CONFIRM STATE --------------------
-useEffect(() => {
-  if (!selectedMonth || studentRows.length === 0) return;
+  // -------------------- LOAD TEACHER CONFIRM STATE --------------------
+  useEffect(() => {
+    if (!selectedMonth || studentRows.length === 0) return;
 
-  const names = studentRows.map((r) => r.student.name); // stable array
+    const names = studentRows.map((r) => r.student.name); // stable array
 
-  let cancelled = false;
+    let cancelled = false;
 
-  const loadConfirms = async () => {
-    const newState: Record<string, boolean> = {};
+    const loadConfirms = async () => {
+      const newState: Record<string, boolean> = {};
 
-    await Promise.all(
-      names.map(async (name) => {
-        const res = await fetchTeacherConfirm(name, selectedMonth);
-        newState[name] = res.confirmed;
-      })
-    );
+      await Promise.all(
+        names.map(async (name) => {
+          const res = await fetchTeacherConfirm(name, selectedMonth);
+          newState[name] = res.confirmed;
+        })
+      );
 
-    if (!cancelled) {
-      setConfirmState(newState);
+      if (!cancelled) {
+        setConfirmState(newState);
+      }
+    };
+
+    const loadPayments = async () => {
+      const newState: Record<string, any> = {};
+      await Promise.all(
+        names.map(async (name) => {
+          const pay = await fetchPaymentStatus(name, selectedMonth);
+          newState[name] = pay;
+        })
+      );
+      if (!cancelled) {
+        setPaymentState(newState);
+      }
     }
-  };
 
-  loadConfirms();
-  return () => {
-    cancelled = true;
-  };
-}, [selectedMonth, studentRows.length]);   // ONLY depend on month + count
+    loadConfirms();
+    loadPayments();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMonth, studentRows.length]);   // ONLY depend on month + count
 
 
 
@@ -1046,7 +1112,7 @@ useEffect(() => {
           : null;
       const configCredit =
         typeof config.initialCredit === "number" &&
-        Number.isFinite(config.initialCredit)
+          Number.isFinite(config.initialCredit)
           ? config.initialCredit
           : null;
 
@@ -1087,13 +1153,13 @@ useEffect(() => {
 
   const summary = useMemo(() => {
     const totalClasses = monthClassnotes.length;
-    
+
     // More reliable calculation: Use classnotes (actual completed classes) as source of truth
     // Match each classnote with its corresponding schedule to get accurate duration
     // IMPORTANT: Only count schedules that match the selectedTeacher
     let totalHours = 0;
     const selectedTeacherTrimmed = (selectedTeacher || "").trim();
-    
+
     if (monthClassnotes.length > 0 && monthSchedules.length > 0) {
       // Create a map of schedules by date and student for quick lookup
       // ONLY include schedules that match the selectedTeacher
@@ -1104,31 +1170,31 @@ useEffect(() => {
         if (entryTeacher && entryTeacher !== selectedTeacherTrimmed) {
           return; // Skip schedules from other teachers
         }
-        
+
         const key = `${schedule.date || ""}_${schedule.student_name || ""}`;
         if (!scheduleMap.has(key)) {
           scheduleMap.set(key, []);
         }
         scheduleMap.get(key)!.push(schedule);
       });
-      
+
       // For each completed classnote, find matching schedule and sum duration
       monthClassnotes.forEach((classnote) => {
         const classnoteDate = classnote.date || (classnote as any).class_date;
         const studentName = classnote.student_name;
         const classnoteTeacher = (classnote.teacher_name || "").trim();
-        
+
         // Only count classnotes from the selected teacher
         if (classnoteTeacher && classnoteTeacher !== selectedTeacherTrimmed) {
           return; // Skip classnotes from other teachers
         }
-        
+
         if (!classnoteDate || !studentName) return;
-        
+
         // Try to find matching schedule(s) for this classnote
         const scheduleKey = `${classnoteDate}_${studentName}`;
         const matchingSchedules = scheduleMap.get(scheduleKey) || [];
-        
+
         if (matchingSchedules.length > 0) {
           // Use the first matching schedule's duration (or sum if multiple)
           matchingSchedules.forEach((schedule) => {
@@ -1155,7 +1221,7 @@ useEffect(() => {
         }
       });
     }
-    
+
     // Fallback: If no classnotes or no matches found, use schedule-based calculation
     // but ensure we're filtering correctly by teacher (STRICT: only selectedTeacher)
     if (totalHours === 0) {
@@ -1168,7 +1234,7 @@ useEffect(() => {
         })
         .reduce((sum, entry) => sum + normalizeDuration(entry.duration), 0);
     }
-    
+
     const totalAmountDue = studentFinancials.reduce(
       (sum, item) => sum + item.amountDue,
       0
@@ -1221,67 +1287,67 @@ useEffect(() => {
   ]);
 
 
-const handleConfigChange = useCallback(
-  async (
-    studentId: string,
-    patch: { rate?: number | null; initialCredit?: number | null }
-  ) => {
-    // 1) Update local state (never store null)
-    setStudentConfigs((prev) => {
-      const existing = prev[studentId] ?? {};
+  const handleConfigChange = useCallback(
+    async (
+      studentId: string,
+      patch: { rate?: number | null; initialCredit?: number | null }
+    ) => {
+      // 1) Update local state (never store null)
+      setStudentConfigs((prev) => {
+        const existing = prev[studentId] ?? {};
 
-      const updated = {
-        ...existing,
-        ...(patch.rate !== undefined
-          ? { rate: patch.rate ?? undefined } // convert null → undefined
-          : {}),
-        ...(patch.initialCredit !== undefined
-          ? { initialCredit: patch.initialCredit ?? undefined } // convert null → undefined
-          : {}),
-      };
+        const updated = {
+          ...existing,
+          ...(patch.rate !== undefined
+            ? { rate: patch.rate ?? undefined } // convert null → undefined
+            : {}),
+          ...(patch.initialCredit !== undefined
+            ? { initialCredit: patch.initialCredit ?? undefined } // convert null → undefined
+            : {}),
+        };
 
-      return { ...prev, [studentId]: updated };
-    });
-
-    // 2) Find the student info
-    const row = studentRows.find((r) => r.student.id === studentId);
-    if (!row) return;
-
-    const studentName = row.student.name;
-
-    // 3) Build POST payload (again: no null)
-    const payload: any = {};
-    if (patch.initialCredit !== undefined) {
-      payload.credits = patch.initialCredit ?? undefined;
-    }
-    if (patch.rate !== undefined) {
-      payload.hourlyRate = patch.rate ?? undefined;
-    }
-
-    // If payload is empty, no need to send API
-    if (Object.keys(payload).length === 0) return;
-
-    // 4) Send POST update
-    try {
-      await fetch(`/api/student/${encodeURIComponent(studentName)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        return { ...prev, [studentId]: updated };
       });
 
-      // 🔥 Refresh cache after saving
-      studentProfileCacheRef.current[studentName] = undefined;
-      await ensureStudentProfile(studentName);
+      // 2) Find the student info
+      const row = studentRows.find((r) => r.student.id === studentId);
+      if (!row) return;
 
-      // Force recalculation
-      setCacheTick((t) => t + 1);
+      const studentName = row.student.name;
 
-    } catch (err) {
-      console.error("Failed to update student:", err);
-    }
-  },
-  [studentRows]
-);
+      // 3) Build POST payload (again: no null)
+      const payload: any = {};
+      if (patch.initialCredit !== undefined) {
+        payload.credits = patch.initialCredit ?? undefined;
+      }
+      if (patch.rate !== undefined) {
+        payload.hourlyRate = patch.rate ?? undefined;
+      }
+
+      // If payload is empty, no need to send API
+      if (Object.keys(payload).length === 0) return;
+
+      // 4) Send POST update
+      try {
+        await fetch(`/api/student/${encodeURIComponent(studentName)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        // 🔥 Refresh cache after saving
+        studentProfileCacheRef.current[studentName] = undefined;
+        await ensureStudentProfile(studentName);
+
+        // Force recalculation
+        setCacheTick((t) => t + 1);
+
+      } catch (err) {
+        console.error("Failed to update student:", err);
+      }
+    },
+    [studentRows]
+  );
 
 
   const renderScheduleDetails = (rows: ScheduleEntry[]) => {
@@ -1322,12 +1388,12 @@ const handleConfigChange = useCallback(
     );
   };
 
-const formatDateForLink = (dateStr: string | null | undefined): string => {
-  if (!dateStr) return "";
-  const dt = parseDateString(dateStr);
-  if (!dt) return String(dateStr ?? "");
-  return formatDotDate(dt);
-};
+  const formatDateForLink = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return "";
+    const dt = parseDateString(dateStr);
+    if (!dt) return String(dateStr ?? "");
+    return formatDotDate(dt);
+  };
 
   const renderClassnoteDetails = (rows: ClassnoteEntry[], student: StudentInfo) => {
     if (!rows.length) {
@@ -1343,7 +1409,7 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
           const dateStr = item.date ?? "";
           const formattedDate = formatDateForLink(dateStr);
           const classNoteUrl = `/teacher/student/class_record?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}${item._id ? `&class_note_id=${encodeURIComponent(item._id)}` : ""}`;
-          
+
           return (
             <div
               key={`${student.name}_classnote_${idx}`}
@@ -1556,11 +1622,10 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                     setSelectedMonth(key);
                     setExpanded(null);
                   }}
-                  className={`rounded-t-lg border px-4 py-2 text-sm font-medium ${
-                    selectedMonth === key
+                  className={`rounded-t-lg border px-4 py-2 text-sm font-medium ${selectedMonth === key
                       ? "border-indigo-500 bg-white text-indigo-600 shadow"
                       : "border-slate-200 bg-slate-100 text-gray-600 hover:bg-white"
-                  }`}
+                    }`}
                 >
                   {monthLabelFromKey(key)}
                 </button>
@@ -1605,19 +1670,19 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
 
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  {isAdmin 
+                  {isAdmin
                     ? `이번달 매출 (₩)`
                     : ''
                   }
                 </div>
                 <div className="mt-1 text-2xl font-semibold text-gray-900">
-                  {isAdmin 
+                  {isAdmin
                     ? CURRENCY_FORMATTER.format(Math.round(summary.monthlyRevenue))
                     : '잘하고 있어요 😊'
                   }
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
-                  {isAdmin 
+                  {isAdmin
                     ? `이번달 수업 매출 (${monthLabelFromKey(selectedMonth)})`
                     : ''
                   }
@@ -1667,7 +1732,8 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                       <th className="px-4 py-3">Class Notes</th>
                       <th className="px-4 py-3">Diary</th>
                       <th className="px-4 py-3">Quizlet</th>
-                  <th className="px-4 py-3">Hagwon Pay</th>
+                      <th className="px-4 py-3">Payment</th>
+                      <th className="px-4 py-3">Hagwon Pay</th>
                       <th className="px-4 py-3">Actions</th>
                     </tr>
                   </thead>
@@ -1685,268 +1751,279 @@ const formatDateForLink = (dateStr: string | null | undefined): string => {
                       studentRows
                         .filter((row) => row.classnotes.length > 0)
                         .map((row) => {
-                        const financial = financialById[row.student.id];
-                        const hourlyRateValue =
-                          financial?.hourlyRate ?? DEFAULT_RATE;
-                        const initialCreditValue =
-                          financial?.initialCredit ?? 0;
-                        const classesCompletedValue =
-                          financial?.classesCompleted ?? row.classnotes.length;
-                        const nextMonthPlannedValue =
-                          financial?.nextMonthPlanned ?? row.nextSchedules.length;
-                        const carryAfterValue =
-                          financial?.carryAfterSettlement ??
-                          initialCreditValue - classesCompletedValue;
-                        const totalCreditsAvailableValue =
-                          financial?.totalCreditsAvailable ??
-                          Math.max(0, carryAfterValue);
-                        const nextToPayClassesValue =
-                          financial?.nextToPayClasses ??
-                          Math.max(0, nextMonthPlannedValue - carryAfterValue);
-                        const amountDueValue =
-                          financial?.amountDue ??
-                          Math.max(0, nextToPayClassesValue * hourlyRateValue);
-                        return (
-                          <React.Fragment key={row.student.id}>
-                            <tr className="hover:bg-slate-50">
-                            <td className="px-4 py-3">
-                              <div className="font-medium text-gray-900">
-                                {row.student.name}
-                              </div>
-                              {row.student.phoneNumber && (
-                                <div className="text-xs text-gray-500">
-                                  {row.student.phoneNumber}
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {confirmState[row.student.name] ? (
-                                <span
-                                  className="inline-flex items-center rounded-full bg-emerald-50 
-                                            text-emerald-700 text-xs px-3 py-1 border border-emerald-200"
-                                >
-                                  ✅ Teacher Confirmed
-                                </span>
-                              ) : (
-                                <span
-                                  className="inline-flex items-center rounded-full bg-red-50 
-                                            text-red-700 text-xs px-3 py-1 border border-red-200"
-                                >
-                                  ❌ Not Confirmed
-                                </span>
-                              )}
-                            </td>
-
-
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-1">
-                                {row.classnotes.length === 0 ? (
-                                  <span className="text-xs text-gray-400">—</span>
-                                ) : (
-                                  row.classnotes.map((item, idx) => {
-                                    const dateStr = item.date ?? "";
-                                    const formattedDate = formatDateForLink(dateStr);
-                                    const classNoteUrl = `/teacher/student/class_record?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}&id=${encodeURIComponent(row.student.id)}${item._id ? `&class_note_id=${encodeURIComponent(item._id)}` : ""}`;
-                                    return (
-                                      <a
-                                        key={`${row.student.name}_classnote_${idx}`}
-                                        href={classNoteUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline"
-                                      >
-                                        {formattedDate || "—"}
-                                      </a>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-1">
-                                {row.diaries.length === 0 ? (
-                                  <span className="text-xs text-gray-400">—</span>
-                                ) : (
-                                  row.diaries.map((item, idx) => {
-                                    if (!item)
-                                      return (
-                                      <span key={`empty_diary_${idx}`} className="text-xs opacity-0 select-none">
-                                        &nbsp;
-                                      </span>
-                                      );
-                                    const dateStr = item.class_date ?? item.date ?? "";
-                                    const formattedDate = formatDateForLink(dateStr);
-                                    const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}`;
-                                    return (
-                                      <a
-                                        key={`${row.student.name}_diary_${idx}`}
-                                        href={diaryUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-medium text-sky-700 hover:text-sky-900 hover:underline"
-                                      >
-                                        {formattedDate || "—"}
-                                      </a>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-1">
-                                {row.quizlets.length === 0 ? (
-                                  <span className="text-xs text-gray-400">—</span>
-                                ) : (
-                                  row.quizlets.map((item, idx) => {
-                                    if (!item)
-                                    return (
-                                    <span key={`empty_quizlet_${idx}`} className="text-xs opacity-0 select-none">
-                                      &nbsp;
-                                    </span>
-                                    );
-                                    const dateStr = item.class_date ?? item.date ?? "";
-                                    const formattedDate = formatDateForLink(dateStr);
-                                    const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}`;
-                                    return (
-                                      <a
-                                        key={`${row.student.name}_quizlet_${idx}`}
-                                        href={quizletUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
-                                      >
-                                        {formattedDate || "—"}
-                                      </a>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-col gap-2">
-                                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                    <label className="flex flex-col text-xs text-gray-500">
-                                      <span className="mb-1">Initial credit</span>
-                                      <input
-                                        type="number"
-                                        step="1"
-                                        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
-                                        value={initialCreditValue}
-                                        onChange={(e) => {
-                                          const parsed = Number.parseFloat(
-                                            e.target.value
-                                          );
-                                          handleConfigChange(row.student.id, {
-                                            initialCredit: Number.isFinite(
-                                              parsed
-                                            )
-                                              ? parsed
-                                              : 0,
-                                          });
-                                        }}
-                                      />
-                                    </label>
-                                    <label className="flex flex-col text-xs text-gray-500">
-                                      <span className="mb-1">Hourly rate (₩)</span>
-                                      <input
-                                        type="number"
-                                        step="1000"
-                                        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
-                                        value={hourlyRateValue}
-                                        onChange={(e) => {
-                                          const parsed = Number.parseFloat(
-                                            e.target.value
-                                          );
-                                          handleConfigChange(row.student.id, {
-                                            rate: Number.isFinite(parsed)
-                                              ? parsed
-                                              : 0,
-                                          });
-                                        }}
-                                      />
-                                    </label>
+                          const financial = financialById[row.student.id];
+                          const hourlyRateValue =
+                            financial?.hourlyRate ?? DEFAULT_RATE;
+                          const initialCreditValue =
+                            financial?.initialCredit ?? 0;
+                          const classesCompletedValue =
+                            financial?.classesCompleted ?? row.classnotes.length;
+                          const nextMonthPlannedValue =
+                            financial?.nextMonthPlanned ?? row.nextSchedules.length;
+                          const carryAfterValue =
+                            financial?.carryAfterSettlement ??
+                            initialCreditValue - classesCompletedValue;
+                          const totalCreditsAvailableValue =
+                            financial?.totalCreditsAvailable ??
+                            Math.max(0, carryAfterValue);
+                          const nextToPayClassesValue =
+                            financial?.nextToPayClasses ??
+                            Math.max(0, nextMonthPlannedValue - carryAfterValue);
+                          const amountDueValue =
+                            financial?.amountDue ??
+                            Math.max(0, nextToPayClassesValue * hourlyRateValue);
+                          return (
+                            <React.Fragment key={row.student.id}>
+                              <tr className="hover:bg-slate-50">
+                                <td className="px-4 py-3">
+                                  <div className="font-medium text-gray-900">
+                                    {row.student.name}
                                   </div>
-                                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
-                                    <div className="mt-1 flex items-center justify-between">
-                                      <span>
-                                        {monthDotLabelFromKey(selectedMonth)}.01 기준 잔여 수업
-                                      </span>
-                                      <span className="font-medium text-gray-900">
-                                        {Math.max(0, Math.round(totalCreditsAvailableValue))}회
-                                      </span>
+                                  {row.student.phoneNumber && (
+                                    <div className="text-xs text-gray-500">
+                                      {row.student.phoneNumber}
                                     </div>
-
-                                    <div className="mt-1 flex items-center justify-between">
-                                      <span>
-                                        다음달 진행 예정 수업
-                                      </span>
-                                      <span className="font-medium text-gray-900">
-                                        {Math.round(nextMonthPlannedValue)}회
-                                      </span>
-                                    </div>
-                                    <div className="mt-1 flex items-center justify-between">
-                                      <span>오늘 결제 필요 수업</span>
-                                      <span className="font-medium text-gray-900">
-                                        {Math.round(nextToPayClassesValue)}회 ({CURRENCY_FORMATTER.format(Math.round(amountDueValue))})
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                            <td className="px-4 py-3">
-                              {(() => {
-                                const loading = !!billingLinkLoading[row.student.id];
-                                const canProcess =
-                                  isAdmin && amountDueValue > 0 && !loading;
-                                const disabledReason = !isAdmin
-                                  ? "관리자만 사용할 수 있습니다"
-                                  : amountDueValue <= 0
-                                  ? "결제할 금액이 없습니다"
-                                  : loading
-                                  ? "처리 중..."
-                                  : "";
-                                return (
-                                  <div className="flex flex-col gap-2">
-                                    <button
-                                      onClick={() =>
-                                        handleBillingProcess(row.student, financial)
-                                      }
-                                      disabled={!canProcess}
-                                      className="rounded-md border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title={canProcess ? "결제 링크 생성" : disabledReason}
-                                    >
-                                      {loading ? "처리 중..." : "Billing Process"}
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleCheckStudentSchedule(row.student)
-                                      }
-                                      className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                                    >
-                                      Check Student Schedule
-                                    </button>
-                                  </div>
-                                );
-                              })()}
-                            </td>
-                          </tr>
-                          {expanded &&
-                            expanded.student === row.student.name && (
-                              <tr className="bg-slate-50">
-                                <td colSpan={7} className="px-4 py-4">
-                                  {detailLoading ? (
-                                    <div className="text-sm text-gray-500">
-                                      상세 데이터를 불러오는 중입니다…
-                                    </div>
-                                  ) : (
-                                    renderExpandedContent(row)
                                   )}
                                 </td>
+                                <td className="px-4 py-3">
+                                  <button
+                                    onClick={async () => {
+                                      if (!isAdmin) return;
+                                      const newVal = await toggleTeacherConfirm(row.student.name, selectedMonth, confirmState[row.student.name] || false);
+                                      setConfirmState(prev => ({ ...prev, [row.student.name]: newVal }));
+                                    }}
+                                    disabled={!isAdmin}
+                                    className={`inline-flex items-center rounded-full text-xs px-3 py-1 border transition
+                                    ${confirmState[row.student.name]
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                                      }`}
+                                  >
+                                    {confirmState[row.student.name] ? "✅ Teacher Confirmed" : "❌ Not Confirmed"}
+                                  </button>
+                                </td>
+
+                                <td className="px-4 py-3">
+                                  {paymentState[row.student.name] ? (
+                                    <div className="flex flex-col">
+                                      <span className="text-xs font-bold text-blue-600">Paid: {CURRENCY_FORMATTER.format(paymentState[row.student.name].amount)}</span>
+                                      <span className="text-[10px] text-gray-400">{paymentState[row.student.name].date || paymentState[row.student.name].approvedAt?.split('T')[0]}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">-</span>
+                                  )}
+                                </td>
+
+
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-col gap-1">
+                                    {row.classnotes.length === 0 ? (
+                                      <span className="text-xs text-gray-400">—</span>
+                                    ) : (
+                                      row.classnotes.map((item, idx) => {
+                                        const dateStr = item.date ?? "";
+                                        const formattedDate = formatDateForLink(dateStr);
+                                        const classNoteUrl = `/teacher/student/class_record?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}&id=${encodeURIComponent(row.student.id)}${item._id ? `&class_note_id=${encodeURIComponent(item._id)}` : ""}`;
+                                        return (
+                                          <a
+                                            key={`${row.student.name}_classnote_${idx}`}
+                                            href={classNoteUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline"
+                                          >
+                                            {formattedDate || "—"}
+                                          </a>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-col gap-1">
+                                    {row.diaries.length === 0 ? (
+                                      <span className="text-xs text-gray-400">—</span>
+                                    ) : (
+                                      row.diaries.map((item, idx) => {
+                                        if (!item)
+                                          return (
+                                            <span key={`empty_diary_${idx}`} className="text-xs opacity-0 select-none">
+                                              &nbsp;
+                                            </span>
+                                          );
+                                        const dateStr = item.class_date ?? item.date ?? "";
+                                        const formattedDate = formatDateForLink(dateStr);
+                                        const diaryUrl = `/teacher/student/diary?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}`;
+                                        return (
+                                          <a
+                                            key={`${row.student.name}_diary_${idx}`}
+                                            href={diaryUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs font-medium text-sky-700 hover:text-sky-900 hover:underline"
+                                          >
+                                            {formattedDate || "—"}
+                                          </a>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-col gap-1">
+                                    {row.quizlets.length === 0 ? (
+                                      <span className="text-xs text-gray-400">—</span>
+                                    ) : (
+                                      row.quizlets.map((item, idx) => {
+                                        if (!item)
+                                          return (
+                                            <span key={`empty_quizlet_${idx}`} className="text-xs opacity-0 select-none">
+                                              &nbsp;
+                                            </span>
+                                          );
+                                        const dateStr = item.class_date ?? item.date ?? "";
+                                        const formattedDate = formatDateForLink(dateStr);
+                                        const quizletUrl = `/teacher/student/quizlet?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(row.student.name)}`;
+                                        return (
+                                          <a
+                                            key={`${row.student.name}_quizlet_${idx}`}
+                                            href={quizletUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
+                                          >
+                                            {formattedDate || "—"}
+                                          </a>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-col gap-2">
+                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                      <label className="flex flex-col text-xs text-gray-500">
+                                        <span className="mb-1">Initial credit</span>
+                                        <input
+                                          type="number"
+                                          step="1"
+                                          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                                          value={initialCreditValue}
+                                          onChange={(e) => {
+                                            const parsed = Number.parseFloat(
+                                              e.target.value
+                                            );
+                                            handleConfigChange(row.student.id, {
+                                              initialCredit: Number.isFinite(
+                                                parsed
+                                              )
+                                                ? parsed
+                                                : 0,
+                                            });
+                                          }}
+                                        />
+                                      </label>
+                                      <label className="flex flex-col text-xs text-gray-500">
+                                        <span className="mb-1">Hourly rate (₩)</span>
+                                        <input
+                                          type="number"
+                                          step="1000"
+                                          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
+                                          value={hourlyRateValue}
+                                          onChange={(e) => {
+                                            const parsed = Number.parseFloat(
+                                              e.target.value
+                                            );
+                                            handleConfigChange(row.student.id, {
+                                              rate: Number.isFinite(parsed)
+                                                ? parsed
+                                                : 0,
+                                            });
+                                          }}
+                                        />
+                                      </label>
+                                    </div>
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
+                                      <div className="mt-1 flex items-center justify-between">
+                                        <span>
+                                          {monthDotLabelFromKey(selectedMonth)}.01 기준 잔여 수업
+                                        </span>
+                                        <span className="font-medium text-gray-900">
+                                          {Math.max(0, Math.round(totalCreditsAvailableValue))}회
+                                        </span>
+                                      </div>
+
+                                      <div className="mt-1 flex items-center justify-between">
+                                        <span>
+                                          다음달 진행 예정 수업
+                                        </span>
+                                        <span className="font-medium text-gray-900">
+                                          {Math.round(nextMonthPlannedValue)}회
+                                        </span>
+                                      </div>
+                                      <div className="mt-1 flex items-center justify-between">
+                                        <span>오늘 결제 필요 수업</span>
+                                        <span className="font-medium text-gray-900">
+                                          {Math.round(nextToPayClassesValue)}회 ({CURRENCY_FORMATTER.format(Math.round(amountDueValue))})
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  {(() => {
+                                    const loading = !!billingLinkLoading[row.student.id];
+                                    const canProcess =
+                                      isAdmin && amountDueValue > 0 && !loading;
+                                    const disabledReason = !isAdmin
+                                      ? "관리자만 사용할 수 있습니다"
+                                      : amountDueValue <= 0
+                                        ? "결제할 금액이 없습니다"
+                                        : loading
+                                          ? "처리 중..."
+                                          : "";
+                                    return (
+                                      <div className="flex flex-col gap-2">
+                                        <button
+                                          onClick={() =>
+                                            handleBillingProcess(row.student, financial)
+                                          }
+                                          disabled={!canProcess}
+                                          className="rounded-md border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                                          title={canProcess ? "결제 링크 생성" : disabledReason}
+                                        >
+                                          {loading ? "처리 중..." : "Billing Process"}
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleCheckStudentSchedule(row.student)
+                                          }
+                                          className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                                        >
+                                          Check Student Schedule
+                                        </button>
+                                      </div>
+                                    );
+                                  })()}
+                                </td>
                               </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })
+                              {expanded &&
+                                expanded.student === row.student.name && (
+                                  <tr className="bg-slate-50">
+                                    <td colSpan={7} className="px-4 py-4">
+                                      {detailLoading ? (
+                                        <div className="text-sm text-gray-500">
+                                          상세 데이터를 불러오는 중입니다…
+                                        </div>
+                                      ) : (
+                                        renderExpandedContent(row)
+                                      )}
+                                    </td>
+                                  </tr>
+                                )}
+                            </React.Fragment>
+                          );
+                        })
                     )}
                   </tbody>
                 </table>

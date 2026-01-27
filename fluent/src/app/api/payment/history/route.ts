@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         limit: 1000, // Get all payments
         status: undefined, // Get all statuses
       });
-      
+
       // Convert PaymentDocument to the format expected by the frontend
       paymentsCollectionData = paymentsDocs.map((doc) => ({
         orderId: doc.orderId,
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         const dateB = b.approvedAt ? new Date(b.approvedAt).getTime() : 0;
         return dateB - dateA; // Most recent first
       });
-      
+
       console.log(`[Payment History] Found ${paymentsCollectionData.length} payments from payments collection for ${studentName}`);
     } catch (err) {
       console.warn('[Payment History] Could not fetch from payments collection (non-critical):', err);
@@ -128,8 +128,8 @@ export async function GET(request: NextRequest) {
         });
       }
     }
-    
-    // Parse payment history string to extract credit additions
+
+    // Parse payment history string to extract credit ADDITIONS (payments only, not deductions)
     const creditTransactions: Array<{
       date: string;
       type: "payment" | "deduction";
@@ -151,24 +151,35 @@ export async function GET(request: NextRequest) {
         const match = entry.match(/(\d{4}-\d{2}-\d{2}T[^:]+):\s*(.+)/);
         if (match) {
           const [, date, description] = match;
-          // Check if it's a credit deduction or payment
-          if (description.includes("Credit -1")) {
-            creditTransactions.push({
-              date,
-              type: "deduction",
-              amount: -1,
-              description: "수업 크레딧 사용",
-            });
-          } else {
-            // Try to extract payment amount
+          // ONLY parse credit ADDITIONS from payments (skip "Credit -1" deductions)
+          // Deductions will come from classnotes below to avoid duplicates
+          if (!description.includes("Credit -1")) {
+            // Try to extract payment amount and credits
             const amountMatch = description.match(/(\d+)/);
-            if (amountMatch) {
+            const creditsMatch = description.match(/\((\d+)\s+credits\)/);
+
+            if (creditsMatch) {
+              // New format with credits info: "method amount (X credits)"
+              const credits = parseInt(creditsMatch[1], 10);
               creditTransactions.push({
                 date,
                 type: "payment",
-                amount: parseInt(amountMatch[1], 10),
-                description,
+                amount: credits,
+                description: `결제로 크레딧 충전 (${description.split(' ')[0]})`,
               });
+            } else if (amountMatch) {
+              // Old format without credits - estimate based on amount
+              // This is fallback for old payments before credit tracking
+              const amount = parseInt(amountMatch[1], 10);
+              const estimatedCredits = Math.floor(amount / 60000); // Rough estimate
+              if (estimatedCredits > 0) {
+                creditTransactions.push({
+                  date,
+                  type: "payment",
+                  amount: estimatedCredits,
+                  description: `결제로 크레딧 충전 (추정)`,
+                });
+              }
             }
           }
         }
@@ -194,9 +205,9 @@ export async function GET(request: NextRequest) {
         const teacherName = note.teacher_name || "";
         const roomName = note.room_name || "";
         const time = note.started_at || note.time || "";
-        const classDescription = note.original_text ? 
+        const classDescription = note.original_text ?
           (note.original_text.substring(0, 50) + (note.original_text.length > 50 ? "..." : "")) : "";
-        
+
         creditTransactions.push({
           date: classDate,
           type: "deduction",
@@ -241,35 +252,35 @@ export async function GET(request: NextRequest) {
     // Combine payments: prioritize payments collection, then billing, then fallback
     // Create a map to deduplicate by orderId (payments collection takes priority)
     const paymentsMap = new Map<string, any>();
-    
+
     // First add payments from payments collection (highest priority - most comprehensive)
     paymentsCollectionData.forEach(payment => {
       if (payment.orderId) {
         paymentsMap.set(payment.orderId, payment);
       }
     });
-    
+
     // Then add billing collection payments (only if not already in payments collection)
     studentPayments.forEach(payment => {
       if (payment.orderId && !paymentsMap.has(payment.orderId)) {
         paymentsMap.set(payment.orderId, payment);
       }
     });
-    
+
     // Finally add fallback payments from paymentHistory string (only if not already present)
     fallbackPayments.forEach(payment => {
       if (payment.orderId && !paymentsMap.has(payment.orderId)) {
         paymentsMap.set(payment.orderId, payment);
       }
     });
-    
+
     // Convert map to array and sort by date (most recent first)
     const allPayments = Array.from(paymentsMap.values()).sort((a, b) => {
       const dateA = a.approvedAt ? new Date(a.approvedAt).getTime() : 0;
       const dateB = b.approvedAt ? new Date(b.approvedAt).getTime() : 0;
       return dateB - dateA;
     });
-    
+
     // Debug logging
     console.log(`Payment history for ${studentName}:`, {
       paymentsFound: allPayments.length,

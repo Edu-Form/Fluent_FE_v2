@@ -5,7 +5,7 @@ const tossSecretKey = process.env.TOSS_SECRET_KEY;
 
 export async function POST(request: Request) {
   try {
-    const { studentName, amount, yyyymm } = await request.json();
+    const { studentName, amount, yyyymm, credits } = await request.json();
 
     if (!studentName || !amount) {
       return NextResponse.json({ message: 'Student name and amount are required' }, { status: 400 });
@@ -13,16 +13,16 @@ export async function POST(request: Request) {
 
     const orderId = new Date().getTime().toString();
     const orderName = `${studentName} - Tuition`;
-    
+
     // Save initial payment to students collection (existing flow)
     try {
-      await saveInitialPayment(studentName, orderId, amount, yyyymm);
-      console.log(`[Payment Link] Initial payment saved for ${studentName}, orderId: ${orderId}`);
+      await saveInitialPayment(studentName, orderId, amount, yyyymm, credits);
+      console.log(`[Payment Link] Initial payment saved for ${studentName}, orderId: ${orderId}, credits: ${credits || 0}`);
     } catch (err) {
       console.error('[Payment Link] Failed to save initial payment:', err);
       // Continue - payment link creation should still work
     }
-    
+
     // NEW: Create payment document in payments collection (non-blocking)
     try {
       let finalStudentId;
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
         orderName,
         metadata: {
           source: 'payment-link',
+          credits: credits || 0, // Store credits in metadata
         },
       });
     } catch (err) {

@@ -50,7 +50,22 @@ function PaymentPageInner() {
   async function handlePay(baseAmount: number, label: string) {
     const quantity = quantities[label] || 1;
     const totalAmount = baseAmount * quantity;
-    
+
+    // Calculate credits based on plan/product
+    let credits = 0;
+    if (label === "3개월 플랜") {
+      credits = 26 * quantity;
+    } else if (label === "1개월 플랜") {
+      credits = 8 * quantity;
+    } else if (label === "6개월 플랜") {
+      credits = 54 * quantity;
+    } else if (label === "12개월 플랜") {
+      credits = 111 * quantity;
+    } else if (label === "오프라인 1:1 수업" || label === "온라인 1:1 수업" || label === "오프라인 2:1 그룹수업" || label === "David 1:1 Class") {
+      // Tuition fees: 1 credit per class
+      credits = quantity;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/payment/link", {
@@ -59,6 +74,7 @@ function PaymentPageInner() {
         body: JSON.stringify({
           studentName: user,
           amount: totalAmount,
+          credits: credits,
           label: quantity > 1 ? `${label} x${quantity}` : label,
         }),
       });
@@ -108,7 +124,7 @@ function PaymentPageInner() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 px-6 py-8 flex justify-center">
       <div className="w-full max-w-lg">
-        
+
         {/* HEADER */}
         <div className="text-center mb-10">
           <div className="flex justify-between items-start mb-4">
@@ -149,7 +165,7 @@ function PaymentPageInner() {
               quantity={quantities["3개월 플랜"]}
               onUpdate={(delta) => updateQuantity("3개월 플랜", delta)}
             />
-            
+
             {quantities["3개월 플랜"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
                 총 금액: {(1440000 * quantities["3개월 플랜"]).toLocaleString()}원
@@ -177,7 +193,7 @@ function PaymentPageInner() {
               quantity={quantities["1개월 플랜"]}
               onUpdate={(delta) => updateQuantity("1개월 플랜", delta)}
             />
-            
+
             {quantities["1개월 플랜"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
                 총 금액: {(480000 * quantities["1개월 플랜"]).toLocaleString()}원
@@ -207,7 +223,7 @@ function PaymentPageInner() {
               quantity={quantities["6개월 플랜"]}
               onUpdate={(delta) => updateQuantity("6개월 플랜", delta)}
             />
-            
+
             {quantities["6개월 플랜"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
                 총 금액: {(2880000 * quantities["6개월 플랜"]).toLocaleString()}원
@@ -237,7 +253,7 @@ function PaymentPageInner() {
               quantity={quantities["12개월 플랜"]}
               onUpdate={(delta) => updateQuantity("12개월 플랜", delta)}
             />
-            
+
             {quantities["12개월 플랜"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
                 총 금액: {(5760000 * quantities["12개월 플랜"]).toLocaleString()}원
@@ -265,7 +281,7 @@ function PaymentPageInner() {
 
         <div className="space-y-5 mb-20">
 
-                    {/* David 1:1 (70,000원 / 회당) */}
+          {/* David 1:1 (70,000원 / 회당) */}
           <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
             <h2 className="text-xl font-semibold text-gray-900">
               David 1:1 Class
@@ -273,7 +289,7 @@ function PaymentPageInner() {
             <p className="text-sm text-gray-600 mt-1">
               데이비드 선생님 수업 · 회당 70,000원
             </p>
-          
+
 
             <QuantitySelector
               quantity={quantities["David 1:1 Class"]}
@@ -305,12 +321,12 @@ function PaymentPageInner() {
                 <p className="text-gray-600 text-sm mt-1">60,000원 / 회당</p>
               </div>
             </div>
-            
+
             <QuantitySelector
               quantity={quantities["오프라인 1:1 수업"]}
               onUpdate={(delta) => updateQuantity("오프라인 1:1 수업", delta)}
             />
-            
+
             {quantities["오프라인 1:1 수업"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
                 총 금액: {(60000 * quantities["오프라인 1:1 수업"]).toLocaleString()}원
@@ -336,12 +352,12 @@ function PaymentPageInner() {
                 <p className="text-gray-600 text-sm mt-1">50,000원 / 회당</p>
               </div>
             </div>
-            
+
             <QuantitySelector
               quantity={quantities["온라인 1:1 수업"]}
               onUpdate={(delta) => updateQuantity("온라인 1:1 수업", delta)}
             />
-            
+
             {quantities["온라인 1:1 수업"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
                 총 금액: {(50000 * quantities["온라인 1:1 수업"]).toLocaleString()}원
@@ -367,12 +383,12 @@ function PaymentPageInner() {
                 <p className="text-gray-600 text-sm mt-1">40,000원 / 회당</p>
               </div>
             </div>
-            
+
             <QuantitySelector
               quantity={quantities["오프라인 2:1 그룹수업"]}
               onUpdate={(delta) => updateQuantity("오프라인 2:1 그룹수업", delta)}
             />
-            
+
             {quantities["오프라인 2:1 그룹수업"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
                 총 금액: {(40000 * quantities["오프라인 2:1 그룹수업"]).toLocaleString()}원

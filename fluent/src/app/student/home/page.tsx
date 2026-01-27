@@ -343,9 +343,9 @@ const HomePage = () => {
               {user_id && (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => router.push(`/student/payment/history?user=${encodeURIComponent(user || "")}&type=${type || "student"}&id=${user_id}`)}
+                    onClick={() => router.push(`/student/payment/history?user=${encodeURIComponent(user || "")}&type=${type || "student"}&id=${user_id}&tab=credits`)}
                     className="flex items-center gap-2 bg-gray-100 text-gray-700 rounded-full px-3 py-2 shadow-sm hover:bg-gray-200 transition-all text-xs font-medium"
-                    title="결제 내역"
+                    title="수업 기록"
                   >
                     <History className="text-gray-600 w-4 h-4" />
                   </button>

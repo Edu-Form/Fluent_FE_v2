@@ -30,7 +30,7 @@ const toDotDate = (raw?: string | null) => {
 
   const y = m[1];
   const mo = String(m[2]).padStart(2, "0");
-  const d  = String(m[3]).padStart(2, "0");
+  const d = String(m[3]).padStart(2, "0");
 
   // ✅ Always returns with trailing dot
   return `${y}. ${mo}. ${d}.`;
@@ -205,7 +205,7 @@ export async function saveTeacherStatus(
       return { status: 200, message: "Skipped: missing student or class_note date" };
     }
     const quizlet_date = quizletDateRaw ? toDotDate(quizletDateRaw) : "N/A";
-    const diary_date   = diaryDateRaw   ? toDotDate(diaryDateRaw)   : "N/A";
+    const diary_date = diaryDateRaw ? toDotDate(diaryDateRaw) : "N/A";
 
     const client = await clientPromise;
     const db = client.db("school_management");       // ensure this matches your real DB
@@ -1007,7 +1007,7 @@ export async function saveOrUpdateTestData(student_name: string, title: string, 
     );
     console.log(result)
     return result;
-    
+
   } catch (error) {
     console.error('Error saving/updating test data:', error);
     return null;
@@ -1063,7 +1063,7 @@ export async function updateScheduleData(
     // If any of date/time/duration are provided, recompute normalized fields
     const hasDate = patch.date !== undefined;
     const hasTime = patch.time !== undefined;
-    const hasDur  = patch.duration !== undefined;
+    const hasDur = patch.duration !== undefined;
 
     if (hasDate || hasTime || hasDur) {
       const dateRaw = hasDate ? patch.date! : curr.date;
@@ -1304,15 +1304,15 @@ export async function savePaymentConfirmStatus(input: {
     const filter = { yyyymm: input.yyyymm, step };
     const update: any = {
       $addToSet: { student_names: { $each: [String(input.student_name)] } },
-      $set: { 
-        savedAt: now, 
-        savedBy: input.savedBy ?? "payment-api", 
-        meta: { 
+      $set: {
+        savedAt: now,
+        savedBy: input.savedBy ?? "payment-api",
+        meta: {
           orderId: input.orderId,
           paymentKey: input.paymentKey,
           amount: input.amount,
-          ...input.meta ?? {} 
-        } 
+          ...input.meta ?? {}
+        }
       },
       $setOnInsert: { createdAt: now, type: "paymentconfirm_status" },
     };
@@ -1690,21 +1690,32 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
-    
-    // Get existing paymentHistory to append instead of overwrite
-    const studentData = await db.collection("students").findOne({ orderId }) || { paymentHistory: "" };
+
+    // Get existing student data to retrieve paymentCredits and paymentHistory
+    const studentData = await db.collection("students").findOne({ orderId }) || { paymentHistory: "", paymentCredits: 0, credits: 0 };
     const existingHistory = studentData.paymentHistory || "";
-    
+    const creditsToAdd = studentData.paymentCredits || 0;
+
+    // Prepare update object
+    const updateObj: any = {
+      paymentId: payment.paymentKey,
+      paymentStatus: payment.status === 'DONE' ? 'COMPLETED' : 'FAILED',
+      paymentHistory: existingHistory
+        ? `${existingHistory} ${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`
+        : `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`,
+    };
+
+    // If payment is successful, add credits to student account
+    if (payment.status === 'DONE' && creditsToAdd > 0) {
+      updateObj.credits = (studentData.credits || 0) + creditsToAdd;
+      console.log(`[Payment] Adding ${creditsToAdd} credits to student. New total: ${updateObj.credits}`);
+    }
+
     const result = await db.collection("students").updateOne(
       { orderId },
-      {
-        $set: {
-          paymentId: payment.paymentKey,
-          paymentStatus: payment.status === 'DONE' ? 'COMPLETED' : 'FAILED',
-          paymentHistory: existingHistory ? `${existingHistory} ${new Date().toISOString()}: ${payment.method} ${payment.totalAmount}` : `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount}`,
-        },
-      }
+      { $set: updateObj }
     );
+
     return result;
   } catch (error) {
     console.error("Error updating payment status:", error);
@@ -1718,8 +1729,10 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
  * @param student_name The name of the student making the payment.
  * @param orderId The unique order ID for this transaction.
  * @param amount The amount of the payment.
+ * @param yyyymm Optional year-month for billing tracking.
+ * @param credits Optional number of credits to be added upon payment completion.
  */
-export async function saveInitialPayment(student_name: string, orderId: string, amount: number, yyyymm?: string) {
+export async function saveInitialPayment(student_name: string, orderId: string, amount: number, yyyymm?: string, credits?: number) {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
@@ -1731,6 +1744,7 @@ export async function saveInitialPayment(student_name: string, orderId: string, 
           orderId,
           paymentStatus: 'PENDING',
           paymentYyyymm: yyyymm, // Store yyyymm for later use in confirmation
+          paymentCredits: credits || 0, // Store credits to be added upon completion
         },
       }
     );
@@ -1754,8 +1768,8 @@ export async function saveClassnotesNew(input: {
   duration_ms?: number | null;
   quizlet_saved?: boolean;    // false at first; can be flipped later
   teacher_name?: string;      // optional
-  type?: string;  
-  reason?: string;   
+  type?: string;
+  reason?: string;
   reason_note?: string;          // optional: beginner/intermediate/business
 }) {
   try {
@@ -1786,7 +1800,7 @@ export async function saveClassnotesNew(input: {
         quizlet_saved: !!input.quizlet_saved,
         teacher_name: input.teacher_name ?? "",
         type: input.type ?? "",
-        reason: input.reason ?? "", 
+        reason: input.reason ?? "",
         updatedAt: toKoreanISOString(now),
       },
       $setOnInsert: { createdAt: toKoreanISOString(now) },
