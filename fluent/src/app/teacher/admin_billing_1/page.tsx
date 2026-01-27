@@ -379,7 +379,7 @@ function AdminBillingExcelPageInner() {
   // Stores teacher-confirmed boolean per student
   const [confirmState, setConfirmState] = useState<Record<string, boolean>>({});
   // Stores payment status per student
-  const [paymentState, setPaymentState] = useState<Record<string, any>>({});
+  const [, setPaymentState] = useState<Record<string, any>>({});
 
 
   const [billingLinkLoading, setBillingLinkLoading] = useState<
@@ -1558,7 +1558,7 @@ function AdminBillingExcelPageInner() {
         <header className="flex flex-col gap-4 border-b border-slate-200 pb-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">
-              관리자 - 교사 정산 보드 (실험용)
+              월별 매출 및 수업 현황
             </h1>
             <p className="mt-1 text-sm text-gray-500">
               교사별로 월간 수업 현황, 메모, 다이어리, Quizlet 진행 상황을
@@ -1800,7 +1800,6 @@ function AdminBillingExcelPageInner() {
                                     {confirmState[row.student.name] ? "✅ Teacher Confirmed" : "❌ Not Confirmed"}
                                   </button>
                                 </td>
-
 
                                 <td className="px-4 py-3">
                                   <div className="flex flex-col gap-1">
