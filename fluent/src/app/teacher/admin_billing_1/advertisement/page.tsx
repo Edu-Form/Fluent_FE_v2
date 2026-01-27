@@ -76,7 +76,7 @@ export default function AdminPopupPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-8">
-      <h1 className="text-2xl font-bold">Student Banner Admin</h1>
+      <h1 className="text-2xl font-bold">상단 배너 관리</h1>
 
       {/* CREATE */}
       <div className="bg-white border rounded-xl p-4 space-y-3">
