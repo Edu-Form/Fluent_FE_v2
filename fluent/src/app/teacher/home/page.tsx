@@ -309,6 +309,7 @@ const HomePageContent = () => {
 
       {/* 메인 콘텐츠 영역 */}
       <div className="flex-grow overflow-auto md:p-4 pt-32 md:pt-4 pb-20 md:pb-4">
+
         {/* 캘린더 뷰 - 모바일에서는 탭에 따라 표시 */}
         <div
           className={`${

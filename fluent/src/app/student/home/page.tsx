@@ -6,7 +6,7 @@ import Announcement from "@/components/Announcement/StudentAnnouncement";
 import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
-
+import StudentPopup from "@/components/StudentPopup";
 import { X, History } from "lucide-react";
 import { MdDiamond } from "react-icons/md";
 
@@ -311,6 +311,10 @@ const HomePage = () => {
 
     return (
       <div className="flex flex-col gap-4 pb-20">
+
+        {/* 🔵 STUDENT BANNER (mobile only, inline) */}
+        <StudentPopup />
+        
         {/* 영어 학습 캐러셀 */}
         <div className="relative">
           <div className="text-3xl font-bold text-indigo-800 p-2 mb-1">
