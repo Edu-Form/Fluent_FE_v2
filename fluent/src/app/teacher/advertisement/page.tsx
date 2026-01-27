@@ -49,18 +49,18 @@ export default function AdminPopupPage() {
     fetchPopups();
   };
 
-  /** Toggle active (only one should be active) */
-  const toggleActive = async (id: string) => {
+    const toggleActive = async (popup: Popup) => {
     await fetch("/api/popup", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            id,
-            active: true, // 또는 toggle 로직
+        id: popup._id,
+        active: !popup.active, // ⭐ 핵심
         }),
     });
+
     fetchPopups();
-  };
+    };
 
   const deletePopup = async (id: string) => {
     await fetch("/api/popup", {
@@ -130,7 +130,7 @@ export default function AdminPopupPage() {
 
             <div className="flex gap-2">
               <button
-                onClick={() => toggleActive(popup._id)}
+                onClick={() => toggleActive(popup)}
                 className={`p-2 rounded-md ${
                   popup.active
                     ? "bg-gray-200 text-gray-600"

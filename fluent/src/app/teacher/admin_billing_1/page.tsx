@@ -1732,8 +1732,6 @@ function AdminBillingExcelPageInner() {
                       <th className="px-4 py-3">Class Notes</th>
                       <th className="px-4 py-3">Diary</th>
                       <th className="px-4 py-3">Quizlet</th>
-                      <th className="px-4 py-3">Payment</th>
-                      <th className="px-4 py-3">Hagwon Pay</th>
                       <th className="px-4 py-3">Actions</th>
                     </tr>
                   </thead>
@@ -1801,17 +1799,6 @@ function AdminBillingExcelPageInner() {
                                   >
                                     {confirmState[row.student.name] ? "✅ Teacher Confirmed" : "❌ Not Confirmed"}
                                   </button>
-                                </td>
-
-                                <td className="px-4 py-3">
-                                  {paymentState[row.student.name] ? (
-                                    <div className="flex flex-col">
-                                      <span className="text-xs font-bold text-blue-600">Paid: {CURRENCY_FORMATTER.format(paymentState[row.student.name].amount)}</span>
-                                      <span className="text-[10px] text-gray-400">{paymentState[row.student.name].date || paymentState[row.student.name].approvedAt?.split('T')[0]}</span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-gray-400">-</span>
-                                  )}
                                 </td>
 
 
