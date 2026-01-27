@@ -2211,3 +2211,124 @@ export async function getAllTemplates() {
   return docs.map(serialize_document);
 }
 
+
+
+/** Get all popups (admin use) */
+export async function getAllPopups() {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const popups = await db
+      .collection("popup")
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return popups.map(serialize_document);
+  } catch (err) {
+    console.error("getAllPopups error:", err);
+    return [];
+  }
+}
+
+/** Get one active popup (student/mobile use) */
+export async function getActivePopup() {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const popup = await db
+      .collection("popup")
+      .findOne({ active: true });
+
+    return serialize_document(popup);
+  } catch (err) {
+    console.error("getActivePopup error:", err);
+    return null;
+  }
+}
+
+/** Create a new popup */
+export async function createPopup(data: {
+  title?: string;
+  message: string;
+  active?: boolean;
+}) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const popupData = {
+      title: data.title ?? "",
+      message: data.message,
+      active: Boolean(data.active),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await db.collection("popup").insertOne(popupData);
+
+    return serialize_document({
+      _id: result.insertedId,
+      ...popupData,
+    });
+  } catch (err) {
+    console.error("createPopup error:", err);
+    return null;
+  }
+}
+
+/** Update popup by ID */
+export async function updatePopupById(
+  id: string,
+  updateData: Partial<{
+    title: string;
+    message: string;
+    active: boolean;
+  }>
+) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const result = await db.collection("popup").findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          ...updateData,
+          updatedAt: new Date(),
+        },
+      },
+      { returnDocument: "after" }
+    );
+
+    // 🔴 THIS is the missing guard
+    if (!result || !result.value) {
+      return null;
+    }
+
+    return serialize_document(result.value);
+  } catch (err) {
+    console.error("updatePopupById error:", err);
+    return null;
+  }
+}
+
+
+/** Delete popup by ID */
+export async function deletePopupById(id: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const result = await db.collection("popup").deleteOne({
+      _id: new ObjectId(id),
+    });
+
+    return result.deletedCount === 1;
+  } catch (err) {
+    console.error("deletePopupById error:", err);
+    return false;
+  }
+}
