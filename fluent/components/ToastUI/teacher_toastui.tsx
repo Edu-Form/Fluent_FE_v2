@@ -156,6 +156,9 @@ function TeacherToastUIInner({
   const currentUser = defaults?.teacher_name || urlUser;
   // Store all students so we can map student → teacher later
   const allStudentsRef = useRef<Map<string, any>>(new Map());
+  const adminUsers = ["Phil", "David", "Inhyung"];
+  const canSeeAdminBilling = adminUsers.includes(urlUser);
+
 
   // --- per-student cache for class_history (for popover meta)
   const studentCacheRef = useRef<Map<string, any>>(new Map());
@@ -1490,15 +1493,17 @@ if (mode === "changed") {
             >
               Admin Billing
             </a> */}
-            <a
-              href={`/teacher/admin_billing_1?user=${encodeURIComponent(currentUser)}&type=${encodeURIComponent(urlType)}${urlId ? `&id=${encodeURIComponent(urlId)}` : ""}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="관리자 결제"
-              className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
-            >
-              관리자 결제
-            </a>
+            {canSeeAdminBilling && (
+              <a
+                href={`/teacher/admin_billing_1?user=${encodeURIComponent(currentUser)}&type=${encodeURIComponent(urlType)}${urlId ? `&id=${encodeURIComponent(urlId)}` : ""}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="관리자 결제"
+                className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+              >
+                관리자 결제
+              </a>
+            )}
             <a
               href="/teacher/schedule/admin/"
               target="_blank"
