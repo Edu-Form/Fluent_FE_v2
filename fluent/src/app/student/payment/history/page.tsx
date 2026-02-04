@@ -354,21 +354,21 @@ function PaymentHistoryInner() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <button
+          {/* <button
             onClick={() => router.push(`/${type}/home?user=${encodeURIComponent(user || "")}&type=${type}&id=${user_id || ""}`)}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">돌아가기</span>
-          </button>
+          </button> */}
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-bold text-gray-900">결제 및 크레딧 내역</h1>
-            <button
+            {/* <button
               onClick={() => setShowExampleData(!showExampleData)}
               className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
             >
               {showExampleData ? "예시 데이터 숨기기" : "예시 데이터 보기"}
-            </button>
+            </button> */}
           </div>
           <p className="text-gray-600">
             결제 내역과 크레딧 사용 내역을 확인하실 수 있습니다.

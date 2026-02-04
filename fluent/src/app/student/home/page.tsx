@@ -7,9 +7,10 @@ import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
 import StudentPopup from "@/components/StudentPopup";
-import { History } from "lucide-react";
+// import { History } from "lucide-react";
 import { MdDiamond } from "react-icons/md";
 import MobileStudentBanner from "@/components/MobileStudentBanner";
+import TodayQuizCard from "@/components/TodayQuizCard";
 
 // 동적 컴포넌트 로딩 추가
 const Alert = dynamic(() => import("@/components/StudentAlert"), {
@@ -459,6 +460,9 @@ const HomePage = () => {
             </div>
           )}
         </div>
+
+        {/* 🎮 오늘의 퀴즈 */}
+        <TodayQuizCard />
 
         {/* 최신 소식 카드 - 이미지 오버레이 스타일 */}
         <MobileStudentBanner />
