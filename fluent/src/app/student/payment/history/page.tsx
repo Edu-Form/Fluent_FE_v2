@@ -2,8 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
-import { Download, Receipt, TrendingUp, TrendingDown, Calendar, ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Download, Receipt, TrendingUp, TrendingDown, Calendar } from "lucide-react";
+// import { useRouter } from "next/navigation";
 
 interface Payment {
   orderId: string;
@@ -34,10 +34,10 @@ interface CreditTransaction {
 
 function PaymentHistoryInner() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  // const router = useRouter();
   const user = searchParams.get("user");
-  const user_id = searchParams.get("id");
-  const type = searchParams.get("type") || "student";
+  // const user_id = searchParams.get("id");
+  // const type = searchParams.get("type") || "student";
 
   const [payments, setPayments] = useState<Payment[]>([]);
   const [creditTransactions, setCreditTransactions] = useState<CreditTransaction[]>([]);
@@ -45,7 +45,7 @@ function PaymentHistoryInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"payments" | "credits">("payments");
-  const [showExampleData, setShowExampleData] = useState(false);
+  const [showExampleData, ] = useState(false);
 
   // Receipt Modal State
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
