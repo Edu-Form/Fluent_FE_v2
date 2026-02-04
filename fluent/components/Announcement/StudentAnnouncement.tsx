@@ -44,6 +44,16 @@ const AnnouncementPage = () => {
   const type = searchParams.get("type");
   const user_id = searchParams.get("id");
   const [userCredits, setUserCredits] = useState<string | number>('');
+  interface Banner {
+    _id: string;
+    imageUrl: string;
+    message: string;
+    active: boolean;
+    createdAt?: string;
+  }
+
+  const [banner, setBanner] = useState<Banner | null>(null);
+
 
   const [next_schedule_data, setNext_schedule_data] =
     useState<ScheduleData | null>(null);
@@ -75,8 +85,22 @@ const AnnouncementPage = () => {
       }
     };
 
+    const fetchBanner = async () => {
+      try {
+        const res = await fetch("/api/banner", { cache: "no-store" });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        setBanner(data); // active banner 1개 or null
+      } catch {
+        console.log("Error fetching banner");
+      }
+    };
+
+
     fetchData();
     fetchData2();
+    fetchBanner();
   }, [user, type, user_id]);
 
   return (
@@ -168,46 +192,48 @@ const AnnouncementPage = () => {
             ))}
           </div>
         </div>
-        {/* 공지사항 섹션 */}
+
+        {/* 공지사항 / 배너 섹션 */}
         <div className="mt-4 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
           <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center">
             <span className="inline-block w-2 h-4 bg-blue-500 rounded mr-2"></span>
             공지사항
           </h2>
 
-          <div className="space-y-3">
-            <div className="border-l-2 border-blue-400 pl-3 py-1">
-              <div className="flex justify-between items-start">
-                <h3 className="font-medium text-sm text-gray-900">
-                  3월 학사일정 안내
-                </h3>
-                <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
-                  중요
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mt-1">
-                2월 20일부터 3월 학생스케줄을 짜주세요.
-              </p>
-              <p className="text-xs text-gray-400 mt-1">2024.02.05</p>
+          {!banner ? (
+            <div className="text-sm text-gray-500 py-6 text-center">
+              현재 등록된 공지사항이 없습니다.
             </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Banner Image */}
+              {banner.imageUrl && (
+                <img
+                  src={banner.imageUrl}
+                  alt="공지 배너"
+                  className="w-full max-h-48 object-cover rounded-lg border border-gray-200"
+                />
+              )}
 
-            <div className="border-l-2 border-gray-300 pl-3 py-1">
-              <div className="flex justify-between items-start">
-                <h3 className="font-medium text-sm text-gray-900">
-                  교재 변경 안내
-                </h3>
-                <span className="text-xs bg-gray-50 text-gray-600 px-2 py-0.5 rounded-full">
-                  공지
-                </span>
+              {/* Banner Message */}
+              <div className="border-l-2 border-blue-400 pl-3 py-1">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-medium text-sm text-gray-900">
+                    공지 안내
+                  </h3>
+                  <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">
+                    중요
+                  </span>
+                </div>
+
+                <p className="text-sm text-gray-700 mt-2 whitespace-pre-line">
+                  {banner.message}
+                </p>
               </div>
-              <p className="text-xs text-gray-600 mt-1">
-                다음 달부터 플랫폼 디자인이 변경될 예정입니다. 자세한 내용은
-                담당자에게 문의해주세요.
-              </p>
-              <p className="text-xs text-gray-400 mt-1">2024.02.04</p>
             </div>
-          </div>
-        </div>{" "}
+          )}
+        </div>
+
         {/* 체크리스트 */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
           <h2 className="text-lg font-bold text-gray-900 mb-3">

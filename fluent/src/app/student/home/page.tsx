@@ -7,8 +7,9 @@ import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
 import StudentPopup from "@/components/StudentPopup";
-import { X, History } from "lucide-react";
+import { History } from "lucide-react";
 import { MdDiamond } from "react-icons/md";
+import MobileStudentBanner from "@/components/MobileStudentBanner";
 
 // 동적 컴포넌트 로딩 추가
 const Alert = dynamic(() => import("@/components/StudentAlert"), {
@@ -28,9 +29,9 @@ const CarouselLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-48"></div>
 );
 
-const ImageLoader = () => (
-  <div className="animate-pulse bg-gray-100 rounded-lg w-full h-40"></div>
-);
+// const ImageLoader = () => (
+//   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-40"></div>
+// );
 
 interface ScheduleData {
   date: string;
@@ -195,89 +196,89 @@ const HomePage = () => {
   }
 
   // 최신 소식 카드 컴포넌트
-  const FluentNewsCard = () => {
-    const [showLargeImage, setShowLargeImage] = useState(false);
+  // const FluentNewsCard = () => {
+  //   const [showLargeImage, setShowLargeImage] = useState(false);
 
-    return (
-      <>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="relative">
-            <Suspense fallback={<ImageLoader />}>
-              <img
-                src="/images/Fluent_Notice.jpeg"
-                alt="Fluent 공지사항"
-                className="w-full h-48 object-cover"
-              />
+  //   return (
+  //     <>
+  //       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  //         <div className="relative">
+  //           <Suspense fallback={<ImageLoader />}>
+  //             <img
+  //               src="/images/Fluent_Notice.jpeg"
+  //               alt="Fluent 공지사항"
+  //               className="w-full h-48 object-cover"
+  //             />
 
-              {/* 그라데이션 오버레이 */}
-              <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/80"></div>
+  //             {/* 그라데이션 오버레이 */}
+  //             <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/80"></div>
 
-              {/* 헤더 오버레이 (상단) */}
-              <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-1 h-5 bg-blue-500 rounded-full mr-2"></div>
-                  <h2 className="text-base font-bold text-white">
-                    Fluent 최신 소식
-                  </h2>
-                </div>
-              </div>
+  //             {/* 헤더 오버레이 (상단) */}
+  //             <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between">
+  //               <div className="flex items-center">
+  //                 <div className="w-1 h-5 bg-blue-500 rounded-full mr-2"></div>
+  //                 <h2 className="text-base font-bold text-white">
+  //                   Fluent 최신 소식
+  //                 </h2>
+  //               </div>
+  //             </div>
 
-              {/* 텍스트 오버레이 (하단) */}
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <div className="text-white text-xl font-bold mb-1">
-                  PIZZA AND BOARD GAMES
-                </div>
-                <div className="text-white/90 text-sm flex items-center justify-between">
-                  <span>Saturday, MAY 24, 2025</span>
-                  <button
-                    className="bg-white text-black rounded-full text-xs px-3 py-1 font-medium"
-                    onClick={() => setShowLargeImage(true)}
-                  >
-                    더보기
-                  </button>
-                </div>
-              </div>
-            </Suspense>
-          </div>
-        </div>
+  //             {/* 텍스트 오버레이 (하단) */}
+  //             <div className="absolute bottom-0 left-0 right-0 p-4">
+  //               <div className="text-white text-xl font-bold mb-1">
+  //                 PIZZA AND BOARD GAMES
+  //               </div>
+  //               <div className="text-white/90 text-sm flex items-center justify-between">
+  //                 <span>Saturday, MAY 24, 2025</span>
+  //                 <button
+  //                   className="bg-white text-black rounded-full text-xs px-3 py-1 font-medium"
+  //                   onClick={() => setShowLargeImage(true)}
+  //                 >
+  //                   더보기
+  //                 </button>
+  //               </div>
+  //             </div>
+  //           </Suspense>
+  //         </div>
+  //       </div>
 
-        {/* 확대된 이미지 모달 */}
-        {showLargeImage && (
-          <div
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-            onClick={() => setShowLargeImage(false)}
-          >
-            <div className="relative max-w-lg w-full">
-              <img
-                src="/images/Fluent_Notice.jpeg"
-                alt="Fluent 공지사항"
-                className="w-full h-auto rounded-xl"
-              />
-              <div className="absolute top-0 right-0 -mt-4 -mr-4">
-                <button
-                  className="bg-white text-black rounded-full p-2 shadow-lg"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowLargeImage(false);
-                  }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
+  //       {/* 확대된 이미지 모달 */}
+  //       {showLargeImage && (
+  //         <div
+  //           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+  //           onClick={() => setShowLargeImage(false)}
+  //         >
+  //           <div className="relative max-w-lg w-full">
+  //             <img
+  //               src="/images/Fluent_Notice.jpeg"
+  //               alt="Fluent 공지사항"
+  //               className="w-full h-auto rounded-xl"
+  //             />
+  //             <div className="absolute top-0 right-0 -mt-4 -mr-4">
+  //               <button
+  //                 className="bg-white text-black rounded-full p-2 shadow-lg"
+  //                 onClick={(e) => {
+  //                   e.stopPropagation();
+  //                   setShowLargeImage(false);
+  //                 }}
+  //               >
+  //                 <X size={20} />
+  //               </button>
+  //             </div>
 
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-6 rounded-b-xl">
-                <p className="text-white/90 text-sm">
-                  Davids English에서 진행하는 영어 회화 모임에 여러분을
-                  초대합니다! 피자를 먹으며 다양한 보드게임을 통해 영어로
-                  대화하는 시간을 가져보세요. 영어 레벨 5 이상 참가 가능합니다.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  };
+  //             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-6 rounded-b-xl">
+  //               <p className="text-white/90 text-sm">
+  //                 Davids English에서 진행하는 영어 회화 모임에 여러분을
+  //                 초대합니다! 피자를 먹으며 다양한 보드게임을 통해 영어로
+  //                 대화하는 시간을 가져보세요. 영어 레벨 5 이상 참가 가능합니다.
+  //               </p>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       )}
+  //     </>
+  //   );
+  // };
 
   const MobileLayout = () => {
     // 현재 시간 상태
@@ -314,7 +315,7 @@ const HomePage = () => {
 
         {/* 🔵 STUDENT BANNER (mobile only, inline) */}
         <StudentPopup />
-        
+
         {/* 영어 학습 캐러셀 */}
         <div className="relative">
           <div className="text-3xl font-bold text-indigo-800 p-2 mb-1">
@@ -424,7 +425,7 @@ const HomePage = () => {
         </div>
 
         {/* 최신 소식 카드 - 이미지 오버레이 스타일 */}
-        <FluentNewsCard />
+        <MobileStudentBanner />
 
         {/* 학습 메뉴 버튼들 - 모바일용 */}
         <div className="space-y-3 mt-4">

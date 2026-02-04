@@ -383,101 +383,101 @@ function AdminBillingExcelPageInner() {
   const [, setPaymentState] = useState<Record<string, any>>({});
 
 
-  const [billingLinkLoading, setBillingLinkLoading] = useState<
-    Record<string, boolean>
-  >({});
+  // const [billingLinkLoading, setBillingLinkLoading] = useState<
+  //   Record<string, boolean>
+  // >({});
 
   useEffect(() => {
     setStudentConfigs({});
   }, [selectedTeacher]);
 
-  const handleBillingProcess = useCallback(
-    async (student: StudentInfo, financial: StudentFinancialSnapshot) => {
-      const studentId = student.id;
-      setBillingLinkLoading((prev) => ({ ...prev, [studentId]: true }));
+  // const handleBillingProcess = useCallback(
+  //   async (student: StudentInfo, financial: StudentFinancialSnapshot) => {
+  //     const studentId = student.id;
+  //     setBillingLinkLoading((prev) => ({ ...prev, [studentId]: true }));
 
-      try {
-        if (!isAdmin) {
-          alert("관리자만 결제 프로세스를 실행할 수 있습니다.");
-          setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
-          return;
-        }
+  //     try {
+  //       if (!isAdmin) {
+  //         alert("관리자만 결제 프로세스를 실행할 수 있습니다.");
+  //         setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
+  //         return;
+  //       }
 
-        const amount = Math.round(financial.amountDue);
-        if (amount <= 0) {
-          alert("결제할 금액이 없습니다.");
-          setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
-          return;
-        }
+  //       const amount = Math.round(financial.amountDue);
+  //       if (amount <= 0) {
+  //         alert("결제할 금액이 없습니다.");
+  //         setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
+  //         return;
+  //       }
 
-        // Generate orderId for tracking
-        const orderId = new Date().getTime().toString();
+  //       // Generate orderId for tracking
+  //       const orderId = new Date().getTime().toString();
 
-        // Create wrapper link that generates payment link on-demand
-        // Pass student name, amount, and orderId as query parameters
-        const wrapperLink = `/payment/link?studentName=${encodeURIComponent(student.name)}&amount=${amount}&orderId=${orderId}`;
-        const fullWrapperLink = `${window.location.origin}${wrapperLink}`;
+  //       // Create wrapper link that generates payment link on-demand
+  //       // Pass student name, amount, and orderId as query parameters
+  //       const wrapperLink = `/payment/link?studentName=${encodeURIComponent(student.name)}&amount=${amount}&orderId=${orderId}`;
+  //       const fullWrapperLink = `${window.location.origin}${wrapperLink}`;
 
-        // Try to copy wrapper link to clipboard
-        try {
-          await navigator.clipboard.writeText(fullWrapperLink);
-          alert(`결제 링크가 클립보드에 복사되었습니다.\n\n래퍼 링크: ${fullWrapperLink}\n\n이 링크를 클릭하면 결제 페이지로 이동합니다.`);
-        } catch {
-          // Fallback: show link in prompt
-          prompt("결제 링크를 복사하세요 (래퍼 링크):", fullWrapperLink);
-        }
+  //       // Try to copy wrapper link to clipboard
+  //       try {
+  //         await navigator.clipboard.writeText(fullWrapperLink);
+  //         alert(`결제 링크가 클립보드에 복사되었습니다.\n\n래퍼 링크: ${fullWrapperLink}\n\n이 링크를 클릭하면 결제 페이지로 이동합니다.`);
+  //       } catch {
+  //         // Fallback: show link in prompt
+  //         prompt("결제 링크를 복사하세요 (래퍼 링크):", fullWrapperLink);
+  //       }
 
-        // Optional: Send via Kakao if enabled (can be disabled)
-        const sendKakao = window.confirm(
-          "카카오톡으로 결제 링크를 전송하시겠습니까?"
-        );
-        if (sendKakao && student.phoneNumber) {
-          try {
-            // Note: This requires Kakao API to be configured
-            // The API endpoint should handle the message sending
-            const kakaoRes = await fetch("/api/kakao-message", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userId: student.phoneNumber, // or student's Kakao user ID
-                templateId: "payment_link_template", // Replace with actual template ID
-                templateArgs: {
-                  studentName: student.name,
-                  amount: amount.toLocaleString("ko-KR"),
-                  paymentLink: fullWrapperLink, // Send wrapper link instead
-                },
-              }),
-            });
+  //       // Optional: Send via Kakao if enabled (can be disabled)
+  //       const sendKakao = window.confirm(
+  //         "카카오톡으로 결제 링크를 전송하시겠습니까?"
+  //       );
+  //       if (sendKakao && student.phoneNumber) {
+  //         try {
+  //           // Note: This requires Kakao API to be configured
+  //           // The API endpoint should handle the message sending
+  //           const kakaoRes = await fetch("/api/kakao-message", {
+  //             method: "POST",
+  //             headers: { "Content-Type": "application/json" },
+  //             body: JSON.stringify({
+  //               userId: student.phoneNumber, // or student's Kakao user ID
+  //               templateId: "payment_link_template", // Replace with actual template ID
+  //               templateArgs: {
+  //                 studentName: student.name,
+  //                 amount: amount.toLocaleString("ko-KR"),
+  //                 paymentLink: fullWrapperLink, // Send wrapper link instead
+  //               },
+  //             }),
+  //           });
 
-            if (kakaoRes.ok) {
-              alert("카카오톡 메시지가 전송되었습니다.");
-            } else {
-              console.warn("Kakao message failed, but payment link was copied");
-            }
-          } catch (kakaoErr) {
-            console.warn("Kakao message error:", kakaoErr);
-            // Don't fail the whole process if Kakao fails
-          }
-        }
-      } catch (err) {
-        console.error("Billing process error:", err);
-        alert(
-          `결제 링크 생성 실패: ${(err as Error)?.message || "Unknown error"}`
-        );
-      } finally {
-        setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
-      }
-    },
-    [isAdmin]
-  );
+  //           if (kakaoRes.ok) {
+  //             alert("카카오톡 메시지가 전송되었습니다.");
+  //           } else {
+  //             console.warn("Kakao message failed, but payment link was copied");
+  //           }
+  //         } catch (kakaoErr) {
+  //           console.warn("Kakao message error:", kakaoErr);
+  //           // Don't fail the whole process if Kakao fails
+  //         }
+  //       }
+  //     } catch (err) {
+  //       console.error("Billing process error:", err);
+  //       alert(
+  //         `결제 링크 생성 실패: ${(err as Error)?.message || "Unknown error"}`
+  //       );
+  //     } finally {
+  //       setBillingLinkLoading((prev) => ({ ...prev, [studentId]: false }));
+  //     }
+  //   },
+  //   [isAdmin]
+  // );
 
-  const handleCheckStudentSchedule = useCallback(
-    (student: StudentInfo) => {
-      const scheduleUrl = `/teacher/schedule?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}`;
-      window.open(scheduleUrl, "_blank");
-    },
-    [selectedTeacher]
-  );
+  // const handleCheckStudentSchedule = useCallback(
+  //   (student: StudentInfo) => {
+  //     const scheduleUrl = `/teacher/schedule?user=${encodeURIComponent(selectedTeacher)}&type=teacher&student_name=${encodeURIComponent(student.name)}&id=${encodeURIComponent(student.id)}`;
+  //     window.open(scheduleUrl, "_blank");
+  //   },
+  //   [selectedTeacher]
+  // );
 
   useEffect(() => {
     let cancelled = false;

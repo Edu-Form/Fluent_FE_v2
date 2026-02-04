@@ -3,9 +3,12 @@ import type { Student, Teacher } from "./definitions";
 import { ObjectId } from "mongodb";
 
 export function serialize_document(document: any) {
+  if (!document) return null;
+
   if (document._id) {
-    document._id = document._id.toString(); // Convert _id to string
+    document._id = document._id.toString();
   }
+
   return document;
 }
 
@@ -2331,4 +2334,93 @@ export async function deletePopupById(id: string) {
     console.error("deletePopupById error:", err);
     return false;
   }
+}
+
+
+/** Get latest active banner (student page) */
+export async function getActiveBanner() {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const doc = await db
+    .collection("banners")
+    .findOne({ active: true }, { sort: { createdAt: -1 } });
+
+  return doc ? serialize_document(doc) : null;
+}
+
+/** Get all banners (admin page) */
+export async function getAllBanners() {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const docs = await db
+    .collection("banners")
+    .find({})
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return docs.map(serialize_document);
+}
+
+/* ---------- CREATE ---------- */
+
+export async function createBanner(payload: {
+  imageUrl: string;
+  message: string;
+}) {
+  const { imageUrl, message } = payload;
+
+  if (!imageUrl || !message) {
+    throw new Error("imageUrl and message are required");
+  }
+
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const doc = {
+    imageUrl,
+    message,
+    active: false,
+    createdAt: new Date().toISOString(),
+  };
+
+  const res = await db.collection("banners").insertOne(doc);
+  return serialize_document({ ...doc, _id: res.insertedId });
+}
+
+/* ---------- UPDATE ---------- */
+
+export async function toggleBannerActive(id: string, active: boolean) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const _id = new ObjectId(id);
+
+  // allow only ONE active banner
+  if (active) {
+    await db.collection("banners").updateMany(
+      {},
+      { $set: { active: false } }
+    );
+  }
+
+  await db.collection("banners").updateOne(
+    { _id },
+    { $set: { active } }
+  );
+
+  return { ok: true };
+}
+
+/* ---------- DELETE ---------- */
+
+export async function deleteBanner(id: string) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const _id = new ObjectId(id);
+
+  const res = await db.collection("banners").deleteOne({ _id });
+  return { deletedCount: res.deletedCount ?? 0 };
 }
