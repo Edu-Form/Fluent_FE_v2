@@ -357,20 +357,6 @@ export default function AdminBillingHomeFancy() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/teacher/admin_billing_1/detail${baseQuery}`}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-slate-50"
-              >
-                디테일(엑셀) 보기 →
-              </Link>
-              <Link
-                href={`/teacher/admin_billing_1/advertisement${baseQuery}`}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-slate-50"
-              >
-                Popup / Banner 관리 →
-              </Link>
-            </div>
           </div>
 
           {/* BIG KPIs */}

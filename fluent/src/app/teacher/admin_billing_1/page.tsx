@@ -362,6 +362,7 @@ function AdminBillingExcelPageInner() {
   const quizletCacheRef = useRef<Record<string, QuizletEntry[]>>({});
   const classnoteCacheRef = useRef<Record<string, ClassnoteEntry[]>>({});
   const studentProfileCacheRef = useRef<Record<string, any>>({});
+  const creditHistoryCacheRef = useRef<Record<string, any[]>>({});
   const [cacheTick, setCacheTick] = useState(0);
 
   const [detailLoading, setDetailLoading] = useState(false);
@@ -724,6 +725,34 @@ function AdminBillingExcelPageInner() {
     []
   );
 
+  const ensureCreditHistory = useCallback(async (studentName: string) => {
+  const key = studentName.trim();
+  if (!key) return [];
+
+  if (creditHistoryCacheRef.current[key]) {
+    return creditHistoryCacheRef.current[key];
+  }
+
+  try {
+    const res = await fetch(
+      `/api/payment/history?studentName=${encodeURIComponent(key)}`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) throw new Error("failed");
+
+    const json = await res.json();
+    const list = Array.isArray(json.creditTransactions)
+      ? json.creditTransactions
+      : [];
+
+    creditHistoryCacheRef.current[key] = list;
+    return list;
+  } catch {
+    creditHistoryCacheRef.current[key] = [];
+    return [];
+  }
+  }, []);
+
   useEffect(() => {
     if (!selectedTeacher) return;
     if (schedulesByTeacher.current[selectedTeacher]) return;
@@ -1067,6 +1096,14 @@ function AdminBillingExcelPageInner() {
       }
     }
 
+    const loadCredits = async () => {
+      await Promise.all(
+        studentRows.map((r) => ensureCreditHistory(r.student.name))
+      );
+      setCacheTick((t) => t + 1);
+    };
+
+    loadCredits();
     loadConfirms();
     loadPayments();
     return () => {
@@ -1533,6 +1570,56 @@ function AdminBillingExcelPageInner() {
     );
   };
 
+  const renderCreditMiniPanel = (studentName: string) => {
+  const items = creditHistoryCacheRef.current[studentName] ?? [];
+
+  if (items.length === 0) {
+    return (
+      <div className="text-xs text-gray-400">
+        No credit history
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-h-32 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-2 space-y-1 text-xs">
+      {items.map((item, idx) => {
+        const isPayment = item.type === "payment";
+        return (
+          <div
+            key={`${studentName}_credit_${idx}`}
+            className={`rounded px-2 py-1 ${
+              isPayment
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-rose-50 text-rose-700"
+            }`}
+          >
+            <div className="font-medium">
+              {isPayment ? "➕ 크레딧 충전" : "➖ 수업 차감"}
+            </div>
+
+            {isPayment ? (
+              <div className="whitespace-pre-line opacity-90">
+                {item.description}
+              </div>
+            ) : (
+              <div className="space-y-0.5 opacity-90">
+                <div>-1 크레딧</div>
+                <div>
+                  수업일:{" "}
+                  {item.classDetails?.date
+                    ? formatDotDate(parseDateString(item.classDetails.date)!)
+                    : formatDotDate(parseDateString(item.date)!)}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+  };
+
 
   const renderExpandedContent = (row: StudentRow) => {
     if (!expanded) return null;
@@ -1956,7 +2043,7 @@ function AdminBillingExcelPageInner() {
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-4 py-3">
+                                {/* <td className="px-4 py-3">
                                   {(() => {
                                     const loading = !!billingLinkLoading[row.student.id];
                                     const canProcess =
@@ -1991,7 +2078,12 @@ function AdminBillingExcelPageInner() {
                                       </div>
                                     );
                                   })()}
+                                </td> */}
+
+                                <td className="px-4 py-3">
+                                  {renderCreditMiniPanel(row.student.name)}
                                 </td>
+
                               </tr>
                               {expanded &&
                                 expanded.student === row.student.name && (

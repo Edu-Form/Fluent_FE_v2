@@ -20,6 +20,21 @@ export async function GET(request: NextRequest) {
       { projection: { paymentHistory: 1, credits: 1, orderId: 1, paymentId: 1, paymentStatus: 1 } }
     );
 
+    // ✅ creditTransactions 먼저 선언 (반드시 위에!)
+    const creditTransactions: Array<{
+      date: string;
+      type: "payment" | "deduction";
+      amount: number;
+      description: string;
+      classDetails?: {
+        teacher?: string;
+        room?: string;
+        time?: string;
+        date?: string;
+        preview?: string;
+      };
+    }> = [];
+
     // NEW: Get payments from payments collection (most comprehensive source)
     // This is non-blocking - if it fails, we fall back to existing collections
     let paymentsCollectionData: any[] = [];
@@ -53,6 +68,26 @@ export async function GET(request: NextRequest) {
       console.warn('[Payment History] Could not fetch from payments collection (non-critical):', err);
       // Continue with existing collections - non-blocking
     }
+
+    paymentsCollectionData.forEach((payment) => {
+      if (payment.status === "DONE" || payment.status === "COMPLETED") {
+        const credits = Math.floor(payment.amount / 60000);
+
+        if (credits > 0) {
+          creditTransactions.push({
+            date: payment.approvedAt || payment.savedAt,
+            type: "payment",
+            amount: credits,
+            description: [
+              `Toss 결제로 크레딧 충전`,
+              `크레딧: ${credits}`,
+              `금액: ₩${payment.amount.toLocaleString()}`
+            ].join("\n"),
+          });
+        }
+      }
+    });
+
 
     // Get payment confirmations from billing collection
     // Handle both array and string formats for student_names
@@ -128,21 +163,6 @@ export async function GET(request: NextRequest) {
         });
       }
     }
-
-    // Parse payment history string to extract credit ADDITIONS (payments only, not deductions)
-    const creditTransactions: Array<{
-      date: string;
-      type: "payment" | "deduction";
-      amount: number;
-      description: string;
-      classDetails?: {
-        teacher?: string;
-        room?: string;
-        time?: string;
-        date?: string;
-        preview?: string;
-      };
-    }> = [];
 
     if (student?.paymentHistory) {
       // Parse payment history string format: "date: description amount"
