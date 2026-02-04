@@ -326,60 +326,96 @@ const HomePage = () => {
           </Suspense>
         </div>
 
-        {/* 인사말 카드  */}
-        <div className="bg-blue-50 rounded-3xl shadow-sm border border-gray-100 p-6">
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 font-medium text-lg">
-                    {user ? user.charAt(0) : "F"}
-                  </span>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">안녕하세요</div>
-                  <div className="text-lg font-bold text-gray-900">
-                    {user || "Fluent"} 님
-                  </div>
-                </div>
-              </div>
-              
-              {/* 크레딧 결제 및 내역 버튼 */}
-              {user_id && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => router.push(`/student/payment/history?user=${encodeURIComponent(user || "")}&type=${type || "student"}&id=${user_id}&tab=credits`)}
-                    className="flex items-center gap-2 bg-gray-100 text-gray-700 rounded-full px-3 py-2 shadow-sm hover:bg-gray-200 transition-all text-xs font-medium"
-                    title="수업 기록"
-                  >
-                    <History className="text-gray-600 w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={Payment}
-                    className="flex items-center gap-2 bg-gradient-to-br from-amber-400 to-amber-500 rounded-full px-4 py-2.5 shadow-md hover:from-amber-500 hover:to-amber-600 transition-all transform hover:scale-105 active:scale-95"
-                  >
-                    <MdDiamond className="text-white text-lg" />
-                    <div className="flex flex-col items-start">
-                      <span className="text-white font-semibold text-sm">수업 횟수</span>
-                      <span className="text-white font-bold text-xs leading-tight">
-                        {Number(userCredits || 0).toLocaleString()}
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
+{/* 🎴 STUDENT HERO CARD */}
+<div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
 
-            <div className="mt-2 border-t border-gray-100 pt-4">
-              <div className="flex justify-between items-center">
-                <div className="text-xs text-gray-500">{formatDate()}</div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {formatTime()}
-                </div>
-              </div>
-            </div>
-          </div>
+  <div className="flex flex-col gap-4">
+
+    {/* 1️⃣ GREETING + CREDIT INLINE */}
+    <div className="flex items-center justify-between gap-4">
+
+      {/* left: greeting */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+          <span className="text-blue-600 font-semibold text-lg">
+            {user ? user.charAt(0) : "F"}
+          </span>
         </div>
+
+        <div className="min-w-0">
+          <p className="text-sm text-gray-500">안녕하세요</p>
+          <p className="text-lg font-bold text-gray-900 truncate">
+            {user || "Fluent"} 님
+          </p>
+        </div>
+      </div>
+
+      {/* right: credit */}
+      <div className="flex items-center gap-2 shrink-0">
+        <MdDiamond className="text-amber-500 text-xl" />
+        <div className="text-right leading-none">
+          <p className="text-[11px] text-gray-500 tracking-tight mb-1">
+            남은 수업 크레딧
+          </p>
+          <p className="text-3xl font-extrabold text-gray-900">
+            {Number(userCredits || 0).toLocaleString()}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {/* 2️⃣ ACTION BUTTONS */}
+    {user_id && (
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={Payment}
+          className="
+            rounded-xl py-3
+            bg-gradient-to-r from-amber-400 to-amber-500
+            text-white font-bold text-sm
+            shadow-md hover:shadow-lg
+            active:scale-95 transition
+          "
+        >
+          크레딧 충전
+        </button>
+
+        <button
+          onClick={() =>
+            router.push(
+              `/student/payment/history?user=${encodeURIComponent(
+                user || ""
+              )}&type=${type}&id=${user_id}&tab=credits`
+            )
+          }
+          className="
+            rounded-xl py-3
+            bg-gray-100 text-gray-700
+            font-semibold text-sm
+            hover:bg-gray-200
+            transition
+          "
+        >
+          내역
+        </button>
+      </div>
+    )}
+
+    {/* 3️⃣ DATE / TIME */}
+    <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+      <span className="text-xs text-gray-500">
+        {formatDate()}
+      </span>
+      <span className="text-lg font-semibold text-gray-900">
+        {formatTime()}
+      </span>
+    </div>
+
+  </div>
+</div>
+
+
+
 
         {/* 선생님의 노트 카드  */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
