@@ -5,14 +5,15 @@ const tossSecretKey = process.env.TOSS_SECRET_KEY;
 
 export async function POST(request: Request) {
   try {
-    const { studentName, amount, yyyymm, credits } = await request.json();
+    const { studentName, amount, yyyymm, credits, label, quantity: quantityParam } = await request.json();
 
     if (!studentName || !amount) {
       return NextResponse.json({ message: 'Student name and amount are required' }, { status: 400 });
     }
 
     const orderId = new Date().getTime().toString();
-    const orderName = `${studentName} - Tuition`;
+    // Use product/class label for order name when provided (shown on Toss checkout)
+    const orderName = label ? `${studentName} - ${label}` : `${studentName} - Tuition`;
 
     // Save initial payment to students collection (existing flow)
     try {
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
     }
 
     // NEW: Create payment document in payments collection (non-blocking)
+    // Store which classes/products the user paid for (description, quantity) when provided
     try {
       let finalStudentId;
       try {
@@ -42,7 +44,8 @@ export async function POST(request: Request) {
         student_id: finalStudentId,
         amount,
         yyyymm,
-        description: `${studentName}'s tuition payment via payment link`,
+        description: label || `${studentName}'s tuition payment via payment link`,
+        quantity: quantityParam != null ? quantityParam : undefined,
         orderName,
         metadata: {
           source: 'payment-link',

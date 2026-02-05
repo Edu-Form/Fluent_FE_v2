@@ -14,6 +14,7 @@ interface Payment {
   approvedAt?: string;
   savedAt?: string;
   yyyymm?: string;
+  description?: string;
   receiptUrl?: string | null;
   receiptKey?: string | null;
 }
@@ -442,6 +443,9 @@ function PaymentHistoryInner() {
                       </p>
                       {payment.yyyymm && (
                         <p className="text-sm text-gray-600">기간: {payment.yyyymm}</p>
+                      )}
+                      {payment.description && (
+                        <p className="text-sm text-gray-600 mt-1">내용: {payment.description}</p>
                       )}
                     </div>
                     <div className="text-right">

@@ -76,6 +76,7 @@ function PaymentPageInner() {
           amount: totalAmount,
           credits: credits,
           label: quantity > 1 ? `${label} x${quantity}` : label,
+          quantity: quantity,
         }),
       });
 
