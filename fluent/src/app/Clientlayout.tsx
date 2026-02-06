@@ -6,7 +6,7 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col bg-[#F6F7FB]">
+    <div className="min-h-[100dvh] w-full bg-white flex flex-col">
       {children}
     </div>
   );

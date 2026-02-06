@@ -32,34 +32,34 @@ export default function Page() {
   }
 
   return (
-    <div className="w-screen h-[80vh]  bg-white flex items-center justify-center">
-      <Card className="w-[90%] max-w-[400px]">
+    <div className="w-full flex-1 flex items-center justify-center px-4">
+      <Card className="w-full max-w-[400px] overflow-hidden">
         <Image
-          src={"/images/Login.svg"}
+          src="/images/Login.svg"
           alt="image"
           width={0}
           height={0}
-          className="w-full h-auto rounded-t-xl"
+          className="w-full h-auto"
         />
+
         <CardHeader>
           <CardTitle className="text-center text-2xl font-bold mt-6 mb-3">
             Login
           </CardTitle>
         </CardHeader>
-        <div className="flex justify-center mb-10">
+
+        <div className="flex justify-center mb-6">
           <input
-            id="username"
             placeholder="전화번호를 적으세요"
             value={username}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setUsername(e.target.value)
-            }
-            className="w-[80%] bg-white text-sm placeholder-gray-400 placeholder-opacity-70 border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-[85%] bg-white text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </div>
-        <CardFooter className="flex justify-center">
+
+        <CardFooter className="flex justify-center pb-6">
           <Button
-            className="w-[90%] rounded-[0.5rem] text-xl text-white py-2 my-20 bg-[#171861] hover:text-[#171861] hover:bg-[#cecee5]"
+            className="w-[90%] rounded-xl text-lg text-white py-3 bg-[#171861]"
             onClick={Login}
           >
             Log in
@@ -68,4 +68,5 @@ export default function Page() {
       </Card>
     </div>
   );
+
 }
