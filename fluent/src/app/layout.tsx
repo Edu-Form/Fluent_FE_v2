@@ -5,6 +5,14 @@
 import "./globals.css";
 import Script from "next/script";
 
+export const metadata = {
+  title: "David's English Academy",
+  description: "The English learning app for David's English Academy",
+  manifest: "/manifest.json",
+  themeColor: "#000000",
+};
+
+
 export default function RootLayout({
   children,
 }: {
