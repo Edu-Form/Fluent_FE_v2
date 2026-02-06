@@ -33,7 +33,7 @@ export default function Page() {
 
   return (
     <div className="w-full flex-1 flex items-center justify-center px-4">
-      <Card className="w-full max-w-[400px] overflow-hidden">
+      <Card className="w-full max-w-[400px] h-full overflow-hidden">
         <Image
           src="/images/Login.svg"
           alt="image"
