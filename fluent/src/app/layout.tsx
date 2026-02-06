@@ -7,6 +7,9 @@ export const metadata = {
   description: "The English learning app for David's English Academy",
   manifest: "/manifest.json",
   themeColor: "#000000",
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
