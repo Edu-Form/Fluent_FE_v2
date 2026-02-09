@@ -379,7 +379,7 @@ const DiaryPageContent = () => {
 
       {/* 네비게이션 바 - 절대 고정 위치 */}
       <div className="navigation-bar">
-        <Navigation mobileOnly={true} defaultActiveIndex={2} />
+        <Navigation defaultActiveIndex={2} />
       </div>
 
       <style jsx global>{`
@@ -486,7 +486,22 @@ export default function Page() {
         </div>
       }
     >
-      <DiaryPageContent />
+      <div className="min-h-screen bg-gray-50 px-3 sm:px-6 lg:px-8">
+        <div className="flex justify-center w-full">
+          <div
+            className="
+              w-full
+              max-w-[430px]
+              md:max-w-[768px]
+              lg:max-w-[1024px]
+              xl:max-w-[1200px]
+            "
+          >
+            <DiaryPageContent />
+          </div>
+        </div>
+      </div>
     </Suspense>
   );
 }
+

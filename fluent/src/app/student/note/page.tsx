@@ -26,7 +26,7 @@ function NotesContent() {
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [classStats, setClassStats] = useState<{
+  const [, setClassStats] = useState<{
     totalClassesCompleted: number;
     currentCredits: number;
     classesUsed: number;
@@ -116,7 +116,7 @@ function NotesContent() {
         {user ? `${user}님의 수업 노트` : "수업 노트"}
       </h1>
 
-      {classStats && (
+      {/* {classStats && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mx-4 mb-4 shadow-sm border border-blue-100">
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-white rounded-lg p-3 shadow-sm">
@@ -127,6 +127,50 @@ function NotesContent() {
               <p className="text-xs text-gray-600 mb-1">사용한 수업 횟수</p>
               <p className="text-xl font-bold text-indigo-600">{classStats.classesUsed}회</p>
             </div>
+          </div>
+        </div>
+      )} */}
+      {/* Selected Note Detail */}
+      {selectedNote && (
+        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="mb-4 pb-3 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">
+              {selectedNote.date || selectedNote.class_date || "수업 노트"}
+            </h2>
+            {selectedNote.teacher_name && (
+              <p className="text-sm text-gray-600">{selectedNote.teacher_name} 선생님</p>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">수업 내용</h3>
+              <div
+                className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3"
+                dangerouslySetInnerHTML={{
+                  __html: selectedNote.original_text,
+                }}
+              />
+            </div>
+
+            {selectedNote.homework && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">숙제</h3>
+                <div
+                  className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap bg-amber-50 rounded-lg p-3 border border-amber-200"
+                  dangerouslySetInnerHTML={{ __html: selectedNote.homework }}
+                />
+              </div>
+            )}
+
+            {selectedNote.nextClass && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">다음 수업</h3>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap bg-blue-50 rounded-lg p-3 border border-blue-200">
+                  {selectedNote.nextClass}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -169,51 +213,6 @@ function NotesContent() {
               );
             })}
           </div>
-
-          {/* Selected Note Detail */}
-          {selectedNote && (
-            <div className="mt-6 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-              <div className="mb-4 pb-3 border-b border-gray-200">
-                <h2 className="text-lg font-bold text-gray-900 mb-1">
-                  {selectedNote.date || selectedNote.class_date || "수업 노트"}
-                </h2>
-                {selectedNote.teacher_name && (
-                  <p className="text-sm text-gray-600">{selectedNote.teacher_name} 선생님</p>
-                )}
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">수업 내용</h3>
-                  <div
-                    className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-3"
-                    dangerouslySetInnerHTML={{
-                      __html: selectedNote.original_text,
-                    }}
-                  />
-                </div>
-
-                {selectedNote.homework && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">숙제</h3>
-                    <div
-                      className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap bg-amber-50 rounded-lg p-3 border border-amber-200"
-                      dangerouslySetInnerHTML={{ __html: selectedNote.homework }}
-                    />
-                  </div>
-                )}
-
-                {selectedNote.nextClass && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">다음 수업</h3>
-                    <div className="text-sm text-gray-700 whitespace-pre-wrap bg-blue-50 rounded-lg p-3 border border-blue-200">
-                      {selectedNote.nextClass}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         <div className="bg-blue-50 p-4 mx-4 rounded-lg text-blue-700">
@@ -236,16 +235,27 @@ function LoadingFallback() {
   );
 }
 
-// 메인 페이지 컴포넌트
 export default function NotesPage() {
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Suspense 경계 내에서 useSearchParams를 사용하는 컴포넌트 래핑 */}
+    <div className="min-h-screen bg-gray-50 px-3 sm:px-6 lg:px-8 pb-24">
       <Suspense fallback={<LoadingFallback />}>
-        <NotesContent />
+        <div className="flex justify-center w-full">
+          <div
+            className="
+              w-full
+              max-w-[430px]
+              md:max-w-[768px]
+              lg:max-w-[1024px]
+              xl:max-w-[1200px]
+            "
+          >
+            <NotesContent />
+          </div>
+        </div>
       </Suspense>
 
-      <Navigation mobileOnly={true} defaultActiveIndex={4} />
+      <Navigation defaultActiveIndex={5} />
     </div>
   );
 }
+

@@ -1,8 +1,6 @@
 "use client";
 
-import EnterBtn from "@/components/EnterBtn/EnterBtn";
 import { useSearchParams, useRouter } from "next/navigation";
-import Announcement from "@/components/Announcement/StudentAnnouncement";
 import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation"; // 네비게이션 컴포넌트 import
@@ -12,19 +10,10 @@ import { MdDiamond } from "react-icons/md";
 import MobileStudentBanner from "@/components/MobileStudentBanner";
 import TodayQuizCard from "@/components/TodayQuizCard";
 
-// 동적 컴포넌트 로딩 추가
-const Alert = dynamic(() => import("@/components/StudentAlert"), {
-  ssr: false,
-});
 // 이미지 캐러셀 컴포넌트 import (동적으로 로드)
 const ImageCarousel = dynamic(() => import("@/components/ImageCarousel"), {
   ssr: false,
 });
-
-// 로딩 컴포넌트
-const SkeletonLoader = () => (
-  <div className="animate-pulse bg-gray-100 rounded-lg w-full h-[70px]"></div>
-);
 
 const CarouselLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-48"></div>
@@ -189,9 +178,9 @@ const HomePage = () => {
   function Diary() {
     router.push(`/student/diary?${diary_url_data}`);
   }
-  function Schedule() {
-    router.push(`/student/schedule?${url_data}`);
-  }
+  // function Schedule() {
+  //   router.push(`/student/schedule?${url_data}`);
+  // }
   function Write() {
     router.push(`/student/diary_note?${diary_note_data}`);
   }
@@ -281,7 +270,7 @@ const HomePage = () => {
   //   );
   // };
 
-  const MobileLayout = () => {
+  const StudentHomeContent = () => {
     // 현재 시간 상태
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -533,59 +522,20 @@ const HomePage = () => {
   };
   return (
     <div className="flex flex-col w-full min-h-screen p-2 sm:p-4 gap-2 sm:gap-4 bg-gray-50">
-      {/* 모바일 레이아웃 */}
-      <div className="block md:hidden">
-        <MobileLayout />
-      </div>
-      {/* 데스크톱 레이아웃 */}
-      <div className="hidden md:flex md:flex-col md:gap-6">
-        {/* 시간 표시 - Alert 컴포넌트 */}
-        <div className="rounded-lg bg-white shadow-lg">
-          <Suspense fallback={<SkeletonLoader />}>
-            <Alert />
-          </Suspense>
-        </div>
-        {/* 오늘의 학생 공지 */}
-        <div className="bg-white rounded-lg p-3 sm:p-4 shadow-lg flex-1 ">
-          <Suspense fallback={<SkeletonLoader />}>
-            <ErrorBoundary>
-              <Announcement />
-            </ErrorBoundary>
-          </Suspense>
-        </div>
-        {/* 학습 메뉴 버튼들 + 글쓰기 버튼 */}
-        <div className="space-y-2 mt-6">
-          <div className="flex flex-row gap-2 sm:gap-6">
-            <div
-              onClick={Schedule}
-              className="cursor-pointer flex-1 transition-transform hover:scale-105"
-            >
-              <EnterBtn id="schedule" image="/images/ScheduleCardMain.svg" />
-            </div>
+{/* 📱 + 🖥 Unified Student Home */}
+<div className="flex justify-center w-full">
+  <div
+    className="
+      w-full
+      max-w-[430px]        /* mobile width */
+      md:max-w-[480px]
+      lg:max-w-[520px]     /* desktop-friendly */
+    "
+  >
+    <StudentHomeContent />
+  </div>
+</div>
 
-            <div
-              onClick={Quizlet}
-              className="cursor-pointer flex-1 transition-transform hover:scale-105"
-            >
-              <EnterBtn id="quizlet" image="/images/QuizletCardMain.svg" />
-            </div>
-
-            <div
-              onClick={Write}
-              className="cursor-pointer flex-1 transition-transform hover:scale-105"
-            >
-              <EnterBtn id="write" image="/images/card.svg" />
-            </div>
-
-            <div
-              onClick={Diary}
-              className="cursor-pointer flex-1 transition-transform hover:scale-105"
-            >
-              <EnterBtn id="diary" image="/images/DiaryCardMain.svg" />
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
@@ -601,7 +551,7 @@ export default function Home() {
     >
       <HomePage />
       {/* 모바일에서만 네비게이션 표시 */}
-      <Navigation mobileOnly={true} defaultActiveIndex={0} />
+      <Navigation defaultActiveIndex={0} />
     </Suspense>
   );
 }

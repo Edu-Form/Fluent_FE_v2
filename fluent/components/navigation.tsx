@@ -179,7 +179,14 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
         />
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg z-40">
+      <div
+        className="
+          fixed bottom-0
+          left-1/2 -translate-x-1/2
+          w-full max-w-[520px]
+          bg-white shadow-lg z-40
+        "
+      >
         <div className="flex justify-around items-center py-2">
           <NavIcon
             Icon={RiHome6Fill}

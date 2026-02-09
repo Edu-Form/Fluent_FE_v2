@@ -212,8 +212,22 @@ const DiaryPageContent: React.FC = () => {
     );
   }
 
-  return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#F9FAFB]">
+return (
+  <div className="min-h-screen bg-[#F9FAFB] flex justify-center">
+    <div
+      className="
+        w-full
+        max-w-[430px]
+        md:max-w-[768px]
+        lg:max-w-[1024px]
+        xl:max-w-[1200px]
+        flex flex-col
+        h-screen
+        overflow-hidden
+        bg-[#F9FAFB]
+      "
+    >
+
       {/* 로딩 오버레이 */}
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
@@ -640,7 +654,7 @@ const DiaryPageContent: React.FC = () => {
         <Navigation mobileOnly={true} defaultActiveIndex={3} />
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from {
             opacity: 0;
@@ -726,6 +740,7 @@ const DiaryPageContent: React.FC = () => {
         }
       `}</style>
     </div>
+  </div>
   );
 };
 
