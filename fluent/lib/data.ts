@@ -2424,3 +2424,61 @@ export async function deleteBanner(id: string) {
   const res = await db.collection("banners").deleteOne({ _id });
   return { deletedCount: res.deletedCount ?? 0 };
 }
+
+export async function deductStudentCreditSafe(params: {
+  student_name: string;
+  class_date: string;
+  classnote_id: string;
+  teacher_name?: string;
+}) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  const students = db.collection("students");
+
+  const student = await students.findOne(
+    { name: params.student_name },
+    { projection: { credits: 1, Credit_Automation_History: 1 } }
+  );
+
+  if (!student) {
+    throw new Error("Student not found");
+  }
+
+  const before = parseInt(student.credits ?? "0", 10);
+  if (!Number.isFinite(before)) {
+    throw new Error("Invalid credit value");
+  }
+
+  const after = before - 1; // ✅ negative allowed
+
+  const historyEntry = {
+    type: "classnote",
+    classnote_id: params.classnote_id,
+    class_date: params.class_date,
+    delta: -1,
+    before,
+    after,
+    teacher_name: params.teacher_name ?? "",
+    createdAt: new Date(),
+  };
+
+  await students.updateOne(
+    { name: params.student_name },
+    {
+      $set: {
+        credits: String(after),
+        updatedAt: new Date(),
+      },
+      $push: {
+        Credit_Automation_History: historyEntry,
+      } as any,
+    }
+  );
+
+  return {
+    before,
+    after,
+    history: historyEntry,
+  };
+}
+

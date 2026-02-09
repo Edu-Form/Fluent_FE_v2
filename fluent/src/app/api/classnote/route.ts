@@ -1,6 +1,6 @@
 // app/api/classnotes/route.ts
 import { NextResponse } from "next/server";
-import { saveClassnotesNew, getExactClassnote } from "@/lib/data";
+import { saveClassnotesNew, getExactClassnote, deductStudentCreditSafe } from "@/lib/data";
 
 
 export async function GET(request: Request) {
@@ -82,7 +82,9 @@ export async function POST(request: Request) {
     }
 
     const results = [];
+
     for (const name of names) {
+      // 1) Save classnote
       const res = await saveClassnotesNew({
         student_name: name,
         class_date,
@@ -93,13 +95,29 @@ export async function POST(request: Request) {
         started_at: started_at ? new Date(started_at) : null,
         ended_at: ended_at ? new Date(ended_at) : null,
         duration_ms: Number.isFinite(duration_ms) ? Number(duration_ms) : null,
-        quizlet_saved: !!quizlet_saved, // probably false at End Class time
+        quizlet_saved: !!quizlet_saved,
         teacher_name: teacher_name ?? "",
         type: type ?? "",
-        reason: reason ?? "", 
+        reason: reason ?? "",
         reason_note: reason_note ?? "",
       });
-      results.push({ name, result: res });
+
+      // 2) Deduct credit ONLY if classnote save succeeded
+      let creditResult = null;
+      if (res?._id) {
+        creditResult = await deductStudentCreditSafe({
+          student_name: name,
+          class_date,
+          classnote_id: res._id,
+          teacher_name,
+        });
+      }
+
+      results.push({
+        name,
+        classnote: res,
+        credit: creditResult, // { before, after }
+      });
     }
 
     return NextResponse.json(
