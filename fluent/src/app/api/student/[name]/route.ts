@@ -54,29 +54,63 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { credits, hourlyRate } = body;
+    const { creditDelta, creditReason, adminName, hourlyRate } = body;
 
-    if (credits === undefined && hourlyRate === undefined) {
-      return NextResponse.json(
-        { error: "No fields provided to update" },
-        { status: 400 }
-      );
+    /* ===============================
+       CREDIT ADJUSTMENT (from modal)
+       =============================== */
+    if (typeof creditDelta === "number") {
+      if (!creditReason || !adminName) {
+        return NextResponse.json(
+          { error: "creditReason and adminName required" },
+          { status: 400 }
+        );
+      }
+
+      const student = await getStudentByName(student_name);
+      if (!student) {
+        return NextResponse.json(
+          { error: "Student not found" },
+          { status: 404 }
+        );
+      }
+
+      const before = parseInt(student.credits ?? "0", 10);
+      const after = before + creditDelta;
+
+      const historyEntry = {
+        type: "admin_adjustment",
+        delta: creditDelta,
+        before,
+        after,
+        reason: creditReason,
+        admin_name: adminName,
+        createdAt: new Date(),
+      };
+
+      await updateStudentByName(student_name, {
+        credits: String(after),
+        Credit_Automation_History: [
+          ...(student.Credit_Automation_History ?? []),
+          historyEntry,
+        ],
+      });
+
+      return NextResponse.json({ success: true, before, after });
     }
 
-    const updateData: any = {};
-    if (credits !== undefined) updateData.credits = String(credits);
-    if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
-
-    const updated = await updateStudentByName(student_name, updateData);
-
-    if (!updated) {
-      return NextResponse.json(
-        { error: "Student not found or update failed" },
-        { status: 404 }
-      );
+    /* ===============================
+       NON-CREDIT UPDATE (hourlyRate)
+       =============================== */
+    if (hourlyRate !== undefined) {
+      const updated = await updateStudentByName(student_name, { hourlyRate });
+      return NextResponse.json({ success: true, updated });
     }
 
-    return NextResponse.json({ success: true, updated });
+    return NextResponse.json(
+      { error: "No valid fields provided" },
+      { status: 400 }
+    );
   } catch (error) {
     console.error("Error updating student:", error);
     return NextResponse.json(

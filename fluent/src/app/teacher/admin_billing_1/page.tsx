@@ -163,10 +163,10 @@ function parseDateString(
   return null;
 }
 
-function monthDotLabelFromKey(key: string) {
-  const [year, month] = key.split("-");
-  return `${year}.${month}`;
-}
+// function monthDotLabelFromKey(key: string) {
+//   const [year, month] = key.split("-");
+//   return `${year}.${month}`;
+// }
 
 
 async function fetchTeacherConfirm(studentName: string, monthKey: string) {
@@ -386,6 +386,16 @@ function AdminBillingExcelPageInner() {
   // const [billingLinkLoading, setBillingLinkLoading] = useState<
   //   Record<string, boolean>
   // >({});
+
+  const [creditModalOpen, setCreditModalOpen] = useState(false);
+  const [creditDelta, setCreditDelta] = useState(0);
+  const [creditReason, setCreditReason] = useState("");
+  const [creditTarget, setCreditTarget] = useState<{
+    studentId: string;
+    studentName: string;
+    currentCredits: number;
+  } | null>(null);
+
 
   useEffect(() => {
     setStudentConfigs({});
@@ -1180,6 +1190,38 @@ function AdminBillingExcelPageInner() {
     });
   }, [studentRows, studentConfigs, cacheTick]);
 
+  // const creditLedgerRows = useMemo(() => {
+  // const rows: any[] = [];
+
+  // studentRows.forEach((row) => {
+  //   const profile =
+  //     studentProfileCacheRef.current[row.student.name];
+  //   const history = profile?.Credit_Automation_History ?? [];
+
+  //   history.forEach((item: any) => {
+  //     rows.push({
+  //       studentName: row.student.name,
+  //       date:
+  //         item.class_date ??
+  //         formatDotDate(parseDateString(item.createdAt)!),
+  //       type: item.type,
+  //       delta: item.delta,
+  //       before: item.before,
+  //       after: item.after,
+  //       teacher: item.teacher_name,
+  //       createdAt: item.createdAt,
+  //     });
+  //   });
+  // });
+
+  // return rows.sort(
+  //   (a, b) =>
+  //     new Date(b.createdAt).getTime() -
+  //     new Date(a.createdAt).getTime()
+  // );
+  // }, [studentRows, cacheTick]);
+
+
   const financialById = useMemo(() => {
     const map: Record<string, StudentFinancialSnapshot> = {};
     studentFinancials.forEach((item) => {
@@ -1386,6 +1428,38 @@ function AdminBillingExcelPageInner() {
     [studentRows]
   );
 
+  const submitCreditAdjustment = async () => {
+    if (!creditTarget) return;
+
+    try {
+      await fetch(
+        `/api/student/${encodeURIComponent(
+          creditTarget.studentName
+        )}/credits`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            delta: creditDelta,
+            reason: creditReason,
+            admin: currentUser,
+          }),
+        }
+      );
+
+      // 🔁 Refresh student profile
+      studentProfileCacheRef.current[creditTarget.studentName] = undefined;
+      await ensureStudentProfile(creditTarget.studentName);
+
+      setCacheTick((t) => t + 1);
+      setCreditModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("크레딧 변경 실패");
+    }
+  };
+
+
 
   const renderScheduleDetails = (rows: ScheduleEntry[]) => {
     if (!rows.length) {
@@ -1571,54 +1645,90 @@ function AdminBillingExcelPageInner() {
   };
 
   const renderCreditMiniPanel = (studentName: string) => {
-  const items = creditHistoryCacheRef.current[studentName] ?? [];
+    const profile = studentProfileCacheRef.current[studentName];
+    const history = Array.isArray(profile?.Credit_Automation_History)
+      ? [...profile.Credit_Automation_History]
+      : [];
 
-  if (items.length === 0) {
+    if (history.length === 0) {
+      return (
+        <div className="text-xs text-gray-400">
+          No credit ledger
+        </div>
+      );
+    }
+
+    // Newest first (Excel convention: latest on top)
+    history.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
     return (
-      <div className="text-xs text-gray-400">
-        No credit history
+      <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-md bg-white">
+        <table className="min-w-full text-xs border-collapse">
+          <thead className="sticky top-0 bg-slate-50 border-b border-slate-200">
+            <tr className="text-gray-500 font-medium">
+              <th className="px-2 py-1 text-left">Date</th>
+              <th className="px-2 py-1 text-left">Type</th>
+              <th className="px-2 py-1 text-right">Δ</th>
+              <th className="px-2 py-1 text-right">Before</th>
+              <th className="px-2 py-1 text-right">After</th>
+              <th className="px-2 py-1 text-left">Teacher</th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-slate-100">
+            {history.map((item, idx) => {
+              const delta = Number(item.delta ?? 0);
+              const isDebit = delta < 0;
+
+              const date =
+                item.class_date ??
+                formatDotDate(parseDateString(item.createdAt)!);
+
+              return (
+                <tr
+                  key={`${studentName}_ledger_${idx}`}
+                  className="hover:bg-slate-50"
+                >
+                  <td className="px-2 py-1 whitespace-nowrap">
+                    {date}
+                  </td>
+
+                  <td className="px-2 py-1">
+                    {item.type === "classnote" ? "Class Deduction" : item.type}
+                  </td>
+
+                  <td
+                    className={`px-2 py-1 text-right font-medium ${
+                      isDebit ? "text-rose-600" : "text-emerald-600"
+                    }`}
+                  >
+                    {delta}
+                  </td>
+
+                  <td className="px-2 py-1 text-right text-gray-700">
+                    {item.before}
+                  </td>
+
+                  <td className="px-2 py-1 text-right font-medium text-gray-900">
+                    {item.after}
+                  </td>
+
+                  <td className="px-2 py-1">
+                    {item.teacher_name ?? "—"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     );
-  }
-
-  return (
-    <div className="max-h-32 overflow-y-auto rounded-md border border-slate-200 bg-slate-50 p-2 space-y-1 text-xs">
-      {items.map((item, idx) => {
-        const isPayment = item.type === "payment";
-        return (
-          <div
-            key={`${studentName}_credit_${idx}`}
-            className={`rounded px-2 py-1 ${
-              isPayment
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-rose-50 text-rose-700"
-            }`}
-          >
-            <div className="font-medium">
-              {isPayment ? "➕ 크레딧 충전" : "➖ 수업 차감"}
-            </div>
-
-            {isPayment ? (
-              <div className="whitespace-pre-line opacity-90">
-                {item.description}
-              </div>
-            ) : (
-              <div className="space-y-0.5 opacity-90">
-                <div>-1 크레딧</div>
-                <div>
-                  수업일:{" "}
-                  {item.classDetails?.date
-                    ? formatDotDate(parseDateString(item.classDetails.date)!)
-                    : formatDotDate(parseDateString(item.date)!)}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
   };
+
+
 
 
   const renderExpandedContent = (row: StudentRow) => {
@@ -1819,7 +1929,7 @@ function AdminBillingExcelPageInner() {
                       <th className="px-4 py-3">Class Notes</th>
                       <th className="px-4 py-3">Diary</th>
                       <th className="px-4 py-3">Quizlet</th>
-                      <th className="px-4 py-3">Actions</th>
+                      <th className="px-4 py-3 w-[240px] text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-sm text-gray-700">
@@ -1841,22 +1951,22 @@ function AdminBillingExcelPageInner() {
                             financial?.hourlyRate ?? DEFAULT_RATE;
                           const initialCreditValue =
                             financial?.initialCredit ?? 0;
-                          const classesCompletedValue =
-                            financial?.classesCompleted ?? row.classnotes.length;
-                          const nextMonthPlannedValue =
-                            financial?.nextMonthPlanned ?? row.nextSchedules.length;
-                          const carryAfterValue =
-                            financial?.carryAfterSettlement ??
-                            initialCreditValue - classesCompletedValue;
-                          const totalCreditsAvailableValue =
-                            financial?.totalCreditsAvailable ??
-                            Math.max(0, carryAfterValue);
-                          const nextToPayClassesValue =
-                            financial?.nextToPayClasses ??
-                            Math.max(0, nextMonthPlannedValue - carryAfterValue);
-                          const amountDueValue =
-                            financial?.amountDue ??
-                            Math.max(0, nextToPayClassesValue * hourlyRateValue);
+                          // const classesCompletedValue =
+                          //   financial?.classesCompleted ?? row.classnotes.length;
+                          // const nextMonthPlannedValue =
+                          //   financial?.nextMonthPlanned ?? row.nextSchedules.length;
+                          // const carryAfterValue =
+                          //   financial?.carryAfterSettlement ??
+                          //   initialCreditValue - classesCompletedValue;
+                          // const totalCreditsAvailableValue =
+                          //   financial?.totalCreditsAvailable ??
+                          //   Math.max(0, carryAfterValue);
+                          // const nextToPayClassesValue =
+                          //   financial?.nextToPayClasses ??
+                          //   Math.max(0, nextMonthPlannedValue - carryAfterValue);
+                          // const amountDueValue =
+                          //   financial?.amountDue ??
+                          //   Math.max(0, nextToPayClassesValue * hourlyRateValue);
                           return (
                             <React.Fragment key={row.student.id}>
                               <tr className="hover:bg-slate-50">
@@ -1976,25 +2086,26 @@ function AdminBillingExcelPageInner() {
                                   <div className="flex flex-col gap-2">
                                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                       <label className="flex flex-col text-xs text-gray-500">
-                                        <span className="mb-1">Initial credit</span>
+                                        <span className="mb-1">Credits</span>
                                         <input
-                                          type="number"
-                                          step="1"
-                                          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
-                                          value={initialCreditValue}
-                                          onChange={(e) => {
-                                            const parsed = Number.parseFloat(
-                                              e.target.value
-                                            );
-                                            handleConfigChange(row.student.id, {
-                                              initialCredit: Number.isFinite(
-                                                parsed
-                                              )
-                                                ? parsed
-                                                : 0,
-                                            });
-                                          }}
-                                        />
+                                        type="number"
+                                        readOnly
+                                        className="cursor-pointer bg-slate-50"
+                                        value={initialCreditValue}
+                                        onClick={() => {
+                                          if (!isAdmin) return;
+
+                                          setCreditTarget({
+                                            studentId: row.student.id,
+                                            studentName: row.student.name,
+                                            currentCredits: initialCreditValue,
+                                          });
+
+                                          setCreditDelta(0);
+                                          setCreditReason("");
+                                          setCreditModalOpen(true);
+                                        }}
+                                      />
                                       </label>
                                       <label className="flex flex-col text-xs text-gray-500">
                                         <span className="mb-1">Hourly rate (₩)</span>
@@ -2016,7 +2127,7 @@ function AdminBillingExcelPageInner() {
                                         />
                                       </label>
                                     </div>
-                                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
+                                    {/* <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
                                       <div className="mt-1 flex items-center justify-between">
                                         <span>
                                           {monthDotLabelFromKey(selectedMonth)}.01 기준 잔여 수업
@@ -2040,7 +2151,7 @@ function AdminBillingExcelPageInner() {
                                           {Math.round(nextToPayClassesValue)}회 ({CURRENCY_FORMATTER.format(Math.round(amountDueValue))})
                                         </span>
                                       </div>
-                                    </div>
+                                    </div> */}
                                   </div>
                                 </td>
                                 {/* <td className="px-4 py-3">
@@ -2105,14 +2216,79 @@ function AdminBillingExcelPageInner() {
                     )}
                   </tbody>
                 </table>
+
+                {creditModalOpen && creditTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                  <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-lg">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      크레딧 조정 — {creditTarget.studentName}
+                    </h3>
+
+                    <div className="mt-4 space-y-3">
+                      <div className="text-xs text-gray-500">
+                        현재 크레딧:{" "}
+                        <span className="font-medium text-gray-900">
+                          {creditTarget.currentCredits}
+                        </span>
+                      </div>
+
+                      <label className="flex flex-col text-xs text-gray-600">
+                        변경 크레딧 (±)
+                        <input
+                          type="number"
+                          className="mt-1 rounded-md border px-2 py-1"
+                          value={creditDelta}
+                          onChange={(e) =>
+                            setCreditDelta(Number(e.target.value))
+                          }
+                        />
+                      </label>
+
+                      <label className="flex flex-col text-xs text-gray-600">
+                        사유
+                        <input
+                          className="mt-1 rounded-md border px-2 py-1"
+                          value={creditReason}
+                          onChange={(e) => setCreditReason(e.target.value)}
+                          placeholder="예: 관리자 보정"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="mt-5 flex justify-end gap-2">
+                      <button
+                        className="rounded-md border px-3 py-1 text-xs"
+                        onClick={() => setCreditModalOpen(false)}
+                      >
+                        취소
+                      </button>
+
+                      <button
+                        className="rounded-md bg-indigo-600 px-3 py-1 text-xs text-white disabled:opacity-50"
+                        disabled={!creditReason || creditDelta === 0}
+                        onClick={async () => {
+                          await submitCreditAdjustment();
+                        }}
+                      >
+                        저장
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               </div>
             </section>
           </>
         )}
       </div>
     </div>
+
+    
   );
+
 }
+
 
 export default function AdminBillingExcelPage() {
   return (
