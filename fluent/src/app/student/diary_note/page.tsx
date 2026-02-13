@@ -222,8 +222,7 @@ return (
         lg:max-w-[1024px]
         xl:max-w-[1200px]
         flex flex-col
-        h-screen
-        overflow-hidden
+        min-h-screen
         bg-[#F9FAFB]
       "
     >
@@ -600,10 +599,10 @@ return (
       )}
       <form
         onSubmit={postQuizlet}
-        className="flex-grow flex flex-col overflow-hidden"
+        className="flex-grow flex flex-col"
       >
         {/* 메인 텍스트 영역 - 모바일 대응 */}
-        <div className="flex-grow flex flex-col relative">
+        <div className="flex-grow flex flex-col relative pb-24 md:pb-0">
           <textarea
             id="original_text"
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -710,15 +709,6 @@ return (
           textarea::placeholder {
             font-size: 2.5rem;
           }
-        }
-
-        /* 전체 고정 레이아웃 */
-        html,
-        body {
-          height: 100%;
-          margin: 0;
-          padding: 0;
-          overflow: hidden;
         }
 
         /* 텍스트 영역 스크롤 */

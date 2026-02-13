@@ -1435,7 +1435,7 @@ function AdminBillingExcelPageInner() {
       await fetch(
         `/api/student/${encodeURIComponent(
           creditTarget.studentName
-        )}/credits`,
+        )}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
