@@ -52,6 +52,8 @@ interface Props {
   /** Optional explicit per-teacher color map (background). e.g., { "Amy": "#FBCFE8" } */
   teacherColors?: Record<string, string>;
   fixedStudentName?: string; // 👈 추가
+  minimal?: boolean; // 👈 hide header controls
+  initialDate?: Date;
 }
 
 /* ---------------------------- Date helpers (KST-like local) ---------------------------- */
@@ -148,6 +150,8 @@ function TeacherToastUIInner({
   enableTeacherSidebar = false,
   allowedTeachers,
   teacherColors,
+  minimal = false,
+  initialDate,
 }: Props) {
   const searchParams = useSearchParams();
   const urlUser = searchParams.get("user") || "";
@@ -693,12 +697,11 @@ function TeacherToastUIInner({
           defaultView: forceView ?? "week",
           useDetailPopup: false,
           usageStatistics: false,
-          isReadOnly: false,
+          isReadOnly: minimal,
           gridSelection: true,
           template: {
             time(ev: any) {
               const student = ev?.raw?.student_name ?? "";
-              const room = ev?.raw?.room_name ?? "";
               const s = new Date(ev.start);
               const e = new Date(ev.end);
               const hhmm = (d: Date) =>
@@ -706,26 +709,24 @@ function TeacherToastUIInner({
               const timeRange = `${hhmm(s)}–${hhmm(e)}`;
               return `
                 <div class="tuic-event-sm">
-                  <div class="tuic-line1">${student} • ${room}</div>
+                  <div class="tuic-line1">${student}</div>
                   <div class="tuic-line2">${timeRange}</div>
                 </div>
               `;
             },
-            /** <-- this is the month cell schedule renderer */
             monthGridSchedule(ev: any) {
               const student = ev?.raw?.student_name ?? "";
-              const room = ev?.raw?.room_name ?? "";
               const s = new Date(ev.start);
-              const e = new Date(ev.end);
-              const hhmm = (d: Date) => `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
-              const timeRange = `${hhmm(s)}–${hhmm(e)}`;
+
+              const hhmm = (d: Date) =>
+                `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+
               return `
-                <div class="tuic-event-sm">
-                  <div class="tuic-line1">${student} • ${room}</div>
-                  <div class="tuic-line2">${timeRange}</div>
+                <div class="tuic-month-line">
+                  <span class="tuic-month-time">${hhmm(s)} ${student}</span>
                 </div>
               `;
-            },
+            }
           },
           week: {
             startDayOfWeek: 0,
@@ -954,9 +955,12 @@ function TeacherToastUIInner({
         calRef.current.on("beforeUpdateEvent", handleBeforeUpdate);
         calRef.current.on("selectDateTime", handleSelectDateTime);
 
-        // open where the user last was
-        calRef.current.setDate(viewDateRef.current);
-        setCurrentDate(viewDateRef.current);
+        // open on initialDate (if provided), otherwise remember last view
+        const openDate = initialDate ?? viewDateRef.current ?? new Date();
+
+        calRef.current.setDate(openDate);
+        viewDateRef.current = openDate;
+        setCurrentDate(openDate);
       }
 
       // keep hour range in sync with variant
@@ -1467,6 +1471,7 @@ if (mode === "changed") {
       {/* RIGHT: Header + Calendar */}
       <div className="flex-1">
         {/* Header */}
+        {!minimal && (
         <div className="flex items-center my-3 gap-2">
           <button onClick={goPrev} className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300">←</button>
           <div className="text-xl mx-4 font-semibold tracking-tight">
@@ -1546,7 +1551,7 @@ if (mode === "changed") {
             </button>
           </div>
         </div>
-
+        )}
         {/* Calendar container must be relative for popovers */}
         <div className={`relative ${variant === "compact" ? "tuic-compact" : "tuic-full"}`} style={{ width: "100%", height: variant === "compact" ? "65vh" : "78vh" }}>
           <div ref={containerRef} className="absolute inset-0" />

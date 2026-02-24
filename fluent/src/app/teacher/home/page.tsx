@@ -76,6 +76,8 @@ const HomePageContent = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  const [nextMonthOpen, setNextMonthOpen] = useState(false);
+
   // Put below other useState hooks
   const INACTIVE_DAYS_THRESHOLD = 21;
   const MS = 24 * 60 * 60 * 1000;
@@ -228,7 +230,19 @@ const HomePageContent = () => {
     }
   };
 
+  const nextMonthClasses = React.useMemo(() => {
+  const now = new Date();
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
+  const year = nextMonth.getFullYear();
+  const month = nextMonth.getMonth();
+
+  return classes.filter((c: any) => {
+      const dt = toDate(c.date);
+      if (!dt) return false;
+      return dt.getFullYear() === year && dt.getMonth() === month;
+    });
+  }, [classes]);
 
 
   return (
@@ -320,6 +334,14 @@ const HomePageContent = () => {
             <h2 className="text-xl font-bold text-gray-800 mb-4 md:hidden">
               캘린더
             </h2>
+            <div className="flex justify-end mb-3">
+              <button
+                onClick={() => setNextMonthOpen(true)}
+                className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+              >
+                Confirm Next Month Schedule
+              </button>
+            </div>
             <Suspense fallback={<SkeletonLoader />}>
               <Teacher_toastUI
                 data={classes}
@@ -665,6 +687,96 @@ const HomePageContent = () => {
               </div>
             )}
           </div>
+
+          {nextMonthOpen && (
+            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+              <div className="relative w-[95vw] h-[95vh] bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+                {/* Header */}
+                <div className="flex justify-between items-center px-6 py-4 border-b">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    3월 스케줄
+                  </h2>
+
+                  <button
+                    onClick={() => setNextMonthOpen(false)}
+                    className="text-gray-500 hover:text-gray-800"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="flex h-[calc(100%-64px)]">
+
+                  {/* LEFT — Calendar Area */}
+                  <div className="flex-1 p-4 overflow-hidden">
+                    <Teacher_toastUI
+                      data={nextMonthClasses}
+                      quizletDates={quizletMap}
+                      studentOptions={allStudents.map((s: any) => s.name)}
+                      defaults={{
+                        teacher_name: user || "",
+                        room_name: "HF1",
+                        time: 18,
+                        duration: 1,
+                      }}
+                      variant="full"
+                      forceView="month"
+                      minimal={true}
+                      initialDate={
+                        new Date(
+                          new Date().getFullYear(),
+                          new Date().getMonth() + 1,
+                          1
+                        )
+                      }
+                    />
+                  </div>
+
+                  {/* RIGHT — Sidebar Skeleton */}
+                  <div className="w-[280px] border-l bg-gray-50 p-5 overflow-y-auto">
+
+                    {/* Section 1 — Low Credit Students */}
+                    <div className="mb-8">
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                        Low Credit Students
+                      </h3>
+
+                      <div className="space-y-3">
+                        <div className="bg-white rounded-lg p-3 shadow-sm text-xs text-gray-500">
+                          Student Name — 1 credit left
+                        </div>
+
+                        <div className="bg-white rounded-lg p-3 shadow-sm text-xs text-gray-500">
+                          Student Name — 2 credits left
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2 — Korean National Holidays */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                        Korean National Holidays
+                      </h3>
+
+                      <div className="space-y-3">
+                        <div className="bg-white rounded-lg p-3 shadow-sm text-xs text-gray-500">
+                          March 1 — Independence Movement Day
+                        </div>
+
+                        <div className="bg-white rounded-lg p-3 shadow-sm text-xs text-gray-500">
+                          March 2 — Substitute Holiday
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          )}
         </div>
 
 

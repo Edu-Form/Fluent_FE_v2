@@ -58,6 +58,15 @@ export default function AdminBillingSidebar() {
         >
           Popup / Banner 관리
         </Link>
+        
+        <Link
+          href={`/teacher/admin_billing_1/consulting${baseQuery}`}
+          className={`${baseClass} ${
+            isPopup ? activeClass : inactiveClass
+          }`}
+        >
+          상담 관리
+        </Link>
       </nav>
     </aside>
   );
