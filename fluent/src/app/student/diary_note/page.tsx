@@ -602,7 +602,7 @@ return (
         className="flex-grow flex flex-col"
       >
         {/* 메인 텍스트 영역 - 모바일 대응 */}
-        <div className="flex-grow flex flex-col relative pb-24 md:pb-0">
+        <div className="flex-grow flex flex-col relative pb-12 md:pb-0">
           <textarea
             id="original_text"
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -618,35 +618,67 @@ return (
           ></textarea>
         </div>
 
-        {/*  버튼 영역 - 모바일 대응 */}
-        <div className="w-full bg-white border-t border-[#E5E8EB] py-3 md:py-4 px-3 md:px-5 sticky bottom-0 z-10 flex gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              const redirectUrl = `/student/home?user=${encodeURIComponent(
-                user
-              )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
-                user_id
-              )}`;
-              router.push(redirectUrl);
-            }}
-            className="flex-1 py-2 md:py-3 rounded-xl text-[#4E5968] text-sm font-medium border border-[#E5E8EB] hover:bg-[#F9FAFB] transition-colors"
-            disabled={loading}
-          >
-            취소하기
-          </button>
-          <button
-            type="submit"
-            className={`flex-1 py-2 md:py-3 rounded-xl text-white text-sm font-medium
-              ${
-                loading
-                  ? "bg-[#DEE2E6] cursor-not-allowed"
-                  : "bg-[#3182F6] hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors"
-              }`}
-            disabled={loading}
-          >
-            저장하기
-          </button>
+        {/* 버튼 영역 */}
+        <div
+          className="
+            fixed md:sticky
+            bottom-[84px] md:bottom-0
+            left-0 right-0
+            w-full
+            bg-white
+            border-t border-[#E5E8EB]
+            py-2 md:py-4
+            px-3 md:px-5
+            z-40
+          "
+        >
+          <div className="max-w-[430px] md:max-w-[768px] lg:max-w-[1024px] xl:max-w-[1200px] mx-auto flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const redirectUrl = `/student/home?user=${encodeURIComponent(
+                  user
+                )}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(
+                  user_id
+                )}`;
+                router.push(redirectUrl);
+              }}
+              className="
+                flex-1
+                py-2 md:py-3
+                rounded-xl
+                text-[#4E5968]
+                text-xs md:text-sm
+                font-medium
+                border border-[#E5E8EB]
+                hover:bg-[#F9FAFB]
+                transition-colors
+              "
+              disabled={loading}
+            >
+              취소하기
+            </button>
+
+            <button
+              type="submit"
+              className={`
+                flex-1
+                py-2 md:py-3
+                rounded-xl
+                text-white
+                text-xs md:text-sm
+                font-medium
+                ${
+                  loading
+                    ? "bg-[#DEE2E6] cursor-not-allowed"
+                    : "bg-[#3182F6] hover:bg-[#1B64DA] active:bg-[#0051CC] transition-colors"
+                }
+              `}
+              disabled={loading}
+            >
+              저장하기
+            </button>
+          </div>
         </div>
       </form>
       <div className="flex md:hidden mt-8">
