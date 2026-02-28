@@ -1240,7 +1240,7 @@ const QuizletCardContent = ({
               style={{ minHeight: "40vh", maxHeight: "60vh" }}
             >
               {/* 카드 내부 우상단 버튼들 */}
-              <div className="absolute top-3 right-3 flex space-x-2 z-10">
+              <div className="absolute top-2 right-2 flex space-x-2 z-10">
                 {/* 복사 버튼 */}
                 <button
                   onClick={(e) => {
@@ -1248,7 +1248,7 @@ const QuizletCardContent = ({
                     copyCurrentText();
                   }}
                   disabled={isAutoPlaying || isPreparingAudio}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm ${
+                  className={`p-1 sm:p-1.5 rounded-full flex items-center justify-center backdrop-blur-sm ${
                     isAutoPlaying || isPreparingAudio
                       ? "bg-gray-200/70 text-gray-400"
                       : isCopied
@@ -1258,9 +1258,9 @@ const QuizletCardContent = ({
                   title="현재 텍스트 복사"
                 >
                   {isCopied ? (
-                    <Check className="text-lg" />
+                    <Check size={12} className="sm:w-4 sm:h-4" />
                   ) : (
-                    <Copy className="text-lg" />
+                    <Copy size={12} className="sm:w-4 sm:h-4" />
                   )}
                 </button>
               </div>
