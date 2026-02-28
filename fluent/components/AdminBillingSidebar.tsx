@@ -16,6 +16,10 @@ export default function AdminBillingSidebar() {
       ? `?user=${encodeURIComponent(user)}&type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`
       : "";
 
+  // 🔐 Admin logic
+  const adminUsers = ["Phil", "David", "Inhyung"];
+  const isAdmin = adminUsers.includes(user);
+
   const isDashboard = pathname === "/teacher/admin_billing_1";
   const isOverview = pathname === "/teacher/admin_billing_1/overview";
   const isAdvertisement = pathname.startsWith("/teacher/admin_billing_1/advertisement");
@@ -34,33 +38,40 @@ export default function AdminBillingSidebar() {
       </div>
 
       <nav className="space-y-1">
-        <Link
-          href={`/teacher/admin_billing_1/overview${baseQuery}`}
-          className={`${baseClass} ${
-            isOverview ? activeClass : inactiveClass
-          }`}
-        >
-          Overview
-        </Link>
 
-        <Link
-          href={`/teacher/admin_billing_1${baseQuery}`}
-          className={`${baseClass} ${
-            isDashboard ? activeClass : inactiveClass
-          }`}
-        >
-          전체 학생 매출 현황
-        </Link>
+        {/* 👑 ADMIN ONLY */}
+        {isAdmin && (
+          <>
+            <Link
+              href={`/teacher/admin_billing_1/overview${baseQuery}`}
+              className={`${baseClass} ${
+                isOverview ? activeClass : inactiveClass
+              }`}
+            >
+              Overview
+            </Link>
 
-        <Link
-          href={`/teacher/admin_billing_1/advertisement${baseQuery}`}
-          className={`${baseClass} ${
-            isAdvertisement ? activeClass : inactiveClass
-          }`}
-        >
-          Popup / Banner 관리
-        </Link>
-        
+            <Link
+              href={`/teacher/admin_billing_1${baseQuery}`}
+              className={`${baseClass} ${
+                isDashboard ? activeClass : inactiveClass
+              }`}
+            >
+              전체 학생 매출 현황
+            </Link>
+
+            <Link
+              href={`/teacher/admin_billing_1/advertisement${baseQuery}`}
+              className={`${baseClass} ${
+                isAdvertisement ? activeClass : inactiveClass
+              }`}
+            >
+              Popup / Banner 관리
+            </Link>
+          </>
+        )}
+
+        {/* 👨‍🏫 ALL TEACHERS */}
         <Link
           href={`/teacher/admin_billing_1/consulting${baseQuery}`}
           className={`${baseClass} ${
@@ -78,6 +89,7 @@ export default function AdminBillingSidebar() {
         >
           Teacher 등록
         </Link>
+
       </nav>
     </aside>
   );

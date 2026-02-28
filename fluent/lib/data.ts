@@ -2500,3 +2500,55 @@ export async function getAllStudents() {
     return [];
   }
 }
+
+/** Create a new student */
+export async function createStudent(studentData: any) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const newStudent = {
+      name: studentData.name ?? "",
+      phoneNumber: studentData.phoneNumber ?? "",
+      teacher: studentData.teacher ?? "",
+      paid: studentData.paid ?? false,
+      firstPaymentCount: studentData.firstPaymentCount ?? 0,
+      status: studentData.status ?? "상담중",
+      level: studentData.level ?? "",
+      curriculum: studentData.curriculum ?? "",
+      availableTimes: studentData.availableTimes ?? "",
+      notes: studentData.notes ?? "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await db.collection("students").insertOne(newStudent);
+
+    return {
+      _id: result.insertedId,
+      ...newStudent,
+    };
+  } catch (err) {
+    console.error("createStudent error:", err);
+    throw err;
+  }
+}
+
+/** Check duplicate student name */
+export async function checkDuplicateStudentName(name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const count = await db
+      .collection("students")
+      .countDocuments({ name });
+
+    return count > 0;
+  } catch (err) {
+    console.error("checkDuplicateStudentName error:", err);
+    return false;
+  }
+}
+
+

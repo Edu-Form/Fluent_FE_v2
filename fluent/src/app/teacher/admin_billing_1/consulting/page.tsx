@@ -26,56 +26,82 @@ export default function ConsultPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [duplicateChecked, setDuplicateChecked] = useState(false);
+  const [isDuplicate, setIsDuplicate] = useState<boolean | null>(null);
+
   const selectedStudent = students.find((s) => s.id === selectedId);
 
-  // ✅ LOAD STUDENTS (GET only)
+  // Load students
+  const loadStudents = async () => {
+    try {
+      const res = await fetch("/api/students");
+      const data = await res.json();
+
+      if (!Array.isArray(data)) return;
+
+      const formatted = data.map((s: any) => ({
+        id: s._id,
+        name: s.name || "",
+        phoneNumber: s.phoneNumber || "",
+        paid: s.paid ?? false,
+        firstPaymentCount: s.firstPaymentCount ?? 0,
+        status: s.status || "상담중",
+        teacher: s.teacher || "",
+        level: s.level || "",
+        curriculum: s.curriculum || "",
+        availableTimes: s.availableTimes || "",
+        notes: s.notes || "",
+      }));
+
+      setStudents(formatted);
+    } catch (error) {
+      console.error("Failed to load students:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const res = await fetch("/api/students");
-        const data = await res.json();
-
-        if (!Array.isArray(data)) return;
-
-        const formatted = data.map((s: any) => ({
-          id: s._id || s.id || crypto.randomUUID(),
-          name: s.name || "",
-          phoneNumber: s.phoneNumber || "",
-          paid: s.paid ?? false,
-          firstPaymentCount: s.firstPaymentCount ?? 0,
-          status: s.status || "상담중",
-          teacher: s.teacher || "",
-          level: s.level || "",
-          curriculum: s.curriculum || "",
-          availableTimes: s.availableTimes || "",
-          notes: s.notes || "",
-        }));
-
-        setStudents(formatted);
-      } catch (error) {
-        console.error("Failed to load students:", error);
-      }
-    };
-
-    fetchStudents();
+    loadStudents();
   }, []);
 
-  const addStudent = () => {
-    const newStudent: Student = {
-      id: crypto.randomUUID(),
-      name: "신규 학생",
-      phoneNumber: "",
-      paid: false,
-      firstPaymentCount: 0,
-      status: "상담중",
-      teacher: "",
-      level: "",
-      curriculum: "",
-      availableTimes: "",
-      notes: "",
-    };
+  // Duplicate check
+  const handleDuplicateCheck = async () => {
+    if (!newName.trim()) return;
 
-    setStudents((prev) => [...prev, newStudent]);
+    const res = await fetch("/api/student/duplicate-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName }),
+    });
+
+    const data = await res.json();
+    setIsDuplicate(data.isDuplicate);
+    setDuplicateChecked(true);
+  };
+
+  // Save student
+  const handleSave = async () => {
+    if (!duplicateChecked || isDuplicate) return;
+
+    await fetch("/api/student", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: newName,
+        phoneNumber: newPhone,
+      }),
+    });
+
+    setIsModalOpen(false);
+    setNewName("");
+    setNewPhone("");
+    setDuplicateChecked(false);
+    setIsDuplicate(null);
+
+    loadStudents();
   };
 
   return (
@@ -85,10 +111,10 @@ export default function ConsultPage() {
         <div className="min-w-max flex flex-col">
           {/* Header */}
           <div className="flex justify-between items-center p-6 border-b">
-            <h1 className="text-xl font-semibold">상담 페이지</h1>
+            <h1 className="text-xl font-semibold">상담 관리</h1>
 
             <button
-              onClick={addStudent}
+              onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:opacity-80 transition"
             >
               <Plus size={16} />
@@ -166,14 +192,11 @@ export default function ConsultPage() {
         </div>
       </div>
 
-      {/* RIGHT PANEL - PROFILE STYLE */}
+      {/* RIGHT PANEL */}
       {selectedStudent && (
         <div className="w-[600px] h-full flex flex-col bg-white border-l flex-shrink-0">
           <div className="p-6 border-b flex justify-between items-center">
-            <h2 className="text-xl font-semibold">
-              Student Profile
-            </h2>
-
+            <h2 className="text-xl font-semibold">Student Profile</h2>
             <button
               onClick={() => setSelectedId(null)}
               className="text-sm text-gray-500 hover:text-black"
@@ -183,7 +206,6 @@ export default function ConsultPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Basic Info */}
             <div className="space-y-4">
               <div>
                 <label className="text-sm text-gray-500">Name</label>
@@ -207,14 +229,78 @@ export default function ConsultPage() {
               </div>
             </div>
 
-            {/* Notes */}
             <div>
-              <label className="text-sm text-gray-500">
-                상담 노트
-              </label>
+              <label className="text-sm text-gray-500">상담 노트</label>
               <div className="mt-2 p-4 border rounded-lg min-h-[120px] bg-gray-50 whitespace-pre-wrap">
                 {selectedStudent.notes || ""}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-[420px] rounded-xl p-6 space-y-4">
+            <h2 className="text-lg font-semibold">학생 추가</h2>
+
+            <div>
+              <label className="text-sm text-gray-500">Student Name</label>
+              <div className="flex gap-2 mt-1">
+                <input
+                  value={newName}
+                  onChange={(e) => {
+                    setNewName(e.target.value);
+                    setDuplicateChecked(false);
+                    setIsDuplicate(null);
+                  }}
+                  className="flex-1 border rounded-lg px-3 py-2"
+                />
+                <button
+                  onClick={handleDuplicateCheck}
+                  className="px-3 py-2 text-sm bg-gray-200 rounded-lg"
+                >
+                  동명이인 체크
+                </button>
+              </div>
+
+              {duplicateChecked && (
+                <p
+                  className={`text-sm mt-1 ${
+                    isDuplicate ? "text-red-500" : "text-green-600"
+                  }`}
+                >
+                  {isDuplicate
+                    ? "이미 존재하는 이름입니다."
+                    : "사용 가능한 이름입니다."}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-500">Phone Number</label>
+              <input
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-sm text-gray-600"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!duplicateChecked || isDuplicate === true}
+                className="px-4 py-2 text-sm bg-black text-white rounded-lg disabled:opacity-40"
+              >
+                저장
+              </button>
             </div>
           </div>
         </div>
