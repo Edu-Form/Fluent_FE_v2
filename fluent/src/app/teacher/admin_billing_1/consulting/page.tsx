@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 type StudentStatus =
   | "상담중"
@@ -23,7 +23,9 @@ type Student = {
 
 export default function ConsultPage() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const selectedStudent = students.find((s) => s.id === selectedId);
 
   const addStudent = () => {
     const newStudent: Student = {
@@ -50,205 +52,155 @@ export default function ConsultPage() {
     );
   };
 
-  const toggleExpand = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  };
+return (
+  <div className="flex h-screen overflow-hidden bg-gray-50">
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    {/* LEFT PANEL */}
+    <div className="flex-1 min-w-0 overflow-auto bg-white border-r">
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">상담 페이지</h1>
+      <div className="min-w-max flex flex-col">
 
-        <button
-          onClick={addStudent}
-          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:opacity-80 transition"
-        >
-          <Plus size={16} />
-          Add New Student
-        </button>
-      </div>
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b">
+          <h1 className="text-xl font-semibold">상담 페이지</h1>
 
-      {/* Table Container (NO overflow wrapper) */}
-      <div className="bg-white border rounded-xl shadow-sm">
+          <button
+            onClick={addStudent}
+            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:opacity-80 transition"
+          >
+            <Plus size={16} />
+            Add New Student
+          </button>
+        </div>
 
-        <table className="min-w-[1500px] w-full text-sm">
-
-          {/* Header */}
+        {/* Table */}
+        <div className="p-6">
+          <table className="w-[1400px] text-sm table-fixed border border-gray-200 rounded-lg overflow-hidden">
           <thead className="bg-gray-100">
             <tr className="text-left text-gray-600">
-              <th className="px-4 py-3 w-[220px]">이름</th>
-              <th className="px-4 py-3 w-[80px]">Paid</th>
-              <th className="px-4 py-3 w-[140px]">첫 결제 횟수</th>
+              <th className="px-4 py-3 w-[180px]">이름</th>
+              <th className="px-4 py-3 w-[80px] text-center">Paid</th>
+              <th className="px-4 py-3 w-[120px]">첫 결제 횟수</th>
               <th className="px-4 py-3 w-[180px]">Status</th>
-              <th className="px-4 py-3 w-[160px]">Teacher</th>
-              <th className="px-4 py-3 w-[120px]">Level</th>
-              <th className="px-4 py-3 w-[180px]">Curriculum</th>
-              <th className="px-4 py-3 w-[220px]">Available Times</th>
-              <th className="px-4 py-3 w-[250px]">Notes</th>
+              <th className="px-4 py-3 w-[180px]">Teacher</th>
+              <th className="px-4 py-3 w-[150px]">Level</th>
+              <th className="px-4 py-3 w-[200px]">Curriculum</th>
+              <th className="px-4 py-3 w-[300px]">Available Times</th>
             </tr>
           </thead>
 
           <tbody>
             {students.map((student) => (
-              <>
-                <tr
-                  key={student.id}
-                  className="border-t hover:bg-gray-50 transition"
-                >
-                  {/* Name */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => toggleExpand(student.id)}
-                        className="text-gray-500"
-                      >
-                        {expandedId === student.id ? (
-                          <ChevronDown size={16} />
-                        ) : (
-                          <ChevronRight size={16} />
-                        )}
-                      </button>
+              <tr
+                key={student.id}
+                onClick={() =>
+                  setSelectedId((prev) =>
+                    prev === student.id ? null : student.id
+                  )
+                }
+                className={`border-t hover:bg-gray-50 cursor-pointer ${
+                  selectedId === student.id ? "bg-gray-100" : ""
+                }`}
+              >
+                <td className="px-4 py-3 truncate">{student.name}</td>
 
-                      <input
-                        value={student.name}
-                        onChange={(e) =>
-                          updateStudent(student.id, "name", e.target.value)
-                        }
-                        className="bg-transparent outline-none w-full"
-                      />
-                    </div>
-                  </td>
+                <td className="px-4 py-3 text-center">
+                  <input
+                    type="checkbox"
+                    checked={student.paid}
+                    onChange={(e) =>
+                      updateStudent(student.id, "paid", e.target.checked)
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </td>
 
-                  {/* Paid */}
-                  <td className="px-4 py-3 text-center">
-                    <input
-                      type="checkbox"
-                      checked={student.paid}
-                      onChange={(e) =>
-                        updateStudent(student.id, "paid", e.target.checked)
-                      }
-                    />
-                  </td>
+                <td className="px-4 py-3">
+                  {student.firstPaymentCount}
+                </td>
 
-                  {/* First Payment Count */}
-                  <td className="px-4 py-3">
-                    <input
-                      type="number"
-                      value={student.firstPaymentCount}
-                      onChange={(e) =>
-                        updateStudent(
-                          student.id,
-                          "firstPaymentCount",
-                          Number(e.target.value)
-                        )
-                      }
-                      className="w-full bg-gray-100 rounded px-2 py-1"
-                    />
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-3">
-                    <select
-                      value={student.status}
-                      onChange={(e) =>
-                        updateStudent(student.id, "status", e.target.value)
-                      }
-                      className="w-full bg-gray-100 rounded px-2 py-1"
-                    >
-                      <option value="상담중">상담중</option>
-                      <option value="결제완료-강사미배정">
-                        결제완료-강사미배정
-                      </option>
-                      <option value="최종확정">최종확정</option>
-                    </select>
-                  </td>
-
-                  {/* Teacher */}
-                  <td className="px-4 py-3">
-                    <input
-                      value={student.teacher}
-                      onChange={(e) =>
-                        updateStudent(student.id, "teacher", e.target.value)
-                      }
-                      className="w-full bg-gray-100 rounded px-2 py-1"
-                    />
-                  </td>
-
-                  {/* Level */}
-                  <td className="px-4 py-3">
-                    <input
-                      value={student.level}
-                      onChange={(e) =>
-                        updateStudent(student.id, "level", e.target.value)
-                      }
-                      className="w-full bg-gray-100 rounded px-2 py-1"
-                    />
-                  </td>
-
-                  {/* Curriculum */}
-                  <td className="px-4 py-3">
-                    <input
-                      value={student.curriculum}
-                      onChange={(e) =>
-                        updateStudent(student.id, "curriculum", e.target.value)
-                      }
-                      className="w-full bg-gray-100 rounded px-2 py-1"
-                    />
-                  </td>
-
-                  {/* Available Times */}
-                  <td className="px-4 py-3">
-                    <input
-                      value={student.availableTimes}
-                      onChange={(e) =>
-                        updateStudent(
-                          student.id,
-                          "availableTimes",
-                          e.target.value
-                        )
-                      }
-                      className="w-full bg-gray-100 rounded px-2 py-1"
-                    />
-                  </td>
-
-                  {/* Notes Preview */}
-                  <td className="px-4 py-3 truncate text-gray-500">
-                    {student.notes || "-"}
-                  </td>
-                </tr>
-
-                {expandedId === student.id && (
-                  <tr className="bg-gray-50 border-t">
-                    <td colSpan={9} className="px-6 py-4">
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium text-gray-600">
-                          상세 상담 노트
-                        </div>
-
-                        <textarea
-                          value={student.notes}
-                          onChange={(e) =>
-                            updateStudent(
-                              student.id,
-                              "notes",
-                              e.target.value
-                            )
-                          }
-                          rows={4}
-                          className="w-full border rounded-lg p-3 resize-none focus:outline-none focus:ring-2 focus:ring-black"
-                          placeholder="상세 상담 내용을 입력하세요..."
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </>
+                <td className="px-4 py-3">{student.status}</td>
+                <td className="px-4 py-3">{student.teacher || "-"}</td>
+                <td className="px-4 py-3">{student.level || "-"}</td>
+                <td className="px-4 py-3 truncate">
+                  {student.curriculum || "-"}
+                </td>
+                <td className="px-4 py-3 truncate">
+                  {student.availableTimes || "-"}
+                </td>
+              </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
-  );
+
+    {/* RIGHT PANEL */}
+    {selectedStudent && (
+      <div className="w-[600px] h-full flex flex-col bg-white border-l flex-shrink-0">
+
+        <div className="p-6 border-b flex justify-between items-center flex-shrink-0">
+          <h2 className="text-xl font-semibold">
+            {selectedStudent.name} 상세 정보
+          </h2>
+
+          <button
+            onClick={() => setSelectedId(null)}
+            className="text-sm text-gray-500 hover:text-black"
+          >
+            닫기
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div>
+            <label className="text-sm text-gray-500">Teacher</label>
+            <input
+              value={selectedStudent.teacher}
+              onChange={(e) =>
+                updateStudent(selectedStudent.id, "teacher", e.target.value)
+              }
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">Level</label>
+            <input
+              value={selectedStudent.level}
+              onChange={(e) =>
+                updateStudent(selectedStudent.id, "level", e.target.value)
+              }
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">Curriculum</label>
+            <input
+              value={selectedStudent.curriculum}
+              onChange={(e) =>
+                updateStudent(selectedStudent.id, "curriculum", e.target.value)
+              }
+              className="w-full border rounded-lg px-3 py-2 mt-1"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">상세 상담 노트</label>
+            <textarea
+              value={selectedStudent.notes}
+              onChange={(e) =>
+                updateStudent(selectedStudent.id, "notes", e.target.value)
+              }
+              rows={6}
+              className="w-full border rounded-lg p-3 resize-none focus:ring-2 focus:ring-black mt-1"
+            />
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+);
 }

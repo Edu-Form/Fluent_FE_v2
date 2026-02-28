@@ -18,7 +18,9 @@ export default function AdminBillingSidebar() {
 
   const isDashboard = pathname === "/teacher/admin_billing_1";
   const isOverview = pathname === "/teacher/admin_billing_1/overview";
-  const isPopup = pathname.startsWith("/teacher/admin_billing_1/advertisement");
+  const isAdvertisement = pathname.startsWith("/teacher/admin_billing_1/advertisement");
+  const isConsulting = pathname.startsWith("/teacher/admin_billing_1/consulting");
+  const isTeacherRegistration = pathname.startsWith("/teacher/admin_billing_1/teacher-registration");
 
   const baseClass =
     "block rounded-md px-3 py-2 text-sm font-medium transition";
@@ -53,7 +55,7 @@ export default function AdminBillingSidebar() {
         <Link
           href={`/teacher/admin_billing_1/advertisement${baseQuery}`}
           className={`${baseClass} ${
-            isPopup ? activeClass : inactiveClass
+            isAdvertisement ? activeClass : inactiveClass
           }`}
         >
           Popup / Banner 관리
@@ -62,10 +64,19 @@ export default function AdminBillingSidebar() {
         <Link
           href={`/teacher/admin_billing_1/consulting${baseQuery}`}
           className={`${baseClass} ${
-            isPopup ? activeClass : inactiveClass
+            isConsulting ? activeClass : inactiveClass
           }`}
         >
           상담 관리
+        </Link>
+
+        <Link
+          href={`/teacher/admin_billing_1/teacher-registration${baseQuery}`}
+          className={`${baseClass} ${
+            isTeacherRegistration ? activeClass : inactiveClass
+          }`}
+        >
+          Teacher 등록
         </Link>
       </nav>
     </aside>
