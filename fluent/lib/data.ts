@@ -2482,3 +2482,21 @@ export async function deductStudentCreditSafe(params: {
   };
 }
 
+/** Fetch all students */
+export async function getAllStudents() {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const students = await db
+      .collection("students")
+      .find({})
+      .sort({ createdAt: -1 }) // newest first (optional)
+      .toArray();
+
+    return students.map(serialize_document);
+  } catch (err) {
+    console.error("getAllStudents error:", err);
+    return [];
+  }
+}
