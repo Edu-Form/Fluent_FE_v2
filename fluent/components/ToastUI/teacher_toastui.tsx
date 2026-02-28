@@ -1506,7 +1506,7 @@ if (mode === "changed") {
                 title="관리자 결제"
                 className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
               >
-                관리자 결제
+                관리자 페이지
               </a>
             )}
             <a

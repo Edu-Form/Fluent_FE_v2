@@ -29,7 +29,7 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
     month: new Date().getMonth() + 1,
   });
 
-  const [isMobile, setIsMobile] = useState(false);
+  const [, setIsMobile] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
