@@ -29,6 +29,15 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
     month: new Date().getMonth() + 1,
   });
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   useEffect(() => {
     const formattedData = data
       .map((event) => {
@@ -71,96 +80,49 @@ const ToastUI: React.FC<ToastUIProps> = ({ data }) => {
   }, [data]);
 
   useEffect(() => {
-    if (calendarContainerRef.current && !calendarInstanceRef.current) {
-      calendarInstanceRef.current = new Calendar(calendarContainerRef.current, {
-        defaultView: "month",
-        useDetailPopup: true,
-        usageStatistics: false,
-      });
-    }
-    if (calendarInstanceRef.current && scheduleData.length > 0) {
-      calendarInstanceRef.current.clear(); // 기존 이벤트 제거
-      calendarInstanceRef.current.createEvents(scheduleData); // 새로운 이벤트 추가
-    }
-
-    // setOptions 호출 추가
-    calendarInstanceRef.current.setOptions({
-      useFormPopup: false,
+  if (calendarContainerRef.current && !calendarInstanceRef.current) {
+    calendarInstanceRef.current = new Calendar(calendarContainerRef.current, {
+      defaultView: "month",
       useDetailPopup: false,
+      usageStatistics: false,
       isReadOnly: true,
       gridSelection: false,
-      template: {
-        popupDetailAttendees({ raw }: { raw: any }) {
-          const teacherName = raw?.teacher_name || "알 수 없음";
-          return `${teacherName} 선생님`;
-        },
-        popupDetailState() {
-          return "lesson"; // 항상 "lesson"으로 설정
-        },
-      },
-      month: {
-        isAlways6Weeks: false, // 다음달 한주까지 보이게 할지말지
-      },
-    });
 
-    // 기본 테마 설정
-    calendarInstanceRef.current.setTheme({
-      common: {
-        border: "1px dotted #e5e5e5",
+  template: {
+    time(schedule: any) {
+      if (!schedule?.start) return "";
 
-        today: {
-          color: "white",
-          backgroundColor: "#3f4166",
-        },
-        saturday: {
-          color: "rgba(64, 64, 255)",
-        },
-        gridSelection: {
-          backgroundColor: "rgba(81, 230, 92, 0.05)",
-          border: "1px dotted #ff0000",
-        },
-      },
-      month: {
-        weekend: {
-          backgroundColor: "aliceblue",
-        },
-        holidayExceptThisMonth: {
-          color: "red",
-        },
-        dayName: {
-          border: "20px",
-          backgroundColor: "none",
-        },
-        moreView: {
-          border: "1px solid #3f4166",
-          borderRadius: "1rem",
-          boxShadow: "0 2px 6px 0 grey",
-          backgroundColor: "white",
-          width: 320,
-          height: 200,
-        },
-      },
-    });
+      const start = new Date(schedule.start);
+      const hours = start.getHours().toString().padStart(2, "0");
+      const minutes = start.getMinutes().toString().padStart(2, "0");
+      const time = `${hours}:${minutes}`;
 
-    // clickEvent 이벤트 리스너 추가
-    calendarInstanceRef.current.on(
-      "clickEvent",
-      ({ event }: { event: any }) => {
-        const clickedEvent = event.raw;
-        console.log("클릭한 이벤트 데이터:", clickedEvent); // 클릭한 이벤트 데이터 콘솔에 출력
-      }
-    );
-    // 현재 표시 중인 연도와 월 업데이트
-    calendarInstanceRef.current.on("afterRender", () => {
-      const date = calendarInstanceRef.current?.getDate();
-      if (date) {
-        setCurrentDate({
-          year: date.getFullYear(),
-          month: date.getMonth() + 1,
-        });
-      }
-    });
-  }, [scheduleData]);
+      return `
+        <div class="mobile-stack">
+          <div class="mobile-time">${time}</div>
+          <div class="mobile-room">${schedule.raw?.room_name}</div>
+        </div>
+        <span class="desktop-only">
+          ${time} ${schedule.raw?.room_name} ${schedule.raw?.teacher_name}
+        </span>
+      `;
+    },
+  },
+
+  month: {
+    isAlways6Weeks: false,
+    visibleEventCount: 99,   // 🔥 show all events
+  },
+  });
+}
+
+  if (!calendarInstanceRef.current) return;
+
+  // 🔥 THEN render events
+  calendarInstanceRef.current.clear();
+  calendarInstanceRef.current.createEvents(scheduleData);
+
+}, [scheduleData]);
 
   const updateCurrentDate = () => {
     const date = calendarInstanceRef.current?.getDate();

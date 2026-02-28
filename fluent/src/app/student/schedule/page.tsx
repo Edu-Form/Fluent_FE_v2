@@ -73,25 +73,37 @@ const SchedulePage = () => {
       });
   }, [user]);
 
-  return (
-    <div className="min-h-screen bg-gray-50 px-3 sm:px-6 lg:px-8 pb-24">
-      <div className="flex justify-center w-full">
+return (
+  <div className="bg-gray-50 pb-24">
+    <div className="flex justify-center w-full">
+      <div
+        className="
+          w-full
+          min-h-[100dvh]           /* full viewport height on mobile */
+          sm:min-h-screen
+          sm:max-w-[768px]
+          lg:max-w-[1024px]
+          xl:max-w-[1200px]
+        "
+      >
         <div
           className="
-            w-full
-            max-w-[430px]
-            md:max-w-[768px]
-            lg:max-w-[1024px]
-            xl:max-w-[1200px]
+            bg-white
+            sm:rounded-xl
+            sm:shadow-lg
+            h-full
+            p-0
+            sm:p-6
           "
         >
-          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+          <div className="h-[100dvh] sm:h-auto">
             <StudentToastUI data={classes} />
           </div>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 
 };
 

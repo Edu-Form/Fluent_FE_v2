@@ -168,4 +168,35 @@ body {
   color: #000;
 }
 
+/* Hide mobile layout by default */
+.mobile-stack {
+  display: none;
+}
 
+/* Show desktop inline normally */
+.desktop-inline {
+  display: inline;
+}
+
+/* Mobile layout */
+@media (max-width: 640px) {
+  .mobile-stack {
+    display: block !important;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .mobile-time {
+    font-weight: 600;
+  }
+
+  .mobile-room,
+  .mobile-teacher {
+    font-size: 10px;
+    opacity: 0.8;
+  }
+
+  .desktop-inline {
+    display: none !important;
+  }
+}
