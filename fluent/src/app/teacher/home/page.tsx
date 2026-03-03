@@ -52,6 +52,12 @@ function toDate(v: any): Date | null {
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
 
+function toDotDateToDate(dateStr: string): Date | null {
+  const m = String(dateStr).trim().match(/^(\d{4})\.\s*(\d{2})\.\s*(\d{2})\./);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
 function isBetweenInclusive(d: Date | null, a: Date | null, b: Date | null) {
   if (!d || !a || !b) return false;
   const min = a < b ? a : b;
@@ -63,6 +69,19 @@ function isBetweenInclusive(d: Date | null, a: Date | null, b: Date | null) {
 const SkeletonLoader = () => (
   <div className="animate-pulse bg-gray-100 rounded-lg w-full h-full"></div>
 );
+
+const KOREAN_HOLIDAYS: Record<number, string[]> = {
+  2026: [
+    "2026. 01. 01.",
+    "2026. 03. 02.",
+    "2026. 05. 05.",
+    "2026. 06. 06.",
+    "2026. 08. 15.",
+    "2026. 10. 03.",
+    "2026. 10. 09.",
+    "2026. 12. 25.",
+  ],
+};
 
 const HomePageContent = () => {
   const searchParams = useSearchParams();
@@ -198,6 +217,86 @@ const HomePageContent = () => {
     ].reduce((a, b) => a + b, 0);
   };
 
+  const handleHolidayRemove = async () => {
+    try {
+      const today = new Date();
+      const year = today.getFullYear();
+
+      const holidayList = KOREAN_HOLIDAYS[year] || [];
+
+      const futureHolidays = holidayList.filter(dateStr => {
+        const dt = toDotDateToDate(dateStr);
+        if (!dt) return false;
+
+        const todayMidnight = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
+
+        return dt >= todayMidnight;
+      });
+
+      if (!futureHolidays.length) {
+        alert("No future holidays remaining.");
+        return;
+      }
+
+      if (!confirm(`총 ${futureHolidays.length}일의 휴무 수업을 삭제하시겠습니까?`)) {
+        return;
+      }
+
+      const res = await fetch("/api/schedules/holiday", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dates: futureHolidays,
+          teacher_name: user,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert("삭제 실패");
+        return;
+      }
+
+      alert(`✅ ${data.deletedCount} classes deleted`);
+
+      window.dispatchEvent(new CustomEvent("calendar:saved"));
+
+    } catch (err) {
+      console.error(err);
+      alert("❌ Failed to remove holiday schedules.");
+    }
+  };
+
+  const handleBackfillCredits = async () => {
+    if (!confirm("기존 결제 데이터를 크레딧 히스토리에 추가하시겠습니까?")) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/payment/manual-update-credit", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert("실패: " + (data.error || "Unknown error"));
+        return;
+      }
+
+      alert(`완료: ${data.updatedEntries}건 업데이트`);
+      console.log(data);
+    } catch (err) {
+      console.error(err);
+      alert("오류 발생");
+    }
+  };
+
   const [quizletMap, setQuizletMap] = useState<Record<string, string[]>>({});
 
 
@@ -231,19 +330,18 @@ const HomePageContent = () => {
   };
 
   const nextMonthClasses = React.useMemo(() => {
-  const now = new Date();
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const year = nextMonth.getFullYear();
-  const month = nextMonth.getMonth();
+    const year = nextMonth.getFullYear();
+    const month = nextMonth.getMonth();
 
-  return classes.filter((c: any) => {
+    return classes.filter((c: any) => {
       const dt = toDate(c.date);
       if (!dt) return false;
       return dt.getFullYear() === year && dt.getMonth() === month;
     });
   }, [classes]);
-
 
   return (
     <div className="flex flex-col md:flex-row w-full h-screen bg-gray-50">
@@ -336,10 +434,17 @@ const HomePageContent = () => {
             </h2>
             <div className="flex justify-end mb-3">
               <button
-                onClick={() => setNextMonthOpen(true)}
-                className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+                onClick={handleHolidayRemove}
+                className="text-xs px-3 py-1 rounded-full border border-rose-300 hover:bg-rose-50 text-rose-700"
               >
-                Confirm Next Month Schedule
+                휴무 제거
+              </button>
+
+              <button
+                onClick={handleBackfillCredits}
+                className="ml-3 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                결제 크레딧 동기화
               </button>
             </div>
             <Suspense fallback={<SkeletonLoader />}>

@@ -1693,30 +1693,58 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
+    const students = db.collection("students");
 
-    // Get existing student data to retrieve paymentCredits and paymentHistory
-    const studentData = await db.collection("students").findOne({ orderId }) || { paymentHistory: "", paymentCredits: 0, credits: 0 };
+    const studentData =
+      await students.findOne({ orderId }) ||
+      { paymentHistory: "", paymentCredits: 0, credits: "0" };
+
     const existingHistory = studentData.paymentHistory || "";
-    const creditsToAdd = studentData.paymentCredits || 0;
+    const creditsToAdd = Number(studentData.paymentCredits ?? 0);
 
-    // Prepare update object
     const updateObj: any = {
       paymentId: payment.paymentKey,
-      paymentStatus: payment.status === 'DONE' ? 'COMPLETED' : 'FAILED',
+      paymentStatus: payment.status === "DONE" ? "COMPLETED" : "FAILED",
       paymentHistory: existingHistory
         ? `${existingHistory} ${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`
         : `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`,
     };
 
-    // If payment is successful, add credits to student account
-    if (payment.status === 'DONE' && creditsToAdd > 0) {
-      updateObj.credits = (studentData.credits || 0) + creditsToAdd;
-      console.log(`[Payment] Adding ${creditsToAdd} credits to student. New total: ${updateObj.credits}`);
+    // ✅ FIXED CREDIT LOGIC
+    if (payment.status === "DONE" && creditsToAdd !== 0) {
+      const before = parseInt(studentData.credits ?? "0", 10);
+      const after = before + creditsToAdd;
+
+      updateObj.credits = String(after);
+      updateObj.updatedAt = new Date();
+
+      // ✅ ADD CREDIT AUTOMATION HISTORY ENTRY
+      updateObj.$push = {
+        Credit_Automation_History: {
+          type: "payment",
+          orderId,
+          delta: creditsToAdd,
+          before,
+          after,
+          paymentKey: payment.paymentKey,
+          amount: payment.totalAmount,
+          createdAt: new Date(),
+        },
+      };
+
+      console.log(
+        `[Payment] Credits updated. Before: ${before}, Added: ${creditsToAdd}, After: ${after}`
+      );
     }
 
-    const result = await db.collection("students").updateOne(
+    const result = await students.updateOne(
       { orderId },
-      { $set: updateObj }
+      updateObj.$push
+        ? {
+            $set: updateObj,
+            $push: updateObj.$push,
+          }
+        : { $set: updateObj }
     );
 
     return result;
@@ -2551,4 +2579,106 @@ export async function checkDuplicateStudentName(name: string) {
   }
 }
 
+export async function deleteSchedulesByHolidayDatesForTeacher(
+  dates: string[],
+  teacher_name: string
+) {
+  if (!Array.isArray(dates) || dates.length === 0) {
+    throw new Error("No holiday dates provided");
+  }
 
+  if (!teacher_name) {
+    throw new Error("teacher_name required");
+  }
+
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  const coll = db.collection("schedules");
+
+  const normalizedDates = dates.map((d) => d.trim());
+
+  const result = await coll.deleteMany({
+    date: { $in: normalizedDates },
+    teacher_name: teacher_name,
+  });
+
+  return {
+    deletedCount: result.deletedCount ?? 0,
+  };
+}
+export async function backfillPaymentCredits() {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const studentsCol = db.collection("students");
+  const paymentsCol = db.collection("payments");
+
+  const students = await studentsCol.find({}).toArray();
+
+  let totalUpdated = 0;
+
+  for (const student of students) {
+    const studentName = student.name;
+
+    // current credit value
+    let currentCredits = parseInt(student.credits ?? "0", 10);
+
+    const history = student.Credit_Automation_History ?? [];
+
+    // find completed payments for this student
+    const completedPayments = await paymentsCol
+      .find({
+        student_name: studentName,
+        status: "COMPLETED",
+      })
+      .toArray();
+
+    for (const payment of completedPayments) {
+      const orderId = payment.orderId;
+
+      // skip if already recorded
+      const alreadyExists = history.some(
+        (h: any) => h.type === "payment" && h.orderId === orderId
+      );
+
+      if (alreadyExists) continue;
+
+      const creditsToAdd = Number(payment.metadata?.credits ?? 0);
+      if (!creditsToAdd || creditsToAdd <= 0) continue;
+
+      const before = currentCredits;
+      const after = before + creditsToAdd;
+
+      const historyEntry = {
+        type: "payment",
+        orderId,
+        delta: creditsToAdd,
+        before,
+        after,
+        paymentKey: payment.paymentKey,
+        amount: payment.amount,
+        description: payment.description,
+        createdAt: payment.completedAt ?? new Date(),
+      };
+
+      await studentsCol.updateOne(
+        { _id: student._id },
+        {
+          $push: { Credit_Automation_History: historyEntry } as any,
+          $set: {
+            credits: String(after),
+            updatedAt: new Date(),
+          },
+        }
+      );
+
+      currentCredits = after;
+      totalUpdated++;
+    }
+  }
+
+  return {
+    message: "Backfill complete",
+    updatedEntries: totalUpdated,
+  };
+}
