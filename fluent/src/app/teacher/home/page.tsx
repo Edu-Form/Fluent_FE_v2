@@ -440,12 +440,12 @@ const HomePageContent = () => {
                 휴무 제거
               </button>
 
-              <button
+              {/* <button
                 onClick={handleBackfillCredits}
                 className="ml-3 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
               >
                 결제 크레딧 동기화
-              </button>
+              </button> */}
             </div>
             <Suspense fallback={<SkeletonLoader />}>
               <Teacher_toastUI
