@@ -22,14 +22,21 @@ type Student = {
   notes: string;
 };
 
+type Teacher = {
+  _id?: string;
+  name: string;
+};
+
 export default function ConsultPage() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newTeacher, setNewTeacher] = useState("");
   const [duplicateChecked, setDuplicateChecked] = useState(false);
   const [isDuplicate, setIsDuplicate] = useState<boolean | null>(null);
 
@@ -63,8 +70,20 @@ export default function ConsultPage() {
     }
   };
 
+  // Load teachers
+  const loadTeachers = async () => {
+    try {
+      const res = await fetch("/api/teacher", { cache: "no-store" });
+      const data = await res.json();
+      setTeachers(data);
+    } catch (error) {
+      console.error("Failed to load teachers:", error);
+    }
+  };
+
   useEffect(() => {
     loadStudents();
+    loadTeachers();
   }, []);
 
   // Duplicate check
@@ -92,12 +111,14 @@ export default function ConsultPage() {
       body: JSON.stringify({
         name: newName,
         phoneNumber: newPhone,
+        teacher: newTeacher,
       }),
     });
 
     setIsModalOpen(false);
     setNewName("");
     setNewPhone("");
+    setNewTeacher("");
     setDuplicateChecked(false);
     setIsDuplicate(null);
 
@@ -109,6 +130,7 @@ export default function ConsultPage() {
       {/* LEFT PANEL */}
       <div className="flex-1 min-w-0 overflow-auto bg-white border-r">
         <div className="min-w-max flex flex-col">
+
           {/* Header */}
           <div className="flex justify-between items-center p-6 border-b">
             <h1 className="text-xl font-semibold">상담 관리</h1>
@@ -206,27 +228,21 @@ export default function ConsultPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-500">Name</label>
-                <div className="mt-1 text-lg font-medium">
-                  {selectedStudent.name || ""}
-                </div>
+            <div>
+              <label className="text-sm text-gray-500">Name</label>
+              <div className="mt-1 text-lg font-medium">
+                {selectedStudent.name}
               </div>
+            </div>
 
-              <div>
-                <label className="text-sm text-gray-500">Phone Number</label>
-                <div className="mt-1">
-                  {selectedStudent.phoneNumber || ""}
-                </div>
-              </div>
+            <div>
+              <label className="text-sm text-gray-500">Phone</label>
+              <div className="mt-1">{selectedStudent.phoneNumber}</div>
+            </div>
 
-              <div>
-                <label className="text-sm text-gray-500">Teacher</label>
-                <div className="mt-1">
-                  {selectedStudent.teacher || ""}
-                </div>
-              </div>
+            <div>
+              <label className="text-sm text-gray-500">Teacher</label>
+              <div className="mt-1">{selectedStudent.teacher}</div>
             </div>
 
             <div>
@@ -264,18 +280,6 @@ export default function ConsultPage() {
                   동명이인 체크
                 </button>
               </div>
-
-              {duplicateChecked && (
-                <p
-                  className={`text-sm mt-1 ${
-                    isDuplicate ? "text-red-500" : "text-green-600"
-                  }`}
-                >
-                  {isDuplicate
-                    ? "이미 존재하는 이름입니다."
-                    : "사용 가능한 이름입니다."}
-                </p>
-              )}
             </div>
 
             <div>
@@ -287,6 +291,22 @@ export default function ConsultPage() {
               />
             </div>
 
+            <div>
+              <label className="text-sm text-gray-500">Teacher</label>
+              <select
+                value={newTeacher}
+                onChange={(e) => setNewTeacher(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 mt-1"
+              >
+                <option value="">선택</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher._id || teacher.name} value={teacher.name}>
+                    {teacher.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="flex justify-end gap-2 pt-4">
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -294,6 +314,7 @@ export default function ConsultPage() {
               >
                 취소
               </button>
+
               <button
                 onClick={handleSave}
                 disabled={!duplicateChecked || isDuplicate === true}
