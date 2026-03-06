@@ -1440,9 +1440,9 @@ function AdminBillingExcelPageInner() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            delta: creditDelta,
-            reason: creditReason,
-            admin: currentUser,
+            creditDelta: creditDelta,
+            creditReason: creditReason,
+            adminName: currentUser,
           }),
         }
       );
