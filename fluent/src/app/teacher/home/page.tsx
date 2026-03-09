@@ -272,30 +272,30 @@ const HomePageContent = () => {
     }
   };
 
-  const handleBackfillCredits = async () => {
-    if (!confirm("기존 결제 데이터를 크레딧 히스토리에 추가하시겠습니까?")) {
-      return;
-    }
+  // const handleBackfillCredits = async () => {
+  //   if (!confirm("기존 결제 데이터를 크레딧 히스토리에 추가하시겠습니까?")) {
+  //     return;
+  //   }
 
-    try {
-      const res = await fetch("/api/payment/manual-update-credit", {
-        method: "POST",
-      });
+  //   try {
+  //     const res = await fetch("/api/payment/manual-update-credit", {
+  //       method: "POST",
+  //     });
 
-      const data = await res.json();
+  //     const data = await res.json();
 
-      if (!res.ok) {
-        alert("실패: " + (data.error || "Unknown error"));
-        return;
-      }
+  //     if (!res.ok) {
+  //       alert("실패: " + (data.error || "Unknown error"));
+  //       return;
+  //     }
 
-      alert(`완료: ${data.updatedEntries}건 업데이트`);
-      console.log(data);
-    } catch (err) {
-      console.error(err);
-      alert("오류 발생");
-    }
-  };
+  //     alert(`완료: ${data.updatedEntries}건 업데이트`);
+  //     console.log(data);
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("오류 발생");
+  //   }
+  // };
 
   const [quizletMap, setQuizletMap] = useState<Record<string, string[]>>({});
 
