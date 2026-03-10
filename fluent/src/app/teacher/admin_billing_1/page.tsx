@@ -388,8 +388,6 @@ function AdminBillingExcelPageInner() {
   // >({});
 
   const [creditModalOpen, setCreditModalOpen] = useState(false);
-  const [creditDelta, setCreditDelta] = useState(0);
-  const [creditReason, setCreditReason] = useState("");
   const [creditTarget, setCreditTarget] = useState<{
     studentId: string;
     studentName: string;
@@ -400,6 +398,11 @@ function AdminBillingExcelPageInner() {
   useEffect(() => {
     setStudentConfigs({});
   }, [selectedTeacher]);
+
+  const [creditAmount, setCreditAmount] = useState(0);
+  const [creditChange, setCreditChange] = useState(0); // credits
+  const [reasonType, setReasonType] = useState<string>("");
+  const [reasonOther, setReasonOther] = useState("");
 
   // const handleBillingProcess = useCallback(
   //   async (student: StudentInfo, financial: StudentFinancialSnapshot) => {
@@ -1440,8 +1443,9 @@ function AdminBillingExcelPageInner() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            creditDelta: creditDelta,
-            creditReason: creditReason,
+            creditDelta: creditChange,   // credit change only
+            creditAmount: creditAmount,  // money amount
+            creditReason: reasonType === "기타" ? reasonOther : reasonType,
             adminName: currentUser,
           }),
         }
@@ -1716,8 +1720,10 @@ function AdminBillingExcelPageInner() {
                     {item.after}
                   </td>
 
-                  <td className="px-2 py-1">
-                    {item.teacher_name ?? "—"}
+                  <td className="px-2 py-1 text-right">
+                    {typeof item.amount === "number"
+                      ? `₩${item.amount.toLocaleString()}`
+                      : "—"}
                   </td>
                 </tr>
               );
@@ -2100,9 +2106,10 @@ function AdminBillingExcelPageInner() {
                                             studentName: row.student.name,
                                             currentCredits: initialCreditValue,
                                           });
-
-                                          setCreditDelta(0);
-                                          setCreditReason("");
+                                          setCreditAmount(0);
+                                          setCreditChange(0);
+                                          setReasonType("");
+                                          setReasonOther("");
                                           setCreditModalOpen(true);
                                         }}
                                       />
@@ -2218,64 +2225,100 @@ function AdminBillingExcelPageInner() {
                 </table>
 
                 {creditModalOpen && creditTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-                  <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-lg">
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      크레딧 조정 — {creditTarget.studentName}
-                    </h3>
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                    <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-lg">
 
-                    <div className="mt-4 space-y-3">
-                      <div className="text-xs text-gray-500">
-                        현재 크레딧:{" "}
-                        <span className="font-medium text-gray-900">
-                          {creditTarget.currentCredits}
-                        </span>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        크레딧 조정 — {creditTarget.studentName}
+                      </h3>
+
+                      <div className="mt-4 space-y-4">
+
+                        <div className="text-xs text-gray-500">
+                          현재 크레딧:
+                          <span className="ml-1 font-medium text-gray-900">
+                            {creditTarget.currentCredits}
+                          </span>
+                        </div>
+
+                        {/* 금액 */}
+                        <label className="flex flex-col text-xs text-gray-600">
+                          금액 (₩)
+                          <input
+                            type="number"
+                            className="mt-1 rounded-md border px-2 py-1"
+                            value={creditAmount}
+                            onChange={(e) => setCreditAmount(Number(e.target.value))}
+                          />
+                        </label>
+
+                        {/* 크레딧 */}
+                        <label className="flex flex-col text-xs text-gray-600">
+                          크레딧 변경
+                          <input
+                            type="number"
+                            className="mt-1 rounded-md border px-2 py-1"
+                            value={creditChange}
+                            onChange={(e) => setCreditChange(Number(e.target.value))}
+                          />
+                        </label>
+
+                        {/* 사유 */}
+                        <div>
+                          <div className="text-xs text-gray-600 mb-2">사유</div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              "현장결제(카드결제)",
+                              "계좌이체",
+                              "네이버스토어",
+                              "기타",
+                            ].map((type) => (
+                              <button
+                                key={type}
+                                onClick={() => setReasonType(type)}
+                                className={`rounded-md border px-2 py-1 text-xs ${
+                                  reasonType === type
+                                    ? "bg-indigo-600 text-white border-indigo-600"
+                                    : "bg-white text-gray-700"
+                                }`}
+                              >
+                                {type}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {reasonType === "기타" && (
+                          <input
+                            className="w-full rounded-md border px-2 py-1 text-xs"
+                            placeholder="기타 사유 입력"
+                            value={reasonOther}
+                            onChange={(e) => setReasonOther(e.target.value)}
+                          />
+                        )}
+
                       </div>
 
-                      <label className="flex flex-col text-xs text-gray-600">
-                        변경 크레딧 (±)
-                        <input
-                          type="number"
-                          className="mt-1 rounded-md border px-2 py-1"
-                          value={creditDelta}
-                          onChange={(e) =>
-                            setCreditDelta(Number(e.target.value))
-                          }
-                        />
-                      </label>
+                      <div className="mt-5 flex justify-end gap-2">
+                        <button
+                          className="rounded-md border px-3 py-1 text-xs"
+                          onClick={() => setCreditModalOpen(false)}
+                        >
+                          취소
+                        </button>
 
-                      <label className="flex flex-col text-xs text-gray-600">
-                        사유
-                        <input
-                          className="mt-1 rounded-md border px-2 py-1"
-                          value={creditReason}
-                          onChange={(e) => setCreditReason(e.target.value)}
-                          placeholder="예: 관리자 보정"
-                        />
-                      </label>
-                    </div>
+                        <button
+                          className="rounded-md bg-indigo-600 text-white px-3 py-1 text-xs"
+                          onClick={submitCreditAdjustment}
+                        >
+                          저장
+                        </button>
+                      </div>
 
-                    <div className="mt-5 flex justify-end gap-2">
-                      <button
-                        className="rounded-md border px-3 py-1 text-xs"
-                        onClick={() => setCreditModalOpen(false)}
-                      >
-                        취소
-                      </button>
-
-                      <button
-                        className="rounded-md bg-indigo-600 px-3 py-1 text-xs text-white disabled:opacity-50"
-                        disabled={!creditReason || creditDelta === 0}
-                        onClick={async () => {
-                          await submitCreditAdjustment();
-                        }}
-                      >
-                        저장
-                      </button>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               </div>
             </section>

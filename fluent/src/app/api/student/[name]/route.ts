@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { creditDelta, creditReason, adminName, hourlyRate } = body;
+    const { creditDelta, creditReason, creditAmount, adminName, hourlyRate } = body;
 
     /* ===============================
        CREDIT ADJUSTMENT (from modal)
@@ -79,10 +79,11 @@ export async function POST(request: Request) {
       const after = before + creditDelta;
 
       const historyEntry = {
-        type: "admin_adjustment",
+        type: creditReason,
         delta: creditDelta,
         before,
         after,
+        amount: creditAmount ?? 0,
         reason: creditReason,
         admin_name: adminName,
         createdAt: new Date(),
