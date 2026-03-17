@@ -24,7 +24,7 @@ export type PaymentMethod =
   | '간편결제'       // Easy payment
   | 'UNKNOWN';
 
-export type PaymentSource = 'api' | 'webhook' | 'manual' | 'system';
+export type PaymentSource = 'api' | 'webhook' | 'manual' | 'system'  | 'confirm'; // ✅ ADD THIS;
 
 export interface PaymentStatusHistoryEntry {
   status: PaymentStatus;
