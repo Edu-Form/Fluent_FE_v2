@@ -1693,14 +1693,25 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
   try {
     const client = await clientPromise;
     const db = client.db("school_management");
-    const students = db.collection("students");
 
+    const students = db.collection("students");
+    const payments = db.collection("payments");
+
+    // 🔥 1. Get payment doc (REAL source of credits)
+    const paymentDoc = await payments.findOne({ orderId });
+
+    if (!paymentDoc) {
+      throw new Error("Payment doc not found");
+    }
+
+    const creditsToAdd = Number(paymentDoc?.metadata?.credits ?? 0);
+
+    // 🔥 2. Find student correctly (NOT by orderId)
     const studentData =
-      await students.findOne({ orderId }) ||
-      { paymentHistory: "", paymentCredits: 0, credits: "0" };
+      await students.findOne({ phoneNumber: paymentDoc.student_id }) ||
+      { paymentHistory: "", credits: "0" };
 
     const existingHistory = studentData.paymentHistory || "";
-    const creditsToAdd = Number(studentData.paymentCredits ?? 0);
 
     const updateObj: any = {
       paymentId: payment.paymentKey,
@@ -1710,15 +1721,14 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
         : `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`,
     };
 
-    // ✅ FIXED CREDIT LOGIC
-    if (payment.status === "DONE" && creditsToAdd !== 0) {
-      const before = parseInt(studentData.credits ?? "0", 10);
+    // 🔥 3. CREDIT UPDATE (FIXED)
+    if (payment.status === "DONE" && creditsToAdd > 0) {
+      const before = Number(studentData.credits ?? 0); // ✅ FIXED (no parseInt)
       const after = before + creditsToAdd;
 
       updateObj.credits = String(after);
       updateObj.updatedAt = new Date();
 
-      // ✅ ADD CREDIT AUTOMATION HISTORY ENTRY
       updateObj.$push = {
         Credit_Automation_History: {
           type: "payment",
@@ -1733,12 +1743,12 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
       };
 
       console.log(
-        `[Payment] Credits updated. Before: ${before}, Added: ${creditsToAdd}, After: ${after}`
+        `[Payment FIXED] Credits updated. Before: ${before}, Added: ${creditsToAdd}, After: ${after}`
       );
     }
 
     const result = await students.updateOne(
-      { orderId },
+      { phoneNumber: paymentDoc.student_id }, // ✅ FIXED
       updateObj.$push
         ? {
             $set: updateObj,
