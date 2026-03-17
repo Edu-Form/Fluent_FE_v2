@@ -1713,23 +1713,24 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
 
     const existingHistory = studentData.paymentHistory || "";
 
-    const updateObj: any = {
+    const setObj: any = {
       paymentId: payment.paymentKey,
       paymentStatus: payment.status === "DONE" ? "COMPLETED" : "FAILED",
       paymentHistory: existingHistory
         ? `${existingHistory} ${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`
         : `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`,
+      updatedAt: new Date(),
     };
 
-    // 🔥 3. CREDIT UPDATE (FIXED)
+    let pushObj: any = undefined;
+
     if (payment.status === "DONE" && creditsToAdd > 0) {
-      const before = Number(studentData.credits ?? 0); // ✅ FIXED (no parseInt)
+      const before = Number(studentData.credits ?? "0");
       const after = before + creditsToAdd;
 
-      updateObj.credits = String(after);
-      updateObj.updatedAt = new Date();
+      setObj.credits = String(after);
 
-      updateObj.$push = {
+      pushObj = {
         Credit_Automation_History: {
           type: "payment",
           orderId,
@@ -1741,20 +1742,18 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
           createdAt: new Date(),
         },
       };
-
-      console.log(
-        `[Payment FIXED] Credits updated. Before: ${before}, Added: ${creditsToAdd}, After: ${after}`
-      );
     }
 
     const result = await students.updateOne(
-      { phoneNumber: paymentDoc.student_id }, // ✅ FIXED
-      updateObj.$push
+      { phoneNumber: paymentDoc.student_id },
+      pushObj
         ? {
-            $set: updateObj,
-            $push: updateObj.$push,
+            $set: setObj,
+            $push: pushObj,
           }
-        : { $set: updateObj }
+        : {
+            $set: setObj,
+          }
     );
 
     return result;
