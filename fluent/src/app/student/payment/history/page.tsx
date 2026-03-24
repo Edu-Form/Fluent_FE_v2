@@ -45,7 +45,7 @@ function PaymentHistoryInner() {
   const [currentCredits, setCurrentCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"payments" | "credits">("payments");
+  const [activeTab, setActiveTab] = useState<"payments" | "credits">("credits");
   const [showExampleData, ] = useState(false);
 
   // Receipt Modal State
@@ -152,10 +152,47 @@ function PaymentHistoryInner() {
           setPayments([...examplePayments, ...(data.payments || [])]);
           setCreditTransactions([...exampleCredits, ...(data.creditTransactions || [])]);
         } else {
-          setPayments(data.payments || []);
-          setCreditTransactions(data.creditTransactions || []);
+          const filteredPayments = (data.payments || []).filter((p: Payment) =>
+            p.status === "DONE" || p.status === "COMPLETED"
+          );
+
+          setPayments(filteredPayments);
+
+          // 👇 NEW LOGIC HERE
+          const profileRes = await fetch(`/api/student/${encodeURIComponent(user)}`, {
+            cache: "no-store",
+          });
+
+          const profile = profileRes.ok ? await profileRes.json() : null;
+
+          const creditHistory = Array.isArray(profile?.Credit_Automation_History)
+            ? profile.Credit_Automation_History
+            : [];
+
+          const mappedCredits: CreditTransaction[] = creditHistory
+            .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .map((item: any) => ({
+              date: item.createdAt,
+              type: item.delta > 0 ? "payment" : "deduction",
+              amount: item.delta,
+              description:
+                item.type === "classnote"
+                  ? "수업 진행"
+                  : item.type === "payment"
+                  ? "크레딧 충전"
+                  : item.type || "기타",
+              classDetails:
+                item.type === "classnote"
+                  ? {
+                      teacher: item.teacher_name,
+                      date: item.class_date,
+                    }
+                  : undefined,
+            }));
+
+          setCreditTransactions(mappedCredits);
+          setCurrentCredits(profile?.credits || 0);
         }
-        setCurrentCredits(data.currentCredits || 0);
 
         // Log if no data found
         if ((!data.payments || data.payments.length === 0) && (!data.creditTransactions || data.creditTransactions.length === 0)) {
@@ -385,16 +422,6 @@ function PaymentHistoryInner() {
         {/* Tabs */}
         <div className="flex gap-4 mb-6 border-b border-gray-200">
           <button
-            onClick={() => setActiveTab("payments")}
-            className={`px-6 py-3 font-medium transition ${activeTab === "payments"
-              ? "border-b-2 border-blue-600 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-              }`}
-          >
-            <Receipt className="inline-block w-5 h-5 mr-2" />
-            결제 내역
-          </button>
-          <button
             onClick={() => setActiveTab("credits")}
             className={`px-6 py-3 font-medium transition ${activeTab === "credits"
               ? "border-b-2 border-blue-600 text-blue-600"
@@ -403,6 +430,17 @@ function PaymentHistoryInner() {
           >
             <Calendar className="inline-block w-5 h-5 mr-2" />
             크레딧 내역
+          </button>
+
+          <button
+            onClick={() => setActiveTab("payments")}
+            className={`px-6 py-3 font-medium transition ${activeTab === "payments"
+              ? "border-b-2 border-blue-600 text-blue-600"
+              : "text-gray-600 hover:text-gray-900"
+              }`}
+          >
+            <Receipt className="inline-block w-5 h-5 mr-2" />
+            영수증 내역 (토스 결제)
           </button>
         </div>
 
@@ -413,6 +451,7 @@ function PaymentHistoryInner() {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
                 <Receipt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 text-lg">결제 내역이 없습니다.</p>
+                <p className="text-gray-600 text-sm">토스 결제 영수증이 필요하실 경우 데이빗 카카오톡 채널에 문의해주세요.</p>
               </div>
             ) : (
               payments.map((payment) => (
