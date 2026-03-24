@@ -2472,9 +2472,10 @@ export async function deductStudentCreditSafe(params: {
   const db = client.db("school_management");
   const students = db.collection("students");
 
+  // 1) Get current credits
   const student = await students.findOne(
     { name: params.student_name },
-    { projection: { credits: 1, Credit_Automation_History: 1 } }
+    { projection: { credits: 1 } }
   );
 
   if (!student) {
@@ -2486,7 +2487,7 @@ export async function deductStudentCreditSafe(params: {
     throw new Error("Invalid credit value");
   }
 
-  const after = before - 1; // ✅ negative allowed
+  const after = before - 1;
 
   const historyEntry = {
     type: "classnote",
@@ -2499,8 +2500,19 @@ export async function deductStudentCreditSafe(params: {
     createdAt: new Date(),
   };
 
-  await students.updateOne(
-    { name: params.student_name },
+  // 2) ATOMIC update (prevents duplicate deduction for same day)
+  const result = await students.updateOne(
+    {
+      name: params.student_name,
+      Credit_Automation_History: {
+        $not: {
+          $elemMatch: {
+            type: "classnote",
+            class_date: params.class_date,
+          },
+        },
+      },
+    },
     {
       $set: {
         credits: String(after),
@@ -2511,6 +2523,14 @@ export async function deductStudentCreditSafe(params: {
       } as any,
     }
   );
+
+  // 3) If no update happened → already deducted today
+  if (result.modifiedCount === 0) {
+    return {
+      skipped: true,
+      reason: "Already deducted for this class_date",
+    };
+  }
 
   return {
     before,
