@@ -189,27 +189,27 @@ async function fetchTeacherConfirm(studentName: string, monthKey: string) {
   }
 }
 
-async function toggleTeacherConfirm(studentName: string, monthKey: string, currentStatus: boolean) {
-  try {
-    const [year, mm] = monthKey.split("-");
-    const yyyymm = `${year}${mm}`;
+// async function toggleTeacherConfirm(studentName: string, monthKey: string, currentStatus: boolean) {
+//   try {
+//     const [year, mm] = monthKey.split("-");
+//     const yyyymm = `${year}${mm}`;
 
-    const res = await fetch(
-      `/api/billing/check1/${encodeURIComponent(studentName)}/${yyyymm}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locked: !currentStatus }),
-      }
-    );
+//     const res = await fetch(
+//       `/api/billing/check1/${encodeURIComponent(studentName)}/${yyyymm}`,
+//       {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ locked: !currentStatus }),
+//       }
+//     );
 
-    if (!res.ok) throw new Error("Failed to toggle");
-    return !currentStatus;
-  } catch (err) {
-    console.error(err);
-    return currentStatus;
-  }
-}
+//     if (!res.ok) throw new Error("Failed to toggle");
+//     return !currentStatus;
+//   } catch (err) {
+//     console.error(err);
+//     return currentStatus;
+//   }
+// }
 
 async function fetchPaymentStatus(studentName: string, monthKey: string) {
   try {
@@ -364,6 +364,7 @@ function AdminBillingExcelPageInner() {
   const studentProfileCacheRef = useRef<Record<string, any>>({});
   const creditHistoryCacheRef = useRef<Record<string, any[]>>({});
   const [cacheTick, setCacheTick] = useState(0);
+  // const [hoveredGroup, setHoveredGroup] = useState<string[] | null>(null);
 
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -378,10 +379,20 @@ function AdminBillingExcelPageInner() {
   >({});
 
   // Stores teacher-confirmed boolean per student
-  const [confirmState, setConfirmState] = useState<Record<string, boolean>>({});
+  const [, setConfirmState] = useState<Record<string, boolean>>({});
   // Stores payment status per student
   const [, setPaymentState] = useState<Record<string, any>>({});
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteTarget, setNoteTarget] = useState<{
+    studentId: string;
+    studentName: string;
+  } | null>(null);
 
+  const [noteType, setNoteType] = useState<string>("");
+  const [groupClassMap, setGroupClassMap] = useState<Record<string, any>>({});
+
+  const [groupStudents, setGroupStudents] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState("");
 
   // const [billingLinkLoading, setBillingLinkLoading] = useState<
   //   Record<string, boolean>
@@ -398,6 +409,31 @@ function AdminBillingExcelPageInner() {
   useEffect(() => {
     setStudentConfigs({});
   }, [selectedTeacher]);
+
+  useEffect(() => {
+    const loadGroupClasses = async () => {
+      try {
+        const res = await fetch("/api/group-class", { cache: "no-store" });
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        const map: Record<string, any> = {};
+
+        data.forEach((group: any) => {
+          (group.group_students || []).forEach((studentName: string) => {
+            map[studentName] = group;
+          });
+        });
+
+        setGroupClassMap(map);
+      } catch (err) {
+        console.error("Failed to load group classes", err);
+      }
+    };
+
+    loadGroupClasses();
+  }, []);
 
   const [creditAmount, setCreditAmount] = useState(0);
   const [creditChange, setCreditChange] = useState(0); // credits
@@ -1234,7 +1270,33 @@ function AdminBillingExcelPageInner() {
   }, [studentFinancials]);
 
   const summary = useMemo(() => {
-    const totalClasses = monthClassnotes.length;
+    let totalClasses = monthClassnotes.length;
+
+    // 🔥 GROUP CLASS DEDUCTION (remove duplicated classnotes)
+    const processedGroups = new Set<string>();
+
+    Object.values(groupClassMap).forEach((group: any) => {
+      const students = group?.group_students || [];
+      if (students.length <= 1) return;
+
+      // prevent double counting same group
+      const groupKey = [...students].sort().join("_");
+      if (processedGroups.has(groupKey)) return;
+      processedGroups.add(groupKey);
+
+      const groupSize = students.length;
+
+      // pick one student as representative
+      const representative = students[0];
+
+      // count how many classnotes exist for that student this month
+      const classCount = monthClassnotes.filter(
+        (cn) => (cn.student_name || "").trim() === representative.trim()
+      ).length;
+
+      // 🔥 subtract duplicated counts
+      totalClasses -= (groupSize - 1) * classCount;
+    });
 
     // More reliable calculation: Use classnotes (actual completed classes) as source of truth
     // Match each classnote with its corresponding schedule to get accurate duration
@@ -1358,7 +1420,9 @@ function AdminBillingExcelPageInner() {
       teacherPay,          // ✅ NEW
       totalAmountDue,
       totalNextToPay,
-      studentCount: (teacherStudents[selectedTeacher] ?? []).length,
+      studentCount: studentRows.filter(
+        (row) => row.classnotes.length > 0
+      ).length,
     };
   }, [
     monthSchedules,
@@ -1678,7 +1742,7 @@ function AdminBillingExcelPageInner() {
               <th className="px-2 py-1 text-right">Δ</th>
               <th className="px-2 py-1 text-right">Before</th>
               <th className="px-2 py-1 text-right">After</th>
-              <th className="px-2 py-1 text-left">Teacher</th>
+              <th className="px-2 py-1 text-left">Price</th>
             </tr>
           </thead>
 
@@ -1931,10 +1995,11 @@ function AdminBillingExcelPageInner() {
                   <thead className="bg-slate-50">
                     <tr className="text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                       <th className="px-4 py-3">학생</th>
-                      <th className="px-4 py-3">수업</th>
+                      <th className="px-4 py-3">특이사항</th>
                       <th className="px-4 py-3">Class Notes</th>
                       <th className="px-4 py-3">Diary</th>
                       <th className="px-4 py-3">Quizlet</th>
+                      <th className="px-2 py-3"></th>
                       <th className="px-4 py-3 w-[240px] text-center">Actions</th>
                     </tr>
                   </thead>
@@ -1987,21 +2052,57 @@ function AdminBillingExcelPageInner() {
                                   )}
                                 </td>
                                 <td className="px-4 py-3">
-                                  <button
-                                    onClick={async () => {
-                                      if (!isAdmin) return;
-                                      const newVal = await toggleTeacherConfirm(row.student.name, selectedMonth, confirmState[row.student.name] || false);
-                                      setConfirmState(prev => ({ ...prev, [row.student.name]: newVal }));
-                                    }}
-                                    disabled={!isAdmin}
-                                    className={`inline-flex items-center rounded-full text-xs px-3 py-1 border transition
-                                    ${confirmState[row.student.name]
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                                        : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                                      }`}
-                                  >
-                                    {confirmState[row.student.name] ? "✅ Teacher Confirmed" : "❌ Not Confirmed"}
-                                  </button>
+                                  <div className="flex flex-col gap-2">
+
+                                    {/* 🔥 STATUS FIRST */}
+                                    <div className="flex flex-wrap items-center gap-2 min-h-[20px]">
+                                      {(() => {
+                                        const profile = studentProfileCacheRef.current[row.student.name];
+                                        const group = groupClassMap[row.student.name];
+
+                                        const isGroup = !!group;
+                                        const isTwo = profile?.["1account2students"];
+
+                                        if (!isGroup && !isTwo) {
+                                          return <span className="text-xs text-gray-300">—</span>;
+                                        }
+
+                                        return (
+                                          <>
+                                            {isGroup && (
+                                              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                                Group
+                                              </span>
+                                            )}
+                                            {isTwo && (
+                                              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                                                1 Account
+                                              </span>
+                                            )}
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+
+                                    {/* 🔥 SMALL ACTION */}
+                                    {isAdmin && (
+                                      <button
+                                        onClick={() => {
+                                          setNoteTarget({
+                                            studentId: row.student.id,
+                                            studentName: row.student.name,
+                                          });
+                                          setNoteType("Group Class");
+                                          setGroupStudents([row.student.name]);
+                                          setGroupName("");
+                                          setNoteModalOpen(true);
+                                        }}
+                                        className="text-[11px] text-indigo-500 hover:text-indigo-700 hover:underline text-left"
+                                      >
+                                        + 추가
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
 
                                 <td className="px-4 py-3">
@@ -2090,75 +2191,51 @@ function AdminBillingExcelPageInner() {
                                 </td>
                                 <td className="px-4 py-3">
                                   <div className="flex flex-col gap-2">
-                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                      <label className="flex flex-col text-xs text-gray-500">
-                                        <span className="mb-1">Credits</span>
-                                        <input
-                                        type="number"
-                                        readOnly
-                                        className="cursor-pointer bg-slate-50"
-                                        value={initialCreditValue}
-                                        onClick={() => {
-                                          if (!isAdmin) return;
 
-                                          setCreditTarget({
-                                            studentId: row.student.id,
-                                            studentName: row.student.name,
-                                            currentCredits: initialCreditValue,
+                                    {/* ✅ CREDITS (PRIMARY) */}
+                                    <div
+                                      onClick={() => {
+                                        if (!isAdmin) return;
+
+                                        setCreditTarget({
+                                          studentId: row.student.id,
+                                          studentName: row.student.name,
+                                          currentCredits: initialCreditValue,
+                                        });
+                                        setCreditAmount(0);
+                                        setCreditChange(0);
+                                        setReasonType("");
+                                        setReasonOther("");
+                                        setCreditModalOpen(true);
+                                      }}
+                                      className={`rounded-lg border px-3 py-2 cursor-pointer transition
+                                        ${isAdmin ? "hover:bg-indigo-50 border-indigo-200" : "border-slate-200 bg-slate-50"}
+                                      `}
+                                    >
+                                      <div className="text-[10px] text-gray-400">CREDITS</div>
+                                      <div className="text-lg font-semibold text-gray-900">
+                                        {initialCreditValue}
+                                      </div>
+                                    </div>
+
+                                    {/* ✅ HOURLY RATE (SECONDARY) */}
+                                    <div className="flex items-center justify-between text-xs text-gray-500">
+                                      <span>Rate</span>
+
+                                      <input
+                                        type="number"
+                                        step="1000"
+                                        className="w-24 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-400 focus:outline-none"
+                                        value={hourlyRateValue}
+                                        onChange={(e) => {
+                                          const parsed = Number.parseFloat(e.target.value);
+                                          handleConfigChange(row.student.id, {
+                                            rate: Number.isFinite(parsed) ? parsed : 0,
                                           });
-                                          setCreditAmount(0);
-                                          setCreditChange(0);
-                                          setReasonType("");
-                                          setReasonOther("");
-                                          setCreditModalOpen(true);
                                         }}
                                       />
-                                      </label>
-                                      <label className="flex flex-col text-xs text-gray-500">
-                                        <span className="mb-1">Hourly rate (₩)</span>
-                                        <input
-                                          type="number"
-                                          step="1000"
-                                          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-gray-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-200"
-                                          value={hourlyRateValue}
-                                          onChange={(e) => {
-                                            const parsed = Number.parseFloat(
-                                              e.target.value
-                                            );
-                                            handleConfigChange(row.student.id, {
-                                              rate: Number.isFinite(parsed)
-                                                ? parsed
-                                                : 0,
-                                            });
-                                          }}
-                                        />
-                                      </label>
                                     </div>
-                                    {/* <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-gray-600">
-                                      <div className="mt-1 flex items-center justify-between">
-                                        <span>
-                                          {monthDotLabelFromKey(selectedMonth)}.01 기준 잔여 수업
-                                        </span>
-                                        <span className="font-medium text-gray-900">
-                                          {Math.max(0, Math.round(totalCreditsAvailableValue))}회
-                                        </span>
-                                      </div>
 
-                                      <div className="mt-1 flex items-center justify-between">
-                                        <span>
-                                          다음달 진행 예정 수업
-                                        </span>
-                                        <span className="font-medium text-gray-900">
-                                          {Math.round(nextMonthPlannedValue)}회
-                                        </span>
-                                      </div>
-                                      <div className="mt-1 flex items-center justify-between">
-                                        <span>오늘 결제 필요 수업</span>
-                                        <span className="font-medium text-gray-900">
-                                          {Math.round(nextToPayClassesValue)}회 ({CURRENCY_FORMATTER.format(Math.round(amountDueValue))})
-                                        </span>
-                                      </div>
-                                    </div> */}
                                   </div>
                                 </td>
                                 {/* <td className="px-4 py-3">
@@ -2311,6 +2388,219 @@ function AdminBillingExcelPageInner() {
                         <button
                           className="rounded-md bg-indigo-600 text-white px-3 py-1 text-xs"
                           onClick={submitCreditAdjustment}
+                        >
+                          저장
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+
+                {noteModalOpen && noteTarget && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+
+                      {/* Title */}
+                      <h3 className="text-base font-semibold text-gray-900">
+                        학생 특이사항 추가
+                      </h3>
+                      <p className="mt-1 text-xs text-gray-500">
+                        학생의 수업 방식 또는 과금 구조를 설정하세요
+                      </p>
+
+                      {/* Options */}
+                      <div className="mt-5 space-y-3">
+
+                        {/* Group Class */}
+                        <div
+                          onClick={() => setNoteType("Group Class")}
+                          className={`cursor-pointer rounded-xl border p-4 transition-all
+                            ${
+                              noteType === "Group Class"
+                                ? "border-yellow-400 bg-yellow-50 shadow-sm ring-1 ring-yellow-200"
+                                : "border-gray-200 hover:border-yellow-300 hover:bg-yellow-50/40"
+                            }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-yellow-800">
+                              🟡 Group Class
+                            </span>
+
+                            {noteType === "Group Class" && (
+                              <span className="text-yellow-500 text-sm">✓</span>
+                            )}
+                          </div>
+
+                            {noteType === "Group Class" && (
+                              <div className="mt-5 space-y-4">
+
+                                {/* Group Name */}
+                                {/* <div>
+                                  <div className="text-xs text-gray-500 mb-1">Group Name (optional)</div>
+                                  <input
+                                    value={groupName}
+                                    onChange={(e) => setGroupName(e.target.value)}
+                                    placeholder="ex. Tue 5PM Group"
+                                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-yellow-400 focus:ring-1 focus:ring-yellow-200 outline-none"
+                                  />
+                                </div> */}
+
+                                {/* Student Selection */}
+                                <div>
+                                  <div className="text-xs text-gray-500 mb-2">그룹 학생 선택</div>
+
+                                  <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 p-2 space-y-1">
+                                    {(teacherStudents[selectedTeacher] || []).map((s) => {
+                                      const selected = groupStudents.includes(s.name);
+
+                                      return (
+                                        <div
+                                          key={s.name}
+                                          onClick={() => {
+                                            setGroupStudents((prev) =>
+                                              prev.includes(s.name)
+                                                ? prev.filter((n) => n !== s.name)
+                                                : [...prev, s.name]
+                                            );
+                                          }}
+                                          className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-sm transition
+                                            ${
+                                              selected
+                                                ? "bg-yellow-100 text-yellow-900"
+                                                : "hover:bg-gray-100 text-gray-700"
+                                            }`}
+                                        >
+                                          <span>{s.name}</span>
+                                          {selected && <span>✓</span>}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Selected Pills */}
+                                <div className="flex flex-wrap gap-2">
+                                  {groupStudents.map((name) => (
+                                    <span
+                                      key={name}
+                                      className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 border border-yellow-200"
+                                    >
+                                      {name}
+                                    </span>
+                                  ))}
+                                </div>
+
+                                {/* Description */}
+                                <div className="text-xs text-yellow-900/80 bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                                  Group class students will be linked together.  
+                                  Classes will be counted jointly and group pricing will apply.
+                                </div>
+
+                              </div>
+                            )}
+                        </div>
+
+                        {/* 1 Account for 2 Students */}
+                        <div
+                          onClick={() => setNoteType("1 Account for 2 Students")}
+                          className={`cursor-pointer rounded-xl border p-4 transition-all
+                            ${
+                              noteType === "1 Account for 2 Students"
+                                ? "border-amber-700 bg-amber-50 shadow-sm ring-1 ring-amber-200"
+                                : "border-gray-200 hover:border-amber-400 hover:bg-amber-50/40"
+                            }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-amber-800">
+                              🟤 1 Account for 2 Students
+                            </span>
+
+                            {noteType === "1 Account for 2 Students" && (
+                              <span className="text-amber-700 text-sm">✓</span>
+                            )}
+                          </div>
+
+                          {noteType === "1 Account for 2 Students" && (
+                            <div className="mt-2 text-xs text-amber-900/80 leading-relaxed">
+                              This is for accounts that include both students in a group class. <br />
+                              Credits will be charged based on a 2-person pricing <br />
+                              (ex. 40,000 × 2 people = 80,000 per credit).
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-6 flex justify-end gap-2">
+                        <button
+                          className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                          onClick={() => setNoteModalOpen(false)}
+                        >
+                          취소
+                        </button>
+
+                        <button
+                          disabled={!noteType}
+                          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-40"
+                          onClick={async () => {
+                            if (!noteTarget || !noteType) return;
+
+                            try {
+                              // ✅ GROUP CLASS → NEW API
+                              if (noteType === "Group Class") {
+                                if (groupStudents.length < 2) {
+                                  alert("최소 2명 이상 선택해야 합니다");
+                                  return;
+                                }
+
+                                await fetch("/api/group-class", {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    group_name: groupName,
+                                    group_students: groupStudents,
+                                  }),
+                                });
+
+                                setGroupStudents([]);
+                                setGroupName("");
+                              }
+
+                              // ✅ 1 ACCOUNT → keep existing logic (for now)
+                              if (noteType === "1 Account for 2 Students") {
+                                await fetch(
+                                  `/api/student/${encodeURIComponent(noteTarget.studentName)}`,
+                                  {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                      "1account2students": true,
+                                    }),
+                                  }
+                                );
+
+                                const existing =
+                                  studentProfileCacheRef.current[noteTarget.studentName] || {};
+
+                                studentProfileCacheRef.current[noteTarget.studentName] = {
+                                  ...existing,
+                                  "1account2students": true,
+                                };
+                              }
+
+                              // ✅ refresh UI
+                              setCacheTick((t) => t + 1);
+                              setNoteModalOpen(false);
+
+                            } catch (err) {
+                              console.error(err);
+                              alert("저장 실패");
+                            }
+                          }}
                         >
                           저장
                         </button>

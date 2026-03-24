@@ -2691,3 +2691,53 @@ export async function backfillPaymentCredits() {
     updatedEntries: totalUpdated,
   };
 }
+
+/** Create a group class */
+export async function createGroupClass({
+  group_name,
+  group_students,
+}: {
+  group_name?: string;
+  group_students: string[];
+}) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const newGroup = {
+      group_name: group_name || `Group_${Date.now()}`,
+      group_students,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await db.collection("group_classes").insertOne(newGroup);
+
+    return {
+      _id: result.insertedId,
+      ...newGroup,
+    };
+  } catch (err) {
+    console.error("createGroupClass error:", err);
+    return null;
+  }
+}
+
+
+/** Get all group classes */
+export async function getGroupClasses() {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const groups = await db
+      .collection("group_classes")
+      .find({})
+      .toArray();
+
+    return groups.map(serialize_document);
+  } catch (err) {
+    console.error("getGroupClasses error:", err);
+    return [];
+  }
+}

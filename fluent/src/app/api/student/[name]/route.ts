@@ -43,7 +43,8 @@ export async function POST(request: Request) {
     const { pathname } = new URL(request.url);
     const parts = pathname.split("/").filter(Boolean);
     const studentIdx = parts.lastIndexOf("student");
-    const raw = studentIdx >= 0 ? parts[studentIdx + 1] : parts[parts.length - 1];
+    const raw =
+      studentIdx >= 0 ? parts[studentIdx + 1] : parts[parts.length - 1];
     const student_name = decodeURIComponent(raw ?? "");
 
     if (!student_name) {
@@ -54,10 +55,19 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { creditDelta, creditReason, creditAmount, adminName, hourlyRate } = body;
+
+    const {
+      creditDelta,
+      creditReason,
+      creditAmount,
+      adminName,
+      hourlyRate,
+      group_class,
+      "1account2students": oneAccountTwoStudents,
+    } = body;
 
     /* ===============================
-       CREDIT ADJUSTMENT (from modal)
+       CREDIT ADJUSTMENT
        =============================== */
     if (typeof creditDelta === "number") {
       if (!creditReason || !adminName) {
@@ -101,10 +111,37 @@ export async function POST(request: Request) {
     }
 
     /* ===============================
+       SPECIAL FLAGS (특이사항)
+       =============================== */
+    if (
+      group_class !== undefined ||
+      oneAccountTwoStudents !== undefined
+    ) {
+      const updateObj: any = {};
+
+      if (group_class !== undefined) {
+        updateObj.group_class = group_class;
+      }
+
+      if (oneAccountTwoStudents !== undefined) {
+        updateObj["1account2students"] = oneAccountTwoStudents;
+      }
+
+      const updated = await updateStudentByName(
+        student_name,
+        updateObj
+      );
+
+      return NextResponse.json({ success: true, updated });
+    }
+
+    /* ===============================
        NON-CREDIT UPDATE (hourlyRate)
        =============================== */
     if (hourlyRate !== undefined) {
-      const updated = await updateStudentByName(student_name, { hourlyRate });
+      const updated = await updateStudentByName(student_name, {
+        hourlyRate,
+      });
       return NextResponse.json({ success: true, updated });
     }
 
