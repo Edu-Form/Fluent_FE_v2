@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,29 +7,64 @@ import { Button } from "@/components/ui/button";
 
 export default function Page() {
   const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // ✅ STEP 2: Auto redirect if user exists
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+
+    if (stored) {
+      try {
+        const user = JSON.parse(stored);
+
+        if (user?.type && user?.phone) {
+          router.replace(
+            `/${user.type}/home?user=${user.name}&type=${user.type}&id=${user.phone}`
+          );
+          return;
+        }
+      } catch (e) {
+        console.error("Invalid stored user");
+      }
+    }
+
+    // no user → show login page
+    setLoading(false);
+  }, [router]);
 
   async function Login() {
     const url = `api/user/${username}`;
-    console.log(url);
     const response = await fetch(url);
+
     if (response.ok) {
       const user = await response.json();
-      console.log(user);
+
       if (user) {
-        // Type guard: Check if user is a Student (has 'level' property)
-        if ("level" in user) {
-          const url = `/student/home?user=${user.name}&type=student&id=${user.phoneNumber}`;
-          router.push(url);
-        } else {
-          const url = `/teacher/home?user=${user.name}&type=teacher&id=${user.phoneNumber}`;
-          router.push(url);
-        }
+        const type = "level" in user ? "student" : "teacher";
+
+        // ✅ store user info
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            name: user.name,
+            type,
+            phone: user.phoneNumber,
+          })
+        );
+
+        // ✅ redirect
+        router.push(
+          `/${type}/home?user=${user.name}&type=${type}&id=${user.phoneNumber}`
+        );
       }
     } else {
-      router.push("/"); // Redirect to home or show an error page if no user found
+      router.push("/");
     }
   }
+
+  // ✅ prevent flicker while checking localStorage
+  if (loading) return null;
 
   return (
     <div className="w-full flex-1 flex items-center justify-center px-4">
@@ -68,5 +103,4 @@ export default function Page() {
       </Card>
     </div>
   );
-
 }
