@@ -24,7 +24,7 @@ export default function Page() {
           );
           return;
         }
-      } catch (e) {
+      } catch {
         console.error("Invalid stored user");
       }
     }
