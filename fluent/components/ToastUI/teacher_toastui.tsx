@@ -678,14 +678,14 @@ function TeacherToastUIInner({
     return matches;
   }
 
-  function updateVisibleEventIfMounted(id: string, calendarId: string, newStart: Date, newEnd: Date) {
-    try {
-      const existing = calRef.current?.getEvent?.(id, calendarId);
-      if (existing) {
-        calRef.current?.updateEvent(id, calendarId, { start: newStart, end: newEnd });
-      }
-    } catch {}
-  }
+  // function updateVisibleEventIfMounted(id: string, calendarId: string, newStart: Date, newEnd: Date) {
+  //   try {
+  //     const existing = calRef.current?.getEvent?.(id, calendarId);
+  //     if (existing) {
+  //       calRef.current?.updateEvent(id, calendarId, { start: newStart, end: newEnd });
+  //     }
+  //   } catch {}
+  // }
 
   /* ------------------------------- Init calendar (ONCE) ------------------------------ */
   useEffect(() => {
