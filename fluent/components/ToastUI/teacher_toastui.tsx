@@ -2392,9 +2392,11 @@ if (mode === "changed") {
                 </>
               ) : (
                 <>
-                  <p className="text-gray-700 mb-3">
-                    같은 <b>학생</b> · 같은 <b>요일</b> · <b>원래 시작시간(시 단위)/길이</b>에 해당하는 수업을
-                    <b> 이 날짜 포함 이후</b> 모두 현재 시간/길이로 업데이트할까요?
+                  <p className="text-gray-700 mb-2">
+                    This will update all upcoming classes with the same schedule.
+                  </p>
+                  <p className="text-gray-400 text-xs mb-3">
+                    Starting from this class onward.
                   </p>
                   <div className="flex justify-end gap-2">
                     <button
