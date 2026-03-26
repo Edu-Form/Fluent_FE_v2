@@ -868,6 +868,62 @@ export async function saveScheduleData(input: any): Promise<any> {
   }
 }
 
+export async function updateScheduleDataBulk(body: any) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+  const coll = db.collection("schedules");
+
+  const {
+    student_name,
+    base_date,
+    old_hour,
+    old_duration,
+    new_hour,
+    new_duration,
+    dayOfWeek,
+  } = body;
+
+  if (!student_name) throw new Error("Missing student_name");
+
+  const all = await coll.find({ student_name }).toArray();
+
+  const targetIds: any[] = [];
+
+  for (const row of all) {
+    const dt = new Date(row.date.replace(/\./g, "-"));
+
+    // ✅ only future (including current)
+    if (dt < new Date(base_date)) continue;
+
+    // ✅ same weekday
+    if (dt.getDay() !== dayOfWeek) continue;
+
+    // ✅ same time pattern
+    if (Number(row.time) !== old_hour) continue;
+    if (Number(row.duration) !== old_duration) continue;
+
+    targetIds.push(row._id);
+  }
+
+  if (targetIds.length === 0) {
+    return { updatedCount: 0 };
+  }
+
+  const result = await coll.updateMany(
+    { _id: { $in: targetIds } },
+    {
+      $set: {
+        time: new_hour,
+        duration: new_duration,
+      },
+    }
+  );
+
+  return {
+    updatedCount: result.modifiedCount,
+  };
+}
+
 
 // --- DELETE schedule(s) ---
 export async function deleteScheduleDataBulk(body: any) {

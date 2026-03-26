@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveScheduleData, deleteScheduleDataBulk } from "@/lib/data";
+import { saveScheduleData, deleteScheduleDataBulk, updateScheduleDataBulk } from "@/lib/data";
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +25,20 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
     console.error("Error deleting schedules:", error);
+    return NextResponse.json(
+      { error: error?.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const result = await updateScheduleDataBulk(body);
+    return NextResponse.json(result, { status: 200 });
+  } catch (error: any) {
+    console.error("Error updating schedules:", error);
     return NextResponse.json(
       { error: error?.message || "Internal Server Error" },
       { status: 500 }

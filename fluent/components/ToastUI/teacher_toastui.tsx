@@ -1344,27 +1344,72 @@ if (mode === "changed") {
   };
 
   /* ---------------------- Update future after drag/resize -------------------- */
+  // const confirmUpdateFuture = async () => {
+  //   if (!bulkPanel || bulkPanel.kind !== "update" || !bulkPanel.reference) return;
+  //   setBulkPanel((p) => (p ? { ...p, saving: true } : p));
+  //   try {
+  //     const base = bulkPanel.baseEvent;
+  //     const baseStart = new Date(base.start as any);
+  //     const baseEnd = new Date(base.end as any);
+  //     const newHour = baseStart.getHours() + baseStart.getMinutes() / 60;
+  //     const newDurHrs = getDurationHours(baseStart, baseEnd);
+
+  //     const matches = collectFutureMatchesFromData(base, bulkPanel.reference!);
+
+  //     for (const { scheduleId, date } of matches) {
+  //       const intH = Math.floor(newHour);
+  //       const intM = Math.round((newHour - intH) * 60);
+  //       const newStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), intH, intM, 0);
+  //       const newEnd = new Date(newStart.getTime() + newDurHrs * 3600000);
+
+  //       await saveUpdateById(scheduleId, ymdString(newStart), newHour, newDurHrs);
+  //       updateVisibleEventIfMounted(scheduleId, "1", newStart, newEnd);
+  //     }
+
+  //     setBulkPanel(null);
+  //     setDetail(null);
+  //   } catch (e: any) {
+  //     alert(`일괄 업데이트 실패: ${e?.message ?? e}`);
+  //     setBulkPanel((p) => (p ? { ...p, saving: false } : p));
+  //   }
+  // };
   const confirmUpdateFuture = async () => {
     if (!bulkPanel || bulkPanel.kind !== "update" || !bulkPanel.reference) return;
+
     setBulkPanel((p) => (p ? { ...p, saving: true } : p));
+
     try {
       const base = bulkPanel.baseEvent;
+
       const baseStart = new Date(base.start as any);
       const baseEnd = new Date(base.end as any);
-      const newHour = baseStart.getHours() + baseStart.getMinutes() / 60;
-      const newDurHrs = getDurationHours(baseStart, baseEnd);
 
-      const matches = collectFutureMatchesFromData(base, bulkPanel.reference!);
+      const newHour =
+        baseStart.getHours() + baseStart.getMinutes() / 60;
 
-      for (const { scheduleId, date } of matches) {
-        const intH = Math.floor(newHour);
-        const intM = Math.round((newHour - intH) * 60);
-        const newStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), intH, intM, 0);
-        const newEnd = new Date(newStart.getTime() + newDurHrs * 3600000);
+      const newDuration = getDurationHours(baseStart, baseEnd);
 
-        await saveUpdateById(scheduleId, ymdString(newStart), newHour, newDurHrs);
-        updateVisibleEventIfMounted(scheduleId, "1", newStart, newEnd);
-      }
+      const oldRef = bulkPanel.reference; // ✅ THIS is your old reference
+
+      // ✅ SINGLE API CALL (this is the whole point)
+      await fetch("/api/schedules", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          student_name: base.raw.student_name,
+          base_date: ymdString(baseStart),
+          old_hour: oldRef.hour,
+          old_duration: oldRef.durationH,
+          new_hour: newHour,
+          new_duration: newDuration,
+          dayOfWeek: baseStart.getDay(),
+        }),
+      });
+
+      // ✅ just refresh instead of manually updating UI
+      window.dispatchEvent(new CustomEvent("calendar:saved"));
 
       setBulkPanel(null);
       setDetail(null);
