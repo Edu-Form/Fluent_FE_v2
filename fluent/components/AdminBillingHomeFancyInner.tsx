@@ -147,7 +147,7 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
         d.getMonth() + 1
       ).padStart(2, "0")}`;
 
-      map[key] = (map[key] || 0) + 40000;
+      map[key] = (map[key] || 0) + 70000;
     });
 
     return Object.entries(map).sort().slice(-6);
