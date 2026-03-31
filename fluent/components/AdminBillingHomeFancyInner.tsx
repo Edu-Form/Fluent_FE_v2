@@ -283,7 +283,7 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
       {/* ROI */}
 {/* ROI */}
 <Card>
-  <CardHeader title="Teacher Performance vs Average" />
+  <CardHeader title="Teacher Performance vs Monthly Average" />
 
   <div className="mt-4 space-y-6">
 
@@ -344,11 +344,11 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
       </div>
     </div>
 
-    {/* BAR GRAPH */}
-    <div className="h-[180px] flex items-end gap-4 relative">
+    {/* GRAPH */}
+    <div className="h-[180px] relative">
       {(() => {
-        /* ---------------- SELECTED TEACHER DATA ---------------- */
-        const monthlyMap: Record<string, Set<string>> = {};
+        /* ---------------- SELECTED TEACHER ---------------- */
+        const teacherMonthlyMap: Record<string, Set<string>> = {};
 
         classnotes.forEach((cn) => {
           if (cn.teacher_name !== selectedTeacher) return;
@@ -360,13 +360,13 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
             d.getMonth() + 1
           ).padStart(2, "0")}`;
 
-          if (!monthlyMap[key]) monthlyMap[key] = new Set();
+          if (!teacherMonthlyMap[key]) teacherMonthlyMap[key] = new Set();
           if (cn.student_name) {
-            monthlyMap[key].add(cn.student_name);
+            teacherMonthlyMap[key].add(cn.student_name);
           }
         });
 
-        const monthly = Object.entries(monthlyMap)
+        const teacherMonthly = Object.entries(teacherMonthlyMap)
           .map(([month, set]) => ({
             month,
             count: set.size,
@@ -374,56 +374,83 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
           .sort((a, b) => a.month.localeCompare(b.month))
           .slice(-6);
 
-        const max = Math.max(...monthly.map((m) => m.count), 1);
-
-        /* ---------------- GLOBAL AVERAGE ---------------- */
-        const globalMonthlyMap: Record<string, Set<string>> = {};
+        /* ---------------- GLOBAL PER TEACHER ---------------- */
+        const globalMap: Record<string, Record<string, Set<string>>> = {};
 
         classnotes.forEach((cn) => {
+          const teacher = cn.teacher_name || "—";
           const d = toDate(cn.date || cn.class_date);
           if (!d) return;
 
-          const key = `${d.getFullYear()}-${String(
+          const month = `${d.getFullYear()}-${String(
             d.getMonth() + 1
           ).padStart(2, "0")}`;
 
-          if (!globalMonthlyMap[key]) globalMonthlyMap[key] = new Set();
+          if (!globalMap[month]) globalMap[month] = {};
+          if (!globalMap[month][teacher])
+            globalMap[month][teacher] = new Set();
+
           if (cn.student_name) {
-            globalMonthlyMap[key].add(cn.student_name);
+            globalMap[month][teacher].add(cn.student_name);
           }
         });
 
-        const globalMonthly = Object.entries(globalMonthlyMap)
-          .map(([month, set]) => ({
-            month,
-            count: set.size,
-          }))
+        const globalMonthlyAvg = Object.entries(globalMap)
+          .map(([month, teacherMap]) => {
+            const teacherCounts = Object.values(teacherMap).map(
+              (set) => set.size
+            );
+
+            const avg =
+              teacherCounts.reduce((a, b) => a + b, 0) /
+              (teacherCounts.length || 1);
+
+            return { month, avg };
+          })
           .sort((a, b) => a.month.localeCompare(b.month))
           .slice(-6);
 
-        const globalAverage =
-          globalMonthly.reduce((sum, m) => sum + m.count, 0) /
-          (globalMonthly.length || 1);
+        /* ---------------- SCALE ---------------- */
+        const allValues = [
+          ...teacherMonthly.map((m) => m.count),
+          ...globalMonthlyAvg.map((m) => m.avg),
+        ];
 
-        const avgHeight = (globalAverage / max) * 140;
+        const max = Math.max(...allValues, 1);
 
+        /* ---------------- RENDER ---------------- */
         return (
-          <>
-            {/* 🔴 GLOBAL AVERAGE LINE */}
-            <div
-              className="absolute left-0 right-0 border-t border-red-400 border-dashed"
-              style={{
-                bottom: `${avgHeight}px`,
-              }}
-            >
-              <div className="text-[10px] text-red-500 absolute -top-4 right-0">
-                Avg {globalAverage.toFixed(1)}
-              </div>
-            </div>
+          <div className="flex items-end gap-4 h-full relative">
+            {/* LINE GRAPH (SVG) */}
+{/* LINE GRAPH (FIXED) */}
+<svg
+  className="absolute inset-0 w-full h-full pointer-events-none"
+  viewBox="0 0 100 100"
+  preserveAspectRatio="none"
+>
+  <polyline
+    fill="none"
+    stroke="red"
+    strokeWidth="1.5"
+    points={globalMonthlyAvg
+      .map((m, i) => {
+        const total = globalMonthlyAvg.length;
+
+        // evenly spaced X (0 → 100)
+        const x = (i / (total - 1 || 1)) * 100;
+
+        // inverted Y (0 top → 100 bottom)
+        const y = 100 - (m.avg / max) * 100;
+
+        return `${x},${y}`;
+      })
+      .join(" ")}
+  />
+</svg>
 
             {/* BARS */}
-            {monthly.map((m) => {
-              const height = (m.count / max) * 140;
+            {teacherMonthly.map((m) => {
+              const height = (m.count / max) * 160;
 
               return (
                 <div
@@ -433,11 +460,7 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
                   <div className="text-xs mb-1">{m.count}</div>
 
                   <div
-                    className={`w-full rounded-md ${
-                      m.count >= globalAverage
-                        ? "bg-green-500"
-                        : "bg-gray-300"
-                    }`}
+                    className="w-full bg-indigo-500 rounded-md"
                     style={{
                       height: `${Math.max(height, 6)}px`,
                     }}
@@ -449,7 +472,7 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
                 </div>
               );
             })}
-          </>
+          </div>
         );
       })()}
     </div>
