@@ -1851,6 +1851,25 @@ export async function saveInitialPayment(student_name: string, orderId: string, 
   }
 }
 
+export async function getAllClassnotes() {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    const docs = await coll
+      .find({})
+      .sort({ date: -1, createdAt: -1 })
+      .limit(5000) // safety
+      .toArray();
+
+    return docs.map(serialize_document);
+  } catch (err) {
+    console.error("getAllClassnotes error:", err);
+    return [];
+  }
+}
+
 // lib/data.ts (append near other save* functions)
 export async function saveClassnotesNew(input: {
   student_name: string;
