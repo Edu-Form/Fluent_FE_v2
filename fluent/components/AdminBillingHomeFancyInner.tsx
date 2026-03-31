@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 /* -------------------------------- TYPES -------------------------------- */
 
@@ -14,17 +12,9 @@ type StudentInfo = {
   teacher?: string;
   teacher_name?: string;
   credits?: number | string;
-  hourlyRate?: number | string;
-  feePerClass?: number | string;
-  fee_per_class?: number | string;
-  classFee?: number | string;
-  class_fee?: number | string;
-  tuition?: number | string;
-  tuitionPerClass?: number | string;
 };
 
 type ClassnoteEntry = {
-  _id?: string;
   student_name?: string;
   teacher_name?: string;
   date?: string;
@@ -36,7 +26,6 @@ type StudentFinancial = {
   name: string;
   teacher: string;
   credits: number;
-  hourlyRate: number;
 };
 
 /* -------------------------------- UTILS -------------------------------- */
@@ -52,19 +41,9 @@ function toDate(str?: string) {
   }
 }
 
-function diffDays(a: Date, b: Date) {
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function toNumber(value: any): number | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "number") return value;
-  const parsed = Number(String(value).replace(/[^\d.-]/g, ""));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function extractCredits(s: StudentInfo): number {
-  return toNumber(s.credits) ?? 0;
+function toNumber(value: any): number {
+  const parsed = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function studentName(s: StudentInfo, i: number) {
@@ -78,11 +57,17 @@ function teacherName(s: StudentInfo) {
 /* -------------------------------- PAGE -------------------------------- */
 
 export default function AdminDashboard() {
-  const searchParams = useSearchParams();
-
   const [students, setStudents] = useState<StudentFinancial[]>([]);
   const [classnotes, setClassnotes] = useState<ClassnoteEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const teachers = useMemo(
+    () => Array.from(new Set(students.map((s) => s.teacher))),
+    [students]
+  );
+
+const [selectedTeacher, setSelectedTeacher] = useState("");
+
+  const [roiMode, setRoiMode] = useState<"1m" | "3m" | "6m">("3m");
 
   useEffect(() => {
     const load = async () => {
@@ -98,20 +83,15 @@ export default function AdminDashboard() {
 
       const sRaw: StudentInfo[] = Array.isArray(sJson)
         ? sJson
-        : Array.isArray(sJson?.data)
-        ? sJson.data
-        : [];
+        : sJson?.data || [];
 
-      const cRaw: ClassnoteEntry[] = Array.isArray(cJson?.data)
-        ? cJson.data
-        : [];
+      const cRaw: ClassnoteEntry[] = cJson?.data || [];
 
-      const mapped = sRaw.map((s: StudentInfo, i: number) => ({
+      const mapped = sRaw.map((s, i) => ({
         id: String(s._id || s.id || i),
         name: studentName(s, i),
         teacher: teacherName(s),
-        credits: extractCredits(s),
-        hourlyRate: 0,
+        credits: toNumber(s.credits),
       }));
 
       setStudents(mapped);
@@ -122,11 +102,59 @@ export default function AdminDashboard() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (teachers.length && !selectedTeacher) {
+      setSelectedTeacher(teachers[0]);
+    }
+  }, [teachers, selectedTeacher]);
+
+  /* ---------------- ACTIVE STUDENTS ---------------- */
+
+  const activeStudents = useMemo(() => {
+    const now = new Date();
+    const set = new Set<string>();
+
+    classnotes.forEach((cn) => {
+      const d = toDate(cn.date || cn.class_date);
+      if (!d) return;
+
+      if (
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
+      ) {
+        if (cn.student_name) set.add(cn.student_name);
+      }
+    });
+
+    return set.size;
+  }, [classnotes]);
+
   /* ---------------- LOW CREDIT ---------------- */
 
   const lowCredit = useMemo(() => {
     return students.filter((s) => s.credits < 0);
   }, [students]);
+
+  /* ---------------- MONTHLY REVENUE ---------------- */
+
+  const monthlyRevenue = useMemo(() => {
+    const map: Record<string, number> = {};
+
+    classnotes.forEach((cn) => {
+      const d = toDate(cn.date || cn.class_date);
+      if (!d) return;
+
+      const key = `${d.getFullYear()}-${String(
+        d.getMonth() + 1
+      ).padStart(2, "0")}`;
+
+      map[key] = (map[key] || 0) + 40000;
+    });
+
+    return Object.entries(map).sort().slice(-6);
+  }, [classnotes]);
+
+  const maxRevenue = Math.max(...monthlyRevenue.map(([, v]) => v), 1);
 
   /* ---------------- ROI ---------------- */
 
@@ -139,99 +167,241 @@ export default function AdminDashboard() {
       studentMap.get(name)!.push(cn);
     });
 
-    const teacherStats: any = {};
+    const stats: any = {};
 
     students.forEach((s) => {
       const notes = studentMap.get(s.name) || [];
-      if (notes.length === 0) return;
+      if (!notes.length) return;
 
       const dates = notes
         .map((n) => toDate(n.date || n.class_date))
-        .filter((d): d is Date => !!d)
-        .sort((a, b) => a.getTime() - b.getTime());
+        .filter(Boolean) as Date[];
 
       if (!dates.length) return;
 
-      const duration = diffDays(dates[0], dates[dates.length - 1]);
+      dates.sort((a, b) => a.getTime() - b.getTime());
+
+      const duration =
+        (dates[dates.length - 1].getTime() - dates[0].getTime()) /
+        (1000 * 60 * 60 * 24);
 
       const t = s.teacher;
 
-      if (!teacherStats[t]) {
-        teacherStats[t] = {
-          total: 0,
-          quit1m: 0,
-          quit3m: 0,
-          quit6m: 0,
-          durations: [],
-        };
+      if (!stats[t]) {
+        stats[t] = { total: 0, quit1m: 0, quit3m: 0, quit6m: 0 };
       }
 
-      teacherStats[t].total += 1;
-      teacherStats[t].durations.push(duration);
+      stats[t].total++;
 
-      if (duration <= 30) teacherStats[t].quit1m += 1;
-      if (duration <= 90) teacherStats[t].quit3m += 1;
-      if (duration <= 180) teacherStats[t].quit6m += 1;
+      if (duration <= 30) stats[t].quit1m++;
+      if (duration <= 90) stats[t].quit3m++;
+      if (duration <= 180) stats[t].quit6m++;
     });
 
-    return Object.entries(teacherStats).map(([teacher, stat]: any) => ({
+    return Object.entries(stats).map(([teacher, s]: any) => ({
       teacher,
-      total: stat.total,
-      quit1m: ((stat.quit1m / stat.total) * 100).toFixed(1),
-      quit3m: ((stat.quit3m / stat.total) * 100).toFixed(1),
-      quit6m: ((stat.quit6m / stat.total) * 100).toFixed(1),
-      avgDays: Math.round(
-        stat.durations.reduce((a: number, b: number) => a + b, 0) /
-          stat.durations.length
-      ),
+      value:
+        roiMode === "1m"
+          ? (s.quit1m / s.total) * 100
+          : roiMode === "3m"
+          ? (s.quit3m / s.total) * 100
+          : (s.quit6m / s.total) * 100,
     }));
-  }, [students, classnotes]);
+  }, [students, classnotes, roiMode]);
 
-  if (loading) return <div className="p-8 text-gray-500">Loading…</div>;
+  if (loading) return <div className="p-8">Loading...</div>;
 
   return (
-    <div className="p-8 space-y-8 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen space-y-6">
 
-      {/* LOW CREDIT */}
-      <Card>
-        <CardHeader title="⚠️ 크레딧 음수 학생" />
-        <div className="mt-4 space-y-2">
-          {lowCredit.length === 0 ? (
-            <div className="text-sm text-gray-500">없음 👍</div>
-          ) : (
-            lowCredit.map((s) => (
-              <div key={s.id} className="flex justify-between text-sm">
-                <span>{s.name} ({s.teacher})</span>
-                <span className="text-rose-600 font-semibold">{s.credits}</span>
+      {/* TOP KPI */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <Card>
+          <div className="text-sm text-gray-500">이번 달 활성 학생</div>
+          <div className="text-3xl font-bold mt-2">{activeStudents}</div>
+        </Card>
+
+        <Card>
+          <CardHeader title="0 Credit 미만 학생" />
+
+          <div className="mt-4 max-h-40 overflow-y-auto space-y-2">
+            {lowCredit.map((s) => (
+              <div key={s.id}>
+                <div className="text-xs text-gray-500">{s.teacher}</div>
+                <div className="flex justify-between text-sm">
+                  <span>{s.name}</span>
+                  <span className="text-rose-500 font-semibold">
+                    {s.credits}
+                  </span>
+                </div>
               </div>
-            ))
-          )}
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <div className="text-sm text-gray-500">추가 KPI</div>
+          <div className="text-2xl font-semibold mt-2">—</div>
+        </Card>
+      </div>
+
+      {/* MONTHLY REVENUE GRAPH */}
+      <Card>
+        <CardHeader title="월별 매출" />
+
+        <div className="mt-6 h-[220px] flex items-end gap-4">
+          {monthlyRevenue.map(([month, value]) => {
+            const height = (value / maxRevenue) * 180; // actual px height
+
+            return (
+              <div key={month} className="flex-1 flex flex-col items-center justify-end">
+                
+                {/* VALUE */}
+                <div className="text-xs mb-1">
+                  ₩{value.toLocaleString()}
+                </div>
+
+                {/* BAR (FIXED HEIGHT SYSTEM) */}
+                <div
+                  className="w-full bg-blue-500 rounded-md"
+                  style={{
+                    height: `${Math.max(height, 8)}px`, // <-- 핵심
+                  }}
+                />
+
+                {/* MONTH */}
+                <div className="text-xs mt-2 text-gray-600">
+                  {month.slice(5)}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Card>
 
       {/* ROI */}
-      <Card>
-        <CardHeader title="📊 Teacher ROI (Retention)" subtitle="이탈률 및 유지기간" />
+{/* ROI */}
+<Card>
+  <CardHeader title="Teacher Retention (ROI)" />
 
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {roiByTeacher.map((r) => (
-            <div key={r.teacher} className="border rounded-2xl p-4 bg-white">
-              <div className="font-semibold">{r.teacher}</div>
-              <div className="text-xs text-gray-500">{r.total} students</div>
+  <div className="mt-4 space-y-6">
 
-              <div className="mt-3 text-sm space-y-1">
-                <div>1개월 이탈: {r.quit1m}%</div>
-                <div>3개월 이탈: {r.quit3m}%</div>
-                <div>6개월 이탈: {r.quit6m}%</div>
-              </div>
+    {/* SELECT + AVG */}
+    <div className="flex justify-between items-center">
+      <select
+        value={selectedTeacher}
+        onChange={(e) => setSelectedTeacher(e.target.value)}
+        className="border rounded-lg px-3 py-1 text-sm"
+      >
+        {teachers.map((t) => (
+          <option key={t}>{t}</option>
+        ))}
+      </select>
 
-              <div className="mt-3 text-sm font-medium">
-                평균 유지: {r.avgDays}일
+      <div className="text-sm text-gray-500">
+        평균 유지:{" "}
+        <span className="font-semibold text-black">
+          {(() => {
+            const studentMap = new Map<string, ClassnoteEntry[]>();
+
+            classnotes.forEach((cn) => {
+              const name = cn.student_name || "";
+              if (!studentMap.has(name)) studentMap.set(name, []);
+              studentMap.get(name)!.push(cn);
+            });
+
+            let durations: number[] = [];
+
+            students.forEach((s) => {
+              if (s.teacher !== selectedTeacher) return;
+
+              const notes = studentMap.get(s.name) || [];
+              if (!notes.length) return;
+
+              const dates = notes
+                .map((n) => toDate(n.date || n.class_date))
+                .filter(Boolean) as Date[];
+
+              if (!dates.length) return;
+
+              dates.sort((a, b) => a.getTime() - b.getTime());
+
+              const duration =
+                (dates[dates.length - 1].getTime() - dates[0].getTime()) /
+                (1000 * 60 * 60 * 24);
+
+              durations.push(duration);
+            });
+
+            if (!durations.length) return 0;
+
+            return Math.round(
+              durations.reduce((a, b) => a + b, 0) / durations.length
+            );
+          })()}일
+        </span>
+      </div>
+    </div>
+
+    {/* BAR GRAPH */}
+    <div className="h-[180px] flex items-end gap-4">
+      {(() => {
+        const monthlyMap: Record<string, Set<string>> = {};
+
+        classnotes.forEach((cn) => {
+          if (cn.teacher_name !== selectedTeacher) return;
+
+          const d = toDate(cn.date || cn.class_date);
+          if (!d) return;
+
+          const key = `${d.getFullYear()}-${String(
+            d.getMonth() + 1
+          ).padStart(2, "0")}`;
+
+          if (!monthlyMap[key]) monthlyMap[key] = new Set();
+          if (cn.student_name) {
+            monthlyMap[key].add(cn.student_name);
+          }
+        });
+
+        const monthly = Object.entries(monthlyMap)
+          .map(([month, set]) => ({
+            month,
+            count: set.size,
+          }))
+          .sort((a, b) => a.month.localeCompare(b.month))
+          .slice(-6);
+
+        const max = Math.max(...monthly.map((m) => m.count), 1);
+
+        return monthly.map((m) => {
+          const height = (m.count / max) * 140;
+
+          return (
+            <div
+              key={m.month}
+              className="flex-1 flex flex-col items-center justify-end"
+            >
+              <div className="text-xs mb-1">{m.count}</div>
+
+              <div
+                className="w-full bg-indigo-500 rounded-md"
+                style={{
+                  height: `${Math.max(height, 6)}px`,
+                }}
+              />
+
+              <div className="text-xs mt-2 text-gray-600">
+                {m.month.slice(5)}
               </div>
             </div>
-          ))}
-        </div>
-      </Card>
+          );
+        });
+      })()}
+    </div>
+  </div>
+</Card>
     </div>
   );
 }
@@ -240,17 +410,12 @@ export default function AdminDashboard() {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+    <div className="bg-white rounded-2xl p-5 shadow-sm border">
       {children}
     </div>
   );
 }
 
-function CardHeader({ title, subtitle }: { title: string; subtitle?: string }) {
-  return (
-    <div>
-      <div className="text-lg font-semibold text-gray-900">{title}</div>
-      {subtitle && <div className="text-sm text-gray-500">{subtitle}</div>}
-    </div>
-  );
+function CardHeader({ title }: { title: string }) {
+  return <div className="font-semibold text-gray-900">{title}</div>;
 }
