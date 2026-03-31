@@ -67,7 +67,6 @@ export default function AdminDashboard() {
 
 const [selectedTeacher, setSelectedTeacher] = useState("");
 
-  const [roiMode,] = useState<"1m" | "3m" | "6m">("3m");
 
   useEffect(() => {
     const load = async () => {
