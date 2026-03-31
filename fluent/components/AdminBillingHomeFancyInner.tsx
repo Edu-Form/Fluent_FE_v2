@@ -67,7 +67,7 @@ export default function AdminDashboard() {
 
 const [selectedTeacher, setSelectedTeacher] = useState("");
 
-  const [roiMode, setRoiMode] = useState<"1m" | "3m" | "6m">("3m");
+  const [roiMode,] = useState<"1m" | "3m" | "6m">("3m");
 
   useEffect(() => {
     const load = async () => {
@@ -158,56 +158,56 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
 
   /* ---------------- ROI ---------------- */
 
-  const roiByTeacher = useMemo(() => {
-    const studentMap = new Map<string, ClassnoteEntry[]>();
+  // const roiByTeacher = useMemo(() => {
+  //   const studentMap = new Map<string, ClassnoteEntry[]>();
 
-    classnotes.forEach((cn) => {
-      const name = cn.student_name || "";
-      if (!studentMap.has(name)) studentMap.set(name, []);
-      studentMap.get(name)!.push(cn);
-    });
+  //   classnotes.forEach((cn) => {
+  //     const name = cn.student_name || "";
+  //     if (!studentMap.has(name)) studentMap.set(name, []);
+  //     studentMap.get(name)!.push(cn);
+  //   });
 
-    const stats: any = {};
+  //   const stats: any = {};
 
-    students.forEach((s) => {
-      const notes = studentMap.get(s.name) || [];
-      if (!notes.length) return;
+  //   students.forEach((s) => {
+  //     const notes = studentMap.get(s.name) || [];
+  //     if (!notes.length) return;
 
-      const dates = notes
-        .map((n) => toDate(n.date || n.class_date))
-        .filter(Boolean) as Date[];
+  //     const dates = notes
+  //       .map((n) => toDate(n.date || n.class_date))
+  //       .filter(Boolean) as Date[];
 
-      if (!dates.length) return;
+  //     if (!dates.length) return;
 
-      dates.sort((a, b) => a.getTime() - b.getTime());
+  //     dates.sort((a, b) => a.getTime() - b.getTime());
 
-      const duration =
-        (dates[dates.length - 1].getTime() - dates[0].getTime()) /
-        (1000 * 60 * 60 * 24);
+  //     const duration =
+  //       (dates[dates.length - 1].getTime() - dates[0].getTime()) /
+  //       (1000 * 60 * 60 * 24);
 
-      const t = s.teacher;
+  //     const t = s.teacher;
 
-      if (!stats[t]) {
-        stats[t] = { total: 0, quit1m: 0, quit3m: 0, quit6m: 0 };
-      }
+  //     if (!stats[t]) {
+  //       stats[t] = { total: 0, quit1m: 0, quit3m: 0, quit6m: 0 };
+  //     }
 
-      stats[t].total++;
+  //     stats[t].total++;
 
-      if (duration <= 30) stats[t].quit1m++;
-      if (duration <= 90) stats[t].quit3m++;
-      if (duration <= 180) stats[t].quit6m++;
-    });
+  //     if (duration <= 30) stats[t].quit1m++;
+  //     if (duration <= 90) stats[t].quit3m++;
+  //     if (duration <= 180) stats[t].quit6m++;
+  //   });
 
-    return Object.entries(stats).map(([teacher, s]: any) => ({
-      teacher,
-      value:
-        roiMode === "1m"
-          ? (s.quit1m / s.total) * 100
-          : roiMode === "3m"
-          ? (s.quit3m / s.total) * 100
-          : (s.quit6m / s.total) * 100,
-    }));
-  }, [students, classnotes, roiMode]);
+  //   return Object.entries(stats).map(([teacher, s]: any) => ({
+  //     teacher,
+  //     value:
+  //       roiMode === "1m"
+  //         ? (s.quit1m / s.total) * 100
+  //         : roiMode === "3m"
+  //         ? (s.quit3m / s.total) * 100
+  //         : (s.quit6m / s.total) * 100,
+  //   }));
+  // }, [students, classnotes, roiMode]);
 
   if (loading) return <div className="p-8">Loading...</div>;
 
@@ -283,11 +283,11 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
       {/* ROI */}
 {/* ROI */}
 <Card>
-  <CardHeader title="Teacher Retention (ROI)" />
+  <CardHeader title="Teacher Performance vs Average" />
 
   <div className="mt-4 space-y-6">
 
-    {/* SELECT + AVG */}
+    {/* SELECT + AVG DURATION */}
     <div className="flex justify-between items-center">
       <select
         value={selectedTeacher}
@@ -311,7 +311,7 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
               studentMap.get(name)!.push(cn);
             });
 
-            let durations: number[] = [];
+            const durations: number[] = [];
 
             students.forEach((s) => {
               if (s.teacher !== selectedTeacher) return;
@@ -345,8 +345,9 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
     </div>
 
     {/* BAR GRAPH */}
-    <div className="h-[180px] flex items-end gap-4">
+    <div className="h-[180px] flex items-end gap-4 relative">
       {(() => {
+        /* ---------------- SELECTED TEACHER DATA ---------------- */
         const monthlyMap: Record<string, Set<string>> = {};
 
         classnotes.forEach((cn) => {
@@ -375,29 +376,81 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
 
         const max = Math.max(...monthly.map((m) => m.count), 1);
 
-        return monthly.map((m) => {
-          const height = (m.count / max) * 140;
+        /* ---------------- GLOBAL AVERAGE ---------------- */
+        const globalMonthlyMap: Record<string, Set<string>> = {};
 
-          return (
+        classnotes.forEach((cn) => {
+          const d = toDate(cn.date || cn.class_date);
+          if (!d) return;
+
+          const key = `${d.getFullYear()}-${String(
+            d.getMonth() + 1
+          ).padStart(2, "0")}`;
+
+          if (!globalMonthlyMap[key]) globalMonthlyMap[key] = new Set();
+          if (cn.student_name) {
+            globalMonthlyMap[key].add(cn.student_name);
+          }
+        });
+
+        const globalMonthly = Object.entries(globalMonthlyMap)
+          .map(([month, set]) => ({
+            month,
+            count: set.size,
+          }))
+          .sort((a, b) => a.month.localeCompare(b.month))
+          .slice(-6);
+
+        const globalAverage =
+          globalMonthly.reduce((sum, m) => sum + m.count, 0) /
+          (globalMonthly.length || 1);
+
+        const avgHeight = (globalAverage / max) * 140;
+
+        return (
+          <>
+            {/* 🔴 GLOBAL AVERAGE LINE */}
             <div
-              key={m.month}
-              className="flex-1 flex flex-col items-center justify-end"
+              className="absolute left-0 right-0 border-t border-red-400 border-dashed"
+              style={{
+                bottom: `${avgHeight}px`,
+              }}
             >
-              <div className="text-xs mb-1">{m.count}</div>
-
-              <div
-                className="w-full bg-indigo-500 rounded-md"
-                style={{
-                  height: `${Math.max(height, 6)}px`,
-                }}
-              />
-
-              <div className="text-xs mt-2 text-gray-600">
-                {m.month.slice(5)}
+              <div className="text-[10px] text-red-500 absolute -top-4 right-0">
+                Avg {globalAverage.toFixed(1)}
               </div>
             </div>
-          );
-        });
+
+            {/* BARS */}
+            {monthly.map((m) => {
+              const height = (m.count / max) * 140;
+
+              return (
+                <div
+                  key={m.month}
+                  className="flex-1 flex flex-col items-center justify-end"
+                >
+                  <div className="text-xs mb-1">{m.count}</div>
+
+                  <div
+                    className={`w-full rounded-md ${
+                      m.count >= globalAverage
+                        ? "bg-green-500"
+                        : "bg-gray-300"
+                    }`}
+                    style={{
+                      height: `${Math.max(height, 6)}px`,
+                    }}
+                  />
+
+                  <div className="text-xs mt-2 text-gray-600">
+                    {m.month.slice(5)}
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        );
       })()}
     </div>
   </div>
