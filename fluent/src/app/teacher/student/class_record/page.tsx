@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, ReactNode, useCallback } from "react";
+import { useState, useEffect, Suspense, ReactNode, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -185,6 +185,7 @@ const ClassPageContent: React.FC = () => {
   const [recentClassnote, setRecentClassnote] = useState<any>(null);
   const [editStartTime, setEditStartTime] = useState("");
   const [editEndTime, setEditEndTime] = useState("");
+  const [creditMap, setCreditMap] = useState<Record<string, number>>({});
 
 
   // ⏸️ Pause timer
@@ -362,6 +363,47 @@ const ClassPageContent: React.FC = () => {
   }
   };
 
+  const memoizedStudentNames = useMemo(
+    () => resolvedStudentNames,
+    [resolvedStudentNames.join(",")]
+  );
+
+  useEffect(() => {
+    const fetchCredits = async () => {
+      if (!memoizedStudentNames.length) return;
+
+      try {
+        const results: Record<string, number> = {};
+
+        await Promise.all(
+          memoizedStudentNames.map(async (name) => {
+            try {
+              const res = await fetch(
+                `/api/student/${encodeURIComponent(name)}`,
+                { cache: "no-store" }
+              );
+
+              if (!res.ok) {
+                results[name] = 0;
+                return;
+              }
+
+              const data = await res.json();
+              results[name] = Number(data?.credits ?? 0);
+            } catch {
+              results[name] = 0;
+            }
+          })
+        );
+
+        setCreditMap(results);
+      } catch (err) {
+        console.error("Failed to fetch credits", err);
+      }
+    };
+
+    fetchCredits();
+  }, [memoizedStudentNames]);
 
   const handleEndClassClick = () => {
     pauseTimer();
@@ -818,9 +860,26 @@ const ClassPageContent: React.FC = () => {
             <h1 className="text-2xl font-bold text-[#191F28]">Class Note</h1>
             {resolvedStudentNames.length > 0 && (
               <div className="px-4 py-2 bg-[#F2F8FF] rounded-full border border-[#E8F3FF]">
-                <span className="text-sm font-semibold text-[#3182F6]">
-                  {resolvedStudentNames.join(", ")}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {resolvedStudentNames.map((name) => (
+                    <div
+                      key={name}
+                      className="flex items-center gap-1 bg-[#F2F8FF] px-3 py-1.5 rounded-full border border-[#E8F3FF]"
+                    >
+                      <span className="text-sm font-semibold text-[#3182F6]">
+                        {name}
+                      </span>
+
+                      {/* ✅ Credit */}
+                      <span className="flex items-end gap-0.5 ml-1">
+                        <span className="text-base font-bold text-[#191F28] leading-none">
+                          {creditMap[name] ?? 0}
+                        </span>
+                        <span className="text-[9px] text-gray-400">Credits</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {classStarted && (

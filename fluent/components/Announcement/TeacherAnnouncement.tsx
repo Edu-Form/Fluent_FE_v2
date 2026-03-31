@@ -79,6 +79,7 @@ const AnnouncementPage = () => {
   const [isQuizletModalOpen, setIsQuizletModalOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [creditMap, setCreditMap] = useState<Record<string, number>>({});
 
   const closeQuizletModal = () => {
     setIsQuizletModalOpen(false);
@@ -109,6 +110,44 @@ const AnnouncementPage = () => {
     };
     fetchData();
   }, [user, today]);
+
+  useEffect(() => {
+  const fetchCredits = async () => {
+    if (!day_schedule_data.length) return;
+
+    try {
+      const uniqueStudents = Array.from(
+        new Set(day_schedule_data.map((s) => s.student_name))
+      );
+
+      const results: Record<string, number> = {};
+
+      await Promise.all(
+        uniqueStudents.map(async (name) => {
+          try {
+            const res = await fetch(
+              `/api/student/${encodeURIComponent(name)}`,
+              { cache: "no-store" }
+            );
+
+            if (!res.ok) return;
+
+            const data = await res.json();
+            results[name] = Number(data?.credits ?? 0);
+          } catch {
+            results[name] = 0;
+          }
+        })
+      );
+
+      setCreditMap(results);
+    } catch (err) {
+      console.error("Failed to fetch credits", err);
+    }
+  };
+
+  fetchCredits();
+}, [day_schedule_data]);
 
   // 같은 시간과 장소 그룹핑 함수
   const groupSchedulesByTimeAndLocation = (
@@ -380,10 +419,14 @@ const AnnouncementPage = () => {
                         }`}
                       >
                         {/* 학생 정보 */}
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                           <h2 className="text-base font-medium text-gray-900">
                             {studentName || "Unknown"}
                           </h2>
+
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                            {creditMap[studentName] ?? 0} credits
+                          </span>
                         </div>
 
                         {/* 액션 버튼 그룹 */}

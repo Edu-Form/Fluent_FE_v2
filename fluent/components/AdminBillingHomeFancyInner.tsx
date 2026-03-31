@@ -641,4 +641,3 @@ function RevenueBars({ data }: { data: { label: string; revenue: number }[] }) {
     </div>
   );
 }
-
