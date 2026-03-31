@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense } from "react";
 import { Minus, Plus, History } from "lucide-react";
+import Navigation from "@/components/navigation";
 
 function PaymentPageInner() {
   const searchParams = useSearchParams();
@@ -123,7 +124,7 @@ function PaymentPageInner() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 px-6 py-8 flex justify-center">
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 px-6 py-8 pb-28 flex justify-center">
       <div className="w-full max-w-lg">
 
         {/* HEADER */}
@@ -414,7 +415,19 @@ function PaymentPageInner() {
 export default function PaymentPage() {
   return (
     <Suspense fallback={<div className="p-10 text-center">Loading...</div>}>
-      <PaymentPageInner />
+      <div className="flex flex-col min-h-screen bg-gray-50">
+
+        {/* MAIN CONTENT */}
+        <div className="flex-1">
+          <PaymentPageInner />
+        </div>
+
+        {/* ✅ BOTTOM NAVBAR (mobile only) */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+          <Navigation defaultActiveIndex={0} />
+        </div>
+
+      </div>
     </Suspense>
   );
 }

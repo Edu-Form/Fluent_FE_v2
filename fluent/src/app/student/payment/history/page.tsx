@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { Download, Receipt, TrendingUp, TrendingDown, Calendar } from "lucide-react";
+import Navigation from "@/components/navigation";
 // import { useRouter } from "next/navigation";
 
 interface Payment {
@@ -631,7 +632,20 @@ export default function PaymentHistory() {
         </div>
       }
     >
-      <PaymentHistoryInner />
+      <div className="flex flex-col min-h-screen bg-gray-50">
+
+        {/* MAIN CONTENT */}
+        <div className="flex-1 pb-28">
+          <PaymentHistoryInner />
+        </div>
+
+        {/* ✅ NAVBAR (ALL SCREENS) */}
+        <div className="fixed bottom-0 left-0 right-0 z-50">
+          <Navigation defaultActiveIndex={0} />
+        </div>
+
+      </div>
+
       {/* GLOBAL PRINT STYLES */}
       <style jsx global>{`
         @media print {
