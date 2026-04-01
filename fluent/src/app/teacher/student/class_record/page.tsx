@@ -119,26 +119,46 @@ const ClassPageContent: React.FC = () => {
   const type = getParam("type");
   const user_id = getParam("id");
   // ✅ Extract group students from URL params (group1_student_name, group2_student_name, ...)
-  const groupStudentNamesFromURL = (() => {
-    if (!searchParams) return [];
 
-    const result: string[] = [];
+  const [selectedGroupStudents, setSelectedGroupStudents] = useState<string[]>([]);
 
-    for (const [key, value] of searchParams.entries()) {
-      if (key.startsWith("group") && key.endsWith("_student_name")) {
-        result.push(value);
-      }
+// URL로 넘어온 그룹 학생들
+const groupStudentNamesFromURL = useMemo(() => {
+  if (!searchParams) return [];
+
+  const result: string[] = [];
+
+  for (const [key, value] of searchParams.entries()) {
+    if (key.startsWith("group") && key.endsWith("_student_name")) {
+      result.push(value);
     }
+  }
 
-    return result;
-  })();
-  // ✅ Final resolved student list for this class
-  const resolvedStudentNames: string[] =
-    student_name
+  return result;
+}, [searchParams]);
+
+// 최종 학생 리스트
+const resolvedStudentNames = useMemo(() => {
+  // 1) If coming from group class link
+  const base =
+    groupStudentNamesFromURL.length > 0
+      ? groupStudentNamesFromURL
+      : student_name
       ? [student_name]
-      : groupStudentNamesFromURL;
+      : [];
 
-  const isGroupClass = resolvedStudentNames.length > 1;
+  // 2) Add manually selected students
+  return [...new Set([...base, ...selectedGroupStudents])];
+}, [groupStudentNamesFromURL, student_name, selectedGroupStudents]);
+
+const isGroupClass = resolvedStudentNames.length > 1;
+  // // ✅ Final resolved student list for this class
+  // const resolvedStudentNames: string[] =
+  //   student_name
+  //     ? [student_name]
+  //     : groupStudentNamesFromURL;
+
+  // const isGroupClass = resolvedStudentNames.length > 1;
   const [class_date, setClassDate] = useState<string>("");
   const [date, setDate] = useState<string>("");
   const [original_text, setOriginal_text] = useState<string>("");
@@ -238,10 +258,7 @@ const ClassPageContent: React.FC = () => {
   ended_at: string;
   duration_ms: number | null;
 }) => {
-  const groupNames =
-    resolvedStudentNames.length > 0
-      ? resolvedStudentNames
-      : [student_name];
+  const groupNames = resolvedStudentNames;
 
 
   if (!homework.trim()) {
@@ -608,18 +625,8 @@ const ClassPageContent: React.FC = () => {
   }, [searchParams]);
 
   const [studentList, setStudentList] = useState<string[]>([]);
-  const [selectedGroupStudents, setSelectedGroupStudents] = useState<string[]>(
-    []
-  );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const group_student_names: string[] =
-    resolvedStudentNames.length > 0
-      ? resolvedStudentNames
-      : selectedGroupStudents.length > 0
-        ? selectedGroupStudents
-        : student_name
-          ? [student_name]
-          : [];
+  const group_student_names = resolvedStudentNames;
 
 
   useEffect(() => {
