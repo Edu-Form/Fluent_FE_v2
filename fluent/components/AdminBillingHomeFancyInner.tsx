@@ -60,13 +60,16 @@ export default function AdminDashboard() {
   const [students, setStudents] = useState<StudentFinancial[]>([]);
   const [classnotes, setClassnotes] = useState<ClassnoteEntry[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [selectedTeacher, setSelectedTeacher] = useState("");
+  const [viewMode, setViewMode] = useState<"graph" | "table">("graph");
+  const [tableData, setTableData] = useState<any[]>([]);
+  const [tableLoading, setTableLoading] = useState(false);
+
   const teachers = useMemo(
     () => Array.from(new Set(students.map((s) => s.teacher))),
     [students]
   );
-
-const [selectedTeacher, setSelectedTeacher] = useState("");
-
 
   useEffect(() => {
     const load = async () => {
@@ -100,6 +103,27 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
 
     load();
   }, []);
+
+  useEffect(() => {
+    if (viewMode !== "table") return;
+
+    const loadTable = async () => {
+      setTableLoading(true);
+
+      try {
+        const res = await fetch("/api/teacher-performance");
+        const json = await res.json();
+        setTableData(json);
+      } catch (e) {
+        console.error("table fetch error", e);
+        setTableData([]);
+      }
+
+      setTableLoading(false);
+    };
+
+    loadTable();
+  }, [viewMode]);
 
   useEffect(() => {
     if (teachers.length && !selectedTeacher) {
@@ -155,67 +179,13 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
 
   const maxRevenue = Math.max(...monthlyRevenue.map(([, v]) => v), 1);
 
-  /* ---------------- ROI ---------------- */
-
-  // const roiByTeacher = useMemo(() => {
-  //   const studentMap = new Map<string, ClassnoteEntry[]>();
-
-  //   classnotes.forEach((cn) => {
-  //     const name = cn.student_name || "";
-  //     if (!studentMap.has(name)) studentMap.set(name, []);
-  //     studentMap.get(name)!.push(cn);
-  //   });
-
-  //   const stats: any = {};
-
-  //   students.forEach((s) => {
-  //     const notes = studentMap.get(s.name) || [];
-  //     if (!notes.length) return;
-
-  //     const dates = notes
-  //       .map((n) => toDate(n.date || n.class_date))
-  //       .filter(Boolean) as Date[];
-
-  //     if (!dates.length) return;
-
-  //     dates.sort((a, b) => a.getTime() - b.getTime());
-
-  //     const duration =
-  //       (dates[dates.length - 1].getTime() - dates[0].getTime()) /
-  //       (1000 * 60 * 60 * 24);
-
-  //     const t = s.teacher;
-
-  //     if (!stats[t]) {
-  //       stats[t] = { total: 0, quit1m: 0, quit3m: 0, quit6m: 0 };
-  //     }
-
-  //     stats[t].total++;
-
-  //     if (duration <= 30) stats[t].quit1m++;
-  //     if (duration <= 90) stats[t].quit3m++;
-  //     if (duration <= 180) stats[t].quit6m++;
-  //   });
-
-  //   return Object.entries(stats).map(([teacher, s]: any) => ({
-  //     teacher,
-  //     value:
-  //       roiMode === "1m"
-  //         ? (s.quit1m / s.total) * 100
-  //         : roiMode === "3m"
-  //         ? (s.quit3m / s.total) * 100
-  //         : (s.quit6m / s.total) * 100,
-  //   }));
-  // }, [students, classnotes, roiMode]);
-
   if (loading) return <div className="p-8">Loading...</div>;
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen space-y-6">
 
-      {/* TOP KPI */}
+      {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
         <Card>
           <div className="text-sm text-gray-500">이번 달 활성 학생</div>
           <div className="text-3xl font-bold mt-2">{activeStudents}</div>
@@ -223,7 +193,6 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
 
         <Card>
           <CardHeader title="0 Credit 미만 학생" />
-
           <div className="mt-4 max-h-40 overflow-y-auto space-y-2">
             {lowCredit.map((s) => (
               <div key={s.id}>
@@ -245,238 +214,505 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
         </Card>
       </div>
 
-      {/* MONTHLY REVENUE GRAPH */}
+      {/* MONTHLY REVENUE */}
       <Card>
         <CardHeader title="월별 매출" />
-
         <div className="mt-6 h-[220px] flex items-end gap-4">
           {monthlyRevenue.map(([month, value]) => {
-            const height = (value / maxRevenue) * 180; // actual px height
+            const height = (value / maxRevenue) * 180;
 
             return (
               <div key={month} className="flex-1 flex flex-col items-center justify-end">
-                
-                {/* VALUE */}
-                <div className="text-xs mb-1">
-                  ₩{value.toLocaleString()}
-                </div>
-
-                {/* BAR (FIXED HEIGHT SYSTEM) */}
-                <div
-                  className="w-full bg-blue-500 rounded-md"
-                  style={{
-                    height: `${Math.max(height, 8)}px`, // <-- 핵심
-                  }}
-                />
-
-                {/* MONTH */}
-                <div className="text-xs mt-2 text-gray-600">
-                  {month.slice(5)}
-                </div>
+                <div className="text-xs mb-1">₩{value.toLocaleString()}</div>
+                <div className="w-full bg-blue-500 rounded-md" style={{ height: `${Math.max(height, 8)}px` }} />
+                <div className="text-xs mt-2 text-gray-600">{month.slice(5)}</div>
               </div>
             );
           })}
         </div>
       </Card>
 
-      {/* ROI */}
-{/* ROI */}
-<Card>
-  <CardHeader title="Teacher Performance vs Monthly Average" />
+      {/* GLOBAL TAB */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setViewMode("graph")}
+          className={`px-3 py-1 text-sm rounded-lg border ${
+            viewMode === "graph"
+              ? "bg-black text-white"
+              : "bg-white text-gray-600"
+          }`}
+        >
+          Graph
+        </button>
 
+        <button
+          onClick={() => setViewMode("table")}
+          className={`px-3 py-1 text-sm rounded-lg border ${
+            viewMode === "table"
+              ? "bg-black text-white"
+              : "bg-white text-gray-600"
+          }`}
+        >
+          Table
+        </button>
+      </div>
+
+      {/* ROI CARD */}
+      <Card>
+        
+
+{viewMode === "graph" && (
   <div className="mt-4 space-y-6">
 
-    {/* SELECT + AVG DURATION */}
-    <div className="flex justify-between items-center">
-      <select
-        value={selectedTeacher}
-        onChange={(e) => setSelectedTeacher(e.target.value)}
-        className="border rounded-lg px-3 py-1 text-sm"
-      >
-        {teachers.map((t) => (
-          <option key={t}>{t}</option>
-        ))}
-      </select>
+    {/* ---------------- CARD 1: TEACHER GRAPH ---------------- */}
+    <Card>
+      <div className="space-y-6">
+        <CardHeader title="Teacher Performance vs Monthly Average" />
 
-      <div className="text-sm text-gray-500">
-        평균 유지:{" "}
-        <span className="font-semibold text-black">
+        {/* SELECT */}
+        <div className="flex justify-between items-center">
+          <select
+            value={selectedTeacher}
+            onChange={(e) => setSelectedTeacher(e.target.value)}
+            className="border rounded-lg px-3 py-1 text-sm"
+          >
+            {teachers.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* GRAPH */}
+        <div className="h-[180px] relative">
           {(() => {
-            const studentMap = new Map<string, ClassnoteEntry[]>();
+            const teacherMonthlyMap: Record<string, Set<string>> = {};
 
             classnotes.forEach((cn) => {
-              const name = cn.student_name || "";
-              if (!studentMap.has(name)) studentMap.set(name, []);
-              studentMap.get(name)!.push(cn);
+              if (cn.teacher_name !== selectedTeacher) return;
+
+              const d = toDate(cn.date || cn.class_date);
+              if (!d) return;
+
+              const key = `${d.getFullYear()}-${String(
+                d.getMonth() + 1
+              ).padStart(2, "0")}`;
+
+              if (!teacherMonthlyMap[key]) teacherMonthlyMap[key] = new Set();
+              if (cn.student_name) {
+                teacherMonthlyMap[key].add(cn.student_name);
+              }
             });
 
-            const durations: number[] = [];
+            const teacherMonthly = Object.entries(teacherMonthlyMap)
+              .map(([month, set]) => ({
+                month,
+                count: set.size,
+              }))
+              .sort((a, b) => a.month.localeCompare(b.month))
+              .slice(-6);
 
-            students.forEach((s) => {
-              if (s.teacher !== selectedTeacher) return;
+            const globalMap: Record<string, Record<string, Set<string>>> = {};
 
-              const notes = studentMap.get(s.name) || [];
-              if (!notes.length) return;
+            classnotes.forEach((cn) => {
+              const teacher = cn.teacher_name || "—";
+              const d = toDate(cn.date || cn.class_date);
+              if (!d) return;
 
-              const dates = notes
-                .map((n) => toDate(n.date || n.class_date))
-                .filter(Boolean) as Date[];
+              const month = `${d.getFullYear()}-${String(
+                d.getMonth() + 1
+              ).padStart(2, "0")}`;
 
-              if (!dates.length) return;
+              if (!globalMap[month]) globalMap[month] = {};
+              if (!globalMap[month][teacher])
+                globalMap[month][teacher] = new Set();
 
-              dates.sort((a, b) => a.getTime() - b.getTime());
-
-              const duration =
-                (dates[dates.length - 1].getTime() - dates[0].getTime()) /
-                (1000 * 60 * 60 * 24);
-
-              durations.push(duration);
+              if (cn.student_name) {
+                globalMap[month][teacher].add(cn.student_name);
+              }
             });
 
-            if (!durations.length) return 0;
+            const globalMonthlyAvg = Object.entries(globalMap)
+              .map(([month, teacherMap]) => {
+                const teacherCounts = Object.values(teacherMap).map(
+                  (set) => set.size
+                );
 
-            return Math.round(
-              durations.reduce((a, b) => a + b, 0) / durations.length
-            );
-          })()}일
-        </span>
-      </div>
-    </div>
+                const avg =
+                  teacherCounts.reduce((a, b) => a + b, 0) /
+                  (teacherCounts.length || 1);
 
-    {/* GRAPH */}
-    <div className="h-[180px] relative">
-      {(() => {
-        /* ---------------- SELECTED TEACHER ---------------- */
-        const teacherMonthlyMap: Record<string, Set<string>> = {};
+                return { month, avg };
+              })
+              .sort((a, b) => a.month.localeCompare(b.month))
+              .slice(-6);
 
-        classnotes.forEach((cn) => {
-          if (cn.teacher_name !== selectedTeacher) return;
+            const allValues = [
+              ...teacherMonthly.map((m) => m.count),
+              ...globalMonthlyAvg.map((m) => m.avg),
+            ];
 
-          const d = toDate(cn.date || cn.class_date);
-          if (!d) return;
+            const max = Math.max(...allValues, 1);
 
-          const key = `${d.getFullYear()}-${String(
-            d.getMonth() + 1
-          ).padStart(2, "0")}`;
+            return (
+              <div className="flex items-end gap-4 h-full relative">
 
-          if (!teacherMonthlyMap[key]) teacherMonthlyMap[key] = new Set();
-          if (cn.student_name) {
-            teacherMonthlyMap[key].add(cn.student_name);
-          }
-        });
-
-        const teacherMonthly = Object.entries(teacherMonthlyMap)
-          .map(([month, set]) => ({
-            month,
-            count: set.size,
-          }))
-          .sort((a, b) => a.month.localeCompare(b.month))
-          .slice(-6);
-
-        /* ---------------- GLOBAL PER TEACHER ---------------- */
-        const globalMap: Record<string, Record<string, Set<string>>> = {};
-
-        classnotes.forEach((cn) => {
-          const teacher = cn.teacher_name || "—";
-          const d = toDate(cn.date || cn.class_date);
-          if (!d) return;
-
-          const month = `${d.getFullYear()}-${String(
-            d.getMonth() + 1
-          ).padStart(2, "0")}`;
-
-          if (!globalMap[month]) globalMap[month] = {};
-          if (!globalMap[month][teacher])
-            globalMap[month][teacher] = new Set();
-
-          if (cn.student_name) {
-            globalMap[month][teacher].add(cn.student_name);
-          }
-        });
-
-        const globalMonthlyAvg = Object.entries(globalMap)
-          .map(([month, teacherMap]) => {
-            const teacherCounts = Object.values(teacherMap).map(
-              (set) => set.size
-            );
-
-            const avg =
-              teacherCounts.reduce((a, b) => a + b, 0) /
-              (teacherCounts.length || 1);
-
-            return { month, avg };
-          })
-          .sort((a, b) => a.month.localeCompare(b.month))
-          .slice(-6);
-
-        /* ---------------- SCALE ---------------- */
-        const allValues = [
-          ...teacherMonthly.map((m) => m.count),
-          ...globalMonthlyAvg.map((m) => m.avg),
-        ];
-
-        const max = Math.max(...allValues, 1);
-
-        /* ---------------- RENDER ---------------- */
-        return (
-          <div className="flex items-end gap-4 h-full relative">
-            {/* LINE GRAPH (SVG) */}
-{/* LINE GRAPH (FIXED) */}
-<svg
-  className="absolute inset-0 w-full h-full pointer-events-none"
-  viewBox="0 0 100 100"
-  preserveAspectRatio="none"
->
-  <polyline
-    fill="none"
-    stroke="red"
-    strokeWidth="1.5"
-    points={globalMonthlyAvg
-      .map((m, i) => {
-        const total = globalMonthlyAvg.length;
-
-        // evenly spaced X (0 → 100)
-        const x = (i / (total - 1 || 1)) * 100;
-
-        // inverted Y (0 top → 100 bottom)
-        const y = 100 - (m.avg / max) * 100;
-
-        return `${x},${y}`;
-      })
-      .join(" ")}
-  />
-</svg>
-
-            {/* BARS */}
-            {teacherMonthly.map((m) => {
-              const height = (m.count / max) * 160;
-
-              return (
-                <div
-                  key={m.month}
-                  className="flex-1 flex flex-col items-center justify-end"
-                >
-                  <div className="text-xs mb-1">{m.count}</div>
-
-                  <div
-                    className="w-full bg-indigo-500 rounded-md"
-                    style={{
-                      height: `${Math.max(height, 6)}px`,
-                    }}
+                {/* LINE */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  <polyline
+                    fill="none"
+                    stroke="red"
+                    strokeWidth="1.5"
+                    points={globalMonthlyAvg
+                      .map((m, i) => {
+                        const total = globalMonthlyAvg.length;
+                        const x = (i / (total - 1 || 1)) * 100;
+                        const y = 100 - (m.avg / max) * 100;
+                        return `${x},${y}`;
+                      })
+                      .join(" ")}
                   />
+                </svg>
 
-                  <div className="text-xs mt-2 text-gray-600">
-                    {m.month.slice(5)}
-                  </div>
+                {/* BARS */}
+                {teacherMonthly.map((m) => {
+                  const height = (m.count / max) * 160;
+
+                  return (
+                    <div key={m.month} className="flex-1 flex flex-col items-center justify-end">
+                      <div className="text-xs mb-1">{m.count}</div>
+                      <div className="w-full bg-indigo-500 rounded-md" style={{ height: `${Math.max(height, 6)}px` }} />
+                      <div className="text-xs mt-2 text-gray-600">
+                        {m.month.slice(5)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </Card>
+
+    {/* ---------------- CARD 2: STUDENT FLOW ---------------- */}
+    <Card>
+      <CardHeader title="Student Flow (Join vs Quit)" />
+
+      <div className="mt-6 h-[220px] flex items-end gap-4">
+        {(() => {
+          const firstMap: Record<string, Date> = {};
+          const lastMap: Record<string, Date> = {};
+
+          const now = new Date();
+          const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
+
+          classnotes.forEach((cn) => {
+            const d = toDate(cn.date || cn.class_date);
+            if (!d || !cn.student_name) return;
+
+            const name = cn.student_name;
+
+            if (!firstMap[name] || firstMap[name] > d) {
+              firstMap[name] = d;
+            }
+
+            if (!lastMap[name] || lastMap[name] < d) {
+              lastMap[name] = d;
+            }
+          });
+
+          const joinMap: Record<string, number> = {};
+          const quitMap: Record<string, number> = {};
+
+          Object.keys(firstMap).forEach((name) => {
+            const first = firstMap[name];
+            const last = lastMap[name];
+
+            if (!first || !last) return;
+
+            const joinKey = `${first.getFullYear()}-${String(
+              first.getMonth() + 1
+            ).padStart(2, "0")}`;
+
+            joinMap[joinKey] = (joinMap[joinKey] || 0) + 1;
+
+            const isInactive =
+              now.getTime() - last.getTime() > THREE_WEEKS;
+
+            if (isInactive) {
+              const quitKey = `${last.getFullYear()}-${String(
+                last.getMonth() + 1
+              ).padStart(2, "0")}`;
+
+              quitMap[quitKey] = (quitMap[quitKey] || 0) + 1;
+            }
+          });
+
+          const allMonths = Array.from(
+            new Set([...Object.keys(joinMap), ...Object.keys(quitMap)])
+          )
+            .sort()
+            .slice(-6);
+
+          const max = Math.max(
+            ...allMonths.map(
+              (m) => Math.max(joinMap[m] || 0, quitMap[m] || 0)
+            ),
+            1
+          );
+
+          return allMonths.map((month) => {
+            const join = joinMap[month] || 0;
+            const quit = quitMap[month] || 0;
+
+            const joinHeight = (join / max) * 180;
+            const quitHeight = (quit / max) * 180;
+
+            return (
+              <div
+                key={month}
+                className="flex-1 flex flex-col items-center justify-end gap-1"
+              >
+                <div
+                  className="w-full bg-green-500 rounded-md"
+                  style={{ height: `${Math.max(joinHeight, 4)}px` }}
+                  title={`Joined: ${join}`}
+                />
+                <div
+                  className="w-full bg-rose-500 rounded-md"
+                  style={{ height: `${Math.max(quitHeight, 4)}px` }}
+                  title={`Quit: ${quit}`}
+                />
+                <div className="text-xs mt-2 text-gray-600">
+                  {month.slice(5)}
                 </div>
-              );
-            })}
-          </div>
-        );
-      })()}
-    </div>
+              </div>
+            );
+          });
+        })()}
+      </div>
+
+      {/* LEGEND */}
+      <div className="flex gap-4 mt-4 text-xs text-gray-600">
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-green-500 rounded-sm" />
+          Joined
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 bg-rose-500 rounded-sm" />
+          Quit
+        </div>
+      </div>
+    </Card>
+
   </div>
-</Card>
+)}
+
+      {viewMode === "table" && (
+        <div className="mt-4 border rounded-xl overflow-x-auto overflow-y-visible bg-white">
+
+          {tableLoading ? (
+            <div className="p-6 text-sm text-gray-500">
+              Loading table...
+            </div>
+          ) : (
+            <table className="min-w-[1200px] w-full text-xs">
+
+              {/* HEADER */}
+              <thead className="bg-gray-100 text-gray-600 sticky top-0 z-0">
+                <tr>
+                  <th className="px-3 py-2 text-left">
+                    <TooltipHeader
+                      label="Teacher"
+                      description="The teacher currently assigned to the student."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Start Date"
+                      description="The approximate first registration date of students under this teacher."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Active Students"
+                      description="Students who are currently active. A student is considered inactive if they have not attended a class for 3 weeks and have 0 or negative credits."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Total Hours"
+                      description="Total teaching hours calculated from all classnotes using duration (in hours)."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Avg Hours / Student"
+                      description="Average teaching hours per student. Calculated as total hours divided by total number of students."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Deactivated"
+                      description="Number of students who have not attended a class for over 3 weeks AND have 0 or negative credits."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="New Students"
+                      description="Students who registered for the first time during the current month (based on createdAt)."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Level Tests"
+                      description="Currently not tracked. Placeholder for future metric."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Paid Cancels"
+                      description="Number of classes marked as paid cancellations based on classnote reason or type."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Deactivate / Signup"
+                      description="Ratio of deactivated students to new students for the month. Indicates churn vs growth."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Retention (1M)"
+                      description="Percentage of students who stayed longer than 1 month after enrollment."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Retention (3M)"
+                      description="Percentage of students who stayed longer than 3 months."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Retention (6M)"
+                      description="Percentage of students who stayed longer than 6 months."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Reactivation Rate"
+                      description="Percentage of students who returned after stopping classes."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Avg Student Lifetime"
+                      description="Average duration students stayed (months), excluding top/bottom 10%."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Teacher Tenure"
+                      description="Total duration the teacher has been active (months)."
+                    />
+                  </th>
+                </tr>
+              </thead>
+
+              {/* BODY */}
+              <tbody>
+                {tableData.map((row, i) => (
+                  <tr
+                    key={i}
+                    className="border-t hover:bg-gray-50 transition"
+                  >
+                    <td className="px-3 py-2 font-medium">
+                      {row.teacher}
+                    </td>
+
+                    <td className="px-3 py-2">
+                      {row.startDate}
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.activeStudents}
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.totalHours}
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.avgHours}
+                    </td>
+
+                    <td className="px-3 py-2 text-center text-rose-500 font-semibold">
+                      {row.deactivated}
+                    </td>
+
+                    <td className="px-3 py-2 text-center text-green-600 font-semibold">
+                      {row.newStudents}
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.levelTests}
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.paidCancels}
+                    </td>
+
+                    <td className="px-3 py-2 text-center font-semibold">
+                      {row.ratio}
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.retention1m ?? "-"}%
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.retention3m ?? "-"}%
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.retention6m ?? "-"}%
+                    </td>
+
+                    <td className="px-3 py-2 text-center text-blue-600 font-semibold">
+                      {row.reactivationRate ?? "-"}%
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.avgStudentLifetime ?? "-"} mo
+                    </td>
+
+                    <td className="px-3 py-2 text-center">
+                      {row.teacherTenure ?? "-"} mo
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+      </Card>
     </div>
   );
 }
@@ -484,13 +720,33 @@ const [selectedTeacher, setSelectedTeacher] = useState("");
 /* ---------------- UI ---------------- */
 
 function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border">
-      {children}
-    </div>
-  );
+  return <div className="bg-white rounded-2xl p-5 shadow-sm border">{children}</div>;
 }
 
 function CardHeader({ title }: { title: string }) {
   return <div className="font-semibold text-gray-900">{title}</div>;
+}
+
+function TooltipHeader({
+  label,
+  description,
+}: {
+  label: string;
+  description: string;
+}) {
+  return (
+    <div className="relative group flex items-center justify-center gap-1 cursor-default">
+      <span>{label}</span>
+
+      {/* small info dot */}
+      <span className="text-[10px] text-gray-400 border rounded-full px-[4px]">
+        i
+      </span>
+
+      {/* tooltip */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 p-2 text-[11px] text-left bg-black text-white rounded-md opacity-0 group-hover:opacity-100 transition pointer-events-none z-[9999] shadow-lg">
+        {description}
+      </div>
+    </div>
+  );
 }
