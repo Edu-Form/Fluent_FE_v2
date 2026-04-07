@@ -111,7 +111,7 @@ const ClassPageContent: React.FC = () => {
     }
   };
 
-  const hasInitializedContent = useRef(false);
+  // const hasInitializedContent = useRef(false);
 
   const next_class_date = getParam("next_class_date");
   const user = getParam("user");
@@ -686,9 +686,15 @@ const isGroupClass = resolvedStudentNames.length > 1;
     editable: false, // 🔒 start locked
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
+
+      // 🚨 BLOCK EMPTY SAVE
+      if (!html || html === "<p></p>" || html.trim() === "") {
+        return;
+      }
+
       setOriginal_text(html);
       saveTempClassNote(html);
-    },
+    }
   });
 
   // useEffect(() => {
@@ -729,38 +735,32 @@ const isGroupClass = resolvedStudentNames.length > 1;
     if (editor) editor.setEditable(isEditable);
   }, [editor, isEditable]);
 
+  const hasInitializedContent = useRef(false);
+
   useEffect(() => {
-    const loadTempNote = async () => {
-      if (!student_name || !editor) return;
+    if (!student_name || !editor) return;
+    if (hasInitializedContent.current) return; // 🚨 ADD THIS
 
-      try {
-        const res = await fetch(
-          `/api/quizlet/temp?student_name=${encodeURIComponent(student_name)}`
-        );
-        if (!res.ok) return;
+    const loadTemp = async () => {
+      const res = await fetch(`/api/quizlet/temp?student_name=${student_name}`);
+      const data = await res.json();
 
-        const data = await res.json();
-        if (!data?.original_text) return;
-
-        // 🔥 TEMP HAS HIGHEST PRIORITY
-        hasInitializedContent.current = true;
-
-        setOriginal_text(data.original_text);
+      if (data?.original_text) {
         editor.commands.setContent(data.original_text);
-      } catch (err) {
-        console.error("Failed to load temp note:", err);
       }
+
+      hasInitializedContent.current = true; // 🚨 ADD THIS
     };
 
-    loadTempNote();
+    loadTemp();
   }, [student_name, editor]);
 
-  useEffect(() => {
-    if (!editor) return;
-    if (editor.getHTML() === original_text) return;
+  // useEffect(() => {
+  //   if (!editor) return;
+  //   if (editor.getHTML() === original_text) return;
 
-    editor.commands.setContent(original_text);
-  }, [original_text, editor]);
+  //   editor.commands.setContent(original_text);
+  // }, [original_text, editor]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {

@@ -261,252 +261,276 @@ export default function AdminDashboard() {
       <Card>
         
 
-{viewMode === "graph" && (
-  <div className="mt-4 space-y-6">
+      {viewMode === "graph" && (
+        <div className="mt-4 space-y-6">
 
-    {/* ---------------- CARD 1: TEACHER GRAPH ---------------- */}
-    <Card>
-      <div className="space-y-6">
-        <CardHeader title="Teacher Performance vs Monthly Average" />
+          {/* ---------------- CARD 1: TEACHER GRAPH ---------------- */}
+          <Card>
+            <div className="space-y-6">
+              <CardHeader title="Teacher Performance vs Monthly Average" />
 
-        {/* SELECT */}
-        <div className="flex justify-between items-center">
-          <select
-            value={selectedTeacher}
-            onChange={(e) => setSelectedTeacher(e.target.value)}
-            className="border rounded-lg px-3 py-1 text-sm"
-          >
-            {teachers.map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
-        </div>
+              {/* SELECT */}
+              <div className="flex justify-between items-center">
+                <select
+                  value={selectedTeacher}
+                  onChange={(e) => setSelectedTeacher(e.target.value)}
+                  className="border rounded-lg px-3 py-1 text-sm"
+                >
+                  {teachers.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
 
-        {/* GRAPH */}
-        <div className="h-[180px] relative">
-          {(() => {
-            const teacherMonthlyMap: Record<string, Set<string>> = {};
+              {/* GRAPH */}
+              <div className="h-[180px] relative">
+                {(() => {
+                  const teacherMonthlyMap: Record<string, Set<string>> = {};
 
-            classnotes.forEach((cn) => {
-              if (cn.teacher_name !== selectedTeacher) return;
+                  classnotes.forEach((cn) => {
+                    if (cn.teacher_name !== selectedTeacher) return;
 
-              const d = toDate(cn.date || cn.class_date);
-              if (!d) return;
+                    const d = toDate(cn.date || cn.class_date);
+                    if (!d) return;
 
-              const key = `${d.getFullYear()}-${String(
-                d.getMonth() + 1
-              ).padStart(2, "0")}`;
+                    const key = `${d.getFullYear()}-${String(
+                      d.getMonth() + 1
+                    ).padStart(2, "0")}`;
 
-              if (!teacherMonthlyMap[key]) teacherMonthlyMap[key] = new Set();
-              if (cn.student_name) {
-                teacherMonthlyMap[key].add(cn.student_name);
-              }
-            });
+                    if (!teacherMonthlyMap[key]) teacherMonthlyMap[key] = new Set();
+                    if (cn.student_name) {
+                      teacherMonthlyMap[key].add(cn.student_name);
+                    }
+                  });
 
-            const teacherMonthly = Object.entries(teacherMonthlyMap)
-              .map(([month, set]) => ({
-                month,
-                count: set.size,
-              }))
-              .sort((a, b) => a.month.localeCompare(b.month))
-              .slice(-6);
+                  const teacherMonthly = Object.entries(teacherMonthlyMap)
+                    .map(([month, set]) => ({
+                      month,
+                      count: set.size,
+                    }))
+                    .sort((a, b) => a.month.localeCompare(b.month))
+                    .slice(-6);
 
-            const globalMap: Record<string, Record<string, Set<string>>> = {};
+                  const globalMap: Record<string, Record<string, Set<string>>> = {};
 
-            classnotes.forEach((cn) => {
-              const teacher = cn.teacher_name || "—";
-              const d = toDate(cn.date || cn.class_date);
-              if (!d) return;
+                  classnotes.forEach((cn) => {
+                    const teacher = cn.teacher_name || "—";
+                    const d = toDate(cn.date || cn.class_date);
+                    if (!d) return;
 
-              const month = `${d.getFullYear()}-${String(
-                d.getMonth() + 1
-              ).padStart(2, "0")}`;
+                    const month = `${d.getFullYear()}-${String(
+                      d.getMonth() + 1
+                    ).padStart(2, "0")}`;
 
-              if (!globalMap[month]) globalMap[month] = {};
-              if (!globalMap[month][teacher])
-                globalMap[month][teacher] = new Set();
+                    if (!globalMap[month]) globalMap[month] = {};
+                    if (!globalMap[month][teacher])
+                      globalMap[month][teacher] = new Set();
 
-              if (cn.student_name) {
-                globalMap[month][teacher].add(cn.student_name);
-              }
-            });
+                    if (cn.student_name) {
+                      globalMap[month][teacher].add(cn.student_name);
+                    }
+                  });
 
-            const globalMonthlyAvg = Object.entries(globalMap)
-              .map(([month, teacherMap]) => {
-                const teacherCounts = Object.values(teacherMap).map(
-                  (set) => set.size
-                );
+                  const globalMonthlyAvg = Object.entries(globalMap)
+                    .map(([month, teacherMap]) => {
+                      const teacherCounts = Object.values(teacherMap).map(
+                        (set) => set.size
+                      );
 
-                const avg =
-                  teacherCounts.reduce((a, b) => a + b, 0) /
-                  (teacherCounts.length || 1);
+                      const avg =
+                        teacherCounts.reduce((a, b) => a + b, 0) /
+                        (teacherCounts.length || 1);
 
-                return { month, avg };
-              })
-              .sort((a, b) => a.month.localeCompare(b.month))
-              .slice(-6);
+                      return { month, avg };
+                    })
+                    .sort((a, b) => a.month.localeCompare(b.month))
+                    .slice(-6);
 
-            const allValues = [
-              ...teacherMonthly.map((m) => m.count),
-              ...globalMonthlyAvg.map((m) => m.avg),
-            ];
+                  const allValues = [
+                    ...teacherMonthly.map((m) => m.count),
+                    ...globalMonthlyAvg.map((m) => m.avg),
+                  ];
 
-            const max = Math.max(...allValues, 1);
-
-            return (
-              <div className="flex items-end gap-4 h-full relative">
-
-                {/* LINE */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  <polyline
-                    fill="none"
-                    stroke="red"
-                    strokeWidth="1.5"
-                    points={globalMonthlyAvg
-                      .map((m, i) => {
-                        const total = globalMonthlyAvg.length;
-                        const x = (i / (total - 1 || 1)) * 100;
-                        const y = 100 - (m.avg / max) * 100;
-                        return `${x},${y}`;
-                      })
-                      .join(" ")}
-                  />
-                </svg>
-
-                {/* BARS */}
-                {teacherMonthly.map((m) => {
-                  const height = (m.count / max) * 160;
+                  const max = Math.max(...allValues, 1);
 
                   return (
-                    <div key={m.month} className="flex-1 flex flex-col items-center justify-end">
-                      <div className="text-xs mb-1">{m.count}</div>
-                      <div className="w-full bg-indigo-500 rounded-md" style={{ height: `${Math.max(height, 6)}px` }} />
-                      <div className="text-xs mt-2 text-gray-600">
-                        {m.month.slice(5)}
-                      </div>
+                    <div className="flex items-end gap-4 h-full relative">
+
+                      {/* LINE */}
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <polyline
+                          fill="none"
+                          stroke="red"
+                          strokeWidth="1.5"
+                          points={globalMonthlyAvg
+                            .map((m, i) => {
+                              const total = globalMonthlyAvg.length;
+                              const x = (i / (total - 1 || 1)) * 100;
+                              const y = 100 - (m.avg / max) * 100;
+                              return `${x},${y}`;
+                            })
+                            .join(" ")}
+                        />
+                      </svg>
+
+                      {/* BARS */}
+                      {teacherMonthly.map((m) => {
+                        const height = (m.count / max) * 160;
+
+                        return (
+                          <div key={m.month} className="flex-1 flex flex-col items-center justify-end">
+                            <div className="text-xs mb-1">{m.count}</div>
+                            <div className="w-full bg-indigo-500 rounded-md" style={{ height: `${Math.max(height, 6)}px` }} />
+                            <div className="text-xs mt-2 text-gray-600">
+                              {m.month.slice(5)}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
-                })}
+                })()}
               </div>
-            );
-          })()}
-        </div>
-      </div>
-    </Card>
+            </div>
+          </Card>
 
-    {/* ---------------- CARD 2: STUDENT FLOW ---------------- */}
-    <Card>
-      <CardHeader title="Student Flow (Join vs Quit)" />
+          {/* ---------------- CARD 2: STUDENT FLOW (TEACHER BASED) ---------------- */}
+          <Card>
+            <div className="space-y-6">
+              <CardHeader title="Student Flow (Join vs Quit)" />
 
-      <div className="mt-6 h-[220px] flex items-end gap-4">
-        {(() => {
-          const firstMap: Record<string, Date> = {};
-          const lastMap: Record<string, Date> = {};
+              {/* SELECT */}
+              <div className="flex justify-between items-center relative z-10">
+                <select
+                  value={selectedTeacher}
+                  onChange={(e) => setSelectedTeacher(e.target.value)}
+                  className="border rounded-lg px-3 py-1 text-sm"
+                >
+                  {teachers.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
 
-          const now = new Date();
-          const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
+              {/* GRAPH */}
+              <div className="mt-6 h-[220px] flex items-end gap-4 relative z-0">
+                {(() => {
+                  const firstMap: Record<string, Date> = {};
+                  const lastMap: Record<string, Date> = {};
+                  const studentTeacherMap: Record<string, string> = {};
 
-          classnotes.forEach((cn) => {
-            const d = toDate(cn.date || cn.class_date);
-            if (!d || !cn.student_name) return;
+                  const now = new Date();
+                  const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
 
-            const name = cn.student_name;
+                  classnotes.forEach((cn) => {
+                    const d = toDate(cn.date || cn.class_date);
+                    if (!d || !cn.student_name) return;
 
-            if (!firstMap[name] || firstMap[name] > d) {
-              firstMap[name] = d;
-            }
+                    const name = cn.student_name;
+                    const teacher = cn.teacher_name || "—";
 
-            if (!lastMap[name] || lastMap[name] < d) {
-              lastMap[name] = d;
-            }
-          });
+                    studentTeacherMap[name] = teacher;
 
-          const joinMap: Record<string, number> = {};
-          const quitMap: Record<string, number> = {};
+                    if (!firstMap[name] || firstMap[name] > d) {
+                      firstMap[name] = d;
+                    }
 
-          Object.keys(firstMap).forEach((name) => {
-            const first = firstMap[name];
-            const last = lastMap[name];
+                    if (!lastMap[name] || lastMap[name] < d) {
+                      lastMap[name] = d;
+                    }
+                  });
 
-            if (!first || !last) return;
+                  const joinMap: Record<string, number> = {};
+                  const quitMap: Record<string, number> = {};
 
-            const joinKey = `${first.getFullYear()}-${String(
-              first.getMonth() + 1
-            ).padStart(2, "0")}`;
+                  Object.keys(firstMap).forEach((name) => {
+                    if (studentTeacherMap[name] !== selectedTeacher) return;
 
-            joinMap[joinKey] = (joinMap[joinKey] || 0) + 1;
+                    const first = firstMap[name];
+                    const last = lastMap[name];
 
-            const isInactive =
-              now.getTime() - last.getTime() > THREE_WEEKS;
+                    if (!first || !last) return;
 
-            if (isInactive) {
-              const quitKey = `${last.getFullYear()}-${String(
-                last.getMonth() + 1
-              ).padStart(2, "0")}`;
+                    const joinKey = `${first.getFullYear()}-${String(
+                      first.getMonth() + 1
+                    ).padStart(2, "0")}`;
 
-              quitMap[quitKey] = (quitMap[quitKey] || 0) + 1;
-            }
-          });
+                    joinMap[joinKey] = (joinMap[joinKey] || 0) + 1;
 
-          const allMonths = Array.from(
-            new Set([...Object.keys(joinMap), ...Object.keys(quitMap)])
-          )
-            .sort()
-            .slice(-6);
+                    const isInactive =
+                      now.getTime() - last.getTime() > THREE_WEEKS;
 
-          const max = Math.max(
-            ...allMonths.map(
-              (m) => Math.max(joinMap[m] || 0, quitMap[m] || 0)
-            ),
-            1
-          );
+                    if (isInactive) {
+                      const quitKey = `${last.getFullYear()}-${String(
+                        last.getMonth() + 1
+                      ).padStart(2, "0")}`;
 
-          return allMonths.map((month) => {
-            const join = joinMap[month] || 0;
-            const quit = quitMap[month] || 0;
+                      quitMap[quitKey] = (quitMap[quitKey] || 0) + 1;
+                    }
+                  });
 
-            const joinHeight = (join / max) * 180;
-            const quitHeight = (quit / max) * 180;
+                  const allMonths = Array.from(
+                    new Set([...Object.keys(joinMap), ...Object.keys(quitMap)])
+                  )
+                    .sort()
+                    .slice(-6);
 
-            return (
-              <div
-                key={month}
-                className="flex-1 flex flex-col items-center justify-end gap-1"
-              >
-                <div
-                  className="w-full bg-green-500 rounded-md"
-                  style={{ height: `${Math.max(joinHeight, 4)}px` }}
-                  title={`Joined: ${join}`}
-                />
-                <div
-                  className="w-full bg-rose-500 rounded-md"
-                  style={{ height: `${Math.max(quitHeight, 4)}px` }}
-                  title={`Quit: ${quit}`}
-                />
-                <div className="text-xs mt-2 text-gray-600">
-                  {month.slice(5)}
+                  const max = Math.max(
+                    ...allMonths.map(
+                      (m) => Math.max(joinMap[m] || 0, quitMap[m] || 0)
+                    ),
+                    1
+                  );
+
+                  return allMonths.map((month) => {
+                    const join = joinMap[month] || 0;
+                    const quit = quitMap[month] || 0;
+
+                    const joinHeight = (join / max) * 180;
+                    const quitHeight = (quit / max) * 180;
+
+                    return (
+                      <div
+                        key={month}
+                        className="flex-1 flex flex-col items-center justify-end gap-1"
+                      >
+                        <div className="text-[10px] text-green-600">{join}</div>
+                        <div
+                          className="w-full bg-green-500 rounded-md"
+                          style={{ height: `${Math.max(joinHeight, 4)}px` }}
+                        />
+
+                        <div className="text-[10px] text-rose-500">{quit}</div>
+                        <div
+                          className="w-full bg-rose-500 rounded-md"
+                          style={{ height: `${Math.max(quitHeight, 4)}px` }}
+                        />
+
+                        <div className="text-xs mt-2 text-gray-600">
+                          {month.slice(5)}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* LEGEND */}
+              <div className="flex gap-4 text-xs text-gray-600">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-green-500 rounded-sm" />
+                  Joined
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-rose-500 rounded-sm" />
+                  Quit
                 </div>
               </div>
-            );
-          });
-        })()}
-      </div>
+            </div>
+          </Card>
 
-      {/* LEGEND */}
-      <div className="flex gap-4 mt-4 text-xs text-gray-600">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-green-500 rounded-sm" />
-          Joined
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-rose-500 rounded-sm" />
-          Quit
-        </div>
-      </div>
-    </Card>
-
-  </div>
-)}
+      )}
 
       {viewMode === "table" && (
         <div className="mt-4 border rounded-xl overflow-x-auto overflow-y-visible bg-white">
