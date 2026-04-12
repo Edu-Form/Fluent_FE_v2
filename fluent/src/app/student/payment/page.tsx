@@ -14,6 +14,7 @@ function PaymentPageInner() {
 
   // hooks MUST be here (before any returns)
   const [loading, setLoading] = useState(false);
+
   // Quantity state for each payment item
   const [quantities, setQuantities] = useState<Record<string, number>>({
     "3개월 플랜": 1,
@@ -21,9 +22,10 @@ function PaymentPageInner() {
     "6개월 플랜": 1,
     "12개월 플랜": 1,
     "오프라인 1:1 수업": 1,
-    "온라인 1:1 수업": 1,
+    "온라인 1:1 맞춤수업": 1,
     "오프라인 2:1 그룹수업": 1,
-    "David 1:1 Class": 1,
+    "원장 (David) 수업": 1,
+    "부원장 수업": 1,
   });
 
   const updateQuantity = (label: string, delta: number) => {
@@ -62,7 +64,13 @@ function PaymentPageInner() {
       credits = 54 * quantity;
     } else if (label === "12개월 플랜") {
       credits = 111 * quantity;
-    } else if (label === "오프라인 1:1 수업" || label === "온라인 1:1 수업" || label === "오프라인 2:1 그룹수업" || label === "David 1:1 Class") {
+    } else if (
+      label === "오프라인 1:1 수업" ||
+      label === "온라인 1:1 맞춤수업" ||
+      label === "오프라인 2:1 그룹수업" ||
+      label === "원장 (David) 수업" ||
+      label === "부원장 수업"
+    ) {
       // Tuition fees: 1 credit per class
       credits = quantity;
     }
@@ -99,7 +107,13 @@ function PaymentPageInner() {
   }
 
   // Quantity selector component
-  const QuantitySelector = ({ quantity, onUpdate }: { quantity: number; onUpdate: (delta: number) => void }) => (
+  const QuantitySelector = ({
+    quantity,
+    onUpdate,
+  }: {
+    quantity: number;
+    onUpdate: (delta: number) => void;
+  }) => (
     <div className="flex items-center gap-3 mt-3">
       <span className="text-sm text-gray-600">수량:</span>
       <div className="flex items-center border border-gray-300 rounded-lg">
@@ -111,7 +125,9 @@ function PaymentPageInner() {
         >
           <Minus className="w-4 h-4" />
         </button>
-        <span className="px-4 py-2 min-w-[3rem] text-center font-medium">{quantity}</span>
+        <span className="px-4 py-2 min-w-[3rem] text-center font-medium">
+          {quantity}
+        </span>
         <button
           type="button"
           onClick={() => onUpdate(1)}
@@ -126,12 +142,17 @@ function PaymentPageInner() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 px-6 py-8 pb-28 flex justify-center">
       <div className="w-full max-w-lg">
-
         {/* HEADER */}
         <div className="text-center mb-10">
           <div className="flex justify-between items-start mb-4">
             <button
-              onClick={() => router.push(`/student/payment/history?user=${encodeURIComponent(user || "")}&type=${type || "student"}&id=${user_id || ""}`)}
+              onClick={() =>
+                router.push(
+                  `/student/payment/history?user=${encodeURIComponent(
+                    user || ""
+                  )}&type=${type || "student"}&id=${user_id || ""}`
+                )
+              }
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
             >
               <History className="w-4 h-4" />
@@ -170,7 +191,8 @@ function PaymentPageInner() {
 
             {quantities["3개월 플랜"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
-                총 금액: {(1440000 * quantities["3개월 플랜"]).toLocaleString()}원
+                총 금액:{" "}
+                {(1440000 * quantities["3개월 플랜"]).toLocaleString()}원
               </p>
             )}
 
@@ -228,7 +250,8 @@ function PaymentPageInner() {
 
             {quantities["6개월 플랜"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
-                총 금액: {(2880000 * quantities["6개월 플랜"]).toLocaleString()}원
+                총 금액:{" "}
+                {(2880000 * quantities["6개월 플랜"]).toLocaleString()}원
               </p>
             )}
 
@@ -258,7 +281,8 @@ function PaymentPageInner() {
 
             {quantities["12개월 플랜"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
-                총 금액: {(5760000 * quantities["12개월 플랜"]).toLocaleString()}원
+                총 금액:{" "}
+                {(5760000 * quantities["12개월 플랜"]).toLocaleString()}원
               </p>
             )}
 
@@ -280,32 +304,57 @@ function PaymentPageInner() {
           Tuition Fee
         </h2>
 
-
         <div className="space-y-5 mb-20">
-
-          {/* David 1:1 (70,000원 / 회당) */}
+          {/* 원장 (David) 수업 */}
           <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
             <h2 className="text-xl font-semibold text-gray-900">
-              David 1:1 Class
+              원장 (David) 수업
             </h2>
             <p className="text-sm text-gray-600 mt-1">
-              데이비드 선생님 수업 · 회당 70,000원
+              데이비드 원장님 수업 · 회당 100,000원
             </p>
 
-
             <QuantitySelector
-              quantity={quantities["David 1:1 Class"]}
-              onUpdate={(delta) => updateQuantity("David 1:1 Class", delta)}
+              quantity={quantities["원장 (David) 수업"]}
+              onUpdate={(delta) => updateQuantity("원장 (David) 수업", delta)}
             />
 
-            {quantities["David 1:1 Class"] > 1 && (
+            {quantities["원장 (David) 수업"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
-                총 금액: {(70000 * quantities["David 1:1 Class"]).toLocaleString()}원
+                총 금액:{" "}
+                {(100000 * quantities["원장 (David) 수업"]).toLocaleString()}원
               </p>
             )}
 
             <button
-              onClick={() => handlePay(70000, "David 1:1 Class")}
+              onClick={() => handlePay(100000, "원장 (David) 수업")}
+              className="w-full mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg font-medium shadow hover:bg-blue-700 transition disabled:opacity-50"
+              disabled={loading}
+            >
+              결제하기
+            </button>
+          </div>
+
+          {/* 부원장 수업 */}
+          <div className="bg-white rounded-2xl shadow-sm border p-6 transition transform hover:scale-[1.02]">
+            <h2 className="text-xl font-semibold text-gray-900">부원장 수업</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              부원장님 수업 · 회당 70,000원
+            </p>
+
+            <QuantitySelector
+              quantity={quantities["부원장 수업"]}
+              onUpdate={(delta) => updateQuantity("부원장 수업", delta)}
+            />
+
+            {quantities["부원장 수업"] > 1 && (
+              <p className="mt-2 text-sm text-gray-700">
+                총 금액: {(70000 * quantities["부원장 수업"]).toLocaleString()}원
+              </p>
+            )}
+
+            <button
+              onClick={() => handlePay(70000, "부원장 수업")}
               className="w-full mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg font-medium shadow hover:bg-blue-700 transition disabled:opacity-50"
               disabled={loading}
             >
@@ -351,23 +400,24 @@ function PaymentPageInner() {
                 <h3 className="text-lg font-semibold text-gray-900">
                   온라인 1:1 맞춤수업
                 </h3>
-                <p className="text-gray-600 text-sm mt-1">50,000원 / 회당</p>
+                <p className="text-gray-600 text-sm mt-1">60,000원 / 회당</p>
               </div>
             </div>
 
             <QuantitySelector
-              quantity={quantities["온라인 1:1 수업"]}
-              onUpdate={(delta) => updateQuantity("온라인 1:1 수업", delta)}
+              quantity={quantities["온라인 1:1 맞춤수업"]}
+              onUpdate={(delta) => updateQuantity("온라인 1:1 맞춤수업", delta)}
             />
 
-            {quantities["온라인 1:1 수업"] > 1 && (
+            {quantities["온라인 1:1 맞춤수업"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
-                총 금액: {(50000 * quantities["온라인 1:1 수업"]).toLocaleString()}원
+                총 금액:{" "}
+                {(60000 * quantities["온라인 1:1 맞춤수업"]).toLocaleString()}원
               </p>
             )}
 
             <button
-              onClick={() => handlePay(50000, "온라인 1:1 수업")}
+              onClick={() => handlePay(60000, "온라인 1:1 맞춤수업")}
               className="w-full mt-4 px-5 py-2 bg-blue-600 text-white rounded-lg font-medium shadow hover:bg-blue-700 transition disabled:opacity-50"
               disabled={loading}
             >
@@ -393,7 +443,8 @@ function PaymentPageInner() {
 
             {quantities["오프라인 2:1 그룹수업"] > 1 && (
               <p className="mt-2 text-sm text-gray-700">
-                총 금액: {(40000 * quantities["오프라인 2:1 그룹수업"]).toLocaleString()}원
+                총 금액:{" "}
+                {(40000 * quantities["오프라인 2:1 그룹수업"]).toLocaleString()}원
               </p>
             )}
 
@@ -406,7 +457,6 @@ function PaymentPageInner() {
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );
@@ -416,7 +466,6 @@ export default function PaymentPage() {
   return (
     <Suspense fallback={<div className="p-10 text-center">Loading...</div>}>
       <div className="flex flex-col min-h-screen bg-gray-50">
-
         {/* MAIN CONTENT */}
         <div className="flex-1">
           <PaymentPageInner />
@@ -426,7 +475,6 @@ export default function PaymentPage() {
         <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
           <Navigation defaultActiveIndex={0} />
         </div>
-
       </div>
     </Suspense>
   );
