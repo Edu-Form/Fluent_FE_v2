@@ -1753,7 +1753,7 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
     const students = db.collection("students");
     const payments = db.collection("payments");
 
-    // 🔥 1. Get payment doc (REAL source of credits)
+    // 1) Get payment doc (rich source of metadata)
     const paymentDoc = await payments.findOne({ orderId });
 
     if (!paymentDoc) {
@@ -1761,8 +1761,22 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
     }
 
     const creditsToAdd = Number(paymentDoc?.metadata?.credits ?? 0);
+    const quantity = Number(paymentDoc?.quantity ?? 0);
+    const description = String(paymentDoc?.description ?? "").trim();
+    const totalAmount = Number(payment.totalAmount ?? paymentDoc.amount ?? 0);
 
-    // 🔥 2. Find student correctly (NOT by orderId)
+    // Derived metrics
+    const unitPrice =
+      quantity > 0 && Number.isFinite(totalAmount)
+        ? totalAmount / quantity
+        : null;
+
+    const pricePerCredit =
+      creditsToAdd > 0 && Number.isFinite(totalAmount)
+        ? totalAmount / creditsToAdd
+        : null;
+
+    // 2) Find student
     const studentData =
       await students.findOne({ phoneNumber: paymentDoc.student_id }) ||
       { paymentHistory: "", credits: "0" };
@@ -1773,8 +1787,8 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
       paymentId: payment.paymentKey,
       paymentStatus: payment.status === "DONE" ? "COMPLETED" : "FAILED",
       paymentHistory: existingHistory
-        ? `${existingHistory} ${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`
-        : `${new Date().toISOString()}: ${payment.method} ${payment.totalAmount} (${creditsToAdd} credits)`,
+        ? `${existingHistory} ${new Date().toISOString()}: ${payment.method} ${totalAmount} (${creditsToAdd} credits)`
+        : `${new Date().toISOString()}: ${payment.method} ${totalAmount} (${creditsToAdd} credits)`,
       updatedAt: new Date(),
     };
 
@@ -1789,12 +1803,20 @@ export async function updatePaymentStatus(orderId: string, payment: any) {
       pushObj = {
         Credit_Automation_History: {
           type: "payment",
+          source: String(paymentDoc?.metadata?.source ?? "payment-link"),
           orderId,
           delta: creditsToAdd,
           before,
           after,
           paymentKey: payment.paymentKey,
-          amount: payment.totalAmount,
+          amount: totalAmount,
+
+          // NEW FIELDS
+          description: description || "",
+          quantity: quantity > 0 ? quantity : null,
+          unitPrice,
+          pricePerCredit,
+
           createdAt: new Date(),
         },
       };
@@ -2753,15 +2775,31 @@ export async function backfillPaymentCredits() {
       const before = currentCredits;
       const after = before + creditsToAdd;
 
+      const quantity = Number(payment.quantity ?? 0);
+      const totalAmount = Number(payment.amount ?? 0);
+      const unitPrice =
+        quantity > 0 && Number.isFinite(totalAmount)
+          ? totalAmount / quantity
+          : null;
+
+      const pricePerCredit =
+        creditsToAdd > 0 && Number.isFinite(totalAmount)
+          ? totalAmount / creditsToAdd
+          : null;
+
       const historyEntry = {
         type: "payment",
+        source: String(payment.metadata?.source ?? "payment-link"),
         orderId,
         delta: creditsToAdd,
         before,
         after,
         paymentKey: payment.paymentKey,
-        amount: payment.amount,
-        description: payment.description,
+        amount: totalAmount,
+        description: payment.description ?? "",
+        quantity: quantity > 0 ? quantity : null,
+        unitPrice,
+        pricePerCredit,
         createdAt: payment.completedAt ?? new Date(),
       };
 

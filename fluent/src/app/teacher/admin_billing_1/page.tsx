@@ -330,6 +330,63 @@ function toNumber(value: any): number | null {
 
 const ALLOWED_ADMINS = ["David", "Phil", "김나연"];
 
+function inferPaymentDescription(unitPrice: number | null) {
+  if (unitPrice == null || !Number.isFinite(unitPrice)) return "";
+
+  const rounded = Math.round(unitPrice);
+
+  if (rounded === 40000) return "4만원 수업";
+  if (rounded === 50000) return "5만원 수업";
+  if (rounded === 60000) return "6만원 수업";
+  if (rounded === 70000) return "7만원 수업";
+  if (rounded === 100000) return "10만원 수업";
+
+  return `${Math.round(rounded / 10000)}만원 수업`;
+}
+
+function getCreditLedgerTypeLabel(item: any) {
+  const delta = Number(item?.delta ?? 0);
+  const isPaymentRow = item?.type === "payment";
+
+  const quantity =
+    typeof item?.quantity === "number"
+      ? item.quantity
+      : Number(item?.quantity ?? 0);
+
+  const amount =
+    typeof item?.amount === "number"
+      ? item.amount
+      : Number(item?.amount ?? 0);
+
+  const deltaAbs = Math.abs(delta);
+
+  const unitPrice =
+    typeof item?.unitPrice === "number" && Number.isFinite(item.unitPrice)
+      ? item.unitPrice
+      : isPaymentRow && quantity > 0 && Number.isFinite(amount) && amount > 0
+        ? amount / quantity
+        : isPaymentRow && deltaAbs > 0 && Number.isFinite(amount) && amount > 0
+          ? amount / deltaAbs
+          : null;
+
+  const rawDescription =
+    typeof item?.description === "string" ? item.description.trim() : "";
+
+  const inferredDescription =
+    isPaymentRow ? inferPaymentDescription(unitPrice) : "";
+
+  if (isPaymentRow) {
+    const paymentName = rawDescription || inferredDescription || "Payment";
+    return `${paymentName} (payment)`;
+  }
+
+  if (item?.type === "classnote") {
+    return "Class Deduction";
+  }
+
+  return String(item?.type ?? "");
+}
+
 function AdminBillingExcelPageInner() {
   const searchParams = useSearchParams();
   const currentUser = (searchParams.get("user") || "").trim();
@@ -1742,7 +1799,7 @@ function AdminBillingExcelPageInner() {
               <th className="px-2 py-1 text-right">Δ</th>
               <th className="px-2 py-1 text-right">Before</th>
               <th className="px-2 py-1 text-right">After</th>
-              <th className="px-2 py-1 text-left">Price</th>
+              <th className="px-2 py-1 text-right">Total</th>
             </tr>
           </thead>
 
@@ -1751,9 +1808,17 @@ function AdminBillingExcelPageInner() {
               const delta = Number(item.delta ?? 0);
               const isDebit = delta < 0;
 
+              const createdAtDate = parseDateString(item.createdAt);
               const date =
                 item.class_date ??
-                formatDotDate(parseDateString(item.createdAt)!);
+                (createdAtDate ? formatDotDate(createdAtDate) : "—");
+
+              const amount =
+                typeof item.amount === "number"
+                  ? item.amount
+                  : Number(item.amount ?? 0);
+
+              const typeLabel = getCreditLedgerTypeLabel(item);
 
               return (
                 <tr
@@ -1764,8 +1829,8 @@ function AdminBillingExcelPageInner() {
                     {date}
                   </td>
 
-                  <td className="px-2 py-1">
-                    {item.type === "classnote" ? "Class Deduction" : item.type}
+                  <td className="px-2 py-1 max-w-[180px] truncate">
+                    {typeLabel}
                   </td>
 
                   <td
@@ -1785,8 +1850,8 @@ function AdminBillingExcelPageInner() {
                   </td>
 
                   <td className="px-2 py-1 text-right">
-                    {typeof item.amount === "number"
-                      ? `₩${item.amount.toLocaleString()}`
+                    {Number.isFinite(amount) && amount > 0
+                      ? `₩${amount.toLocaleString()}`
                       : "—"}
                   </td>
                 </tr>
