@@ -207,6 +207,32 @@ const isGroupClass = resolvedStudentNames.length > 1;
   const [editEndTime, setEditEndTime] = useState("");
   const [creditMap, setCreditMap] = useState<Record<string, number>>({});
 
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleList, setScheduleList] = useState<any[]>([]);
+  const [selectedSchedule, setSelectedSchedule] = useState<any | null>(null);
+
+  useEffect(() => {
+    const fetchSchedules = async () => {
+      const targetStudent = resolvedStudentNames[0];
+      if (!targetStudent) return;
+
+      try {
+        const res = await fetch(
+          `/api/schedules/student/${encodeURIComponent(targetStudent)}`
+        );
+        if (!res.ok) return;
+
+        const data = await res.json();
+        setScheduleList(data);
+      } catch (err) {
+        console.error("Failed to fetch schedules", err);
+      }
+    };
+
+    if (scheduleModalOpen) {
+      fetchSchedules();
+    }
+  }, [scheduleModalOpen, student_name]);
 
   // ⏸️ Pause timer
   const pauseTimer = () => {
@@ -257,6 +283,7 @@ const isGroupClass = resolvedStudentNames.length > 1;
   started_at: string | null;
   ended_at: string;
   duration_ms: number | null;
+  override_class_date?: string; // ⭐ ADD
 }) => {
   const groupNames = resolvedStudentNames;
 
@@ -269,7 +296,9 @@ const isGroupClass = resolvedStudentNames.length > 1;
     alert("Please write class notes.");
     return;
   }
-  if (!class_date || class_date.trim() === "") {
+  const finalClassDate = opts.override_class_date || class_date;
+
+  if (!finalClassDate || finalClassDate.trim() === "") {
     alert("Please select a class date.");
     return;
   }
@@ -283,8 +312,8 @@ const isGroupClass = resolvedStudentNames.length > 1;
     const classnotesPayload = {
       quizletData: {
         student_names: groupNames,
-        class_date,
-        date: class_date,
+        class_date: finalClassDate,
+        date: finalClassDate,
         original_text,
       },
       homework,
@@ -478,6 +507,7 @@ const isGroupClass = resolvedStudentNames.length > 1;
     started_at: startDt.toISOString(),
     ended_at: endDt.toISOString(),
     duration_ms,
+    override_class_date: class_date,
   });
 
   setTimeModalOpen(false);
@@ -527,6 +557,35 @@ const isGroupClass = resolvedStudentNames.length > 1;
     },
   });
 
+  const normalizeTime = (time: any): string => {
+    if (typeof time === "string") return time;
+
+    if (typeof time === "number") {
+      const h = Math.floor(time);
+      const m = (time % 1) * 60;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+
+    if (time instanceof Date) {
+      return `${String(time.getHours()).padStart(2, "0")}:${String(
+        time.getMinutes()
+      ).padStart(2, "0")}`;
+    }
+
+    return "";
+  };
+
+  const addDuration = (time: any, duration: number) => {
+    const normalized = normalizeTime(time);
+
+    const [h, m] = normalized.split(":").map(Number);
+    const totalMin = h * 60 + m + duration * 60;
+
+    const newH = Math.floor(totalMin / 60);
+    const newM = totalMin % 60;
+
+    return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
+  };
 
   const CustomHighlight = Highlight.extend({
     addKeyboardShortcuts() {
@@ -918,7 +977,7 @@ const isGroupClass = resolvedStudentNames.length > 1;
               onChange={(e) => setClassDate(formatToSave(e.target.value))}
               className="px-4 py-2.5 bg-white border border-[#E5E8EB] rounded-xl focus:border-[#3182F6] focus:ring-4 focus:ring-[#3182F6]/10 transition-all text-sm font-medium text-[#4E5968] w-40"
               required
-              disabled={loading || !isEditable}
+              disabled={loading || !isEditable || isModifyMode}
             />
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
               <svg
@@ -1565,7 +1624,7 @@ const isGroupClass = resolvedStudentNames.length > 1;
               onClick={() => {
                 if (isModifyMode) {
                   // 🔹 MODIFY MODE → open manual time modal
-                  setTimeModalOpen(true);
+                  setScheduleModalOpen(true);
                 } else {
                   // 🕒 NORMAL CLASS → start timer
                   setClassStarted(true);
@@ -1584,7 +1643,7 @@ const isGroupClass = resolvedStudentNames.length > 1;
                     : "bg-[#3182F6] hover:bg-[#1B64DA]"
                 }`}
             >
-              {isModifyMode ? "Move to Translate" : "수업 시작하기"}
+              {isModifyMode ? "Set Time / Date" : "수업 시작하기"}
             </button>
           ) : (
             <button
@@ -1798,13 +1857,93 @@ const isGroupClass = resolvedStudentNames.length > 1;
                 onClick={handleManualTimeConfirm}
                 className="px-6 py-3 text-sm bg-[#3182F6] text-white rounded-xl"
               >
-                Confirm & Continue
+                Move to Translate
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {scheduleModalOpen && (
+      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="bg-white rounded-3xl w-[90%] max-w-md p-6 shadow-xl space-y-4">
+
+          <h2 className="text-xl font-bold">Select Schedule</h2>
+
+          <div className="max-h-60 overflow-y-auto space-y-2">
+            {scheduleList.map((sch, idx) => (
+              <div
+                key={idx}
+                onClick={() => setSelectedSchedule(sch)}
+                className={`p-3 rounded-xl border cursor-pointer ${
+                  selectedSchedule === sch
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200"
+                }`}
+              >
+                <div className="text-sm font-semibold">{sch.date}</div>
+                <div className="text-xs text-gray-500">
+                  {sch.time} ({sch.duration} hr)
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              onClick={() => setScheduleModalOpen(false)}
+              className="px-4 py-2 border rounded-xl"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={async () => {
+                if (!selectedSchedule) {
+                  alert("Please select a schedule.");
+                  return;
+                }
+
+                const scheduleDate = selectedSchedule.date.includes(".")
+                ? selectedSchedule.date
+                : formatToSave(selectedSchedule.date);
+                setClassDate(scheduleDate);
+
+                const startDt = combineDateAndTime(
+                  selectedSchedule.date,
+                  normalizeTime(selectedSchedule.time)
+                );
+
+                const endDt = combineDateAndTime(
+                  selectedSchedule.date,
+                  addDuration(selectedSchedule.time, selectedSchedule.duration)
+                );
+
+                if (!startDt || !endDt) {
+                  alert("Invalid schedule data");
+                  return;
+                }
+
+                const duration_ms = endDt.getTime() - startDt.getTime();
+
+                // ✅ FIX: pass override_class_date
+                await saveClassnoteAndTranslate({
+                  started_at: startDt.toISOString(),
+                  ended_at: endDt.toISOString(),
+                  duration_ms,
+                  override_class_date: scheduleDate, // ⭐ THIS LINE
+                });
+
+                setScheduleModalOpen(false);
+              }}
+              className="px-4 py-2 bg-blue-500 text-white rounded-xl"
+            >
+              Confirm & Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
       {translationModalOpen && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center">
