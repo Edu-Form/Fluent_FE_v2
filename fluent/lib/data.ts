@@ -2875,8 +2875,14 @@ export async function getGroupClasses() {
   }
 }
 
-export async function getTeacherPerformanceData() {
+export async function getTeacherPerformanceData(filters?: {
+  year?: string;
+  month?: string;
+}) {
   try {
+    const filterYear = filters?.year ? Number(filters.year) : null;
+    const filterMonth = filters?.month ? Number(filters.month) : null; // 1~12
+
     const client = await clientPromise;
 
     const db1 = client.db("school_management");
@@ -2888,11 +2894,23 @@ export async function getTeacherPerformanceData() {
     const now = new Date();
     const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
 
+    const referenceDate =
+      filterYear && filterMonth
+        ? new Date(filterYear, filterMonth, 0, 23, 59, 59)
+        : now;
+
     function parseDotDate(str?: string) {
       if (!str) return null;
       const m = str.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
       if (!m) return null;
       return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    }
+
+    function isInTargetMonth(date: Date | null) {
+      if (!date) return false;
+      if (filterYear && date.getFullYear() !== filterYear) return false;
+      if (filterMonth && date.getMonth() + 1 !== filterMonth) return false;
+      return true;
     }
 
     function toNumber(value: any): number {
@@ -2907,25 +2925,21 @@ export async function getTeacherPerformanceData() {
     function trimOutliers(arr: number[]) {
       if (arr.length < 5) return arr;
       const sorted = [...arr].sort((a, b) => a - b);
-      const start = Math.floor(sorted.length * 0.1);
-      const end = Math.ceil(sorted.length * 0.9);
-      return sorted.slice(start, end);
+      return sorted.slice(
+        Math.floor(sorted.length * 0.1),
+        Math.ceil(sorted.length * 0.9)
+      );
     }
 
     const teacherMap: Record<string, any> = {};
 
-    // ---------------------------
     // GROUP STUDENTS
-    // ---------------------------
     studentsRaw.forEach((s: any, i: number) => {
       const teacher = s.teacher || s.teacher_name || "—";
       const name = s.name || s.student_name || `학생-${i}`;
 
       if (!teacherMap[teacher]) {
-        teacherMap[teacher] = {
-          students: [],
-          notes: [],
-        };
+        teacherMap[teacher] = { students: [], notes: [] };
       }
 
       teacherMap[teacher].students.push({
@@ -2935,22 +2949,26 @@ export async function getTeacherPerformanceData() {
       });
     });
 
-    // ---------------------------
     // GROUP CLASSNOTES
-    // ---------------------------
     classnotesRaw.forEach((cn: any) => {
       const teacher = cn.teacher_name || "—";
       if (!teacherMap[teacher]) return;
-
       teacherMap[teacher].notes.push(cn);
     });
 
-    // ---------------------------
-    // CALCULATE METRICS
-    // ---------------------------
+    // CALCULATE
     const result = Object.entries(teacherMap).map(([teacher, data]: any) => {
       const students = data.students;
       const notes = data.notes;
+
+      // 🔥 FILTERED NOTES (KEY CHANGE)
+      const filteredNotes =
+        filterYear || filterMonth
+          ? notes.filter((n: any) => {
+              const d = parseDotDate(n.date || n.class_date);
+              return isInTargetMonth(d);
+            })
+          : notes;
 
       const lastClassMap: Record<string, Date> = {};
       const firstClassMap: Record<string, Date> = {};
@@ -2962,17 +2980,14 @@ export async function getTeacherPerformanceData() {
 
         const name = n.student_name;
 
-        // last class
         if (!lastClassMap[name] || lastClassMap[name] < d) {
           lastClassMap[name] = d;
         }
 
-        // first class
         if (!firstClassMap[name] || firstClassMap[name] > d) {
           firstClassMap[name] = d;
         }
 
-        // full history
         if (!studentNoteMap[name]) studentNoteMap[name] = [];
         studentNoteMap[name].push(d);
       });
@@ -2983,7 +2998,7 @@ export async function getTeacherPerformanceData() {
       students.forEach((s: any) => {
         const last = lastClassMap[s.name];
         const inactive =
-          !last || now.getTime() - last.getTime() > THREE_WEEKS;
+          !last || referenceDate.getTime() - last.getTime() > THREE_WEEKS;
 
         if (inactive && s.credits <= 0) {
           deactivated++;
@@ -2992,31 +3007,46 @@ export async function getTeacherPerformanceData() {
         }
       });
 
-      const totalHours =
-        notes.reduce((acc: number, n: any) => {
-          return acc + ((n.duration_ms || 0) / 1000 / 60 / 60);
-        }, 0) || 0;
+      // ✅ COUNT UNIQUE CLASSES (1 class = 1 hour)
+      const uniqueClasses = new Set();
 
-      const avgHours = students.length
-        ? totalHours / students.length
-        : 0;
+      notes.forEach((n: any) => {
+        if (!n.student_name) return;
 
-      const thisMonth = now.getMonth();
-      const thisYear = now.getFullYear();
+        const date = n.date || n.class_date;
+        if (!date) return;
 
+        const key = `${n.student_name}-${date}`;
+        uniqueClasses.add(key);
+      });
+
+      const totalHours = uniqueClasses.size;
+
+      const avgHours = students.length ? totalHours / students.length : 0;
+
+      // 🔥 NEW STUDENTS FILTERED
       const newStudents = students.filter((s: any) => {
+        if (!s.createdAt) return false;
         const d = new Date(s.createdAt);
-        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+
+        if (filterYear && d.getFullYear() !== filterYear) return false;
+        if (filterMonth && d.getMonth() + 1 !== filterMonth) return false;
+
+        if (!filterYear && !filterMonth) {
+          return (
+            d.getMonth() === now.getMonth() &&
+            d.getFullYear() === now.getFullYear()
+          );
+        }
+
+        return true;
       }).length;
 
-      const paidCancels = notes.filter((n: any) =>
-        (n.reason || "").includes("paid")
+      const paidCancels = filteredNotes.filter((n: any) =>
+        (n.reason || "").toLowerCase().includes("paid")
       ).length;
 
-      // ---------------------------
-      // NEW METRICS
-      // ---------------------------
-
+      // ---- retention (unchanged) ----
       let retention1 = 0;
       let retention3 = 0;
       let retention6 = 0;
@@ -3036,16 +3066,12 @@ export async function getTeacherPerformanceData() {
         if (lifetime >= 3) retention3++;
         if (lifetime >= 6) retention6++;
 
-        // reactivation (gap > 30 days then comes back)
         const dates = (studentNoteMap[name] || []).sort(
           (a, b) => a.getTime() - b.getTime()
         );
 
         for (let i = 1; i < dates.length; i++) {
-          const gap =
-            dates[i].getTime() - dates[i - 1].getTime();
-
-          if (gap > 30 * 24 * 60 * 60 * 1000) {
+          if (dates[i].getTime() - dates[i - 1].getTime() > 30 * 86400000) {
             reactivated++;
             break;
           }
@@ -3054,21 +3080,14 @@ export async function getTeacherPerformanceData() {
 
       const totalStudents = Object.keys(firstClassMap).length || 1;
 
-      const retention1m = Number(
-        ((retention1 / totalStudents) * 100).toFixed(1)
-      );
-      const retention3m = Number(
-        ((retention3 / totalStudents) * 100).toFixed(1)
-      );
-      const retention6m = Number(
-        ((retention6 / totalStudents) * 100).toFixed(1)
-      );
+      const retention1m = Number(((retention1 / totalStudents) * 100).toFixed(1));
+      const retention3m = Number(((retention3 / totalStudents) * 100).toFixed(1));
+      const retention6m = Number(((retention6 / totalStudents) * 100).toFixed(1));
 
       const reactivationRate = Number(
         ((reactivated / totalStudents) * 100).toFixed(1)
       );
 
-      // avg lifetime (trimmed)
       const trimmed = trimOutliers(lifetimes);
       const avgStudentLifetime = trimmed.length
         ? Number(
@@ -3079,7 +3098,6 @@ export async function getTeacherPerformanceData() {
           )
         : 0;
 
-      // teacher tenure
       const allDates = notes
         .map((n: any) => parseDotDate(n.date || n.class_date))
         .filter(Boolean) as Date[];
@@ -3101,12 +3119,7 @@ export async function getTeacherPerformanceData() {
         newStudents,
         levelTests: "-",
         paidCancels,
-        ratio:
-          newStudents === 0
-            ? 0
-            : Number((deactivated / newStudents).toFixed(2)),
-
-        // NEW FIELDS
+        ratio: newStudents === 0 ? 0 : Number((deactivated / newStudents).toFixed(2)),
         retention1m,
         retention3m,
         retention6m,

@@ -63,8 +63,37 @@ export default function AdminDashboard() {
 
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [viewMode, setViewMode] = useState<"graph" | "table">("graph");
-  const [tableData, setTableData] = useState<any[]>([]);
+  const [rawTableData, setRawTableData] = useState<any[]>([]);
+  const [filteredTableData, setFilteredTableData] = useState<any[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
+
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+
+  const handleSearch = async () => {
+    setTableLoading(true);
+
+    try {
+      const params = new URLSearchParams();
+
+      if (selectedYear) params.set("year", selectedYear);
+      if (selectedMonth) params.set("month", selectedMonth);
+
+      const url = params.toString()
+        ? `/api/teacher-performance?${params.toString()}`
+        : "/api/teacher-performance";
+
+      const res = await fetch(url);
+      const json = await res.json();
+
+      setFilteredTableData(json);
+    } catch (e) {
+      console.error("search fetch error", e);
+      setFilteredTableData([]);
+    }
+
+    setTableLoading(false);
+  };
 
   const teachers = useMemo(
     () => Array.from(new Set(students.map((s) => s.teacher))),
@@ -113,10 +142,13 @@ export default function AdminDashboard() {
       try {
         const res = await fetch("/api/teacher-performance");
         const json = await res.json();
-        setTableData(json);
+
+        setRawTableData(json);
+        setFilteredTableData(json); // initial full data
       } catch (e) {
         console.error("table fetch error", e);
-        setTableData([]);
+        setRawTableData([]);
+        setFilteredTableData([]);
       }
 
       setTableLoading(false);
@@ -533,7 +565,64 @@ export default function AdminDashboard() {
       )}
 
       {viewMode === "table" && (
-        <div className="mt-4 border rounded-xl overflow-x-auto overflow-y-visible bg-white">
+      <div className="space-y-3">
+
+        {/* 🔥 FILTER BAR (ADD THIS) */}
+        <div className="flex gap-2 items-center">
+
+          {/* YEAR */}
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="border rounded-lg px-3 py-1 text-sm"
+          >
+            <option value="">Year</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+          </select>
+
+          {/* MONTH */}
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="border rounded-lg px-3 py-1 text-sm"
+          >
+            <option value="">Month</option>
+            {Array.from({ length: 12 }, (_, i) => {
+              const m = String(i + 1).padStart(2, "0");
+              return (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              );
+            })}
+          </select>
+
+          {/* 🔍 SEARCH BUTTON */}
+          <button
+            onClick={handleSearch}
+            className="px-4 py-1.5 bg-black text-white text-sm rounded-lg"
+          >
+            검색
+          </button>
+
+          {/* RESET (optional but VERY useful) */}
+          <button
+            onClick={() => {
+              setSelectedYear("");
+              setSelectedMonth("");
+              setFilteredTableData(rawTableData);
+            }}
+            className="px-3 py-1.5 border text-sm rounded-lg"
+          >
+            초기화
+          </button>
+
+        </div>
+        
+
+        {/* 🧾 TABLE */}
+        <div className="border rounded-xl overflow-x-auto overflow-y-visible bg-white">
 
           {tableLoading ? (
             <div className="p-6 text-sm text-gray-500">
@@ -661,7 +750,7 @@ export default function AdminDashboard() {
 
               {/* BODY */}
               <tbody>
-                {tableData.map((row, i) => (
+                {filteredTableData.map((row, i) => (
                   <tr
                     key={i}
                     className="border-t hover:bg-gray-50 transition"
@@ -734,6 +823,7 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           )}
+        </div>
         </div>
       )}
       </Card>
