@@ -2568,6 +2568,7 @@ export async function deductStudentCreditSafe(params: {
   const client = await clientPromise;
   const db = client.db("school_management");
   const students = db.collection("students");
+  const schedules = db.collection("schedules"); // ✅ ADD THIS
 
   // 1) Get current credits
   const student = await students.findOne(
@@ -2584,20 +2585,40 @@ export async function deductStudentCreditSafe(params: {
     throw new Error("Invalid credit value");
   }
 
-  const after = before - 1;
+  // ✅ 2) FIND SCHEDULE
+  const schedule = await schedules.findOne({
+    student_name: params.student_name,
+    date: params.class_date,
+  });
+
+  // ✅ 3) DETERMINE DEDUCTION
+  let deduction = 1;
+
+  if (schedule?.duration === 2) {
+    deduction = 2;
+  }
+
+  // DEBUG (optional but recommended)
+  if (!schedule) {
+    console.warn(
+      `[credit] No schedule found for ${params.student_name} ${params.class_date}`
+    );
+  }
+
+  const after = before - deduction;
 
   const historyEntry = {
     type: "classnote",
     classnote_id: params.classnote_id,
     class_date: params.class_date,
-    delta: -1,
+    delta: -deduction, // ✅ UPDATED
     before,
     after,
     teacher_name: params.teacher_name ?? "",
     createdAt: new Date(),
   };
 
-  // 2) ATOMIC update (prevents duplicate deduction for same day)
+  // 4) ATOMIC update (same as before)
   const result = await students.updateOne(
     {
       name: params.student_name,
@@ -2621,7 +2642,6 @@ export async function deductStudentCreditSafe(params: {
     }
   );
 
-  // 3) If no update happened → already deducted today
   if (result.modifiedCount === 0) {
     return {
       skipped: true,

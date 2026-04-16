@@ -190,6 +190,24 @@ export default function AdminDashboard() {
     return students.filter((s) => s.credits < 0);
   }, [students]);
 
+    /* ---------------- REFUND RESERVE ---------------- */
+
+  const refundReserve = useMemo(() => {
+    const CREDIT_UNIT_PRICE = 60000;
+
+    const totalOutstandingCredits = students.reduce((sum, s) => {
+      const credits = Number(s.credits) || 0;
+      return credits > 0 ? sum + credits : sum;
+    }, 0);
+
+    const estimatedRefundAmount = totalOutstandingCredits * CREDIT_UNIT_PRICE;
+
+    return {
+      totalOutstandingCredits,
+      estimatedRefundAmount,
+    };
+  }, [students]);
+
   /* ---------------- MONTHLY REVENUE ---------------- */
 
   const monthlyRevenue = useMemo(() => {
@@ -242,7 +260,14 @@ export default function AdminDashboard() {
 
         <Card>
           <div className="text-sm text-gray-500">추가 KPI</div>
-          <div className="text-2xl font-semibold mt-2">—</div>
+          <div className="mt-2 space-y-1">
+            <div className="text-2xl font-semibold text-gray-900">
+              Extra Credits: {refundReserve.totalOutstandingCredits.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-500">
+              ₩{refundReserve.estimatedRefundAmount.toLocaleString()}
+            </div>
+          </div>
         </Card>
       </div>
 
