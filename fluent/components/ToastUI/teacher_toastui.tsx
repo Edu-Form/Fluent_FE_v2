@@ -202,6 +202,8 @@ function TeacherToastUIInner({
     setCurrentDate(d);
   }
 
+  const [consultations, setConsultations] = useState<any[]>([]);
+
   const [viewName, setViewName] = useState<"week" | "month">(forceView ?? "week");
 
   // popovers
@@ -223,8 +225,48 @@ function TeacherToastUIInner({
     student_name: defaults?.student_name ?? "",
     teacher_name: defaults?.teacher_name ?? "",
   });
-  const updateAdd = (patch: Partial<typeof addForm>) => setAddForm((p) => ({ ...p, ...patch }));
+  const [addType, setAddType] = useState<"class" | "consultation">("class");
 
+  const [consultForm, setConsultForm] = useState({
+    student_name: "",
+    phone: "",
+    date: ymdString(new Date()),
+    time: "12",
+    room_name: "HF1",
+    duration: "1",
+  });
+
+  const [overlapChecked, setOverlapChecked] = useState(false);
+  const [hasOverlap, setHasOverlap] = useState<boolean | null>(null);
+  const updateAdd = (patch: Partial<typeof addForm>) => setAddForm((p) => ({ ...p, ...patch }));
+  const handleConsultOverlapCheck = async () => {
+    if (!consultForm.student_name.trim()) {
+      alert("학생 이름 먼저 입력하세요");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/student/duplicate-check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: consultForm.student_name.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      // ✅ THIS is your real logic now
+      setHasOverlap(data.isDuplicate);
+      setOverlapChecked(true);
+
+    } catch (err) {
+      console.error(err);
+      alert("중복 체크 실패");
+    }
+  };
   useEffect(() => {
     if (addOpen && !addForm.student_name && studentOptions.length > 0) {
       setAddForm((p) => ({ ...p, student_name: studentOptions[0] }));
@@ -367,6 +409,48 @@ function TeacherToastUIInner({
   const eventsFromProps = useMemo(() => {
     const events: EventObject[] = [];
 
+    // 0) CONSULTATIONS (render first, independent from schedules)
+    for (const c of consultations || []) {
+      if (!c.date) continue;
+
+      const base = toDateYMD(c.date);
+      if (!base) continue;
+
+      // if your API has time/duration, use it — otherwise fallback
+      const startHour = Number(c.time ?? 12);
+      const startMin = Math.round((startHour % 1) * 60);
+
+      const start = new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        base.getDate(),
+        Math.floor(startHour),
+        startMin
+      );
+
+      const end = new Date(start.getTime() + (c.duration ?? 0.5) * 3600000);
+
+      events.push({
+        id: `consult-${c._id}`,
+        calendarId: "consultation", // 👈 important (separate type)
+        title: `📞 ${c.student_name || "Consultation"}`,
+        category: "time",
+        start,
+        end,
+
+        // 🔥 PURPLE STYLE (your requirement)
+        backgroundColor: "#E9D5FF",
+        borderColor: "#7C3AED",
+        dragBackgroundColor: "#DDD6FE",
+        color: "#4C1D95", // no drag/edit for now
+
+        raw: {
+          ...c,
+          is_consultation: true,
+        },
+      });
+    }
+
     // 1) Normal schedules (render today + future)
     for (const e of data || []) {
       if (!e.date || Number.isNaN(e.time) || Number.isNaN(e.duration)) continue;
@@ -401,14 +485,19 @@ function TeacherToastUIInner({
     }
 
     // === Recolor past & today schedules when a classnote exists ===
+    // === Recolor past & today schedules when a classnote exists ===
     const today = kstTodayOnly();
 
-    // Build index of schedule events by (student,date)
+    // only process NON-consultation schedule events
     const byStudentDate = new Map<string, EventObject[]>();
+
     for (const ev of events) {
+      if (ev.raw?.is_consultation) continue;
+
       const student = ev?.raw?.student_name || "";
       const dateKey = ymdString(toLocalDateOnly(new Date(ev.start)));
       const k = `${student}::${dateKey}`;
+
       if (!byStudentDate.has(k)) byStudentDate.set(k, []);
       byStudentDate.get(k)!.push(ev);
     }
@@ -417,30 +506,30 @@ function TeacherToastUIInner({
       const [, dateDot] = k.split("::");
       const dt = toDateYMD(dateDot);
       if (!dt) continue;
+
       const dateOnly = toLocalDateOnly(dt);
       if (dateOnly.getTime() > today.getTime()) continue;
 
       const notes = classnoteMap.get(k) || [];
 
-      // 🆕 If no classnote AND this schedule is in the past → show schedule in RED
+      // no classnote + past date => red
       if (notes.length === 0 && dateOnly.getTime() < today.getTime()) {
         for (const ev of evList) {
-          ev.backgroundColor = "#FECACA"; // red
+          ev.backgroundColor = "#FECACA";
           ev.borderColor = "#DC2626";
           ev.color = "#7F1D1D";
         }
-        continue; // stop further processing
+        continue;
       }
 
-
-      // 🆕 Fallback: if no classnote exists at all for this date → mark red and skip further processing
+      // no classnote at all => red
       if (notes.length === 0) {
         for (const ev of evList) {
           ev.backgroundColor = "#FECACA";
           ev.borderColor = "#DC2626";
           ev.color = "#7F1D1D";
         }
-        continue; // no notes, skip rest
+        continue;
       }
 
       const note = notes
@@ -451,20 +540,17 @@ function TeacherToastUIInner({
             new Date(a.updatedAt || a.createdAt || 0).getTime()
         )[0];
 
-        // ✅ Protector: if this note explicitly marked as "class time changed", force green
-        if (
-          typeof note?.reason === "string" &&
-          note.reason.toLowerCase().trim().includes("class time changed")
-        ) {
-          for (const ev of evList) {
-            ev.backgroundColor = "#D1FAE5"; // light green
-            ev.borderColor = "#10B981";     // green
-            ev.color = "#064E3B";           // dark green
-          }
-          continue; // ✅ skip rest of loop for this student/date
+      if (
+        typeof note?.reason === "string" &&
+        note.reason.toLowerCase().trim().includes("class time changed")
+      ) {
+        for (const ev of evList) {
+          ev.backgroundColor = "#D1FAE5";
+          ev.borderColor = "#10B981";
+          ev.color = "#064E3B";
         }
-
-
+        continue;
+      }
 
       const started = note?.started_at ? new Date(note.started_at) : null;
       const ended = note?.ended_at ? new Date(note.ended_at) : null;
@@ -487,40 +573,52 @@ function TeacherToastUIInner({
           ev.borderColor = "#10B981";
           ev.color = "#064E3B";
         } else {
-          ev.backgroundColor = "#FEF3C7"; // light yellow
-          ev.borderColor = "#F59E0B";     // amber border
-          ev.color = "#78350F";           // dark amber text
+          ev.backgroundColor = "#FEF3C7";
+          ev.borderColor = "#F59E0B";
+          ev.color = "#78350F";
         }
       }
     }
 
-
-
-    // 3) Add classnote-driven events for past/today ONLY (no duplicate if schedule already present)
+    // 3) Add classnote-driven events for past/today ONLY
     for (const [k, notes] of classnoteMap.entries()) {
+      // skip consultation student/date pairs
+      if (
+        (consultations || []).some((c) => {
+          const dt = toDateYMD(c.date);
+          if (!dt) return false;
+          return `${c.student_name}::${ymdString(dt)}` === k;
+        })
+      ) {
+        continue;
+      }
+
       const [student, dateDot] = k.split("::");
       const dt = toDateYMD(dateDot);
       if (!dt) continue;
 
-      const todayOnly = kstTodayOnly();
       const dateOnly = toLocalDateOnly(dt);
-      if (dateOnly.getTime() > todayOnly.getTime()) continue; // only past/today
+      if (dateOnly.getTime() > today.getTime()) continue;
 
-      // if a schedule already exists for (student, date), don't add note event (the schedule above was recolored)
+      // if schedule already exists, don't add note-only event
       if (byStudentDate.has(k)) continue;
 
-      const note = notes.slice().sort((a,b) =>
-        new Date(b.updatedAt || b.createdAt || 0).getTime() -
-        new Date(a.updatedAt || a.createdAt || 0).getTime()
-      )[0];
+      const note = notes
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt || b.createdAt || 0).getTime() -
+            new Date(a.updatedAt || a.createdAt || 0).getTime()
+        )[0];
 
-      // ✅ protector for note-only events too
       if (
         typeof note?.reason === "string" &&
         note.reason.toLowerCase().trim().includes("class time changed")
       ) {
         const s = note?.started_at ? new Date(note.started_at) : new Date(dt);
-        const e = note?.ended_at ? new Date(note.ended_at) : new Date(s.getTime() + 30 * 60 * 1000);
+        const e = note?.ended_at
+          ? new Date(note.ended_at)
+          : new Date(s.getTime() + 30 * 60 * 1000);
 
         events.push({
           id: `note-${student}-${dateDot}-${Math.random().toString(36).slice(2)}`,
@@ -539,31 +637,44 @@ function TeacherToastUIInner({
             date: dateDot,
           },
         });
-        continue; // ✅ skip rest of this loop
+        continue;
       }
 
+      const roundToMin = (d: Date) =>
+        new Date(Math.round(d.getTime() / 60000) * 60000);
 
-      const roundToMin = (d: Date) => new Date(Math.round(d.getTime() / 60000) * 60000);
       const started = note?.started_at ? roundToMin(new Date(note.started_at)) : null;
-      const ended   = note?.ended_at   ? roundToMin(new Date(note.ended_at))   : null;
+      const ended = note?.ended_at ? roundToMin(new Date(note.ended_at)) : null;
 
-      // compare only with past/today schedules for matching
       const candidates = pastSchedulesIndex.get(k) || [];
-      let matched: { start: Date; end: Date; room_name?: string; teacher_name?: string } | null = null;
+      let matched: {
+        start: Date;
+        end: Date;
+        room_name?: string;
+        teacher_name?: string;
+      } | null = null;
 
       if (started && ended && candidates.length) {
         for (const cand of candidates) {
           const startOK = minutesDiff(cand.start, started) <= MATCH_TOL_MIN;
-          const endOK   = minutesDiff(cand.end,   ended)   <= MATCH_TOL_MIN;
-          if (startOK && endOK) { matched = cand; break; }
+          const endOK = minutesDiff(cand.end, ended) <= MATCH_TOL_MIN;
+          if (startOK && endOK) {
+            matched = cand;
+            break;
+          }
         }
       }
 
-      const s = matched ? matched.start : (started ?? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 0, 0));
-      const e = matched ? matched.end   : (ended   ?? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 30, 0));
+      const s = matched
+        ? matched.start
+        : started ?? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 0, 0);
+
+      const e = matched
+        ? matched.end
+        : ended ?? new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 9, 30, 0);
 
       const isGreen = Boolean(matched);
-      const bg = isGreen ? "#D1FAE5" : "#FEF3C7"; ;
+      const bg = isGreen ? "#D1FAE5" : "#FEF3C7";
       const border = isGreen ? "#10B981" : "#DC2626";
       const text = isGreen ? "#064E3B" : "#7F1D1D";
 
@@ -589,41 +700,36 @@ function TeacherToastUIInner({
     }
 
     return events;
-  }, [data, teacherColorMap, classnoteMap, pastSchedulesIndex]);
+  }, [data, teacherColorMap, classnoteMap, pastSchedulesIndex, consultations]);
 
   /* ------------------------------- Apply filters ---------------------------- */
   const filteredEvents = useMemo(() => {
     return (eventsFromProps || []).filter((ev) => {
-    // 1) If schedule exists → use schedule’s teacher
-    let teacherOfEvent = ev?.raw?.teacher_name?.trim();
 
-    // 2) If no schedule teacher → get student’s assigned teacher
-    if (!teacherOfEvent) {
-      const studentName = ev?.raw?.student_name?.trim();
-      const student = allStudentsRef.current.get(studentName);
-      if (student) teacherOfEvent = student.teacher?.trim() || "";
-    }
-
-    // 👇 제일 위에 추가
-    if (fixedStudentName) {
-      return ev?.raw?.student_name === fixedStudentName;
-    }
-
-    // 기존 teacher 기준 필터 유지
-    if (teacherOfEvent !== currentUser?.trim()) return false;
-
-
-
-    // 2️⃣ Apply sidebar teacher filters (admin only)
-    if (enableTeacherSidebar) {
-      if (teacherFilter.size > 0 && !teacherFilter.has(teacherOfEvent)) {
-        return false;
+      // ✅ FIRST: fixed student override
+      if (fixedStudentName) {
+        return ev?.raw?.student_name === fixedStudentName;
       }
-    }
 
-    return true;
-  });
-}, [eventsFromProps, enableTeacherSidebar, teacherFilter, currentUser]);
+      let teacherOfEvent = ev?.raw?.teacher_name?.trim();
+
+      if (!teacherOfEvent) {
+        const studentName = ev?.raw?.student_name?.trim();
+        const student = allStudentsRef.current.get(studentName);
+        if (student) teacherOfEvent = student.teacher?.trim() || "";
+      }
+
+      if (teacherOfEvent !== currentUser?.trim()) return false;
+
+      if (enableTeacherSidebar) {
+        if (teacherFilter.size > 0 && !teacherFilter.has(teacherOfEvent)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [eventsFromProps, enableTeacherSidebar, teacherFilter, currentUser, fixedStudentName]);
 
 
   /* ------------------------------- API helpers ------------------------------- */
@@ -637,6 +743,8 @@ function TeacherToastUIInner({
     try { window.dispatchEvent(new CustomEvent("calendar:saved")); } catch {}
     return res.json().catch(() => ({}));
   };
+
+  const [studentMode, setStudentMode] = useState<"existing" | "new">("new");
 
   const saveCreate = async (payload: {
     date: string; time: number; duration: number; room_name: string; teacher_name: string; student_name: string; calendarId?: string;
@@ -871,6 +979,21 @@ function TeacherToastUIInner({
           const { event, nativeEvent } = args || {};
           if (!event || !calRef.current) return;
 
+          // ✅ CONSULTATION OVERRIDE
+          if (event.raw?.is_consultation) {
+            const studentName = event.raw?.student_name;
+
+            if (!studentName) return;
+
+            // 👉 redirect to your consult page with pre-selected student
+            window.open(
+              `/teacher/admin_billing_1/consulting?student_name=${encodeURIComponent(studentName)}&user=${encodeURIComponent(currentUser)}&type=${encodeURIComponent(urlType)}${urlId ? `&id=${encodeURIComponent(urlId)}` : ""}`,
+              "_blank"
+            );
+
+            return; // 🚨 STOP normal flow
+          }
+
           const cal = calRef.current;
 
           // 1️⃣ Remove highlight from previous event
@@ -940,7 +1063,7 @@ function TeacherToastUIInner({
           const s = new Date(start);
           // Always default to 1 hour
           const hours = 1;
-
+          const timeValue = s.getHours() + s.getMinutes() / 60;
 
           setAddOpen(true);
           setRepeatMode(false);
@@ -948,8 +1071,15 @@ function TeacherToastUIInner({
           setAddForm((p) => ({
             ...p,
             date: ymdString(s),
-            time: String(s.getHours() + s.getMinutes() / 60),
+            time: String(timeValue),
             duration: String(hours),
+          }));
+
+          // 🔥 ADD THIS (for consultation)
+          setConsultForm((p) => ({
+            ...p,
+            date: ymdString(s),
+            time: String(timeValue),
           }));
 
           try { calRef.current?.clearGridSelections?.(); } catch {}
@@ -1085,6 +1215,21 @@ function TeacherToastUIInner({
     fetchStudentsAndNotes();
   }, [currentDate, viewName, currentUser]);
 
+  useEffect(() => {
+    async function fetchConsultations() {
+      try {
+        const res = await fetch("/api/consultations", { cache: "no-store" });
+        const json = await res.json();
+
+        setConsultations(json.data || []);
+      } catch (err) {
+        console.error("consultations fetch error:", err);
+        setConsultations([]);
+      }
+    }
+
+    fetchConsultations();
+  }, []);
 
   // Close popovers on outside click / ESC
   useEffect(() => {
@@ -1605,6 +1750,9 @@ if (mode === "changed") {
 
           {/* Event popover */}
           {detail?.event && (() => {
+            if (detail.event.raw?.is_consultation) {
+              return null; // 🔥 no popover at all
+            }
             const ev = detail.event;
             const raw = ev.raw || {};
             const student = raw.student_name ?? "";
@@ -1872,7 +2020,7 @@ if (mode === "changed") {
                     </button>
 
                     {caseType === "red_unscheduled" && (
-                              <button
+                    <button
                       className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-md hover:bg-blue-100"
                       onClick={async () => {
                         try {
@@ -2084,14 +2232,13 @@ if (mode === "changed") {
 
 
 
-          {/* Add card */}
           {addOpen && (
             <div
               ref={addRef}
-              className="absolute z-50 w-[320px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+              className="absolute z-50 w-[340px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
               style={(() => {
                 if (!addAnchor || !containerRef.current) return { top: 12, right: 12 } as React.CSSProperties;
-                const POP_W = 320, POP_H = 220, pad = 8;
+                const POP_W = 340, POP_H = 320, pad = 8;
                 const cw = containerRef.current.clientWidth;
                 const ch = containerRef.current.clientHeight;
                 let left = addAnchor.x + 10;
@@ -2102,246 +2249,585 @@ if (mode === "changed") {
               })()}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="font-semibold text-gray-900 leading-snug">새 수업 등록</div>
-                <button onClick={() => { setAddOpen(false); setAddAnchor(null); }} className="text-gray-400 hover:text-gray-600 rounded-md px-2" aria-label="Close" title="닫기">✕</button>
+                <div className="font-semibold text-gray-900 leading-snug">
+                  {addType === "class" ? "새 수업 등록" : "새 상담 등록"}
+                </div>
+                <button
+                  onClick={() => {
+                    setAddOpen(false);
+                    setAddAnchor(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 rounded-md px-2"
+                  aria-label="Close"
+                  title="닫기"
+                >
+                  ✕
+                </button>
               </div>
 
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <label className="text-xs">
-                  <div className="text-gray-600 mb-1">Date</div>
-                  <input
-                    className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
-                    value={addForm.date}
-                    onChange={(e) => updateAdd({ date: e.target.value })}
-                    onBlur={(e) => { const dt = toDateYMD(e.target.value); if (dt) updateAdd({ date: ymdString(dt) }); }}
-                    placeholder="YYYY. MM. DD."
-                  />
-                </label>
-                <label className="text-xs">
-                  <div className="text-gray-600 mb-1">Room</div>
-                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.room_name} onChange={(e) => updateAdd({ room_name: e.target.value })} placeholder="101" />
-                </label>
-                <label className="text-xs">
-                  <div className="text-gray-600 mb-1">Time</div>
-                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.time} onChange={(e) => updateAdd({ time: e.target.value })} placeholder="18 or 18.5" />
-                </label>
-                <label className="text-xs">
-                  <div className="text-gray-600 mb-1">Duration</div>
-                  <input className="w-full border rounded-lg px-2 py-1.5 bg-white text-black" value={addForm.duration} onChange={(e) => updateAdd({ duration: e.target.value })} placeholder="1 or 1.5" />
-                </label>
-
-                <label className="text-xs col-span-2">
-                  <div className="text-gray-600 mb-1">Student</div>
-                  {studentOptions.length ? (
-                    <div className="relative">
-                      <select
-                        className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                        value={addForm.student_name}
-                        onChange={(e) => updateAdd({ student_name: e.target.value })}
-                      >
-                        {studentOptions.map((name) => (
-                          <option key={name} value={name}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                      <svg
-                        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <input
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                      value={addForm.student_name}
-                      onChange={(e) => updateAdd({ student_name: e.target.value })}
-                      placeholder="홍길동"
-                    />
-                  )}
-                </label>
-
-                <label className="text-xs col-span-2">
-                  <div className="text-gray-600 mb-1">Teacher</div>
-                  {teacherOptions.length > 0 ? (
-                    <div className="relative">
-                      <select
-                        className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                        value={addForm.teacher_name}
-                        onChange={(e) => updateAdd({ teacher_name: e.target.value })}
-                      >
-                        {teacherOptions.map((name) => (
-                          <option key={name} value={name}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
-                      <svg
-                        className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <input
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                      value={addForm.teacher_name}
-                      onChange={(e) => updateAdd({ teacher_name: e.target.value })}
-                      placeholder="Loading teachers..."
-                    />
-                  )}
-                </label>
-              </div>
-
-              <div className="mt-3 flex justify-between">
+              {/* TYPE SELECTOR */}
+              <div className="mt-3 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setRepeatMode((v) => !v)}
-                  aria-pressed={repeatMode}
+                  onClick={() => setAddType("class")}
                   className={`px-3 py-1 text-xs rounded-md border ${
-                    repeatMode
+                    addType === "class"
                       ? "bg-indigo-600 text-white border-indigo-600"
                       : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"
                   }`}
-                  title="매주 같은 시간/강의실 반복 등록 토글"
                 >
-                  Repeat Class
+                  Class
                 </button>
 
                 <button
-                  onClick={async () => {
-                    if (submitting) return;
-                    setSubmitting(true);
-                    try {
-                      const dt = toDateYMD(addForm.date);
-                      const timeNum = Number(addForm.time);
-                      const durNum = Number(addForm.duration);
-                      if (!dt) return alert("날짜 형식: YYYY. MM. DD");
-
-                      const isHalfStep = (n: number) =>
-                        Number.isFinite(n) && Math.abs(n * 2 - Math.round(n * 2)) < 1e-9;
-
-                      if (!isHalfStep(timeNum) || timeNum < 0 || timeNum > 23.5) {
-                        return alert("Time must be 0, 0.5, …, 23.5");
-                      }
-                      if (!isHalfStep(durNum) || durNum <= 0) {
-                        return alert("Duration must be 0.5, 1.0, 1.5, …");
-                      }
-
-                      if (!addForm.room_name) return alert("Room is required");
-                      if (!addForm.student_name) return alert("Student is required");
-
-                      const h = Math.floor(timeNum);
-                      const m = Math.round((timeNum - h) * 60);
-
-                      if (repeatMode) {
-                        const base = toDateYMD(addForm.date);
-                        if (!base) return alert("날짜 형식: YYYY. MM. DD");
-                        const until = new Date(base);
-                        until.setFullYear(until.getFullYear() + 1);
-
-                        const payloads: any[] = [];
-                        const baseLocal = new Date(base.getFullYear(), base.getMonth(), base.getDate());
-                        const untilLocal = new Date(until.getFullYear(), until.getMonth(), until.getDate());
-
-                        for (let i = 0; ; i++) {
-                          const iter = new Date(
-                            baseLocal.getFullYear(),
-                            baseLocal.getMonth(),
-                            baseLocal.getDate() + i * 7
-                          );
-                          if (iter > untilLocal) break;
-
-                          payloads.push({
-                            date: ymdString(iter),
-                            time: timeNum,
-                            duration: durNum,
-                            room_name: addForm.room_name,
-                            teacher_name: addForm.teacher_name ?? "",
-                            student_name: addForm.student_name,
-                            calendarId: "1",
-                          });
-                        }
-
-                        // ✅ Send all in one go
-                        const res = await fetch("/api/schedules", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify(payloads),
-                        });
-
-                        if (!res.ok) throw new Error("Failed to create multiple schedules");
-                        
-
-                        // (Optional) just show confirmation
-                        alert(`✅ ${payloads.length} classes created successfully.`);
-                      } else {
-                        const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), h, m, 0);
-                        const end = new Date(start.getTime() + durNum * 60 * 60 * 1000);
-
-                        const payload = {
-                          date: addForm.date,
-                          time: timeNum,
-                          duration: durNum,
-                          room_name: addForm.room_name,
-                          teacher_name: addForm.teacher_name ?? "",
-                          student_name: addForm.student_name,
-                          calendarId: "1",
-                        };
-
-                        const created = await saveCreate(payload);
-                        const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
-                        const color = teacherColorMap.get(payload.teacher_name);
-
-                        calRef.current?.createEvents([{
-                          id: newId,
-                          calendarId: "1",
-                          title: `${payload.room_name}호 ${payload.student_name}님`,
-                          category: "time",
-                          start,
-                          end,
-                          backgroundColor: color?.bg ?? "#EEF2FF",
-                          borderColor: color?.border ?? "#C7D2FE",
-                          dragBackgroundColor: color?.bg ?? "#E0E7FF",
-                          color: "#111827",
-                          raw: {
-                            schedule_id: newId,
-                            room_name: payload.room_name,
-                            teacher_name: payload.teacher_name,
-                            student_name: payload.student_name,
-                          },
-                        }]);
-                      }
-
-                      setAddOpen(false);
-                      setAddAnchor(null);
-                      setRepeatMode(false);
-                    } catch (e: any) {
-                      alert(`생성 실패: ${e?.message ?? e}`);
-                    } finally {
-                      setSubmitting(false);
-                    }
-                  }}
-                  disabled={submitting}
-                  className={`px-3 py-1 text-xs rounded-md ${
-                    submitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
-                  } text-white disabled:opacity-60 inline-flex items-center`}
+                  type="button"
+                  onClick={() => setAddType("consultation")}
+                  className={`px-3 py-1 text-xs rounded-md border ${
+                    addType === "consultation"
+                      ? "bg-purple-600 text-white border-purple-600"
+                      : "border-purple-300 text-purple-700 hover:bg-purple-50"
+                  }`}
                 >
-                  {submitting && (
-                    <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z" />
-                    </svg>
-                  )}
-                  {repeatMode ? "Add Multiple" : "Add"}
+                  Consultation
                 </button>
               </div>
+
+              {/* ========================= CLASS FORM ========================= */}
+              {addType === "class" && (
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Date</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={addForm.date}
+                        onChange={(e) => updateAdd({ date: e.target.value })}
+                        onBlur={(e) => {
+                          const dt = toDateYMD(e.target.value);
+                          if (dt) updateAdd({ date: ymdString(dt) });
+                        }}
+                        placeholder="YYYY. MM. DD."
+                      />
+                    </label>
+
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Room</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={addForm.room_name}
+                        onChange={(e) => updateAdd({ room_name: e.target.value })}
+                        placeholder="101"
+                      />
+                    </label>
+
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Time</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={addForm.time}
+                        onChange={(e) => updateAdd({ time: e.target.value })}
+                        placeholder="18 or 18.5"
+                      />
+                    </label>
+
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Duration</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={addForm.duration}
+                        onChange={(e) => updateAdd({ duration: e.target.value })}
+                        placeholder="1 or 1.5"
+                      />
+                    </label>
+
+                    <label className="text-xs col-span-2">
+                      <div className="text-gray-600 mb-1">Student</div>
+                      {studentOptions.length ? (
+                        <div className="relative">
+                          <select
+                            className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                            value={addForm.student_name}
+                            onChange={(e) => updateAdd({ student_name: e.target.value })}
+                          >
+                            {studentOptions.map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                              </option>
+                            ))}
+                          </select>
+                          <svg
+                            className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <input
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                          value={addForm.student_name}
+                          onChange={(e) => updateAdd({ student_name: e.target.value })}
+                          placeholder="홍길동"
+                        />
+                      )}
+                    </label>
+
+                    <label className="text-xs col-span-2">
+                      <div className="text-gray-600 mb-1">Teacher</div>
+                      {teacherOptions.length > 0 ? (
+                        <div className="relative">
+                          <select
+                            className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2 pr-9 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                            value={addForm.teacher_name}
+                            onChange={(e) => updateAdd({ teacher_name: e.target.value })}
+                          >
+                            {teacherOptions.map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                              </option>
+                            ))}
+                          </select>
+                          <svg
+                            className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.06l3.71-3.83a.75.75 0 1 1 1.08 1.04l-4.24 4.38a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06z" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <input
+                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                          value={addForm.teacher_name}
+                          onChange={(e) => updateAdd({ teacher_name: e.target.value })}
+                          placeholder="Loading teachers..."
+                        />
+                      )}
+                    </label>
+                  </div>
+
+                  <div className="mt-3 flex justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setRepeatMode((v) => !v)}
+                      aria-pressed={repeatMode}
+                      className={`px-3 py-1 text-xs rounded-md border ${
+                        repeatMode
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                      }`}
+                      title="매주 같은 시간/강의실 반복 등록 토글"
+                    >
+                      Repeat Class
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        if (submitting) return;
+                        setSubmitting(true);
+                        try {
+                          const dt = toDateYMD(addForm.date);
+                          const timeNum = Number(addForm.time);
+                          const durNum = Number(addForm.duration);
+                          if (!dt) return alert("날짜 형식: YYYY. MM. DD");
+
+                          const isHalfStep = (n: number) =>
+                            Number.isFinite(n) && Math.abs(n * 2 - Math.round(n * 2)) < 1e-9;
+
+                          if (!isHalfStep(timeNum) || timeNum < 0 || timeNum > 23.5) {
+                            return alert("Time must be 0, 0.5, …, 23.5");
+                          }
+                          if (!isHalfStep(durNum) || durNum <= 0) {
+                            return alert("Duration must be 0.5, 1.0, 1.5, …");
+                          }
+
+                          if (!addForm.room_name) return alert("Room is required");
+                          if (!addForm.student_name) return alert("Student is required");
+
+                          const h = Math.floor(timeNum);
+                          const m = Math.round((timeNum - h) * 60);
+
+                          if (repeatMode) {
+                            const base = toDateYMD(addForm.date);
+                            if (!base) return alert("날짜 형식: YYYY. MM. DD");
+                            const until = new Date(base);
+                            until.setFullYear(until.getFullYear() + 1);
+
+                            const payloads: any[] = [];
+                            const baseLocal = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+                            const untilLocal = new Date(until.getFullYear(), until.getMonth(), until.getDate());
+
+                            for (let i = 0; ; i++) {
+                              const iter = new Date(
+                                baseLocal.getFullYear(),
+                                baseLocal.getMonth(),
+                                baseLocal.getDate() + i * 7
+                              );
+                              if (iter > untilLocal) break;
+
+                              payloads.push({
+                                date: ymdString(iter),
+                                time: timeNum,
+                                duration: durNum,
+                                room_name: addForm.room_name,
+                                teacher_name: addForm.teacher_name ?? "",
+                                student_name: addForm.student_name,
+                                calendarId: "1",
+                              });
+                            }
+
+                            const res = await fetch("/api/schedules", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify(payloads),
+                            });
+
+                            if (!res.ok) throw new Error("Failed to create multiple schedules");
+                            alert(`✅ ${payloads.length} classes created successfully.`);
+                          } else {
+                            const start = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), h, m, 0);
+                            const end = new Date(start.getTime() + durNum * 60 * 60 * 1000);
+
+                            const payload = {
+                              date: addForm.date,
+                              time: timeNum,
+                              duration: durNum,
+                              room_name: addForm.room_name,
+                              teacher_name: addForm.teacher_name ?? "",
+                              student_name: addForm.student_name,
+                              calendarId: "1",
+                            };
+
+                            const created = await saveCreate(payload);
+                            const newId = String(created?._id ?? `${Date.now()}-${Math.random()}`);
+                            const color = teacherColorMap.get(payload.teacher_name);
+
+                            calRef.current?.createEvents([{
+                              id: newId,
+                              calendarId: "1",
+                              title: `${payload.room_name}호 ${payload.student_name}님`,
+                              category: "time",
+                              start,
+                              end,
+                              backgroundColor: color?.bg ?? "#EEF2FF",
+                              borderColor: color?.border ?? "#C7D2FE",
+                              dragBackgroundColor: color?.bg ?? "#E0E7FF",
+                              color: "#111827",
+                              raw: {
+                                schedule_id: newId,
+                                room_name: payload.room_name,
+                                teacher_name: payload.teacher_name,
+                                student_name: payload.student_name,
+                              },
+                            }]);
+                          }
+
+                          setAddOpen(false);
+                          setAddAnchor(null);
+                          setRepeatMode(false);
+                        } catch (e: any) {
+                          alert(`생성 실패: ${e?.message ?? e}`);
+                        } finally {
+                          setSubmitting(false);
+                        }
+                      }}
+                      disabled={submitting}
+                      className={`px-3 py-1 text-xs rounded-md ${
+                        submitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
+                      } text-white disabled:opacity-60 inline-flex items-center`}
+                    >
+                      {submitting && (
+                        <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z" />
+                        </svg>
+                      )}
+                      {repeatMode ? "Add Multiple" : "Add"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* ========================= CONSULTATION FORM ========================= */}
+              {addType === "consultation" && (
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {/* Student Type Selector */}
+                    <label className="text-xs col-span-2">
+                      <div className="text-gray-600 mb-1">Student Type</div>
+
+                      <div className="flex gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConsultForm((p) => ({ ...p, student_name: "" }));
+                            setOverlapChecked(false);
+                            setHasOverlap(null);
+                            setStudentMode("existing");
+                          }}
+                          className={`px-2 py-1 text-xs rounded-md border ${
+                            studentMode === "existing"
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                          }`}
+                        >
+                          Existing
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConsultForm((p) => ({ ...p, student_name: "" }));
+                            setOverlapChecked(false);
+                            setHasOverlap(null);
+                            setStudentMode("new");
+                          }}
+                          className={`px-2 py-1 text-xs rounded-md border ${
+                            studentMode === "new"
+                              ? "bg-purple-600 text-white border-purple-600"
+                              : "border-purple-300 text-purple-700 hover:bg-purple-50"
+                          }`}
+                        >
+                          New
+                        </button>
+                      </div>
+
+                      {/* EXISTING STUDENT */}
+                      {studentMode === "existing" && (
+                        <select
+                          className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                          value={consultForm.student_name}
+                          onChange={(e) =>
+                            setConsultForm((p) => ({
+                              ...p,
+                              student_name: e.target.value,
+                            }))
+                          }
+                        >
+                          <option value="">학생 선택</option>
+                          {studentOptions.map((name) => (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {/* NEW STUDENT */}
+                      {studentMode === "new" && (
+                        <>
+                          <div className="flex gap-2">
+                            <input
+                              className="flex-1 border rounded-lg px-2 py-1.5 bg-white text-black"
+                              value={consultForm.student_name}
+                              onChange={(e) => {
+                                setConsultForm((p) => ({
+                                  ...p,
+                                  student_name: e.target.value,
+                                }));
+                                setOverlapChecked(false);
+                                setHasOverlap(null);
+                              }}
+                              placeholder="학생 이름"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={handleConsultOverlapCheck}
+                              className="px-2 py-1 text-xs bg-gray-200 rounded-md hover:bg-gray-300"
+                            >
+                              중복 체크
+                            </button>
+                          </div>
+
+                          {overlapChecked && (
+                            <div className="mt-1 text-xs">
+                              {hasOverlap ? (
+                                <span className="text-red-600">⚠️ 중복 이름 존재</span>
+                              ) : (
+                                <span className="text-green-600">✅ 사용 가능</span>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </label>
+
+                    {/* Phone (ONLY for new student) */}
+                    {studentMode === "new" && (
+                      <label className="text-xs col-span-2">
+                        <div className="text-gray-600 mb-1">Phone Number</div>
+                        <input
+                          className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                          value={consultForm.phone}
+                          onChange={(e) => {
+                            const onlyNums = e.target.value.replace(/\D/g, "");
+                            setConsultForm((p) => ({ ...p, phone: onlyNums }));
+                          }}
+                          placeholder="01012345678"
+                        />
+                      </label>
+                    )}
+
+                    {/* Date */}
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Date</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={consultForm.date}
+                        onChange={(e) =>
+                          setConsultForm((p) => ({ ...p, date: e.target.value }))
+                        }
+                        onBlur={(e) => {
+                          const dt = toDateYMD(e.target.value);
+                          if (dt) {
+                            setConsultForm((p) => ({ ...p, date: ymdString(dt) }));
+                          }
+                        }}
+                        placeholder="YYYY. MM. DD."
+                      />
+                    </label>
+
+                    {/* Time */}
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Time</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={consultForm.time}
+                        onChange={(e) =>
+                          setConsultForm((p) => ({ ...p, time: e.target.value }))
+                        }
+                        placeholder="12 or 12.5"
+                      />
+                    </label>
+
+                    {/* Room */}
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Room</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={consultForm.room_name}
+                        onChange={(e) =>
+                          setConsultForm((p) => ({ ...p, room_name: e.target.value }))
+                        }
+                        placeholder="Consult"
+                      />
+                    </label>
+
+                    {/* Duration */}
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Duration</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={consultForm.duration}
+                        onChange={(e) =>
+                          setConsultForm((p) => ({ ...p, duration: e.target.value }))
+                        }
+                        placeholder="0.5"
+                      />
+                    </label>
+
+                    {/* Teacher */}
+                    <label className="text-xs col-span-2">
+                      <div className="text-gray-600 mb-1">Teacher</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-gray-100 text-black"
+                        value={currentUser}
+                        readOnly
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={async () => {
+                        if (submitting) return;
+                        setSubmitting(true);
+
+                        try {
+                          const dt = toDateYMD(consultForm.date);
+                          const timeNum = Number(consultForm.time);
+                          const durationNum = Number(consultForm.duration);
+
+                          const isHalfStep = (n: number) =>
+                            Number.isFinite(n) && Math.abs(n * 2 - Math.round(n * 2)) < 1e-9;
+
+                          if (!dt) return alert("날짜 형식: YYYY. MM. DD");
+                          if (!isHalfStep(timeNum) || timeNum < 0 || timeNum > 23.5) {
+                            return alert("Time must be 0, 0.5, …, 23.5");
+                          }
+                          if (!isHalfStep(durationNum) || durationNum <= 0) {
+                            return alert("Duration must be 0.5, 1.0, ...");
+                          }
+
+                          if (!consultForm.student_name.trim()) return alert("Student required");
+                          if (!consultForm.phone.trim()) return alert("Phone required");
+
+                          if (hasOverlap) {
+                            return alert("⚠️ Cannot create consultation due to overlap");
+                          }
+
+                          const studentName = consultForm.student_name.trim();
+
+                          if (!hasOverlap) {
+                            await fetch("/api/student", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                name: studentName,
+                                phoneNumber: consultForm.phone.trim(),
+                                teacher: currentUser,
+                              }),
+                            });
+                          }
+
+                          await fetch("/api/consultations", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              student_name: studentName,
+                              phoneNumber: consultForm.phone.trim(),
+                              teacher_name: currentUser,
+                              date: consultForm.date,
+                              time: timeNum,
+                              duration: durationNum,
+                              room_name: consultForm.room_name,
+                            }),
+                          });
+
+                          window.dispatchEvent(new CustomEvent("calendar:saved"));
+
+                          setAddOpen(false);
+                          setAddAnchor(null);
+                        } catch (e: any) {
+                          alert(`생성 실패: ${e?.message ?? e}`);
+                        } finally {
+                          setSubmitting(false);
+                        }
+                      }}
+                      disabled={submitting}
+                      className={`px-4 py-1.5 text-xs rounded-md font-medium transition 
+                        ${
+                          submitting
+                            ? "bg-purple-400 cursor-not-allowed"
+                            : "bg-purple-600 hover:bg-purple-700"
+                        } 
+                        text-white shadow-sm disabled:opacity-60 inline-flex items-center`}
+                    >
+                      {submitting && (
+                        <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 017-7.94V2a10 10 0 100 20v-2.06A8 8 0 014 12z" />
+                        </svg>
+                      )}
+                      Add Consultation
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

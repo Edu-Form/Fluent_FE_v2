@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 type StudentStatus =
   | "상담중"
@@ -27,7 +29,7 @@ type Teacher = {
   name: string;
 };
 
-export default function ConsultPage() {
+function ConsultPageContent() {
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -41,6 +43,34 @@ export default function ConsultPage() {
   const [isDuplicate, setIsDuplicate] = useState<boolean | null>(null);
 
   const selectedStudent = students.find((s) => s.id === selectedId);
+  const [notesDraft, setNotesDraft] = useState("");
+    useEffect(() => {
+    if (selectedStudent) {
+      setNotesDraft(selectedStudent.notes || "");
+    }
+  }, [selectedStudent]);
+  const handleSaveNotes = async () => {
+    if (!selectedStudent) return;
+
+    try {
+      await fetch(`/api/student/${encodeURIComponent(selectedStudent.name)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: notesDraft }),
+      });
+
+      // update local state
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === selectedStudent.id ? { ...s, notes: notesDraft } : s
+        )
+      );
+    } catch (err) {
+      console.error("Failed to save notes:", err);
+    }
+  };
+  const searchParams = useSearchParams();
+  const queryStudentName = searchParams.get("student_name");
 
   // Load students
   const loadStudents = async () => {
@@ -86,6 +116,18 @@ export default function ConsultPage() {
     loadTeachers();
   }, []);
 
+  useEffect(() => {
+    if (!queryStudentName || students.length === 0) return;
+
+    const found = students.find(
+      (s) => s.name?.trim() === queryStudentName.trim()
+    );
+
+    if (found) {
+      setSelectedId(found.id);
+    }
+  }, [queryStudentName, students]);
+
   // Duplicate check
   const handleDuplicateCheck = async () => {
     if (!newName.trim()) return;
@@ -123,6 +165,49 @@ export default function ConsultPage() {
     setIsDuplicate(null);
 
     loadStudents();
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!selectedStudent) return;
+
+    const confirmDelete = confirm(
+      `${selectedStudent.name} 학생을 삭제하시겠습니까?`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await fetch(`/api/student/${encodeURIComponent(selectedStudent.name)}`, {
+        method: "DELETE",
+      });
+
+      // remove from UI
+      setStudents((prev) =>
+        prev.filter((s) => s.id !== selectedStudent.id)
+      );
+
+      setSelectedId(null);
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
+
+  const handleTeacherChange = async (studentName: string, teacher: string) => {
+    try {
+      await fetch(`/api/student/${encodeURIComponent(studentName)}`, {
+        method: "POST", // your API uses POST
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teacher }),
+      });
+
+      // instant UI update (no reload)
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.name === studentName ? { ...s, teacher } : s
+        )
+      );
+    } catch (err) {
+      console.error("Failed to update teacher:", err);
+    }
   };
 
   return (
@@ -192,7 +277,20 @@ export default function ConsultPage() {
                     <td className="px-4 py-3">{student.status}</td>
 
                     <td className="px-4 py-3">
-                      {student.teacher || "-"}
+                      <select
+                        value={student.teacher || ""}
+                        onChange={(e) =>
+                          handleTeacherChange(student.name, e.target.value)
+                        }
+                        className="border rounded px-2 py-1 text-sm bg-white"
+                      >
+                        <option value="">선택</option>
+                        {teachers.map((t) => (
+                          <option key={t._id || t.name} value={t.name}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
                     </td>
 
                     <td className="px-4 py-3">
@@ -219,12 +317,22 @@ export default function ConsultPage() {
         <div className="w-[600px] h-full flex flex-col bg-white border-l flex-shrink-0">
           <div className="p-6 border-b flex justify-between items-center">
             <h2 className="text-xl font-semibold">Student Profile</h2>
-            <button
-              onClick={() => setSelectedId(null)}
-              className="text-sm text-gray-500 hover:text-black"
-            >
-              닫기
-            </button>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteStudent}
+                className="text-sm text-red-500 hover:text-red-700"
+              >
+                삭제
+              </button>
+
+              <button
+                onClick={() => setSelectedId(null)}
+                className="text-sm text-gray-500 hover:text-black"
+              >
+                닫기
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -247,8 +355,21 @@ export default function ConsultPage() {
 
             <div>
               <label className="text-sm text-gray-500">상담 노트</label>
-              <div className="mt-2 p-4 border rounded-lg min-h-[120px] bg-gray-50 whitespace-pre-wrap">
-                {selectedStudent.notes || ""}
+              <div className="mt-2 space-y-2">
+                <textarea
+                  value={notesDraft}
+                  onChange={(e) => setNotesDraft(e.target.value)}
+                  className="w-full p-3 border rounded-lg min-h-[120px] text-sm"
+                />
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSaveNotes}
+                    className="px-3 py-1 text-sm bg-black text-white rounded"
+                  >
+                    저장
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -277,7 +398,7 @@ export default function ConsultPage() {
                   onClick={handleDuplicateCheck}
                   className="px-3 py-2 text-sm bg-gray-200 rounded-lg"
                 >
-                  동명이인 체크
+                  중복 체크
                 </button>
               </div>
             </div>
@@ -327,5 +448,13 @@ export default function ConsultPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ConsultPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading...</div>}>
+      <ConsultPageContent />
+    </Suspense>
   );
 }

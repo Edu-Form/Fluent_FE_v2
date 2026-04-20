@@ -94,6 +94,19 @@ const combineDateAndTime = (dateDot: string | undefined, timeHHMM: string) => {
   return new Date(Number(y), Number(mo) - 1, Number(d), hh, mm, 0, 0);
 };
 
+const parseDate = (dateStr: string) => {
+  if (!dateStr) return new Date(0);
+
+  // supports both "YYYY. MM. DD." and ISO
+  if (dateStr.includes(".")) {
+    const clean = dateStr.replace(/\.$/, "");
+    const [y, m, d] = clean.split(". ").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  return new Date(dateStr);
+};
+
 
 // 퀴즐렛 페이지 내용 컴포넌트
 const ClassPageContent: React.FC = () => {
@@ -162,7 +175,7 @@ const isGroupClass = resolvedStudentNames.length > 1;
   const [class_date, setClassDate] = useState<string>("");
   const [date, setDate] = useState<string>("");
   const [original_text, setOriginal_text] = useState<string>("");
-  const [loading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
 
   const [translationModalOpen, setTranslationModalOpen] = useState(false);
@@ -209,8 +222,51 @@ const isGroupClass = resolvedStudentNames.length > 1;
 
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [scheduleList, setScheduleList] = useState<any[]>([]);
-  const [selectedSchedule, setSelectedSchedule] = useState<any | null>(null);
+  const sortedScheduleList = useMemo(() => {
+    return [...scheduleList].sort((a, b) => {
+      const dateA = parseDate(a.date).getTime();
+      const dateB = parseDate(b.date).getTime();
 
+      // 🔥 newest first
+      return dateB - dateA;
+    });
+  }, [scheduleList]);
+  const [selectedSchedule, setSelectedSchedule] = useState<any | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const closestIndex = useMemo(() => {
+    if (!sortedScheduleList.length) return 0;
+
+    const today = new Date();
+
+    let minDiff = Infinity;
+    let bestIdx = 0;
+
+    sortedScheduleList.forEach((sch, idx) => {
+      const d = parseDate(sch.date);
+      const diff = Math.abs(d.getTime() - today.getTime());
+
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestIdx = idx;
+      }
+    });
+
+    return bestIdx;
+  }, [sortedScheduleList]);
+  useEffect(() => {
+    if (!scheduleModalOpen) return;
+
+    setTimeout(() => {
+      const el = itemRefs.current[closestIndex];
+      if (el) {
+        el.scrollIntoView({
+          behavior: "smooth",
+          block: "center", // 🔥 THIS is what you wanted
+        });
+      }
+    }, 100); // wait for render
+  }, [scheduleModalOpen, closestIndex]);
   useEffect(() => {
     const fetchSchedules = async () => {
       const targetStudent = resolvedStudentNames[0];
@@ -285,24 +341,31 @@ const isGroupClass = resolvedStudentNames.length > 1;
   duration_ms: number | null;
   override_class_date?: string; // ⭐ ADD
 }) => {
+  setLoading(true);
   const groupNames = resolvedStudentNames;
 
 
   if (!homework.trim()) {
+    setLoading(false);
     alert("Homework field is required.");
     return;
   }
   if (!original_text || original_text.trim().length === 0) {
+    setLoading(false);
     alert("Please write class notes.");
     return;
   }
   const finalClassDate = opts.override_class_date || class_date;
 
   if (!finalClassDate || finalClassDate.trim() === "") {
+    setLoading(false);
+
     alert("Please select a class date.");
     return;
   }
   if (!original_text.includes("<mark>")) {
+    setLoading(false);
+
     alert("Please highlight at least one Quizlet expression.");
     return;
   }
@@ -406,6 +469,7 @@ const isGroupClass = resolvedStudentNames.length > 1;
     }
   } finally {
     setTranslating(false);
+    setLoading(false); // ✅ THIS IS THE KEY
   }
   };
 
@@ -1870,9 +1934,12 @@ const isGroupClass = resolvedStudentNames.length > 1;
 
           <h2 className="text-xl font-bold">Select Schedule</h2>
 
-          <div className="max-h-60 overflow-y-auto space-y-2">
-            {scheduleList.map((sch, idx) => (
+          <div ref={listRef} className="max-h-60 overflow-y-auto space-y-2">
+            {sortedScheduleList.map((sch, idx) => (
               <div
+                ref={(el) => {
+                  itemRefs.current[idx] = el;
+                }}
                 key={idx}
                 onClick={() => setSelectedSchedule(sch)}
                 className={`p-3 rounded-xl border cursor-pointer ${

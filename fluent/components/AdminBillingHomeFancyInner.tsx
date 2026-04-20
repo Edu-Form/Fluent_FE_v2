@@ -104,10 +104,16 @@ export default function AdminDashboard() {
     const load = async () => {
       setLoading(true);
 
-      const [studentRes, noteRes] = await Promise.all([
+      const [studentRes, noteRes, consultRes] = await Promise.all([
         fetch("/api/studentList"),
         fetch("/api/classnote/all"),
+        fetch("/api/consultations"), 
       ]);
+
+      const consultJson = await consultRes.json().catch(() => []);
+      const consultRaw = consultJson?.data || [];
+
+      setConsultations(consultRaw);
 
       const sJson = await studentRes.json().catch(() => []);
       const cJson = await noteRes.json().catch(() => []);
@@ -132,6 +138,30 @@ export default function AdminDashboard() {
 
     load();
   }, []);
+
+  const [consultations, setConsultations] = useState<any[]>([]);
+
+  const consultationMonthly = useMemo(() => {
+    const map: Record<string, number> = {};
+
+    consultations.forEach((c) => {
+      if (c.teacher_name !== selectedTeacher) return;
+
+      const d = toDate(c.date);
+      if (!d) return;
+
+      const key = `${d.getFullYear()}-${String(
+        d.getMonth() + 1
+      ).padStart(2, "0")}`;
+
+      map[key] = (map[key] || 0) + 1;
+    });
+
+    return Object.entries(map)
+      .map(([month, count]) => ({ month, count }))
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-6);
+  }, [consultations, selectedTeacher]);
 
   useEffect(() => {
     if (viewMode !== "table") return;
@@ -585,6 +615,59 @@ export default function AdminDashboard() {
               </div>
             </div>
           </Card>
+
+          {/* ---------------- CARD 3: CONSULTATIONS (MONTHLY) ---------------- */}
+          <Card>
+            <div className="space-y-6">
+              <CardHeader title="Consultations (Monthly)" />
+
+              {/* SELECT (same pattern as other charts) */}
+              <div className="flex justify-between items-center">
+                <select
+                  value={selectedTeacher}
+                  onChange={(e) => setSelectedTeacher(e.target.value)}
+                  className="border rounded-lg px-3 py-1 text-sm"
+                >
+                  {teachers.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* GRAPH */}
+              <div className="h-[180px] flex items-end gap-4">
+                {(() => {
+                  const max = Math.max(
+                    ...consultationMonthly.map((m) => m.count),
+                    1
+                  );
+
+                  return consultationMonthly.map((m) => {
+                    const height = (m.count / max) * 160;
+
+                    return (
+                      <div
+                        key={m.month}
+                        className="flex-1 flex flex-col items-center justify-end"
+                      >
+                        <div className="text-xs mb-1">{m.count}</div>
+
+                        <div
+                          className="w-full bg-purple-500 rounded-md"
+                          style={{ height: `${Math.max(height, 6)}px` }}
+                        />
+
+                        <div className="text-xs mt-2 text-gray-600">
+                          {m.month.slice(5)}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </Card>
+
 
         </div>
       )}

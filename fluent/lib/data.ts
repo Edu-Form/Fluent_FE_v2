@@ -527,6 +527,20 @@ export async function updateStudentByName(name: string, updateData: any) {
   }
 }
 
+export async function deleteStudentByName(name: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("school_management");
+
+    const res = await db.collection("students").deleteOne({ name });
+
+    return res.deletedCount === 1;
+  } catch (err) {
+    console.error("deleteStudentByName error:", err);
+    return false;
+  }
+}
+
 
 export async function getStudentQuizletData(student_name: string) {
   try {
@@ -3154,4 +3168,37 @@ export async function getTeacherPerformanceData(filters?: {
     console.error("getTeacherPerformanceData error:", error);
     return [];
   }
+}
+
+export async function createConsultation(data: any) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const doc = {
+    ...data,
+    createdAt: new Date(),
+  };
+
+  const res = await db.collection("consultations").insertOne(doc);
+
+  return {
+    _id: res.insertedId.toString(),
+    ...doc,
+  };
+}
+
+export async function getConsultations() {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const list = await db
+    .collection("consultations")
+    .find({})
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return list.map((d) => ({
+    ...d,
+    _id: d._id.toString(),
+  }));
 }

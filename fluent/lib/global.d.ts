@@ -1,7 +1,8 @@
-// global.d.ts
 declare global {
-    const _mongoClientPromise: Promise<any> | undefined;
-  }
-  
-export {};  // This ensures the file is treated as a module.
-  
+  const _mongoClientPromise: Promise<any> | undefined;
+}
+
+// ✅ ADD THIS
+declare module "*.css";
+
+export {};

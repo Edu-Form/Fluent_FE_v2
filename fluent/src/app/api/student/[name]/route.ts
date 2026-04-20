@@ -1,6 +1,6 @@
 // app/api/student/[name]/route.ts
 import { NextResponse } from "next/server";
-import { getStudentByName, updateStudentByName } from "@/lib/data";
+import { getStudentByName, updateStudentByName, deleteStudentByName } from "@/lib/data";
 
 export async function GET(request: Request) {
   try {
@@ -145,6 +145,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, updated });
     }
 
+    /* ===============================
+      BASIC FIELD UPDATE (teacher)
+      =============================== */
+    if (body.teacher !== undefined) {
+      const updated = await updateStudentByName(student_name, {
+        teacher: body.teacher,
+      });
+      return NextResponse.json({ success: true, updated });
+    }
+
+    if (body.notes !== undefined) {
+      const updated = await updateStudentByName(student_name, {
+        notes: body.notes,
+      });
+      return NextResponse.json({ success: true, updated });
+    }
+
     return NextResponse.json(
       { error: "No valid fields provided" },
       { status: 400 }
@@ -157,3 +174,40 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { pathname } = new URL(request.url);
+    const parts = pathname.split("/").filter(Boolean);
+    const studentIdx = parts.lastIndexOf("student");
+    const raw =
+      studentIdx >= 0 ? parts[studentIdx + 1] : parts[parts.length - 1];
+
+    const student_name = decodeURIComponent(raw ?? "");
+
+    if (!student_name) {
+      return NextResponse.json(
+        { error: "Student name not provided" },
+        { status: 400 }
+      );
+    }
+
+    const success = await deleteStudentByName(student_name);
+
+    if (!success) {
+      return NextResponse.json(
+        { error: "Student not found or delete failed" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
