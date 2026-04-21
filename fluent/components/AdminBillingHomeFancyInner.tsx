@@ -210,19 +210,34 @@ const teacherRepayment = useMemo(() => {
       }
     });
 
-    const final: Record<string, { r1: number; r3: number; r6: number }> = {};
+    const final: Record<
+      string,
+      {
+        r1: number;
+        r3: number;
+        r6: number;
+        c1: [number, number]; // [active, eligible]
+        c3: [number, number];
+        c6: [number, number];
+      }
+    > = {};
 
     Object.keys(result).forEach((teacher) => {
       const r = result[teacher];
 
       final[teacher] = {
-        r1: r.eligible1 ? 100 : 0, // always 100 if eligible exists
+        r1: r.eligible1 ? 100 : 0,
         r3: r.eligible3
           ? Number(((r.active3 / r.eligible3) * 100).toFixed(1))
           : 0,
         r6: r.eligible6
           ? Number(((r.active6 / r.eligible6) * 100).toFixed(1))
           : 0,
+
+        // ✅ ADD COUNTS
+        c1: [r.active1, r.eligible1],
+        c3: [r.active3, r.eligible3],
+        c6: [r.active6, r.eligible6],
       };
     });
 
@@ -1172,15 +1187,47 @@ const teacherRepayment = useMemo(() => {
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {teacherRetention[row.teacher]?.r1 ?? "-"}%
+                      {(() => {
+                        const r = teacherRetention[row.teacher];
+                        return (
+                          <div className="flex flex-col items-center">
+                            <span>{r.r1}%</span>
+                            <span className="text-[10px] text-gray-400">
+                              ({r.c1[0]}/{r.c1[1]})
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {teacherRetention[row.teacher]?.r3 ?? "-"}%
+                      {(() => {
+                        const r = teacherRetention[row.teacher];
+                        if (!r) return "-";
+
+                        return (
+                          <div className="flex flex-col items-center leading-tight">
+                            <span>{r.r3}%</span>
+                            <span className="text-[10px] text-gray-400">
+                              ({r.c3[0]}/{r.c3[1]})
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {teacherRetention[row.teacher]?.r6 ?? "-"}%
+                      {(() => {
+                        const r = teacherRetention[row.teacher];
+                        return (
+                          <div className="flex flex-col items-center">
+                            <span>{r.r6}%</span>
+                            <span className="text-[10px] text-gray-400">
+                              ({r.c6[0]}/{r.c6[1]})
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     <td className="px-3 py-2 text-center text-blue-600 font-semibold">
