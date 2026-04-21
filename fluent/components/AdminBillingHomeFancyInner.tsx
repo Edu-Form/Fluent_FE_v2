@@ -95,6 +95,281 @@ export default function AdminDashboard() {
     setTableLoading(false);
   };
 
+const teacherRepayment = useMemo(() => {
+  const map: Record<string, { once: number; repeat: number }> = {};
+
+  students.forEach((s: any) => {
+    const teacher = s.teacher || "—";
+    const history = s.Credit_Automation_History || [];
+
+    // ✅ ANY positive delta = payment
+    const paymentCount = history.filter((h: any) => (h.delta || 0) > 0).length;
+
+    if (paymentCount === 0) return; // ❗ exclude never-paid students
+
+    if (!map[teacher]) {
+      map[teacher] = { once: 0, repeat: 0 };
+    }
+
+    map[teacher].once += 1;
+
+    if (paymentCount >= 2) {
+      map[teacher].repeat += 1;
+    }
+  });
+
+  const result: Record<string, number> = {};
+
+  Object.keys(map).forEach((teacher) => {
+    const { once, repeat } = map[teacher];
+
+    result[teacher] = once
+      ? Number(((repeat / once) * 100).toFixed(1))
+      : 0;
+  });
+
+  return result;
+}, [students]);
+
+  const teacherRetention = useMemo(() => {
+    const firstMap: Record<string, Date> = {};
+    const lastMap: Record<string, Date> = {};
+    const teacherMap: Record<string, string> = {};
+
+    const now = new Date();
+    const THREE_WEEKS = 21 * 86400000;
+
+    // build maps
+    classnotes.forEach((cn) => {
+      const d = toDate(cn.date || cn.class_date);
+      if (!d || !cn.student_name) return;
+
+      const name = cn.student_name;
+      const teacher = cn.teacher_name || "—";
+
+      teacherMap[name] = teacher;
+
+      if (!firstMap[name] || firstMap[name] > d) {
+        firstMap[name] = d;
+      }
+
+      if (!lastMap[name] || lastMap[name] < d) {
+        lastMap[name] = d;
+      }
+    });
+
+    const result: Record<
+      string,
+      { eligible1: number; eligible3: number; eligible6: number; active1: number; active3: number; active6: number }
+    > = {};
+
+    Object.keys(firstMap).forEach((name) => {
+      const first = firstMap[name];
+      const last = lastMap[name];
+      const teacher = teacherMap[name] || "—";
+
+      if (!first || !last) return;
+
+      const student = students.find((s) => s.name === name);
+      const credits = student?.credits ?? 0;
+
+      const isInactive =
+        now.getTime() - last.getTime() > THREE_WEEKS &&
+        credits <= 0;
+
+      const lifetime =
+        (now.getTime() - first.getTime()) / (1000 * 60 * 60 * 24 * 30);
+
+      if (!result[teacher]) {
+        result[teacher] = {
+          eligible1: 0,
+          eligible3: 0,
+          eligible6: 0,
+          active1: 0,
+          active3: 0,
+          active6: 0,
+        };
+      }
+
+      // --- 1M ---
+      if (lifetime >= 1) {
+        result[teacher].eligible1 += 1;
+        if (!isInactive) result[teacher].active1 += 1;
+      }
+
+      // --- 3M ---
+      if (lifetime >= 3) {
+        result[teacher].eligible3 += 1;
+        if (!isInactive) result[teacher].active3 += 1;
+      }
+
+      // --- 6M ---
+      if (lifetime >= 6) {
+        result[teacher].eligible6 += 1;
+        if (!isInactive) result[teacher].active6 += 1;
+      }
+    });
+
+    const final: Record<string, { r1: number; r3: number; r6: number }> = {};
+
+    Object.keys(result).forEach((teacher) => {
+      const r = result[teacher];
+
+      final[teacher] = {
+        r1: r.eligible1 ? 100 : 0, // always 100 if eligible exists
+        r3: r.eligible3
+          ? Number(((r.active3 / r.eligible3) * 100).toFixed(1))
+          : 0,
+        r6: r.eligible6
+          ? Number(((r.active6 / r.eligible6) * 100).toFixed(1))
+          : 0,
+      };
+    });
+
+    return final;
+  }, [classnotes, students]);
+
+  const teacherDeactivation = useMemo(() => {
+    const lastMap: Record<string, Date> = {};
+    const teacherMap: Record<string, string> = {};
+
+    const now = new Date();
+    const THREE_WEEKS = 21 * 24 * 60 * 60 * 1000;
+
+    // 1. get last class per student
+    classnotes.forEach((cn) => {
+      const d = toDate(cn.date || cn.class_date);
+      if (!d || !cn.student_name) return;
+
+      const name = cn.student_name;
+      const teacher = cn.teacher_name || "—";
+
+      teacherMap[name] = teacher;
+
+      if (!lastMap[name] || lastMap[name] < d) {
+        lastMap[name] = d;
+      }
+    });
+
+    // 2. check deactivation condition
+    const total: Record<string, number> = {};
+    const monthly: Record<string, Record<string, number>> = {};
+
+    Object.keys(lastMap).forEach((name) => {
+      const last = lastMap[name];
+      const teacher = teacherMap[name] || "—";
+
+      const student = students.find((s) => s.name === name);
+      const credits = student?.credits ?? 0;
+
+      const isInactive =
+        now.getTime() - last.getTime() > THREE_WEEKS &&
+        credits <= 0;
+
+      if (!isInactive) return;
+
+      // ✅ total
+      total[teacher] = (total[teacher] || 0) + 1;
+
+      // ✅ monthly (based on LAST CLASS DATE)
+      const key = `${last.getFullYear()}-${String(
+        last.getMonth() + 1
+      ).padStart(2, "0")}`;
+
+      if (!monthly[teacher]) monthly[teacher] = {};
+      monthly[teacher][key] = (monthly[teacher][key] || 0) + 1;
+    });
+
+    return { total, monthly };
+  }, [classnotes, students]);
+
+  const teacherMonthlyHours = useMemo(() => {
+  const map: Record<string, Record<string, number>> = {};
+
+  classnotes.forEach((cn) => {
+    const teacher = cn.teacher_name || "—";
+    const d = toDate(cn.date || cn.class_date);
+    if (!d) return;
+
+    const key = `${d.getFullYear()}-${String(
+      d.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+    if (!map[teacher]) map[teacher] = {};
+    map[teacher][key] = (map[teacher][key] || 0) + 1; // 1 class = 1 hour
+  });
+
+  return map;
+  }, [classnotes]);
+
+  const teacherMonthlyStats = useMemo(() => {
+  if (!selectedYear || !selectedMonth) return {};
+
+  const target = `${selectedYear}-${selectedMonth}`;
+
+  const activeSet: Record<string, Set<string>> = {};
+  const firstMap: Record<string, Date> = {};
+  const teacherMap: Record<string, string> = {};
+  const paidCancels: Record<string, number> = {};
+
+  // --- CLASSNOTES LOOP ---
+  classnotes.forEach((cn: any) => {
+    const d = toDate(cn.date || cn.class_date);
+    if (!d || !cn.student_name) return;
+
+    const teacher = cn.teacher_name || "—";
+    const name = cn.student_name;
+
+    const key = `${d.getFullYear()}-${String(
+      d.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+    // track teacher
+    teacherMap[name] = teacher;
+
+    // ACTIVE (monthly unique students)
+    if (key === target) {
+      if (!activeSet[teacher]) activeSet[teacher] = new Set();
+      activeSet[teacher].add(name);
+    }
+
+    // FIRST CLASS (for new students)
+    if (!firstMap[name] || firstMap[name] > d) {
+      firstMap[name] = d;
+    }
+
+    // PAID CANCELS
+    if (
+      key === target &&
+      (cn.reason || "").toLowerCase().includes("paid")
+    ) {
+      paidCancels[teacher] = (paidCancels[teacher] || 0) + 1;
+    }
+  });
+
+  // --- NEW STUDENTS ---
+  const newStudents: Record<string, number> = {};
+
+  Object.entries(firstMap).forEach(([name, firstDate]) => {
+    const key = `${firstDate.getFullYear()}-${String(
+      firstDate.getMonth() + 1
+    ).padStart(2, "0")}`;
+
+    if (key === target) {
+      const teacher = teacherMap[name] || "—";
+      newStudents[teacher] = (newStudents[teacher] || 0) + 1;
+    }
+  });
+
+  return {
+    active: Object.fromEntries(
+      Object.entries(activeSet).map(([t, set]) => [t, set.size])
+    ),
+    newStudents,
+    paidCancels,
+  };
+}, [classnotes, selectedYear, selectedMonth]);
+
   const teachers = useMemo(
     () => Array.from(new Set(students.map((s) => s.teacher))),
     [students]
@@ -195,25 +470,6 @@ export default function AdminDashboard() {
 
   /* ---------------- ACTIVE STUDENTS ---------------- */
 
-  const activeStudents = useMemo(() => {
-    const now = new Date();
-    const set = new Set<string>();
-
-    classnotes.forEach((cn) => {
-      const d = toDate(cn.date || cn.class_date);
-      if (!d) return;
-
-      if (
-        d.getMonth() === now.getMonth() &&
-        d.getFullYear() === now.getFullYear()
-      ) {
-        if (cn.student_name) set.add(cn.student_name);
-      }
-    });
-
-    return set.size;
-  }, [classnotes]);
-
   /* ---------------- LOW CREDIT ---------------- */
 
   const lowCredit = useMemo(() => {
@@ -268,7 +524,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <div className="text-sm text-gray-500">이번 달 활성 학생</div>
-          <div className="text-3xl font-bold mt-2">{activeStudents}</div>
+          <div className="text-3xl font-bold mt-2">{Object.values(teacherMonthlyStats.active || {}).reduce((a, b) => a + b, 0)}</div>
         </Card>
 
         <Card>
@@ -758,7 +1014,7 @@ export default function AdminDashboard() {
 
                   <th className="px-3 py-2">
                     <TooltipHeader
-                      label="Active Students"
+                      label="Monthly Active Students"
                       description="Students who are currently active. A student is considered inactive if they have not attended a class for 3 weeks and have 0 or negative credits."
                     />
                   </th>
@@ -772,21 +1028,28 @@ export default function AdminDashboard() {
 
                   <th className="px-3 py-2">
                     <TooltipHeader
-                      label="Avg Hours / Student"
-                      description="Average teaching hours per student. Calculated as total hours divided by total number of students."
+                      label="Monthly Hours"
+                      description="Total teaching hours for the selected month based on classnote count (1 class = 1 hour)."
                     />
                   </th>
 
                   <th className="px-3 py-2">
                     <TooltipHeader
-                      label="Deactivated"
+                      label="Total Deactivated"
                       description="Number of students who have not attended a class for over 3 weeks AND have 0 or negative credits."
                     />
                   </th>
 
                   <th className="px-3 py-2">
                     <TooltipHeader
-                      label="New Students"
+                      label="Monthly Deactivated"
+                      description="Number of students who became inactive in the selected month based on their last class date (inactive = no class for 3 weeks + credits ≤ 0)."
+                    />
+                  </th>
+
+                  <th className="px-3 py-2">
+                    <TooltipHeader
+                      label="Monthly New Students"
                       description="Students who registered for the first time during the current month (based on createdAt)."
                     />
                   </th>
@@ -800,15 +1063,8 @@ export default function AdminDashboard() {
 
                   <th className="px-3 py-2">
                     <TooltipHeader
-                      label="Paid Cancels"
+                      label="Monthly Paid Cancels"
                       description="Number of classes marked as paid cancellations based on classnote reason or type."
-                    />
-                  </th>
-
-                  <th className="px-3 py-2">
-                    <TooltipHeader
-                      label="Deactivate / Signup"
-                      description="Ratio of deactivated students to new students for the month. Indicates churn vs growth."
                     />
                   </th>
 
@@ -835,8 +1091,8 @@ export default function AdminDashboard() {
 
                   <th className="px-3 py-2">
                     <TooltipHeader
-                      label="Reactivation Rate"
-                      description="Percentage of students who returned after stopping classes."
+                      label="Repayment Rate"
+                      description="Percentage of students who paid again after the initial payment"
                     />
                   </th>
 
@@ -872,7 +1128,7 @@ export default function AdminDashboard() {
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {row.activeStudents}
+                      {teacherMonthlyStats.active?.[row.teacher] || 0}
                     </td>
 
                     <td className="px-3 py-2 text-center">
@@ -880,15 +1136,31 @@ export default function AdminDashboard() {
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {row.avgHours}
+                      {(() => {
+                        if (!selectedYear || !selectedMonth) return "-";
+
+                        const key = `${selectedYear}-${selectedMonth}`;
+                        return teacherMonthlyHours[row.teacher]?.[key] || 0;
+                      })()}
                     </td>
 
                     <td className="px-3 py-2 text-center text-rose-500 font-semibold">
-                      {row.deactivated}
+                      {teacherDeactivation.total[row.teacher] || 0}
+                    </td>
+
+                    <td className="px-3 py-2 text-center text-rose-400">
+                      {(() => {
+                        if (!selectedYear || !selectedMonth) return "-";
+
+                        const key = `${selectedYear}-${selectedMonth}`;
+                        return (
+                          teacherDeactivation.monthly[row.teacher]?.[key] || 0
+                        );
+                      })()}
                     </td>
 
                     <td className="px-3 py-2 text-center text-green-600 font-semibold">
-                      {row.newStudents}
+                      {teacherMonthlyStats.newStudents?.[row.teacher] || 0}
                     </td>
 
                     <td className="px-3 py-2 text-center">
@@ -896,27 +1168,23 @@ export default function AdminDashboard() {
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {row.paidCancels}
-                    </td>
-
-                    <td className="px-3 py-2 text-center font-semibold">
-                      {row.ratio}
+                      {teacherMonthlyStats.paidCancels?.[row.teacher] || 0}
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {row.retention1m ?? "-"}%
+                      {teacherRetention[row.teacher]?.r1 ?? "-"}%
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {row.retention3m ?? "-"}%
+                      {teacherRetention[row.teacher]?.r3 ?? "-"}%
                     </td>
 
                     <td className="px-3 py-2 text-center">
-                      {row.retention6m ?? "-"}%
+                      {teacherRetention[row.teacher]?.r6 ?? "-"}%
                     </td>
 
                     <td className="px-3 py-2 text-center text-blue-600 font-semibold">
-                      {row.reactivationRate ?? "-"}%
+                      {teacherRepayment[row.teacher] ?? "-"}%
                     </td>
 
                     <td className="px-3 py-2 text-center">
