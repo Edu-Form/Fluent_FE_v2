@@ -226,7 +226,9 @@ const teacherRepayment = useMemo(() => {
       const r = result[teacher];
 
       final[teacher] = {
-        r1: r.eligible1 ? 100 : 0,
+        r1: r.eligible1
+        ? Number(((r.active1 / r.eligible1) * 100).toFixed(1))
+        : 0 ,
         r3: r.eligible3
           ? Number(((r.active3 / r.eligible3) * 100).toFixed(1))
           : 0,
@@ -1189,8 +1191,10 @@ const teacherRepayment = useMemo(() => {
                     <td className="px-3 py-2 text-center">
                       {(() => {
                         const r = teacherRetention[row.teacher];
+                        if (!r) return "-";
+
                         return (
-                          <div className="flex flex-col items-center">
+                          <div className="flex flex-col items-center leading-tight">
                             <span>{r.r1}%</span>
                             <span className="text-[10px] text-gray-400">
                               ({r.c1[0]}/{r.c1[1]})
@@ -1219,8 +1223,10 @@ const teacherRepayment = useMemo(() => {
                     <td className="px-3 py-2 text-center">
                       {(() => {
                         const r = teacherRetention[row.teacher];
+                        if (!r) return "-";
+
                         return (
-                          <div className="flex flex-col items-center">
+                          <div className="flex flex-col items-center leading-tight">
                             <span>{r.r6}%</span>
                             <span className="text-[10px] text-gray-400">
                               ({r.c6[0]}/{r.c6[1]})
