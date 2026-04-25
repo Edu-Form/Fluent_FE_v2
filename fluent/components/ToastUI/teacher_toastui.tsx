@@ -814,9 +814,7 @@ function TeacherToastUIInner({
           template: {
             time(ev: any) {
               const student = ev?.raw?.student_name ?? "";
-              const studentDoc = allStudentsRef.current.get(student);
-              const isPaid = studentDoc?.paid;
-              const label = `${student} (${isPaid ? "Paid" : "Unpaid"})`;
+              const label = `${student}`;
               const s = new Date(ev.start);
               const e = new Date(ev.end);
               const hhmm = (d: Date) =>
