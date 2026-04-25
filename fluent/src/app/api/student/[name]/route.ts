@@ -61,7 +61,6 @@ export async function POST(request: Request) {
       creditReason,
       creditAmount,
       adminName,
-      hourlyRate,
       group_class,
       "1account2students": oneAccountTwoStudents,
     } = body;
@@ -135,37 +134,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, updated });
     }
 
-    /* ===============================
-       NON-CREDIT UPDATE (hourlyRate)
-       =============================== */
-    if (hourlyRate !== undefined) {
-      const updated = await updateStudentByName(student_name, {
-        hourlyRate,
-      });
-      return NextResponse.json({ success: true, updated });
+    const allowedFields = [
+      "teacher",
+      "notes",
+      "phoneNumber",
+      "link",
+      "paid",
+      "hourlyRate",
+    ];
+
+    const updateObj: any = {};
+
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) {
+        updateObj[key] = body[key];
+      }
     }
 
-    /* ===============================
-      BASIC FIELD UPDATE (teacher)
-      =============================== */
-    if (body.teacher !== undefined) {
-      const updated = await updateStudentByName(student_name, {
-        teacher: body.teacher,
-      });
-      return NextResponse.json({ success: true, updated });
+    // 🔥 auto-sync status with paid
+    if (body.paid !== undefined) {
+      updateObj.status = body.paid
+        ? "결제완료-강사미배정"
+        : "상담중";
     }
 
-    if (body.notes !== undefined) {
-      const updated = await updateStudentByName(student_name, {
-        notes: body.notes,
-      });
-      return NextResponse.json({ success: true, updated });
+    if (Object.keys(updateObj).length === 0) {
+      return NextResponse.json(
+        { error: "No valid fields provided" },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json(
-      { error: "No valid fields provided" },
-      { status: 400 }
-    );
+    const updated = await updateStudentByName(student_name, updateObj);
+    return NextResponse.json({ success: true, updated });
   } catch (error) {
     console.error("Error updating student:", error);
     return NextResponse.json(

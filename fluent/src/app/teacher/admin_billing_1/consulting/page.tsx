@@ -22,6 +22,7 @@ type Student = {
   curriculum: string;
   availableTimes: string;
   notes: string;
+  link?: string;
 };
 
 type Teacher = {
@@ -33,6 +34,7 @@ function ConsultPageContent() {
   const [students, setStudents] = useState<Student[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,30 +45,46 @@ function ConsultPageContent() {
   const [isDuplicate, setIsDuplicate] = useState<boolean | null>(null);
 
   const selectedStudent = students.find((s) => s.id === selectedId);
-  const [notesDraft, setNotesDraft] = useState("");
-    useEffect(() => {
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [linkDraft, setLinkDraft] = useState("");
+
+  useEffect(() => {
     if (selectedStudent) {
       setNotesDraft(selectedStudent.notes || "");
+      setPhoneDraft(selectedStudent.phoneNumber || "");
+      setLinkDraft(selectedStudent.link || ""); // ✅ add this
     }
   }, [selectedStudent]);
-  const handleSaveNotes = async () => {
+  const [notesDraft, setNotesDraft] = useState("");
+  const handleSaveAll = async () => {
     if (!selectedStudent) return;
 
     try {
       await fetch(`/api/student/${encodeURIComponent(selectedStudent.name)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes: notesDraft }),
+        body: JSON.stringify({
+          phoneNumber: phoneDraft,
+          notes: notesDraft,
+          link: linkDraft,
+        }),
       });
 
-      // update local state
+      // update UI once
       setStudents((prev) =>
         prev.map((s) =>
-          s.id === selectedStudent.id ? { ...s, notes: notesDraft } : s
+          s.id === selectedStudent.id
+            ? {
+                ...s,
+                phoneNumber: phoneDraft,
+                notes: notesDraft,
+                link: linkDraft,
+              }
+            : s
         )
       );
     } catch (err) {
-      console.error("Failed to save notes:", err);
+      console.error("Failed to save student:", err);
     }
   };
   const searchParams = useSearchParams();
@@ -92,6 +110,7 @@ function ConsultPageContent() {
         curriculum: s.curriculum || "",
         availableTimes: s.availableTimes || "",
         notes: s.notes || "",
+        link: s.link || "",
       }));
 
       setStudents(formatted);
@@ -170,11 +189,6 @@ function ConsultPageContent() {
   const handleDeleteStudent = async () => {
     if (!selectedStudent) return;
 
-    const confirmDelete = confirm(
-      `${selectedStudent.name} 학생을 삭제하시겠습니까?`
-    );
-    if (!confirmDelete) return;
-
     try {
       await fetch(`/api/student/${encodeURIComponent(selectedStudent.name)}`, {
         method: "DELETE",
@@ -210,6 +224,27 @@ function ConsultPageContent() {
     }
   };
 
+  const handlePaidToggle = async (student: Student) => {
+  const newPaid = !student.paid;
+
+    try {
+      await fetch(`/api/student/${encodeURIComponent(student.name)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paid: newPaid }),
+      });
+
+      // instant UI update
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === student.id ? { ...s, paid: newPaid } : s
+        )
+      );
+    } catch (err) {
+      console.error("Failed to update paid:", err);
+    }
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       {/* LEFT PANEL */}
@@ -218,7 +253,7 @@ function ConsultPageContent() {
 
           {/* Header */}
           <div className="flex justify-between items-center p-6 border-b">
-            <h1 className="text-xl font-semibold">상담 관리</h1>
+            <h1 className="text-xl font-semibold">상담 관리 & Student Registration</h1>
 
             <button
               onClick={() => setIsModalOpen(true)}
@@ -267,7 +302,12 @@ function ConsultPageContent() {
                     </td>
 
                     <td className="px-4 py-3 text-center">
-                      <input type="checkbox" checked={student.paid} readOnly />
+                      <input
+                        type="checkbox"
+                        checked={student.paid}
+                        onChange={() => handlePaidToggle(student)}
+                        className="w-4 h-4 cursor-pointer accent-green-500"
+                      />
                     </td>
 
                     <td className="px-4 py-3">
@@ -320,15 +360,8 @@ function ConsultPageContent() {
 
             <div className="flex gap-2">
               <button
-                onClick={handleDeleteStudent}
-                className="text-sm text-red-500 hover:text-red-700"
-              >
-                삭제
-              </button>
-
-              <button
                 onClick={() => setSelectedId(null)}
-                className="text-sm text-gray-500 hover:text-black"
+                className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
               >
                 닫기
               </button>
@@ -345,7 +378,14 @@ function ConsultPageContent() {
 
             <div>
               <label className="text-sm text-gray-500">Phone</label>
-              <div className="mt-1">{selectedStudent.phoneNumber}</div>
+
+              <div className="mt-2 space-y-2">
+                <input
+                  value={phoneDraft}
+                  onChange={(e) => setPhoneDraft(e.target.value)}
+                  className="w-full p-3 border rounded-lg text-sm"
+                />
+              </div>
             </div>
 
             <div>
@@ -354,22 +394,61 @@ function ConsultPageContent() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-500">상담 노트</label>
+              <label className="text-sm text-gray-500">Link</label>
+              <div className="mt-2 space-y-2">
+                <input
+                  value={linkDraft}
+                  onChange={(e) => setLinkDraft(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full p-3 border rounded-lg text-sm"
+                />
+
+                <div className="flex justify-between items-center">
+                  {/* open link */}
+                  {linkDraft && (
+                    <a
+                      href={linkDraft}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-500 hover:underline"
+                    >
+                      열기
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm text-gray-500">노트</label>
               <div className="mt-2 space-y-2">
                 <textarea
                   value={notesDraft}
                   onChange={(e) => setNotesDraft(e.target.value)}
-                  className="w-full p-3 border rounded-lg min-h-[120px] text-sm"
+                  className="w-full p-3 border rounded-lg min-h-[120px] text-sm bg-white text-black"
                 />
+              </div>
+            </div>
 
-                <div className="flex justify-end">
+            <div className="border-t bg-white p-4 sticky bottom-0">
+              <div className="flex justify-end">
+
+                <div className="flex gap-2">
                   <button
-                    onClick={handleSaveNotes}
-                    className="px-3 py-1 text-sm bg-black text-white rounded"
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    className="px-4 py-2 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 transition"
+                  >
+                    삭제
+                  </button>
+
+                  <button
+                    onClick={handleSaveAll}
+                    className="px-4 py-2 text-sm rounded-lg bg-black text-white hover:opacity-80 transition"
                   >
                     저장
                   </button>
                 </div>
+
               </div>
             </div>
           </div>
@@ -377,6 +456,43 @@ function ConsultPageContent() {
       )}
 
       {/* MODAL */}
+      {isDeleteModalOpen && selectedStudent && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-[420px] rounded-xl p-6 space-y-4">
+
+            <h2 className="text-lg font-semibold text-red-600">
+              Delete Student
+            </h2>
+
+            <p className="text-sm text-gray-700">
+              You will permanently delete{" "}
+              <span className="font-medium">{selectedStudent.name}</span>{" "}
+              and all of his/her data.
+            </p>
+
+            <p className="text-sm text-gray-500">
+              This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 text-sm border rounded-lg text-gray-600 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleDeleteStudent}
+                className="px-4 py-2 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-[420px] rounded-xl p-6 space-y-4">
@@ -450,6 +566,8 @@ function ConsultPageContent() {
     </div>
   );
 }
+
+
 
 export default function ConsultPage() {
   return (

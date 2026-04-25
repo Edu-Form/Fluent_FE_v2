@@ -814,6 +814,9 @@ function TeacherToastUIInner({
           template: {
             time(ev: any) {
               const student = ev?.raw?.student_name ?? "";
+              const studentDoc = allStudentsRef.current.get(student);
+              const isPaid = studentDoc?.paid;
+              const label = `${student} (${isPaid ? "Paid" : "Unpaid"})`;
               const s = new Date(ev.start);
               const e = new Date(ev.end);
               const hhmm = (d: Date) =>
@@ -821,7 +824,7 @@ function TeacherToastUIInner({
               const timeRange = `${hhmm(s)}–${hhmm(e)}`;
               return `
                 <div class="tuic-event-sm">
-                  <div class="tuic-line1">${student}</div>
+                  <div class="tuic-line1">${label}</div>
                   <div class="tuic-line2">${timeRange}</div>
                 </div>
               `;
@@ -979,19 +982,16 @@ function TeacherToastUIInner({
           const { event, nativeEvent } = args || {};
           if (!event || !calRef.current) return;
 
-          // ✅ CONSULTATION OVERRIDE
           if (event.raw?.is_consultation) {
-            const studentName = event.raw?.student_name;
+            const rect = containerRef.current?.getBoundingClientRect();
 
-            if (!studentName) return;
+            const x = (nativeEvent?.clientX ?? 0) - (rect?.left ?? 0);
+            const y = (nativeEvent?.clientY ?? 0) - (rect?.top ?? 0);
 
-            // 👉 redirect to your consult page with pre-selected student
-            window.open(
-              `/teacher/admin_billing_1/consulting?student_name=${encodeURIComponent(studentName)}&user=${encodeURIComponent(currentUser)}&type=${encodeURIComponent(urlType)}${urlId ? `&id=${encodeURIComponent(urlId)}` : ""}`,
-              "_blank"
-            );
+            setDetail({ event, x, y });
+            setAddOpen(false);
 
-            return; // 🚨 STOP normal flow
+            return;
           }
 
           const cal = calRef.current;
@@ -1750,11 +1750,99 @@ if (mode === "changed") {
 
           {/* Event popover */}
           {detail?.event && (() => {
-            if (detail.event.raw?.is_consultation) {
-              return null; // 🔥 no popover at all
-            }
             const ev = detail.event;
             const raw = ev.raw || {};
+            if (raw.is_consultation) {
+              const student = raw.student_name || "";
+
+              // 👉 build links
+              const studentPageUrl = `/teacher/admin_billing_1/consulting?student_name=${encodeURIComponent(student)}&user=${encodeURIComponent(currentUser)}&type=${encodeURIComponent(urlType)}${urlId ? `&id=${encodeURIComponent(urlId)}` : ""}`;
+
+              const studentDoc = allStudentsRef.current.get(student);
+              const notionLink = studentDoc?.link || "";
+
+              return (
+                <div
+                  ref={popRef}
+                  className={`absolute z-50 rounded-xl shadow-xl p-4 w-[280px] border
+                    ${raw.paid 
+                      ? "bg-green-50 border-green-200" 
+                      : "bg-white border-purple-200"
+                    }`}
+                  style={{
+                    left: `${detail.x + 12}px`,
+                    top: `${detail.y + 12}px`,
+                  }}
+                >
+                  <div className="text-sm space-y-3">
+
+                    {/* Title → Student name */}
+                    <div
+                      className={`font-semibold text-[14px] ${
+                        raw.paid ? "text-green-700" : "text-purple-700"
+                      }`}
+                    >
+                      {student}
+                    </div>
+
+                    {/* Paid checkbox */}
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500">Paid</span>
+                      <input
+                        type="checkbox"
+                        checked={raw.paid ?? false}
+                        onChange={async () => {
+                          try {
+                            await fetch(`/api/student/${encodeURIComponent(student)}`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ paid: !raw.paid }),
+                            });
+
+                            raw.paid = !raw.paid;
+                            setDetail({ ...detail }); // rerender
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                        className={`w-4 h-4 cursor-pointer ${
+                          raw.paid ? "accent-green-600" : "accent-purple-600"
+                        }`}
+                      />
+                    </div>
+
+                    {/* Links */}
+                    <div className="flex flex-col gap-2 pt-2">
+
+                      {notionLink && (
+                        <a
+                          href={notionLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-md hover:bg-gray-200 text-center"
+                        >
+                          Notion →
+                        </a>
+                      )}
+
+                      <a
+                        href={studentPageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-xs px-2 py-1 rounded-md text-center ${
+                          raw.paid
+                            ? "bg-green-100 text-green-700 hover:bg-green-200"
+                            : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                        }`}
+                      >
+                        Student Page →
+                      </a>
+                    </div>
+
+                  </div>
+                </div>
+              );
+            }
             const student = raw.student_name ?? "";
             const start = new Date(ev.start);
             const end = new Date(ev.end);

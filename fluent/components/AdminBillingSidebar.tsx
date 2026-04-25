@@ -78,7 +78,7 @@ export default function AdminBillingSidebar() {
             isConsulting ? activeClass : inactiveClass
           }`}
         >
-          상담 관리
+          상담 관리 & Student Registration
         </Link>
 
         <Link

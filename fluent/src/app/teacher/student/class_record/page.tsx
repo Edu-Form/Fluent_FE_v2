@@ -1707,7 +1707,7 @@ const isGroupClass = resolvedStudentNames.length > 1;
                     : "bg-[#3182F6] hover:bg-[#1B64DA]"
                 }`}
             >
-              {isModifyMode ? "Set Time / Date" : "수업 시작하기"}
+              {isModifyMode ? "Save New Time/Date & Regenerate Quizlet" : "수업 시작하기"}
             </button>
           ) : (
             <button

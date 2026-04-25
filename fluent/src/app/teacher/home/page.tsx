@@ -404,10 +404,26 @@ const HomePageContent = () => {
         {/* 사이드바 내용 */}
         <div className="flex flex-col h-full gap-4">
           {/* 시간 표시 - Alert 컴포넌트 */}
-          <div className="rounded-lg h-[70px] overflow-hidden">
-            <Suspense fallback={<SkeletonLoader />}>
-              <Alert />
-            </Suspense>
+          {/* 시간 표시 + 로그아웃 */}
+          <div className="flex items-center gap-2 h-[70px]">
+            <button
+              onClick={() => {
+                // Clear everything client-side
+                localStorage.clear();
+                sessionStorage.clear();
+
+                // Hard reload WITHOUT query params
+                window.location.href = "/"; // or "/"
+              }}
+              className="h-full px-3 text-xs font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
+            >
+              로그아웃
+            </button>
+            <div className="flex-1 rounded-lg overflow-hidden">
+              <Suspense fallback={<SkeletonLoader />}>
+                <Alert />
+              </Suspense>
+            </div>
           </div>
 
           {/* 오늘의 학생 리스트 */}
