@@ -30,7 +30,7 @@ const Pill = ({
   className?: string;
 }) => {
   const base =
-    "inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ring-1";
+    "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-extrabold ring-1";
   const okCls = "bg-emerald-50 text-emerald-700 ring-emerald-200";
   const noCls = "bg-rose-50 text-rose-700 ring-rose-200";
   return <span className={`${base} ${ok ? okCls : noCls} ${className}`}>{children}</span>;
@@ -52,11 +52,11 @@ function toDate(v: any): Date | null {
   return Number.isFinite(dt.getTime()) ? dt : null;
 }
 
-function toDotDateToDate(dateStr: string): Date | null {
-  const m = String(dateStr).trim().match(/^(\d{4})\.\s*(\d{2})\.\s*(\d{2})\./);
-  if (!m) return null;
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-}
+// function toDotDateToDate(dateStr: string): Date | null {
+//   const m = String(dateStr).trim().match(/^(\d{4})\.\s*(\d{2})\.\s*(\d{2})\./);
+//   if (!m) return null;
+//   return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+// }
 
 function isBetweenInclusive(d: Date | null, a: Date | null, b: Date | null) {
   if (!d || !a || !b) return false;
@@ -67,21 +67,21 @@ function isBetweenInclusive(d: Date | null, a: Date | null, b: Date | null) {
 
 // 로딩 컴포넌트
 const SkeletonLoader = () => (
-  <div className="animate-pulse bg-gray-100 rounded-lg w-full h-full"></div>
+  <div className="h-full w-full animate-pulse rounded-2xl bg-slate-100" />
 );
 
-const KOREAN_HOLIDAYS: Record<number, string[]> = {
-  2026: [
-    "2026. 01. 01.",
-    "2026. 03. 02.",
-    "2026. 05. 05.",
-    "2026. 06. 06.",
-    "2026. 08. 15.",
-    "2026. 10. 03.",
-    "2026. 10. 09.",
-    "2026. 12. 25.",
-  ],
-};
+// const KOREAN_HOLIDAYS: Record<number, string[]> = {
+//   2026: [
+//     "2026. 01. 01.",
+//     "2026. 03. 02.",
+//     "2026. 05. 05.",
+//     "2026. 06. 06.",
+//     "2026. 08. 15.",
+//     "2026. 10. 03.",
+//     "2026. 10. 09.",
+//     "2026. 12. 25.",
+//   ],
+// };
 
 const HomePageContent = () => {
   const searchParams = useSearchParams();
@@ -217,60 +217,60 @@ const HomePageContent = () => {
     ].reduce((a, b) => a + b, 0);
   };
 
-  const handleHolidayRemove = async () => {
-    try {
-      const today = new Date();
-      const year = today.getFullYear();
+  // const handleHolidayRemove = async () => {
+  //   try {
+  //     const today = new Date();
+  //     const year = today.getFullYear();
 
-      const holidayList = KOREAN_HOLIDAYS[year] || [];
+  //     const holidayList = KOREAN_HOLIDAYS[year] || [];
 
-      const futureHolidays = holidayList.filter(dateStr => {
-        const dt = toDotDateToDate(dateStr);
-        if (!dt) return false;
+  //     const futureHolidays = holidayList.filter(dateStr => {
+  //       const dt = toDotDateToDate(dateStr);
+  //       if (!dt) return false;
 
-        const todayMidnight = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        );
+  //       const todayMidnight = new Date(
+  //         today.getFullYear(),
+  //         today.getMonth(),
+  //         today.getDate()
+  //       );
 
-        return dt >= todayMidnight;
-      });
+  //       return dt >= todayMidnight;
+  //     });
 
-      if (!futureHolidays.length) {
-        alert("No future holidays remaining.");
-        return;
-      }
+  //     if (!futureHolidays.length) {
+  //       alert("No future holidays remaining.");
+  //       return;
+  //     }
 
-      if (!confirm(`총 ${futureHolidays.length}일의 휴무 수업을 삭제하시겠습니까?`)) {
-        return;
-      }
+  //     if (!confirm(`총 ${futureHolidays.length}일의 휴무 수업을 삭제하시겠습니까?`)) {
+  //       return;
+  //     }
 
-      const res = await fetch("/api/schedules/holiday", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dates: futureHolidays,
-          teacher_name: user,
-        }),
-      });
+  //     const res = await fetch("/api/schedules/holiday", {
+  //       method: "DELETE",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({
+  //         dates: futureHolidays,
+  //         teacher_name: user,
+  //       }),
+  //     });
 
-      const data = await res.json();
+  //     const data = await res.json();
 
-      if (!res.ok) {
-        alert("삭제 실패");
-        return;
-      }
+  //     if (!res.ok) {
+  //       alert("삭제 실패");
+  //       return;
+  //     }
 
-      alert(`✅ ${data.deletedCount} classes deleted`);
+  //     alert(`✅ ${data.deletedCount} classes deleted`);
 
-      window.dispatchEvent(new CustomEvent("calendar:saved"));
+  //     window.dispatchEvent(new CustomEvent("calendar:saved"));
 
-    } catch (err) {
-      console.error(err);
-      alert("❌ Failed to remove holiday schedules.");
-    }
-  };
+  //   } catch (err) {
+  //     console.error(err);
+  //     alert("❌ Failed to remove holiday schedules.");
+  //   }
+  // };
 
   // const handleBackfillCredits = async () => {
   //   if (!confirm("기존 결제 데이터를 크레딧 히스토리에 추가하시겠습니까?")) {
@@ -344,9 +344,14 @@ const HomePageContent = () => {
   }, [classes]);
 
   return (
-    <div className="flex flex-col md:flex-row w-full h-screen bg-gray-50">
+    <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,#dbeafe_0%,transparent_34%),radial-gradient(circle_at_top_right,#f5d0fe_0%,transparent_28%),linear-gradient(135deg,#f8fafc_0%,#eef2ff_45%,#f8fafc_100%)] text-slate-950 md:flex-row">
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute left-[32%] top-[-120px] h-[300px] w-[300px] rounded-full bg-blue-300/20 blur-3xl" />
+        <div className="absolute right-[-80px] top-[18%] h-[360px] w-[360px] rounded-full bg-fuchsia-300/20 blur-3xl" />
+        <div className="absolute bottom-[-120px] left-[18%] h-[320px] w-[320px] rounded-full bg-cyan-300/20 blur-3xl" />
+      </div>
       {/* 모바일 헤더 */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-white z-50 shadow-sm">
+      <div className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur md:hidden">
         <div className="flex justify-between items-center p-4">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -402,10 +407,10 @@ const HomePageContent = () => {
         </div>
 
         {/* 사이드바 내용 */}
-        <div className="flex flex-col h-full gap-4">
+        <div className="flex h-full flex-col gap-4">
           {/* 시간 표시 - Alert 컴포넌트 */}
           {/* 시간 표시 + 로그아웃 */}
-          <div className="flex items-center gap-2 h-[70px]">
+          <div className="flex h-[76px] items-center gap-2 rounded-[28px] border border-white/70 bg-white/75 p-2 shadow-[0_22px_55px_rgba(15,23,42,0.10)] backdrop-blur-xl">
             <button
               onClick={() => {
                 // Clear everything client-side
@@ -415,11 +420,11 @@ const HomePageContent = () => {
                 // Hard reload WITHOUT query params
                 window.location.href = "/"; // or "/"
               }}
-              className="h-full px-3 text-xs font-medium rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-600"
+              className="h-full rounded-2xl border border-white/70 bg-slate-950 px-3 text-xs font-extrabold text-white shadow-lg shadow-slate-950/15 transition hover:bg-rose-600"
             >
               로그아웃
             </button>
-            <div className="flex-1 rounded-lg overflow-hidden">
+            <div className="flex-1 overflow-hidden rounded-2xl">
               <Suspense fallback={<SkeletonLoader />}>
                 <Alert />
               </Suspense>
@@ -427,7 +432,7 @@ const HomePageContent = () => {
           </div>
 
           {/* 오늘의 학생 리스트 */}
-          <div className="bg-white rounded-lg p-4 shadow-sm flex-1">
+          <div className="flex-1 overflow-hidden rounded-[30px] border border-white/70 bg-white/75 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.10)] backdrop-blur-xl">
             <Suspense fallback={<SkeletonLoader />}>
               <Announcement />
             </Suspense>
@@ -436,31 +441,24 @@ const HomePageContent = () => {
       </div>
 
       {/* 메인 콘텐츠 영역 */}
-      <div className="flex-grow overflow-auto md:p-4 pt-32 md:pt-4 pb-20 md:pb-4">
+      <div className="relative z-10 flex-grow overflow-auto px-3 pb-20 pt-32 md:px-5 md:py-5">
 
         {/* 캘린더 뷰 - 모바일에서는 탭에 따라 표시 */}
         <div
           className={`${
             activeTab === "calendar" || !isMobile ? "block" : "hidden"
-          } md:block mb-6`}
+          } mb-6 md:block`}
         >
-          <div className="bg-white rounded-lg p-4 shadow-lg">
+          <div className="relative overflow-hidden rounded-[34px] border border-white/70 bg-white/75 p-4 shadow-[0_30px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl before:pointer-events-none before:absolute before:inset-0 before:rounded-[34px] before:bg-gradient-to-br before:from-white/70 before:via-transparent before:to-blue-100/30">
             <h2 className="text-xl font-bold text-gray-800 mb-4 md:hidden">
               캘린더
             </h2>
-            <div className="flex justify-end mb-3">
-              <button
+            <div className="mb-3 flex justify-end">
+              {/* <button
                 onClick={handleHolidayRemove}
-                className="text-xs px-3 py-1 rounded-full border border-rose-300 hover:bg-rose-50 text-rose-700"
+                className="rounded-full border border-rose-100 bg-rose-50 px-4 py-2 text-xs font-extrabold text-rose-700 transition hover:bg-rose-600 hover:text-white"
               >
                 휴무 제거
-              </button>
-
-              {/* <button
-                onClick={handleBackfillCredits}
-                className="ml-3 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-              >
-                결제 크레딧 동기화
               </button> */}
             </div>
             <Suspense fallback={<SkeletonLoader />}>
@@ -481,19 +479,19 @@ const HomePageContent = () => {
             activeTab === "students" || !isMobile ? "block" : "hidden"
           } md:block`}
         >
-          <div className="bg-white rounded-lg p-4 shadow-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg md:text-xl font-bold text-gray-800">
+          <div className="relative overflow-hidden rounded-[34px] border border-white/70 bg-white/75 p-4 shadow-[0_30px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl before:pointer-events-none before:absolute before:inset-0 before:rounded-[34px] before:bg-gradient-to-br before:from-white/70 before:via-transparent before:to-indigo-100/30">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-black tracking-tight text-slate-950 md:text-2xl">
                 전체 학생 체크리스트
               </h2>
-              <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs md:text-sm font-medium">
+              <div className="rounded-full border border-blue-100 bg-blue-600 px-4 py-2 text-xs font-extrabold text-white shadow-lg shadow-blue-600/20 md:text-sm">
                 총 {allStudents.length}명
               </div>
             </div>
 
             {allStudents.length === 0 ? (
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-gray-500">학생 정보가 없습니다.</p>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+                <p className="text-sm font-semibold text-slate-500">학생 정보가 없습니다.</p>
               </div>
             ) : (
               <div className="overflow-x-auto -mx-4 px-4">
@@ -667,8 +665,8 @@ const HomePageContent = () => {
                 </div>
 
                 {/* 데스크톱 뷰 - 테이블 형태로 표시 */}
-                <table className="hidden md:table w-full text-sm text-left border-separate border-spacing-y-2">
-                  <thead className="text-[11px] tracking-wide text-gray-600 uppercase">
+                <table className="hidden w-full border-separate border-spacing-y-2 text-left text-sm md:table">
+                  <thead className="text-[11px] uppercase tracking-[0.12em] text-slate-400">
                     <tr>
                       <th className="px-3 py-2 text-center">학생 이름</th>
                       <th className="px-3 py-2 text-center">Class Note</th>
@@ -690,20 +688,22 @@ const HomePageContent = () => {
                       const diaryOk = !!student.diary_date && diaryGreen;
                       const scheduleOk = !!student.schedule_date;
 
-                      const cellBg = isInactive ? "bg-gray-100" : "bg-white";
-                      const textTone = isInactive ? "text-gray-400" : "text-gray-900";
+                      const cellBg = isInactive ? "bg-slate-50/80" : "bg-white/90";
+                      const textTone = isInactive ? "text-slate-400" : "text-slate-950";
 
                       return (
                         <tr
                           key={index}
-                          className={`shadow-sm ${isInactive ? "opacity-90" : ""}`}
+                          className={`transition duration-150 hover:-translate-y-0.5 hover:shadow-[0_18px_35px_rgba(15,23,42,0.10)] ${isInactive ? "opacity-75" : ""}`}
                         >
-                          <td className={`px-3 py-3 text-center align-middle rounded-l-xl border border-gray-100 ${cellBg}`}>
-                            <div className={`text-[15px] font-semibold ${textTone}`}>{student.name}</div>
+                          <td className={`rounded-l-2xl border border-slate-100 px-3 py-3 text-center align-middle ${cellBg}`}>
+                            <div className={`text-[15px] font-extrabold tracking-tight ${textTone}`}>
+                              {student.name}
+                            </div>
                           </td>
 
                           {/* Class Note */}
-                          <td className={`px-3 py-3 text-center align-middle border border-l-0 border-gray-100 ${cellBg}`}>
+                          <td className={`border border-l-0 border-slate-100 px-3 py-3 text-center align-middle ${cellBg}`}>
                             <Link
                               href={`/teacher/student/class_record?user=${user}&type=${type}&id=${id}&student_name=${student.name}`}
                               target="_blank" rel="noopener noreferrer"
@@ -723,7 +723,7 @@ const HomePageContent = () => {
 
                           {/* Quizlet */}
                           <td
-                            className={`px-3 py-3 text-center align-middle border border-l-0 border-gray-100 ${cellBg}`}
+                            className={`border border-l-0 border-slate-100 px-3 py-3 text-center align-middle ${cellBg}`}
                           >
                             <Link
                               href={`/teacher/student/quizlet?user=${user}&student_name=${student.name}`}
@@ -760,7 +760,7 @@ const HomePageContent = () => {
                           </td>
 
                           {/* AI Diary */}
-                          <td className={`px-3 py-3 text-center align-middle border border-l-0 border-gray-100 ${cellBg}`}>
+                          <td className={`border border-l-0 border-slate-100 px-3 py-3 text-center align-middle ${cellBg}`}>
                             <Link
                               href={`/teacher/student/diary?user=${user}&type=teacher&student_name=${student.name}`}
                               target="_blank" rel="noopener noreferrer"
@@ -781,7 +781,7 @@ const HomePageContent = () => {
                           </td>
 
                           {/* Schedule */}
-                          <td className={`px-3 py-3 text-center align-middle rounded-r-xl border border-l-0 border-gray-100 ${cellBg}`}>
+                          <td className={`rounded-r-2xl border border-l-0 border-slate-100 px-3 py-3 text-center align-middle ${cellBg}`}>
                             <Link
                               href={`/teacher/schedule?user=${user}&type=teacher&student_name=${student.name}&id=${id}`}
                               target="_blank" rel="noopener noreferrer"
@@ -810,8 +810,8 @@ const HomePageContent = () => {
           </div>
 
           {nextMonthOpen && (
-            <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-              <div className="relative w-[95vw] h-[95vh] bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+              <div className="relative h-[95vh] w-[95vw] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.35)]">
 
                 {/* Header */}
                 <div className="flex justify-between items-center px-6 py-4 border-b">

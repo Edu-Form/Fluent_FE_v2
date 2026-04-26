@@ -4,6 +4,11 @@ import React, { useEffect, useMemo, useState } from "react";
 
 /* -------------------------------- TYPES -------------------------------- */
 
+type CreditHistory = {
+  type?: string;
+  delta?: number;
+};
+
 type StudentInfo = {
   _id?: string;
   id?: string;
@@ -12,6 +17,7 @@ type StudentInfo = {
   teacher?: string;
   teacher_name?: string;
   credits?: number | string;
+  Credit_Automation_History?: CreditHistory[];
 };
 
 type ClassnoteEntry = {
@@ -26,6 +32,7 @@ type StudentFinancial = {
   name: string;
   teacher: string;
   credits: number;
+  Credit_Automation_History: CreditHistory[];
 };
 
 /* -------------------------------- UTILS -------------------------------- */
@@ -95,23 +102,40 @@ export default function AdminDashboard() {
     setTableLoading(false);
   };
 
-const teacherRepayment = useMemo(() => {
-  const map: Record<string, { once: number; repeat: number }> = {};
+  const eligibleStudents = useMemo(() => {
+    const CUTOFF = new Date("2026-04-01");
 
-  students.forEach((s: any) => {
+    return students.filter((s) => {
+      const history = s.Credit_Automation_History || [];
+
+      return history.some((h: any) => {
+        if ((h.delta || 0) >= 0) return false;
+        if (!String(h.type || "").includes("classnote")) return false;
+
+        const d = toDate(h.class_date);
+        return d && d >= CUTOFF;
+      });
+    });
+  }, [students]);
+
+const teacherRepayment = useMemo(() => {
+  const map: Record<string, { total: number; repeat: number }> = {};
+
+  eligibleStudents.forEach((s) => {
     const teacher = s.teacher || "—";
     const history = s.Credit_Automation_History || [];
 
-    // ✅ ANY positive delta = payment
-    const paymentCount = history.filter((h: any) => (h.delta || 0) > 0).length;
+    const paymentCount = history.filter(
+      (h: any) => (Number(h.delta) || 0) > 0
+    ).length;
 
-    if (paymentCount === 0) return; // ❗ exclude never-paid students
+    if (paymentCount === 0) return;
 
     if (!map[teacher]) {
-      map[teacher] = { once: 0, repeat: 0 };
+      map[teacher] = { total: 0, repeat: 0 };
     }
 
-    map[teacher].once += 1;
+    map[teacher].total += 1;
 
     if (paymentCount >= 2) {
       map[teacher].repeat += 1;
@@ -121,15 +145,15 @@ const teacherRepayment = useMemo(() => {
   const result: Record<string, number> = {};
 
   Object.keys(map).forEach((teacher) => {
-    const { once, repeat } = map[teacher];
+    const { total, repeat } = map[teacher];
 
-    result[teacher] = once
-      ? Number(((repeat / once) * 100).toFixed(1))
+    result[teacher] = total
+      ? Number(((repeat / total) * 100).toFixed(1))
       : 0;
   });
 
   return result;
-}, [students]);
+}, [eligibleStudents]);
 
   const teacherRetention = useMemo(() => {
     const firstMap: Record<string, Date> = {};
@@ -421,6 +445,7 @@ const teacherRepayment = useMemo(() => {
         name: studentName(s, i),
         teacher: teacherName(s),
         credits: toNumber(s.credits),
+        Credit_Automation_History: s.Credit_Automation_History || [],
       }));
 
       setStudents(mapped);
@@ -562,7 +587,7 @@ const teacherRepayment = useMemo(() => {
         </Card>
 
         <Card>
-          <div className="text-sm text-gray-500">추가 KPI</div>
+          <div className="text-sm text-gray-500">Others</div>
           <div className="mt-2 space-y-1">
             <div className="text-2xl font-semibold text-gray-900">
               Extra Credits: {refundReserve.totalOutstandingCredits.toLocaleString()}
@@ -1088,21 +1113,21 @@ const teacherRepayment = useMemo(() => {
                   <th className="px-3 py-2">
                     <TooltipHeader
                       label="Retention (1M)"
-                      description="Percentage of students who stayed longer than 1 month after enrollment."
+                      description="Retention rate for students who took class for more than 1 month. All students who joined before 1 month are excluded."
                     />
                   </th>
 
                   <th className="px-3 py-2">
                     <TooltipHeader
                       label="Retention (3M)"
-                      description="Percentage of students who stayed longer than 3 months."
+                      description="Retention rate for students who took class for more than 3 months. All students who joined before 3 months are excluded."
                     />
                   </th>
 
                   <th className="px-3 py-2">
                     <TooltipHeader
                       label="Retention (6M)"
-                      description="Percentage of students who stayed longer than 6 months."
+                      description="Retention rate for students who took class for more than 6 months. All students who joined before 6 months are excluded."
                     />
                   </th>
 

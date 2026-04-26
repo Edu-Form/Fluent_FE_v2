@@ -99,10 +99,20 @@ function getDurationHours(start: Date, end: Date) {
 
 /* ----------------------------- Color utilities ----------------------------- */
 const PASTEL_PALETTE = [
-  "#FBCFE8", "#FECDD3", "#F5D0FE", "#E9D5FF", "#DDD6FE",
-  "#C7D2FE", "#BFDBFE", "#BAE6FD", "#A5F3FC", "#99F6E4",
-  "#A7F3D0", "#BBF7D0", "#D9F99D", "#FEF08A", "#FDE68A",
-  "#FED7AA", "#FECACA", "#E7E5E4", "#E5E7EB", "#E2E8F0",
+  "#DBEAFE", // premium blue
+  "#E0E7FF", // indigo
+  "#EDE9FE", // violet
+  "#FCE7F3", // pink
+  "#FFE4E6", // rose
+  "#CCFBF1", // teal
+  "#DCFCE7", // emerald
+  "#FEF3C7", // amber
+  "#E0F2FE", // sky
+  "#F3E8FF", // purple
+  "#ECFCCB", // lime
+  "#FFEDD5", // orange
+  "#FAE8FF", // fuchsia
+  "#F1F5F9", // slate
 ];
 
 function hashIdx(name: string, mod: number) {
@@ -127,14 +137,15 @@ function shade(hex: string, p: number) {
 
 function highlightEvent(cal: any, ev: any) {
   cal.updateEvent(ev.id, ev.calendarId, {
-    boxShadow: "0 0 0 3px rgba(37,99,235,0.6)",
-    borderRadius: "12px",
+    boxShadow:
+      "0 18px 36px rgba(15,23,42,0.22), 0 0 0 3px rgba(59,130,246,0.38)",
+    borderRadius: "16px",
   });
 }
 
 function unhighlightEvent(cal: any, ev: any) {
   cal.updateEvent(ev.id, ev.calendarId, {
-    boxShadow: "none",
+    boxShadow: "",
   });
 }
 
@@ -240,6 +251,77 @@ function TeacherToastUIInner({
   const [overlapChecked, setOverlapChecked] = useState(false);
   const [hasOverlap, setHasOverlap] = useState<boolean | null>(null);
   const updateAdd = (patch: Partial<typeof addForm>) => setAddForm((p) => ({ ...p, ...patch }));
+  const KOREAN_HOLIDAYS: Record<number, string[]> = {
+    2026: [
+      "2026. 01. 01.",
+      "2026. 03. 02.",
+      "2026. 05. 05.",
+      "2026. 06. 06.",
+      "2026. 08. 15.",
+      "2026. 10. 03.",
+      "2026. 10. 09.",
+      "2026. 12. 25.",
+    ],
+  };
+  function toDotDateToDate(dateStr: string): Date | null {
+    const m = String(dateStr).trim().match(/^(\d{4})\.\s*(\d{2})\.\s*(\d{2})\./);
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
+  const handleHolidayRemove = async () => {
+    try {
+      const today = new Date();
+      const year = today.getFullYear();
+
+      const holidayList = KOREAN_HOLIDAYS[year] || [];
+
+      const futureHolidays = holidayList.filter(dateStr => {
+        const dt = toDotDateToDate(dateStr);
+        if (!dt) return false;
+
+        const todayMidnight = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
+
+        return dt >= todayMidnight;
+      });
+
+      if (!futureHolidays.length) {
+        alert("No future holidays remaining.");
+        return;
+      }
+
+      if (!confirm(`총 ${futureHolidays.length}일의 휴무 수업을 삭제하시겠습니까?`)) {
+        return;
+      }
+
+      const res = await fetch("/api/schedules/holiday", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dates: futureHolidays,
+          teacher_name: user,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert("삭제 실패");
+        return;
+      }
+
+      alert(`✅ ${data.deletedCount} classes deleted`);
+
+      window.dispatchEvent(new CustomEvent("calendar:saved"));
+
+    } catch (err) {
+      console.error(err);
+      alert("❌ Failed to remove holiday schedules.");
+    }
+  };
   const handleConsultOverlapCheck = async () => {
     if (!consultForm.student_name.trim()) {
       alert("학생 이름 먼저 입력하세요");
@@ -440,14 +522,15 @@ function TeacherToastUIInner({
         end,
 
         // 🔥 PURPLE STYLE (your requirement)
-        backgroundColor: "#E9D5FF",
-        borderColor: "#7C3AED",
-        dragBackgroundColor: "#DDD6FE",
-        color: "#4C1D95", // no drag/edit for now
+        backgroundColor: "#F3E8FF",
+        borderColor: "#A855F7",
+        dragBackgroundColor: "#E9D5FF",
+        color: "#581C87",
 
         raw: {
           ...c,
           is_consultation: true,
+          event_kind: "consultation",
         },
       });
     }
@@ -480,14 +563,15 @@ function TeacherToastUIInner({
         start,
         end,
 
-        backgroundColor: "#1F2937",
-        borderColor: "#111827",
-        dragBackgroundColor: "#374151",
-        color: "#F9FAFB",
+        backgroundColor: "#0F172A",
+        borderColor: "#020617",
+        dragBackgroundColor: "#1E293B",
+        color: "#F8FAFC",
 
         raw: {
           ...op,
           is_operation: true,
+          event_kind: "operation",
         },
       });
     }
@@ -513,13 +597,14 @@ function TeacherToastUIInner({
         category: "time",
         start,
         end,
-        backgroundColor: color?.bg ?? "#EEF2FF",
-        borderColor: color?.border ?? "#C7D2FE",
-        dragBackgroundColor: color?.bg ?? "#E0E7FF",
-        color: "#111827",
+        backgroundColor: color?.bg ?? "#DBEAFE",
+        borderColor: color?.border ?? "#93C5FD",
+        dragBackgroundColor: color?.bg ?? "#DBEAFE",
+        color: "#0F172A",
         raw: {
           ...e,
-          schedule_id: e._id || e.id, // ✅ always keep the real DB ID here
+          schedule_id: e._id || e.id,
+          event_kind: "class",
         },
       });
 
@@ -586,9 +671,9 @@ function TeacherToastUIInner({
         note.reason.toLowerCase().trim().includes("class time changed")
       ) {
         for (const ev of evList) {
-          ev.backgroundColor = "#D1FAE5";
-          ev.borderColor = "#10B981";
-          ev.color = "#064E3B";
+          ev.backgroundColor = "#DCFCE7";
+          ev.borderColor = "#22C55E";
+          ev.color = "#14532D";
         }
         continue;
       }
@@ -610,9 +695,9 @@ function TeacherToastUIInner({
         const endOK = minutesDiff(schEnd, ended) <= MATCH_TOL_MIN;
 
         if (startOK && endOK) {
-          ev.backgroundColor = "#D1FAE5";
-          ev.borderColor = "#10B981";
-          ev.color = "#064E3B";
+          ev.backgroundColor = "#DCFCE7";
+          ev.borderColor = "#22C55E";
+          ev.color = "#14532D";
         } else {
           ev.backgroundColor = "#FEF3C7";
           ev.borderColor = "#F59E0B";
@@ -933,92 +1018,318 @@ function TeacherToastUIInner({
           const el = document.createElement("style");
           el.id = styleId;
           el.textContent = `
-        /* Base look */
-        .toastui-calendar-layout { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans", "Malgun Gothic", sans-serif; }
-        .toastui-calendar-panel { background:#fff; border-radius:16px; overflow:hidden; }
-        .toastui-calendar-daygrid, .toastui-calendar-week { border-color:#eef1f4; }
-        .toastui-calendar-dayname { background:#f7f8fa; color:#4b5563; font-weight:600; border-bottom:1px solid #eef1f4; }
-        .toastui-calendar-today .toastui-calendar-dayname-date-area, .toastui-calendar-today .toastui-calendar-weekday-grid-line { background:#eef6ff; }
-        .toastui-calendar-timegrid-now-indicator { background:#0ea5e9; }
-        .toastui-calendar-timegrid-now-indicator-arrow { border-bottom-color:#0ea5e9; }
-        .toastui-calendar-timegrid-hour { color:#6b7280; font-size:10px; }
-        .toastui-calendar-time-schedule { border:none !important; }
-        .toastui-calendar-time-schedule-block { border-radius:12px !important; box-shadow:0 1px 2px rgba(16,24,40,.06); }
-        .toastui-calendar-time-schedule .toastui-calendar-event-time-content { background:transparent !important; }
+          /* ================= MODERN CALENDAR THEME ONLY ================= */
 
-        /* === No vertical scroll: force grid to fill container height */
-        .toastui-calendar-panel.toastui-calendar-time { overflow-y: hidden !important; }
-        .toastui-calendar-timegrid,
-        .toastui-calendar-timegrid-container,
-        .toastui-calendar-timegrid-scrollarea,
-        .toastui-calendar-timegrid-hour-area,
-        .toastui-calendar-timegrid-schedules {
-          height: 100% !important;
-          min-height: 0 !important;
-          overflow-y: hidden !important;
-        }
+          .toastui-calendar-layout {
+            font-family:
+              Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+              "Segoe UI", Roboto, "Helvetica Neue", Arial,
+              "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans", "Malgun Gothic",
+              sans-serif;
+            color: #0f172a;
+            background: transparent;
+          }
 
-        /* ====== COMPACT VARIANT ====== */
-        .tuic-compact .toastui-calendar-dayname { font-size:12px; }
-        .tuic-compact .toastui-calendar-timegrid-hour { font-size:9px; }
-        .tuic-compact .toastui-calendar-timegrid-gridline { height:16px !important; }
-        .tuic-compact .toastui-calendar-timegrid-half-hour { height:8px !important; }
-        .tuic-compact .toastui-calendar-time-schedule-block { border-radius:10px !important; }
-        .tuic-compact .tuic-event-sm .tuic-line1{ font-size:10px; }
-        .tuic-compact .tuic-event-sm .tuic-line2{ font-size:9px; }
-        .tuic-compact .toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 0; padding-bottom: 0; }
-        /* Allow 2 lines in month cells for our custom template */
-        .toastui-calendar-month .tuic-event-sm { line-height: 1.15; }
-        .toastui-calendar-month .tuic-event-sm .tuic-line1 { 
-          font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .toastui-calendar-month .tuic-event-sm .tuic-line2 { 
-          margin-top: 2px; font-size: 10px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
+          /* Main surfaces */
+          .toastui-calendar-panel {
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 24px;
+            overflow: hidden;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow:
+              0 20px 45px rgba(15, 23, 42, 0.08),
+              0 1px 2px rgba(15, 23, 42, 0.04);
+          }
 
-        /* In case the month view enforces single-line heights on events */
-        .toastui-calendar-month .toastui-calendar-weekday-schedule { height: auto !important; }
-        .toastui-calendar-month .toastui-calendar-event-time-content { white-space: normal !important; }
+          .toastui-calendar-layout,
+          .toastui-calendar-daygrid,
+          .toastui-calendar-week,
+          .toastui-calendar-timegrid,
+          .toastui-calendar-timegrid-container,
+          .toastui-calendar-timegrid-scrollarea {
+            background: transparent !important;
+          }
 
-        /* ====== FULL VARIANT ====== */
-        .tuic-full .toastui-calendar-timegrid-gridline { height:auto !important; }
-        .tuic-full .toastui-calendar-timegrid-half-hour { height:auto !important; }
-        .tuic-full .toastui-calendar-timegrid .toastui-calendar-time-schedule-content { padding-top: 1px; padding-bottom: 1px; }
-        
-        /* Make month schedules tall enough for two lines */
-        .toastui-calendar-month .toastui-calendar-weekday-schedule {
-          height: auto !important;
-          min-height: 28px;              /* match scheduleHeight or a bit less */
-          padding: 2px 4px;
-          box-sizing: border-box;
-        }
+          /* Grid */
+          .toastui-calendar-daygrid,
+          .toastui-calendar-week,
+          .toastui-calendar-timegrid-gridline,
+          .toastui-calendar-timegrid-half-hour,
+          .toastui-calendar-weekday-grid-line {
+            border-color: #eef2f7 !important;
+          }
 
-        /* Our two-line template */
-        .toastui-calendar-month .tuic-event-sm { 
-          display: block; 
-          line-height: 1.15; 
-        }
-        .toastui-calendar-month .tuic-event-sm .tuic-line1 { 
-          font-size: 11px; 
-          white-space: nowrap; 
-          overflow: hidden; 
-          text-overflow: ellipsis; 
-        }
-        .toastui-calendar-month .tuic-event-sm .tuic-line2 { 
-          margin-top: 2px; 
-          font-size: 10px; 
-          opacity: .9; 
-          white-space: nowrap; 
-          overflow: hidden; 
-          text-overflow: ellipsis; 
-        }
+          .toastui-calendar-timegrid-column {
+            border-color: #f1f5f9 !important;
+          }
 
-        /* Prevent internal wrappers from forcing single-line clips */
-        .toastui-calendar-month .toastui-calendar-event-time-content {
-          white-space: normal !important;
-        }
+          /* Day names */
+          .toastui-calendar-dayname {
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+            color: #475569 !important;
+            font-weight: 800 !important;
+            font-size: 12px !important;
+            letter-spacing: -0.01em;
+            border-bottom: 1px solid #e2e8f0 !important;
+          }
 
-        `;
+          .toastui-calendar-dayname-date-area {
+            border-radius: 999px;
+            padding: 2px 7px;
+          }
+
+          /* Today */
+          .toastui-calendar-today .toastui-calendar-dayname-date-area {
+            background: #2563eb !important;
+            color: #ffffff !important;
+            font-weight: 900 !important;
+          }
+
+          .toastui-calendar-today .toastui-calendar-weekday-grid-line {
+            background: rgba(37, 99, 235, 0.035) !important;
+          }
+
+          /* Time labels */
+          .toastui-calendar-timegrid-hour {
+            color: #94a3b8 !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+          }
+
+          .toastui-calendar-timegrid-timezone {
+            color: #94a3b8 !important;
+            font-size: 10px !important;
+          }
+
+          /* Now indicator */
+          .toastui-calendar-timegrid-now-indicator {
+            background: #ef4444 !important;
+            height: 2px !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+          }
+
+          .toastui-calendar-timegrid-now-indicator-arrow {
+            border-bottom-color: #ef4444 !important;
+          }
+
+          /* Event blocks */
+          .toastui-calendar-time-schedule {
+            border: none !important;
+          }
+
+          .toastui-calendar-time-schedule-block {
+            border-radius: 14px !important;
+            overflow: hidden !important;
+            box-shadow:
+              0 8px 18px rgba(15, 23, 42, 0.10),
+              inset 0 0 0 1px rgba(255,255,255,0.42);
+            transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+          }
+
+          .toastui-calendar-time-schedule-block:hover {
+            transform: translateY(-1px);
+            filter: saturate(1.04);
+            box-shadow:
+              0 12px 24px rgba(15, 23, 42, 0.14),
+              inset 0 0 0 1px rgba(255,255,255,0.48);
+          }
+
+          .toastui-calendar-time-schedule .toastui-calendar-event-time-content {
+            background: transparent !important;
+            padding: 0 !important;
+          }
+
+          .toastui-calendar-weekday-event {
+            border-radius: 12px !important;
+            overflow: hidden !important;
+          }
+
+          /* Your custom event template */
+          .tuic-event-sm {
+            width: 100%;
+            height: 100%;
+            padding: 5px 7px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.18;
+          }
+
+          .tuic-event-sm .tuic-line1 {
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .tuic-event-sm .tuic-line2 {
+            margin-top: 2px;
+            font-size: 10px;
+            font-weight: 700;
+            opacity: 0.78;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          /* Month event */
+          .tuic-month-line {
+            width: 100%;
+            padding: 2px 6px;
+            border-radius: 9px;
+            line-height: 1.2;
+          }
+
+          .tuic-month-time {
+            display: block;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          /* Month view */
+          .toastui-calendar-month {
+            background: #ffffff !important;
+          }
+
+          .toastui-calendar-month .toastui-calendar-weekday-grid-line {
+            border-color: #eef2f7 !important;
+          }
+
+          .toastui-calendar-month .toastui-calendar-weekday-schedule {
+            height: auto !important;
+            min-height: 28px;
+            padding: 2px 4px;
+            box-sizing: border-box;
+            border-radius: 10px !important;
+          }
+
+          .toastui-calendar-month .toastui-calendar-event-time-content {
+            white-space: normal !important;
+          }
+
+          .toastui-calendar-month .tuic-event-sm {
+            display: block;
+            line-height: 1.15;
+            padding: 3px 6px;
+          }
+
+          .toastui-calendar-month .tuic-event-sm .tuic-line1 {
+            font-size: 11px;
+            font-weight: 900;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .toastui-calendar-month .tuic-event-sm .tuic-line2 {
+            margin-top: 2px;
+            font-size: 10px;
+            font-weight: 700;
+            opacity: 0.82;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          /* Selection */
+          .toastui-calendar-grid-selection {
+            border-radius: 14px !important;
+            border: 1px dashed #6366f1 !important;
+            background: rgba(99, 102, 241, 0.08) !important;
+          }
+
+          /* No vertical scroll */
+          .toastui-calendar-panel.toastui-calendar-time {
+            overflow-y: hidden !important;
+          }
+
+          .toastui-calendar-timegrid,
+          .toastui-calendar-timegrid-container,
+          .toastui-calendar-timegrid-scrollarea,
+          .toastui-calendar-timegrid-hour-area,
+          .toastui-calendar-timegrid-schedules {
+            height: 100% !important;
+            min-height: 0 !important;
+            overflow-y: hidden !important;
+          }
+
+          /* Compact */
+          .tuic-compact .toastui-calendar-dayname {
+            font-size: 11px !important;
+          }
+
+          .tuic-compact .toastui-calendar-timegrid-hour {
+            font-size: 9px !important;
+          }
+
+          .tuic-compact .toastui-calendar-timegrid-gridline {
+            height: 16px !important;
+          }
+
+          .tuic-compact .toastui-calendar-timegrid-half-hour {
+            height: 8px !important;
+          }
+
+          .tuic-compact .toastui-calendar-time-schedule-block {
+            border-radius: 11px !important;
+          }
+
+          .tuic-compact .tuic-event-sm {
+            padding: 3px 6px;
+          }
+
+          .tuic-compact .tuic-event-sm .tuic-line1 {
+            font-size: 10px;
+          }
+
+          .tuic-compact .tuic-event-sm .tuic-line2 {
+            font-size: 9px;
+          }
+
+          .tuic-compact .toastui-calendar-timegrid .toastui-calendar-time-schedule-content {
+            padding-top: 0;
+            padding-bottom: 0;
+          }
+
+          /* Full */
+          .tuic-full .toastui-calendar-timegrid-gridline {
+            height: auto !important;
+          }
+
+          .tuic-full .toastui-calendar-timegrid-half-hour {
+            height: auto !important;
+          }
+
+          .tuic-full .toastui-calendar-timegrid .toastui-calendar-time-schedule-content {
+            padding-top: 1px;
+            padding-bottom: 1px;
+          }
+
+          /* Scrollbar */
+          .toastui-calendar-layout ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+          }
+
+          .toastui-calendar-layout ::-webkit-scrollbar-track {
+            background: transparent;
+          }
+
+          .toastui-calendar-layout ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+          }
+
+          .toastui-calendar-layout ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+          }
+          `;
           document.head.appendChild(el);
         }
 
@@ -1026,19 +1337,42 @@ function TeacherToastUIInner({
         calRef.current.setTheme({
           common: {
             backgroundColor: "#ffffff",
-            border: "1px solid #eef1f4",
-            gridSelection: { backgroundColor: "rgba(99,102,241,0.06)", border: "1px dashed #c7d2fe" },
+            border: "1px solid #e2e8f0",
+            gridSelection: {
+              backgroundColor: "rgba(99,102,241,0.08)",
+              border: "1px dashed #6366f1",
+            },
           },
           week: {
-            dayName: { borderBottom: "1px solid #eef1f4", backgroundColor: "#f7f8fa", color: "#475569" },
-            nowIndicatorLabel: { color: "#0ea5e9", backgroundColor: "#0ea5e9" },
-            nowIndicatorPast: { border: "1px solid #0ea5e9" },
-            nowIndicatorBullet: { backgroundColor: "#0ea5e9" },
+            dayName: {
+              borderBottom: "1px solid #e2e8f0",
+              backgroundColor: "#f8fafc",
+              color: "#475569",
+            },
+            nowIndicatorLabel: {
+              color: "#ef4444",
+              backgroundColor: "#ef4444",
+            },
+            nowIndicatorPast: {
+              border: "1px solid #ef4444",
+            },
+            nowIndicatorBullet: {
+              backgroundColor: "#ef4444",
+            },
           },
           month: {
-            dayName: { borderBottom: "1px solid #eef1f4", backgroundColor: "#f7f8fa", color: "#475569" },
+            dayName: {
+              borderBottom: "1px solid #e2e8f0",
+              backgroundColor: "#f8fafc",
+              color: "#475569",
+            },
           },
-          time: { fontSize: "12px", fontWeight: "500", color: "#1f2937", backgroundColor: "#eff6ff" },
+          time: {
+            fontSize: "12px",
+            fontWeight: "700",
+            color: "#0f172a",
+            backgroundColor: "#eff6ff",
+          },
         });
 
         // Handlers
@@ -1388,7 +1722,7 @@ function TeacherToastUIInner({
 
   const bulkPanelStyle = (() => {
     if (!containerRef.current) return {};
-    const POP_W = 340, pad = 12;
+    const POP_W = 360, pad = 12;
     const cw = containerRef.current.clientWidth;
     let left = cw - POP_W - pad;
     let top = pad;
@@ -1687,15 +2021,37 @@ if (mode === "changed") {
 
   /* --------------------------------- Render --------------------------------- */
   return (
-    <div className={`w-full ${enableTeacherSidebar ? "flex gap-4" : ""}`}>
+    <div className={`w-full ${enableTeacherSidebar ? "flex gap-5" : ""}`}>
       {/* LEFT: Teacher filter sidebar (admin only) */}
       {enableTeacherSidebar && (
-        <aside className="w-[240px] shrink-0 bg-white border border-gray-200 rounded-2xl p-3 h-fit sticky top-3">
-          <div className="font-semibold text-gray-900 mb-2">Teachers</div>
+        <aside className="w-[250px] shrink-0 rounded-[24px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur h-fit sticky top-3">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                Filter
+              </div>
+              <div className="text-base font-extrabold tracking-tight text-slate-950">
+                Teachers
+              </div>
+            </div>
+            <div className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500">
+              {teacherFilter.size}/{uniqueTeachers.length}
+            </div>
+          </div>
 
           <div className="flex items-center gap-2 mb-3">
-            <button onClick={selectAllTeachers} className="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50">Select All</button>
-            <button onClick={clearTeachers} className="text-xs px-2 py-1 rounded border border-slate-300 hover:bg-slate-50">Clear</button>
+            <button
+              onClick={selectAllTeachers}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              Select All
+            </button>
+            <button
+              onClick={clearTeachers}
+              className="rounded-full border border-rose-100 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-600 hover:bg-rose-100"
+            >
+              Clear
+            </button>
           </div>
 
           <div className="space-y-2 max-h-[60vh] overflow-auto pr-1">
@@ -1706,7 +2062,9 @@ if (mode === "changed") {
               return (
                 <div
                   key={t}
-                  className={`group flex items-center justify-between gap-2 text-sm rounded-lg px-2 py-1 ${active ? "bg-slate-50" : ""}`}
+                  className={`group flex items-center justify-between gap-2 rounded-2xl px-3 py-2 text-sm transition ${
+                    active ? "bg-slate-50 shadow-sm ring-1 ring-slate-100" : "hover:bg-slate-50"
+                  }`}
                 >
                   <label htmlFor={inputId} className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -1714,7 +2072,7 @@ if (mode === "changed") {
                       type="checkbox"
                       checked={active}
                       onChange={() => toggleTeacher(t)}
-                      className="accent-slate-700"
+                      className="h-4 w-4 accent-slate-900"
                     />
                     <span className="inline-flex items-center gap-2">
                       <span
@@ -1757,18 +2115,54 @@ if (mode === "changed") {
       <div className="flex-1">
         {/* Header */}
         {!minimal && (
-        <div className="flex items-center my-3 gap-2">
-          <button onClick={goPrev} className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300">←</button>
-          <div className="text-xl mx-4 font-semibold tracking-tight">
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-[26px] border border-slate-200/80 bg-white/90 px-4 py-3 shadow-[0_18px_40px_rgba(15,23,42,0.07)] backdrop-blur">
+          <button
+            onClick={goPrev}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-black text-slate-700 shadow-sm hover:bg-slate-950 hover:text-white"
+          >
+            ←
+          </button>
+
+          <div className="mx-2 min-w-[120px] text-center text-xl font-black tracking-tight text-slate-950">
             {currentDate.getFullYear()}. {currentDate.getMonth() + 1}
           </div>
-          <button onClick={goNext} className="p-1 px-3 border rounded-full hover:bg-slate-700 hover:text-white border-slate-300">→</button>
-          <button onClick={goToday} className="ml-2 p-1 px-3 border rounded-2xl hover:bg-slate-700 hover:text-white border-slate-300">Today</button>
+
+          <button
+            onClick={goNext}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-black text-slate-700 shadow-sm hover:bg-slate-950 hover:text-white"
+          >
+            →
+          </button>
+
+          <button
+            onClick={goToday}
+            className="ml-1 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-extrabold text-blue-700 hover:bg-blue-600 hover:text-white"
+          >
+            Today
+          </button>
 
           {!forceView && (
             <div className="ml-2 flex items-center gap-2">
-              <button onClick={toWeek}  className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${viewName === "week"  ? "bg-slate-900 text-white" : ""}`}>Week</button>
-              <button onClick={toMonth} className={`p-1 px-3 border rounded-2xl border-slate-300 hover:bg-slate-700 hover:text-white ${viewName === "month" ? "bg-slate-900 text-white" : ""}`}>Month</button>
+              <button
+                onClick={toWeek}
+                className={`rounded-full px-4 py-2 text-xs font-extrabold transition ${
+                  viewName === "week"
+                    ? "bg-slate-950 text-white shadow-lg shadow-slate-950/20"
+                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Week
+              </button>
+              <button
+                onClick={toMonth}
+                className={`rounded-full px-4 py-2 text-xs font-extrabold transition ${
+                  viewName === "month"
+                    ? "bg-slate-950 text-white shadow-lg shadow-slate-950/20"
+                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                Month
+              </button>
             </div>
           )}
 
@@ -1788,7 +2182,7 @@ if (mode === "changed") {
               target="_blank"
               rel="noopener noreferrer"
               title="관리자 결제"
-              className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+              className="rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-xs font-extrabold text-indigo-700 hover:bg-indigo-600 hover:text-white"
             >
               관리자 페이지
             </a>
@@ -1797,7 +2191,7 @@ if (mode === "changed") {
               target="_blank"
               rel="noopener noreferrer"
               title="Open Full Calendar"
-              className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
+              className="rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-xs font-extrabold text-indigo-700 hover:bg-indigo-600 hover:text-white"
             >
               Full Calendar
             </a>
@@ -1810,6 +2204,13 @@ if (mode === "changed") {
             >
               Student Registration
             </a> */}
+
+            <button
+                onClick={handleHolidayRemove}
+                className="rounded-full border border-rose-100 bg-rose-50 px-4 py-2 text-xs font-extrabold text-rose-700 transition hover:bg-rose-600 hover:text-white"
+              >
+                휴무 제거
+            </button>
 
             {/* Add Calendar button */}
             <button
@@ -1828,7 +2229,11 @@ if (mode === "changed") {
                 })
               }
               title="새 수업 등록"
-              className={`text-xs px-3 py-1 rounded-full border ${addOpen ? "bg-indigo-600 text-white border-indigo-600" : "border-indigo-300 hover:bg-indigo-50 text-indigo-700"}`}
+              className={`rounded-full px-4 py-2 text-xs font-extrabold transition ${
+                addOpen
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/25"
+                  : "border border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white"
+              }`}
             >
               Add Class
             </button>
@@ -1836,8 +2241,13 @@ if (mode === "changed") {
         </div>
         )}
         {/* Calendar container must be relative for popovers */}
-        <div className={`relative ${variant === "compact" ? "tuic-compact" : "tuic-full"}`} style={{ width: "100%", height: variant === "compact" ? "65vh" : "78vh" }}>
-          <div ref={containerRef} className="absolute inset-0" />
+<div
+  className={`relative overflow-hidden rounded-[34px] border border-white/70 bg-[radial-gradient(circle_at_top_left,rgba(219,234,254,0.85),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-2.5 shadow-[0_30px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl ${
+    variant === "compact" ? "tuic-compact" : "tuic-full"
+  }`}
+  style={{ width: "100%", height: variant === "compact" ? "65vh" : "78vh" }}
+>
+          <div ref={containerRef} className="absolute inset-2" />
 
           {/* Event popover */}
           {detail?.event && (() => {
@@ -1855,11 +2265,11 @@ if (mode === "changed") {
               return (
                 <div
                   ref={popRef}
-                  className={`absolute z-50 rounded-xl shadow-xl p-4 w-[280px] border
-                    ${raw.paid 
-                      ? "bg-green-50 border-green-200" 
-                      : "bg-white border-purple-200"
-                    }`}
+                  className={`absolute z-50 w-[300px] rounded-[24px] border p-4 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur ${
+                    raw.paid
+                      ? "border-emerald-200 bg-emerald-50/95"
+                      : "border-purple-200 bg-white/95"
+                  }`}
                   style={{
                     left: `${detail.x + 12}px`,
                     top: `${detail.y + 12}px`,
@@ -1969,7 +2379,7 @@ if (mode === "changed") {
             return (
               <div
                 ref={popRef}
-                className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 w-[260px]"
+                className="absolute z-50 w-[280px] rounded-[22px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur"
                 style={{
                   left: `${detail.x + 12}px`,
                   top: `${detail.y + 12}px`,
@@ -2414,10 +2824,10 @@ if (mode === "changed") {
           {addOpen && (
             <div
               ref={addRef}
-              className="absolute z-50 w-[340px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+              className="absolute z-50 w-[360px] rounded-[24px] border border-slate-200/80 bg-white/95 p-4 text-sm shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur"
               style={(() => {
                 if (!addAnchor || !containerRef.current) return { top: 12, right: 12 } as React.CSSProperties;
-                const POP_W = 340, POP_H = 320, pad = 8;
+                const POP_W = 360, POP_H = 360, pad = 10;
                 const cw = containerRef.current.clientWidth;
                 const ch = containerRef.current.clientHeight;
                 let left = addAnchor.x + 10;
@@ -2428,8 +2838,17 @@ if (mode === "changed") {
               })()}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="font-semibold text-gray-900 leading-snug">
-                  {addType === "class" ? "새 수업 등록" : "새 상담 등록"}
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                    Create
+                  </div>
+                  <div className="text-base font-extrabold tracking-tight text-slate-950">
+                    {addType === "class"
+                      ? "새 수업 등록"
+                      : addType === "consultation"
+                      ? "새 상담 등록"
+                      : "운영 업무 등록"}
+                  </div>
                 </div>
                 <button
                   onClick={() => {
@@ -2449,10 +2868,10 @@ if (mode === "changed") {
                 <button
                   type="button"
                   onClick={() => setAddType("class")}
-                  className={`px-3 py-1 text-xs rounded-md border ${
+                  className={`rounded-full px-3 py-1.5 text-xs font-extrabold transition ${
                     addType === "class"
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                      : "border border-indigo-100 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
                   }`}
                 >
                   Class
@@ -2461,10 +2880,10 @@ if (mode === "changed") {
                 <button
                   type="button"
                   onClick={() => setAddType("consultation")}
-                  className={`px-3 py-1 text-xs rounded-md border ${
+                  className={`rounded-full px-3 py-1.5 text-xs font-extrabold transition ${
                     addType === "consultation"
-                      ? "bg-purple-600 text-white border-purple-600"
-                      : "border-purple-300 text-purple-700 hover:bg-purple-50"
+                      ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20"
+                      : "border border-purple-100 bg-purple-50 text-purple-700 hover:bg-purple-100"
                   }`}
                 >
                   Consultation
@@ -2472,10 +2891,10 @@ if (mode === "changed") {
                 <button
                   type="button"
                   onClick={() => setAddType("operation")}
-                  className={`px-3 py-1 text-xs rounded-md border ${
+                  className={`rounded-full px-3 py-1.5 text-xs font-extrabold transition ${
                     addType === "operation"
-                      ? "bg-slate-800 text-white border-slate-800"
-                      : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                      ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20"
+                      : "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   Operation Task
@@ -3126,11 +3545,11 @@ if (mode === "changed") {
           {bulkPanel && (
             <div
               ref={bulkRef}
-              className="absolute z-50 bg-white border border-gray-200 rounded-xl shadow-xl p-3 text-sm"
+              className="absolute z-50 rounded-[24px] border border-slate-200/80 bg-white/95 p-4 text-sm shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur"
               style={bulkPanelStyle}
             >
               <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="font-semibold text-gray-900 leading-snug">
+                <div className="text-base font-extrabold tracking-tight text-slate-950 leading-snug">
                   {bulkPanel.kind === "delete" ? "Delete future classes?" : "Update all future classes?"}
                 </div>
                 <button
