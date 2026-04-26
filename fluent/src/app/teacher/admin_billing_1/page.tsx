@@ -414,6 +414,7 @@ function AdminBillingExcelPageInner() {
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const schedulesByTeacher = useRef<Record<string, ScheduleEntry[]>>({});
+  const consultationsRef = useRef<any[]>([]);
 
   const diaryCacheRef = useRef<Record<string, DiaryEntry[]>>({});
   const quizletCacheRef = useRef<Record<string, QuizletEntry[]>>({});
@@ -907,6 +908,50 @@ function AdminBillingExcelPageInner() {
     };
   }, [selectedTeacher]);
 
+  useEffect(() => {
+    if (!selectedTeacher) return;
+
+    let cancelled = false;
+
+    const loadAll = async () => {
+      try {
+        const [consultRes, opRes] = await Promise.all([
+          fetch("/api/consultations", { cache: "no-store" }),
+          fetch("/api/operation-task", { cache: "no-store" }),
+        ]);
+
+        const consultJson = consultRes.ok ? await consultRes.json() : null;
+        const opJson = opRes.ok ? await opRes.json() : null;
+
+        // 🔥 CRITICAL FIX: normalize BOTH responses
+        const consultList = Array.isArray(consultJson?.data)
+          ? consultJson.data
+          : [];
+
+        const opList = Array.isArray(opJson)
+          ? opJson
+          : [];
+
+        if (!cancelled) {
+          consultationsRef.current = [
+            ...consultList,
+            ...opList,
+          ];
+          setCacheTick((t) => t + 1);
+        }
+      } catch (err) {
+        console.error("Failed to load consultation + operation", err);
+        if (!cancelled) consultationsRef.current = [];
+      }
+    };
+
+    loadAll();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedTeacher]);
+
   const monthOptions = useMemo(() => {
     const scheduleList =
       schedulesByTeacher.current[selectedTeacher] ?? [];
@@ -1325,6 +1370,41 @@ function AdminBillingExcelPageInner() {
     });
     return map;
   }, [studentFinancials]);
+
+  const consultationSummary = useMemo(() => {
+    const list = consultationsRef.current || [];
+
+    let consultCount = 0;
+    let operationCount = 0;
+
+    const teacher = (selectedTeacher || "").trim().toLowerCase();
+
+    list.forEach((item) => {
+      const dt = parseDateString(item.date);
+      if (!dt) return;
+
+      // ✅ PER MONTH
+      if (monthKeyFromDate(dt) !== selectedMonth) return;
+
+      // ✅ CONSULTATION
+      if (
+        item.consult_teacher &&
+        item.consult_teacher.trim().toLowerCase() === teacher
+      ) {
+        consultCount++;
+      }
+
+      // ✅ OPERATION TASK
+      if (
+        item.operation_teacher &&
+        item.operation_teacher.trim().toLowerCase() === teacher
+      ) {
+        operationCount++;
+      }
+    });
+
+    return { consultCount, operationCount };
+  }, [selectedTeacher, selectedMonth, cacheTick]);
 
   const summary = useMemo(() => {
     let totalClasses = monthClassnotes.length;
@@ -2044,6 +2124,34 @@ function AdminBillingExcelPageInner() {
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
                   해당 교사에게 배정된 학생 수
+                </div>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* 상담 횟수 */}
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  상담 횟수
+                </div>
+                <div className="mt-1 text-2xl font-semibold text-purple-600">
+                  {consultationSummary.consultCount}
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  {selectedTeacher} 상담 ({monthLabelFromKey(selectedMonth)})
+                </div>
+              </div>
+
+              {/* Operation Task */}
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Operation Tasks
+                </div>
+                <div className="mt-1 text-2xl font-semibold text-gray-900">
+                  {consultationSummary.operationCount}
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  운영 업무 횟수 ({monthLabelFromKey(selectedMonth)})
                 </div>
               </div>
             </section>
