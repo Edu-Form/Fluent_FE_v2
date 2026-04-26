@@ -255,8 +255,9 @@ function TeacherToastUIInner({
     2026: [
       "2026. 01. 01.",
       "2026. 03. 02.",
+      "2026. 05. 01.",
       "2026. 05. 05.",
-      "2026. 06. 06.",
+      "2026. 06. 03.",
       "2026. 08. 15.",
       "2026. 10. 03.",
       "2026. 10. 09.",
@@ -302,7 +303,7 @@ function TeacherToastUIInner({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           dates: futureHolidays,
-          teacher_name: user,
+          teacher_name: currentUser,
         }),
       });
 
