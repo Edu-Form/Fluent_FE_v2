@@ -154,7 +154,7 @@ export async function POST(request: Request) {
     // 🔥 auto-sync status with paid
     if (body.paid !== undefined) {
       updateObj.status = body.paid
-        ? "결제완료-강사미배정"
+        ? "결제완료"
         : "상담중";
     }
 

@@ -203,6 +203,7 @@ function TeacherToastUIInner({
   }
 
   const [consultations, setConsultations] = useState<any[]>([]);
+  const [operations, setOperations] = useState<any[]>([]);
 
   const [viewName, setViewName] = useState<"week" | "month">(forceView ?? "week");
 
@@ -225,7 +226,7 @@ function TeacherToastUIInner({
     student_name: defaults?.student_name ?? "",
     teacher_name: defaults?.teacher_name ?? "",
   });
-  const [addType, setAddType] = useState<"class" | "consultation">("class");
+  const [addType, setAddType] = useState<"class" | "consultation" | "operation">("class");
 
   const [consultForm, setConsultForm] = useState({
     student_name: "",
@@ -451,6 +452,46 @@ function TeacherToastUIInner({
       });
     }
 
+    // OPERATION TASKS
+    for (const op of operations || []) {
+      if (!op.date) continue;
+
+      const base = toDateYMD(op.date);
+      if (!base) continue;
+
+      const startHour = Number(op.time ?? 12);
+      const startMin = Math.round((startHour % 1) * 60);
+
+      const start = new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        base.getDate(),
+        Math.floor(startHour),
+        startMin
+      );
+
+      const end = new Date(start.getTime() + (op.duration ?? 1) * 3600000);
+
+      events.push({
+        id: `operation-${op._id?.$oid || op._id}`,
+        calendarId: "operation",
+        title: `🛠 ${op.operation_teacher || "Operation"}`,
+        category: "time",
+        start,
+        end,
+
+        backgroundColor: "#1F2937",
+        borderColor: "#111827",
+        dragBackgroundColor: "#374151",
+        color: "#F9FAFB",
+
+        raw: {
+          ...op,
+          is_operation: true,
+        },
+      });
+    }
+
     // 1) Normal schedules (render today + future)
     for (const e of data || []) {
       if (!e.date || Number.isNaN(e.time) || Number.isNaN(e.duration)) continue;
@@ -492,7 +533,7 @@ function TeacherToastUIInner({
     const byStudentDate = new Map<string, EventObject[]>();
 
     for (const ev of events) {
-      if (ev.raw?.is_consultation) continue;
+      if (ev.raw?.is_consultation || ev.raw?.is_operation) continue;
 
       const student = ev?.raw?.student_name || "";
       const dateKey = ymdString(toLocalDateOnly(new Date(ev.start)));
@@ -700,24 +741,36 @@ function TeacherToastUIInner({
     }
 
     return events;
-  }, [data, teacherColorMap, classnoteMap, pastSchedulesIndex, consultations]);
+  }, [data, teacherColorMap, classnoteMap, pastSchedulesIndex, consultations, operations]);
 
   /* ------------------------------- Apply filters ---------------------------- */
   const filteredEvents = useMemo(() => {
     return (eventsFromProps || []).filter((ev) => {
+
+      if (ev?.raw?.is_operation) {
+        return (
+          ev?.raw?.operation_teacher?.trim() === currentUser?.trim()
+        );
+      }
 
       // ✅ FIRST: fixed student override
       if (fixedStudentName) {
         return ev?.raw?.student_name === fixedStudentName;
       }
 
-      let teacherOfEvent = ev?.raw?.teacher_name?.trim();
+      let teacherOfEvent = "";
 
-      if (!teacherOfEvent) {
-        const studentName = ev?.raw?.student_name?.trim();
-        const student = allStudentsRef.current.get(studentName);
-        if (student) teacherOfEvent = student.teacher?.trim() || "";
+      if (ev?.raw?.is_consultation) {
+        teacherOfEvent = ev?.raw?.consult_teacher?.trim();
+      } else {
+        teacherOfEvent = ev?.raw?.teacher_name?.trim();
       }
+
+      // if (!teacherOfEvent) {
+      //   const studentName = ev?.raw?.student_name?.trim();
+      //   const student = allStudentsRef.current.get(studentName);
+      //   if (student) teacherOfEvent = student.teacher?.trim() || "";
+      // }
 
       if (teacherOfEvent !== currentUser?.trim()) return false;
 
@@ -813,13 +866,26 @@ function TeacherToastUIInner({
           gridSelection: true,
           template: {
             time(ev: any) {
-              const student = ev?.raw?.student_name ?? "";
-              const label = `${student}`;
+              let label = "";
+
+              if (ev?.raw?.is_operation) {
+                label = "🛠 Operation Task";
+              } else if (ev?.raw?.is_consultation) {
+                label = ev?.raw?.student_name
+                  ? `💬상담: ${ev.raw.student_name}`
+                  : "💬상담";
+              } else {
+                label = ev?.raw?.student_name || "";
+              }
+
               const s = new Date(ev.start);
               const e = new Date(ev.end);
+
               const hhmm = (d: Date) =>
                 `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
               const timeRange = `${hhmm(s)}–${hhmm(e)}`;
+
               return `
                 <div class="tuic-event-sm">
                   <div class="tuic-line1">${label}</div>
@@ -980,7 +1046,7 @@ function TeacherToastUIInner({
           const { event, nativeEvent } = args || {};
           if (!event || !calRef.current) return;
 
-          if (event.raw?.is_consultation) {
+          if (event.raw?.is_consultation || event.raw?.is_operation) {
             const rect = containerRef.current?.getBoundingClientRect();
 
             const x = (nativeEvent?.clientX ?? 0) - (rect?.left ?? 0);
@@ -1229,6 +1295,25 @@ function TeacherToastUIInner({
     fetchConsultations();
   }, []);
 
+  useEffect(() => {
+    async function fetchOperations() {
+      try {
+        const res = await fetch("/api/operation-task", { cache: "no-store" });
+        const json = await res.json();
+        setOperations(
+          Array.isArray(json) ? json :
+          Array.isArray(json?.data) ? json.data :
+          []
+        );
+      } catch (err) {
+        console.error("operation fetch error:", err);
+        setOperations([]);
+      }
+    }
+
+    fetchOperations();
+  }, []);
+
   // Close popovers on outside click / ESC
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -1343,6 +1428,14 @@ function TeacherToastUIInner({
     const d = calRef.current?.getDate() ?? viewDateRef.current ?? new Date();
     rememberAndSetDate(d);
   };
+
+  const [operationForm, setOperationForm] = useState({
+    date: ymdString(new Date()),
+    time: "12",
+    duration: "1",
+    operation_teacher: currentUser,
+    notes: "",
+  });
 
   const handleSubmitReason = async (mode: "paid" | "changed") => {
   if (!detail?.event) return;
@@ -1708,7 +1801,7 @@ if (mode === "changed") {
             >
               Full Calendar
             </a>
-            <a
+            {/* <a
               href="https://fluent-erp-eight.vercel.app/student-registration"
               target="_blank"
               rel="noopener noreferrer"
@@ -1716,7 +1809,7 @@ if (mode === "changed") {
               className="text-xs px-3 py-1 rounded-full border border-indigo-300 hover:bg-indigo-50 text-indigo-700"
             >
               Student Registration
-            </a>
+            </a> */}
 
             {/* Add Calendar button */}
             <button
@@ -2376,6 +2469,17 @@ if (mode === "changed") {
                 >
                   Consultation
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setAddType("operation")}
+                  className={`px-3 py-1 text-xs rounded-md border ${
+                    addType === "operation"
+                      ? "bg-slate-800 text-white border-slate-800"
+                      : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  Operation Task
+                </button>
               </div>
 
               {/* ========================= CLASS FORM ========================= */}
@@ -2818,7 +2922,7 @@ if (mode === "changed") {
 
                     {/* Teacher */}
                     <label className="text-xs col-span-2">
-                      <div className="text-gray-600 mb-1">Teacher</div>
+                      <div className="text-gray-600 mb-1">상담 Teacher</div>
                       <input
                         className="w-full border rounded-lg px-2 py-1.5 bg-gray-100 text-black"
                         value={currentUser}
@@ -2865,7 +2969,9 @@ if (mode === "changed") {
                               body: JSON.stringify({
                                 name: studentName,
                                 phoneNumber: consultForm.phone.trim(),
-                                teacher: currentUser,
+
+                                teacher_name: "",              
+                                consult_teacher: currentUser,  
                               }),
                             });
                           }
@@ -2876,7 +2982,9 @@ if (mode === "changed") {
                             body: JSON.stringify({
                               student_name: studentName,
                               phoneNumber: consultForm.phone.trim(),
-                              teacher_name: currentUser,
+
+                              consult_teacher: currentUser, // ✅ 핵심
+
                               date: consultForm.date,
                               time: timeNum,
                               duration: durationNum,
@@ -2910,6 +3018,103 @@ if (mode === "changed") {
                         </svg>
                       )}
                       Add Consultation
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {addType === "operation" && (
+                <>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Date</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={operationForm.date}
+                        onChange={(e) =>
+                          setOperationForm((p) => ({ ...p, date: e.target.value }))
+                        }
+                      />
+                    </label>
+
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Time</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={operationForm.time}
+                        onChange={(e) =>
+                          setOperationForm((p) => ({ ...p, time: e.target.value }))
+                        }
+                      />
+                    </label>
+
+                    <label className="text-xs">
+                      <div className="text-gray-600 mb-1">Duration</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black"
+                        value={operationForm.duration}
+                        onChange={(e) =>
+                          setOperationForm((p) => ({ ...p, duration: e.target.value }))
+                        }
+                      />
+                    </label>
+
+                    <label className="text-xs col-span-2">
+                      <div className="text-gray-600 mb-1">Operation Teacher</div>
+                      <input
+                        className="w-full border rounded-lg px-2 py-1.5 bg-gray-100 text-black"
+                        value={currentUser}
+                        readOnly
+                      />
+                    </label>
+
+                    <label className="text-xs col-span-2">
+                      <div className="text-gray-600 mb-1">Notes</div>
+                      <textarea
+                        className="w-full border rounded-lg px-2 py-1.5 bg-white text-black min-h-[100px]"
+                        value={operationForm.notes}
+                        onChange={(e) =>
+                          setOperationForm((p) => ({ ...p, notes: e.target.value }))
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const dt = toDateYMD(operationForm.date);
+                          const timeNum = Number(operationForm.time);
+                          const durationNum = Number(operationForm.duration);
+
+                          if (!dt) return alert("날짜 형식: YYYY. MM. DD");
+
+                          await fetch("/api/operation-task", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              date: operationForm.date,
+                              time: timeNum,
+                              duration: durationNum,
+                              operation_teacher: currentUser,
+                              notes: operationForm.notes,
+                            }),
+                          });
+
+                          window.dispatchEvent(new CustomEvent("calendar:saved"));
+
+                          setAddOpen(false);
+                          setAddAnchor(null);
+                        } catch (err) {
+                          console.error(err);
+                          alert("Failed to create operation task");
+                        }
+                      }}
+                      className="px-4 py-1.5 text-xs rounded-md bg-slate-800 text-white hover:bg-slate-900"
+                    >
+                      Add Operation Task
                     </button>
                   </div>
                 </>

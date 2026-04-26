@@ -3202,3 +3202,43 @@ export async function getConsultations() {
     _id: d._id.toString(),
   }));
 }
+
+export async function createOperationTask(data: {
+  date: string;
+  time: number;
+  duration?: number;
+  operation_teacher: string;
+  notes?: string;
+}) {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const doc = {
+    type: "operation_task",
+
+    date: data.date,
+    time: data.time,
+    duration: data.duration ?? 1,
+
+    operation_teacher: data.operation_teacher,
+    notes: data.notes ?? "",
+
+    created_at: new Date(),
+  };
+
+  const result = await db.collection("Operation_Tasks").insertOne(doc);
+
+  return result.insertedId;
+}
+
+export async function getOperationTasks() {
+  const client = await clientPromise;
+  const db = client.db("school_management");
+
+  const tasks = await db
+    .collection("Operation_Tasks")
+    .find({})
+    .toArray();
+
+  return tasks;
+}
