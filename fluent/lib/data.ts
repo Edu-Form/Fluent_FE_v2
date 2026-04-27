@@ -898,61 +898,178 @@ export async function updateScheduleDataBulk(body: any) {
   } = body;
 
   if (!student_name) throw new Error("Missing student_name");
+  if (!base_date) throw new Error("Missing base_date");
+  if (old_hour === undefined) throw new Error("Missing old_hour");
+  if (old_duration === undefined) throw new Error("Missing old_duration");
+  if (new_hour === undefined) throw new Error("Missing new_hour");
+  if (new_duration === undefined) throw new Error("Missing new_duration");
+  if (dayOfWeek === undefined) throw new Error("Missing dayOfWeek");
+
+  const baseDt = parseYMD(base_date);
+  if (!baseDt) throw new Error("Invalid base_date format");
+
+  const oldHourNum = Number(old_hour);
+  const oldDurationNum = Number(old_duration);
+  const newHourNum = Number(new_hour);
+  const newDurationNum = Number(new_duration);
+
+  if (!isHalfStep(oldHourNum)) throw new Error("Invalid old_hour");
+  if (!isHalfStep(oldDurationNum)) throw new Error("Invalid old_duration");
+  if (!isHalfStep(newHourNum)) throw new Error("Invalid new_hour");
+  if (!isHalfStep(newDurationNum)) throw new Error("Invalid new_duration");
 
   const all = await coll.find({ student_name }).toArray();
 
-  const targetIds: any[] = [];
+  const targetDocs: any[] = [];
 
   for (const row of all) {
-    const dt = new Date(row.date.replace(/\./g, "-"));
+    const rowDt = parseYMD(row.date);
+    if (!rowDt) continue;
 
-    // ✅ only future (including current)
-    if (dt < new Date(base_date)) continue;
+    const rowDateOnly = new Date(
+      rowDt.getFullYear(),
+      rowDt.getMonth(),
+      rowDt.getDate()
+    );
 
-    // ✅ same weekday
-    if (dt.getDay() !== dayOfWeek) continue;
+    const baseDateOnly = new Date(
+      baseDt.getFullYear(),
+      baseDt.getMonth(),
+      baseDt.getDate()
+    );
 
-    // ✅ same time pattern
-    if (Number(row.time) !== old_hour) continue;
-    if (Number(row.duration) !== old_duration) continue;
+    // Include current date and future dates only
+    if (rowDateOnly.getTime() < baseDateOnly.getTime()) continue;
 
-    targetIds.push(row._id);
+    // Same weekday
+    if (rowDateOnly.getDay() !== Number(dayOfWeek)) continue;
+
+    // Same old schedule pattern
+    if (Number(row.time) !== oldHourNum) continue;
+    if (Number(row.duration) !== oldDurationNum) continue;
+
+    targetDocs.push(row);
   }
 
-  if (targetIds.length === 0) {
-    return { updatedCount: 0 };
+  if (targetDocs.length === 0) {
+    return {
+      matchedCount: 0,
+      modifiedCount: 0,
+      updatedCount: 0,
+    };
   }
 
-  const result = await coll.updateMany(
-    { _id: { $in: targetIds } },
-    {
-      $set: {
-        time: new_hour,
-        duration: new_duration,
-      },
-    }
-  );
+  let modifiedCount = 0;
+
+  for (const row of targetDocs) {
+    const normalized = buildTimeFields(row.date, newHourNum, newDurationNum);
+
+    const result = await coll.updateOne(
+      { _id: row._id },
+      {
+        $set: {
+          ...normalized,
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    );
+
+    modifiedCount += result.modifiedCount ?? 0;
+  }
 
   return {
-    updatedCount: result.modifiedCount,
+    matchedCount: targetDocs.length,
+    modifiedCount,
+    updatedCount: modifiedCount,
   };
 }
 
 
-// --- DELETE schedule(s) ---
 export async function deleteScheduleDataBulk(body: any) {
   const client = await clientPromise;
   const db = client.db("school_management");
   const coll = db.collection("schedules");
 
+  // Existing ID-based delete support
   if (Array.isArray(body?.ids)) {
-    const objectIds = body.ids.map((id: string) => new ObjectId(id));
+    const objectIds = body.ids
+      .filter(Boolean)
+      .map((id: string) => new ObjectId(id));
+
+    if (!objectIds.length) {
+      return { deletedCount: 0 };
+    }
+
     const result = await coll.deleteMany({ _id: { $in: objectIds } });
     return { deletedCount: result.deletedCount };
   }
 
+  // New future-pattern delete support
+  const {
+    student_name,
+    base_date,
+    old_hour,
+    old_duration,
+    dayOfWeek,
+  } = body;
+
+  if (student_name && base_date && old_hour !== undefined && old_duration !== undefined && dayOfWeek !== undefined) {
+    const baseDt = parseYMD(base_date);
+    if (!baseDt) throw new Error("Invalid base_date format");
+
+    const oldHourNum = Number(old_hour);
+    const oldDurationNum = Number(old_duration);
+
+    const all = await coll.find({ student_name }).toArray();
+
+    const targetIds: ObjectId[] = [];
+
+    for (const row of all) {
+      const rowDt = parseYMD(row.date);
+      if (!rowDt) continue;
+
+      const rowDateOnly = new Date(
+        rowDt.getFullYear(),
+        rowDt.getMonth(),
+        rowDt.getDate()
+      );
+
+      const baseDateOnly = new Date(
+        baseDt.getFullYear(),
+        baseDt.getMonth(),
+        baseDt.getDate()
+      );
+
+      // Include current date and future dates only
+      if (rowDateOnly.getTime() < baseDateOnly.getTime()) continue;
+
+      // Same weekday
+      if (rowDateOnly.getDay() !== Number(dayOfWeek)) continue;
+
+      // Same old schedule pattern
+      if (Number(row.time) !== oldHourNum) continue;
+      if (Number(row.duration) !== oldDurationNum) continue;
+
+      targetIds.push(row._id);
+    }
+
+    if (!targetIds.length) {
+      return { deletedCount: 0 };
+    }
+
+    const result = await coll.deleteMany({
+      _id: { $in: targetIds },
+    });
+
+    return {
+      deletedCount: result.deletedCount,
+    };
+  }
+
+  // Existing single delete support
   const id = body?._id || body?.id;
   if (!id) throw new Error("Missing id(s)");
+
   const result = await coll.deleteOne({ _id: new ObjectId(id) });
   return { deletedCount: result.deletedCount };
 }

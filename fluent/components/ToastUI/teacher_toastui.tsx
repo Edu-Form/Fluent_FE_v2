@@ -96,7 +96,13 @@ function getDurationHours(start: Date, end: Date) {
   return Math.round(mins / 30) / 2; // 0.5, 1.0, 1.5, ...
 }
 
+function roundHalfHour(n: number) {
+  return Math.round(n * 2) / 2;
+}
 
+function timeFromDateHalf(d: Date) {
+  return roundHalfHour(d.getHours() + d.getMinutes() / 60);
+}
 
 /* ----------------------------- Color utilities ----------------------------- */
 const PASTEL_PALETTE = [
@@ -1426,7 +1432,10 @@ function TeacherToastUIInner({
         const handleBeforeUpdate = async ({ event, changes }: { event: EventObject; changes: Partial<EventObject> }) => {
           const oldStart = new Date(event.start as any);
           const oldEnd = new Date(event.end as any);
-          const oldRef = { hour: oldStart.getHours(), durationH: getDurationHours(oldStart, oldEnd) };
+          const oldRef = {
+            hour: timeFromDateHalf(oldStart),
+            durationH: getDurationHours(oldStart, oldEnd),
+          };
 
           setDetail((d) => (d?.event?.id === event.id ? null : d));
           calRef.current?.updateEvent(event.id as string, event.calendarId as string, changes);
@@ -1438,7 +1447,7 @@ function TeacherToastUIInner({
             await saveUpdateById(
               String(after.raw?.schedule_id || after.id),
               ymdString(start),
-              start.getHours() + start.getMinutes() / 60,
+              timeFromDateHalf(start),
               getDurationHours(start, end)
             );
           } catch (e: any) {
@@ -1706,7 +1715,10 @@ function TeacherToastUIInner({
       kind: "delete",
       baseEvent,
       anchor: anchor ?? null,
-      reference: { hour: bs.getHours(), durationH: getDurationHours(bs, be) },
+      reference: {
+        hour: timeFromDateHalf(bs),
+        durationH: getDurationHours(bs, be),
+      },
       saving: false,
     });
   };
@@ -1955,15 +1967,12 @@ if (mode === "changed") {
       const baseStart = new Date(base.start as any);
       const baseEnd = new Date(base.end as any);
 
-      const newHour =
-        baseStart.getHours() + baseStart.getMinutes() / 60;
-
+      const newHour = timeFromDateHalf(baseStart);
       const newDuration = getDurationHours(baseStart, baseEnd);
 
-      const oldRef = bulkPanel.reference; // ✅ THIS is your old reference
+      const oldRef = bulkPanel.reference;
 
-      // ✅ SINGLE API CALL (this is the whole point)
-      await fetch("/api/schedules", {
+      const res = await fetch("/api/schedules", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -1979,7 +1988,14 @@ if (mode === "changed") {
         }),
       });
 
-      // ✅ just refresh instead of manually updating UI
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json?.error || "Bulk update failed");
+      }
+
+      alert(`✅ ${json.updatedCount ?? json.modifiedCount ?? 0} future classes updated`);
+
       window.dispatchEvent(new CustomEvent("calendar:saved"));
 
       setBulkPanel(null);
@@ -1993,24 +2009,35 @@ if (mode === "changed") {
   /* -------------------------- Delete future (data-based) --------------------- */
   const confirmDeleteMany = async () => {
     if (!bulkPanel || bulkPanel.kind !== "delete" || !bulkPanel.reference) return;
+
     setBulkPanel((p) => (p ? { ...p, saving: true } : p));
+
     try {
       const base = bulkPanel.baseEvent;
+      const baseStart = new Date(base.start as any);
       const refWindow = bulkPanel.reference;
-      const matches = collectFutureMatchesFromData(base, refWindow);
 
-      // ✅ Bulk delete via single API call
-      const ids = matches.map((m) => m.scheduleId);
-      await fetch("/api/schedules", {
+      const res = await fetch("/api/schedules", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
+        body: JSON.stringify({
+          student_name: base.raw.student_name,
+          base_date: ymdString(baseStart),
+          old_hour: refWindow.hour,
+          old_duration: refWindow.durationH,
+          dayOfWeek: baseStart.getDay(),
+        }),
       });
 
-      // Immediately reflect in UI
-      for (const id of ids) {
-        calRef.current?.deleteEvent?.(id, "1");
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(json?.error || "Bulk delete failed");
       }
+
+      alert(`✅ ${json.deletedCount ?? 0} future classes deleted`);
+
+      window.dispatchEvent(new CustomEvent("calendar:saved"));
 
       setBulkPanel(null);
       setDetail(null);
