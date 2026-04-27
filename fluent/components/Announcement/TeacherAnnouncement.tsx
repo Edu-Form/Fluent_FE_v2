@@ -287,7 +287,7 @@ const AnnouncementPage = () => {
       {/* 헤더 섹션 */}
       <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl font-bold text-gray-900">
             Today {filteredData.length} class
             {filteredData.length > 1 ? "es" : ""}
           </h1>
@@ -419,12 +419,12 @@ const AnnouncementPage = () => {
                         }`}
                       >
                         {/* 학생 정보 */}
-                        <div className="flex items-center gap-2">
-                          <h2 className="text-base font-medium text-gray-900">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h2 className="text-[18px] font-bold text-gray-900 whitespace-nowrap">
                             {studentName || "Unknown"}
                           </h2>
 
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 whitespace-nowrap">
                             {creditMap[studentName] ?? 0} credits
                           </span>
                         </div>

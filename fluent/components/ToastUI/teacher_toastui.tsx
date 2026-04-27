@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
 import "@toast-ui/calendar/dist/toastui-calendar.min.css";
 
 // Lightweight types because we lazy-load Calendar to avoid SSR issues
@@ -1414,9 +1415,8 @@ function TeacherToastUIInner({
           };
 
           // 4️⃣ Existing popover positioning (unchanged)
-          const rect = containerRef.current?.getBoundingClientRect();
-          const x = (nativeEvent?.clientX ?? 0) - (rect?.left ?? 0);
-          const y = (nativeEvent?.clientY ?? 0) - (rect?.top ?? 0);
+          const x = nativeEvent?.clientX ?? 0;
+          const y = nativeEvent?.clientY ?? 0;
 
           setDetail({ event, x, y });
           setAddOpen(false);
@@ -2242,16 +2242,18 @@ if (mode === "changed") {
         </div>
         )}
         {/* Calendar container must be relative for popovers */}
-<div
-  className={`relative overflow-hidden rounded-[34px] border border-white/70 bg-[radial-gradient(circle_at_top_left,rgba(219,234,254,0.85),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-2.5 shadow-[0_30px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl ${
-    variant === "compact" ? "tuic-compact" : "tuic-full"
-  }`}
-  style={{ width: "100%", height: variant === "compact" ? "65vh" : "78vh" }}
->
+        <div
+          className={`relative overflow-visible rounded-[34px] border border-white/70 bg-[radial-gradient(circle_at_top_left,rgba(219,234,254,0.85),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-2.5 shadow-[0_30px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl ${
+            variant === "compact" ? "tuic-compact" : "tuic-full"
+          }`}
+          style={{ width: "100%", height: variant === "compact" ? "65vh" : "78vh" }}
+        >
           <div ref={containerRef} className="absolute inset-2" />
 
           {/* Event popover */}
-          {detail?.event && (() => {
+          {detail?.event && typeof window !== "undefined" &&
+            createPortal(
+              (() => {
             const ev = detail.event;
             const raw = ev.raw || {};
             if (raw.is_consultation) {
@@ -2380,10 +2382,11 @@ if (mode === "changed") {
             return (
               <div
                 ref={popRef}
-                className="absolute z-50 w-[280px] rounded-[22px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur"
+                className="fixed z-[9999] w-[280px] rounded-[22px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.18)] backdrop-blur"
                 style={{
                   left: `${detail.x + 12}px`,
                   top: `${detail.y + 12}px`,
+                  position: "fixed",
                 }}
               >
               {caseType === "green" && (
@@ -2818,7 +2821,9 @@ if (mode === "changed") {
 
               </div>
             );
-          })()}
+          })(),
+          document.body
+        )}
 
 
 

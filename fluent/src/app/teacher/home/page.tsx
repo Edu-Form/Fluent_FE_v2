@@ -432,7 +432,7 @@ const HomePageContent = () => {
           </div>
 
           {/* 오늘의 학생 리스트 */}
-          <div className="flex-1 overflow-hidden rounded-[30px] border border-white/70 bg-white/75 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+          <div className="flex-1  overflow-y-auto rounded-[30px] border border-white/70 bg-white/75 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.10)] backdrop-blur-xl">
             <Suspense fallback={<SkeletonLoader />}>
               <Announcement />
             </Suspense>
