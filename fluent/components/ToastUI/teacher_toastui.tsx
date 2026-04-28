@@ -903,34 +903,34 @@ function TeacherToastUIInner({
     postJSON(`${saveEndpointBase}/${scheduleId}`, "DELETE");
 
   /* -------------------------- Data-driven future match ----------------------- */
-  function collectFutureMatchesFromData(
-    base: EventObject,
-    reference: { hour: number; durationH: number }
-  ) {
-    const baseStart = new Date(base.start as any);
-    const baseDOW = baseStart.getDay();
-    const baseDateOnly = toLocalDateOnly(baseStart);
-    const student = base?.raw?.student_name ?? "";
+  // function collectFutureMatchesFromData(
+  //   base: EventObject,
+  //   reference: { hour: number; durationH: number }
+  // ) {
+  //   const baseStart = new Date(base.start as any);
+  //   const baseDOW = baseStart.getDay();
+  //   const baseDateOnly = toLocalDateOnly(baseStart);
+  //   const student = base?.raw?.student_name ?? "";
 
-    const matches: Array<{ scheduleId: string; date: Date }> = [];
+  //   const matches: Array<{ scheduleId: string; date: Date }> = [];
 
-    for (const row of data || []) {
-      if (!row?.student_name || row.student_name !== student) continue;
-      const dt = toDateYMD(row.date);
-      if (!dt) continue;
+  //   for (const row of data || []) {
+  //     if (!row?.student_name || row.student_name !== student) continue;
+  //     const dt = toDateYMD(row.date);
+  //     if (!dt) continue;
 
-      if (toLocalDateOnly(dt).getTime() < baseDateOnly.getTime()) continue;
-      if (dt.getDay() !== baseDOW) continue;
+  //     if (toLocalDateOnly(dt).getTime() < baseDateOnly.getTime()) continue;
+  //     if (dt.getDay() !== baseDOW) continue;
 
-      if (Number(row.time) !== reference.hour) continue;
-      if (Number(row.duration) !== reference.durationH) continue;
+  //     if (Number(row.time) !== reference.hour) continue;
+  //     if (Number(row.duration) !== reference.durationH) continue;
 
-      const scheduleId = String(row._id ?? row.id ?? "");
-      if (!scheduleId) continue;
-      matches.push({ scheduleId, date: dt });
-    }
-    return matches;
-  }
+  //     const scheduleId = String(row._id ?? row.id ?? "");
+  //     if (!scheduleId) continue;
+  //     matches.push({ scheduleId, date: dt });
+  //   }
+  //   return matches;
+  // }
 
   // function updateVisibleEventIfMounted(id: string, calendarId: string, newStart: Date, newEnd: Date) {
   //   try {

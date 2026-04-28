@@ -74,8 +74,15 @@ export default function AdminDashboard() {
   const [filteredTableData, setFilteredTableData] = useState<any[]>([]);
   const [tableLoading, setTableLoading] = useState(false);
 
-  const [selectedMonth, setSelectedMonth] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
+  const now = new Date();
+
+  const [selectedMonth, setSelectedMonth] = useState(
+    String(now.getMonth() + 1).padStart(2, "0")
+  );
+
+  const [selectedYear, setSelectedYear] = useState(
+    String(now.getFullYear())
+  );
 
   const handleSearch = async () => {
     setTableLoading(true);
