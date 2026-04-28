@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { IconType } from "react-icons";
-import { RiHome6Fill } from "react-icons/ri";
+import { RiHome6Fill, RiLogoutBoxRLine } from "react-icons/ri";
 import { PiBookBookmarkFill } from "react-icons/pi";
 import { TbCardsFilled } from "react-icons/tb";
 import { RiEdit2Fill } from "react-icons/ri"; // 다이어리 쓰기 아이콘 추가
@@ -158,8 +158,9 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("userToken");
-    router.push("/");
+    sessionStorage.clear();
+    localStorage.clear();
+    router.replace("/");
   };
 
   if (isHomePage || displayPage) {
@@ -188,6 +189,15 @@ function NavigationComponent({ defaultActiveIndex = 0 }) {
         "
       >
         <div className="flex justify-around items-center py-2">
+          <NavIcon
+            Icon={RiLogoutBoxRLine}
+            isActive={false}
+            label="로그아웃"
+            onClick={() => {
+              setShowLogoutConfirm(true);
+            }}
+          />
+          
           <NavIcon
             Icon={RiHome6Fill}
             isActive={activeIndex === 0}
