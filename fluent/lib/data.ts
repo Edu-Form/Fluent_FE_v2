@@ -12,6 +12,13 @@ export function serialize_document(document: any) {
   return document;
 }
 
+type AdminClassnoteQuery = {
+  student_name?: string;
+  teacher_name?: string;
+  date?: string;
+  class_date?: string;
+};
+
 // lib/data.ts (top, near imports)
 const toDotDate = (raw?: string | null) => {
   if (!raw) return "";
@@ -3358,4 +3365,171 @@ export async function getOperationTasks() {
     .toArray();
 
   return tasks;
+}
+
+/* ======================================================
+   Admin Classnote Search + Update
+   DB: room_allocation_db
+   Collection: classnotes
+
+   Date format is ALWAYS:
+   YYYY. MM. DD.
+   Example:
+   2026. 04. 20.
+   ====================================================== */
+
+function normalizeDotDateForClassnote(date: string) {
+  if (!date) return "";
+
+  const trimmed = String(date).trim();
+
+  // Accept:
+  // 2026. 04. 20.
+  // 2026.04.20
+  // 2026.4.20
+  // 2026-04-20
+  // 2026/04/20
+  // 20260420
+  const cleaned = trimmed.replace(/\.+$/, "");
+
+  const match =
+    cleaned.match(/^(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})$/) ||
+    cleaned.match(/^(\d{4})-\s*(\d{1,2})-\s*(\d{1,2})$/) ||
+    cleaned.match(/^(\d{4})\/\s*(\d{1,2})\/\s*(\d{1,2})$/) ||
+    cleaned.match(/^(\d{4})(\d{2})(\d{2})$/);
+
+  if (!match) return trimmed;
+
+  const y = match[1];
+  const m = String(match[2]).padStart(2, "0");
+  const d = String(match[3]).padStart(2, "0");
+
+  return `${y}. ${m}. ${d}.`;
+}
+
+export async function getClassnotesByAdminQuery({
+  student_name,
+  teacher_name,
+  date,
+  class_date,
+}: AdminClassnoteQuery) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    const query: Record<string, any> = {};
+
+    // Optional student search
+    // Allows partial search like "민지"
+    if (student_name?.trim()) {
+      query.student_name = {
+        $regex: student_name.trim(),
+        $options: "i",
+      };
+    }
+
+    // Optional teacher search
+    if (teacher_name?.trim()) {
+      query.teacher_name = teacher_name.trim();
+    }
+
+    // Optional date search
+    // Always normalize to "YYYY. MM. DD."
+    const normalizedDate = normalizeDotDateForClassnote(date || class_date || "");
+
+    if (normalizedDate) {
+      query.$or = [
+        { date: normalizedDate },
+        { class_date: normalizedDate },
+      ];
+    }
+
+    const classnotes = await coll
+      .find(query)
+      .sort({
+        date: -1,
+        class_date: -1,
+        updatedAt: -1,
+        createdAt: -1,
+      })
+      .limit(300)
+      .toArray();
+
+    return classnotes.map(serialize_document);
+  } catch (err) {
+    console.error("getClassnotesByAdminQuery error:", err);
+    return [];
+  }
+}
+
+export async function updateClassnoteById(
+  id: string,
+  updates: Record<string, any>
+) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("room_allocation_db");
+    const coll = db.collection("classnotes");
+
+    if (!id || !ObjectId.isValid(id)) {
+      throw new Error("Invalid classnote _id");
+    }
+
+    if (!updates || typeof updates !== "object") {
+      throw new Error("Missing updates object");
+    }
+
+    const blockedFields = ["_id", "createdAt"];
+
+    const cleanUpdates: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (blockedFields.includes(key)) continue;
+
+      // Always force date fields to "YYYY. MM. DD."
+      if (key === "date" || key === "class_date") {
+        cleanUpdates[key] = normalizeDotDateForClassnote(String(value ?? ""));
+      }
+
+      // Keep started_at / ended_at as strings because your saveClassnotesNew
+      // stores them with toKoreanISOString()
+      else if (key === "started_at" || key === "ended_at") {
+        cleanUpdates[key] = value || null;
+      }
+
+      else if (key === "duration_ms") {
+        cleanUpdates[key] =
+          value === "" || value === null || value === undefined
+            ? null
+            : Number(value);
+      }
+
+      else {
+        cleanUpdates[key] = value;
+      }
+    }
+
+    cleanUpdates.updatedAt = toKoreanISOString(new Date());
+
+    const result = await coll.findOneAndUpdate(
+      { _id: new ObjectId(id) },
+      {
+        $set: cleanUpdates,
+      },
+      {
+        returnDocument: "after",
+      }
+    );
+
+    // Handles MongoDB driver differences
+    const updatedDoc = (result as any)?.value ?? result;
+
+    if (!updatedDoc) return null;
+
+    return serialize_document(updatedDoc);
+  } catch (err) {
+    console.error("updateClassnoteById error:", err);
+    return null;
+  }
 }

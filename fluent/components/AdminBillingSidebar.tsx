@@ -18,13 +18,16 @@ export default function AdminBillingSidebar() {
 
   // 🔐 Admin logic
   const adminUsers = ["Phil", "David", "Inhyung"];
-  const isAdmin = adminUsers.includes(user);
+  const isAdmin = adminUsers.some(
+    (admin) => admin.toLowerCase() === user.trim().toLowerCase()
+  );
 
   const isDashboard = pathname === "/teacher/admin_billing_1";
   const isOverview = pathname === "/teacher/admin_billing_1/overview";
   const isAdvertisement = pathname.startsWith("/teacher/admin_billing_1/advertisement");
   const isConsulting = pathname.startsWith("/teacher/admin_billing_1/consulting");
   const isTeacherRegistration = pathname.startsWith("/teacher/admin_billing_1/teacher-registration");
+  const isClassnotes = pathname.startsWith("/teacher/admin_billing_1/classnotes");
 
   const baseClass =
     "block rounded-md px-3 py-2 text-sm font-medium transition";
@@ -38,7 +41,6 @@ export default function AdminBillingSidebar() {
       </div>
 
       <nav className="space-y-1">
-
         {/* 👑 ADMIN ONLY */}
         {isAdmin && (
           <>
@@ -68,6 +70,15 @@ export default function AdminBillingSidebar() {
             >
               Popup / Banner 관리
             </Link>
+
+            <Link
+              href={`/teacher/admin_billing_1/classnotes${baseQuery}`}
+              className={`${baseClass} ${
+                isClassnotes ? activeClass : inactiveClass
+              }`}
+            >
+              Classnote 수정
+            </Link>
           </>
         )}
 
@@ -89,7 +100,6 @@ export default function AdminBillingSidebar() {
         >
           Teacher 등록
         </Link>
-
       </nav>
     </aside>
   );
